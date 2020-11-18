@@ -24,12 +24,128 @@ import config as cfg
 from misc.io_methods import IOMethods
 from misc.queue import Queue
 
+class Processing(object):
+    def __init__(self, working_dir):
+        self.working_dir = working_dir
+
+    def run(self):
+
+        cmds = cfg.cmds
+
+        refs = cfg.references
+
+        # build virus reference DB
+        virus_db_path = refs["virus_db"]
+        bwa_ref = refs["bwa_ref"]
+
+        #IOMethods.create_folder(virus_db_path)
+
+        #download_virus_db(virus_db_path)
+
+        # download GISAID
+
+        # download SRA
+
+        # download reference nt
+
+        # do pairwise alignment
+
+        # download NGS reference
+
+        # do BWA alignment
+
+        alignment_path = os.path.join(self.working_dir, "alignment")
+        sam_file = os.path.join(alignment_path, "Aligned.out.sam")
+        bam_file = os.path.join(alignment_path, "Aligned.out.bam")
+        
+        cmd_align = "{} mem {} {} > {}".format(cmds["bwa"], bwa_ref, fq, sam_file)
+        cmd_sambam = "{} sort -O bam -o {} {}".format(cmds["samtools"], bam_file, sam_file)
+        
+        # do mpileup
+
+        cmd_pileup = "{0} mpileup -E -d 0 -A -f {1} {2} | {0} call -mv --ploidy 1 -Ov -o {3}".format(cmds["bcftools"], refs["novo_fasta"], bam_file, vcf_file)
+
+        # do snpeff
+
+        cmd_snpeff = "{} ann -noStats -no-downstream -no-upstream -no-intergenic -no-intron -onlyProtein -fi {} SARS-COV2 {} > {}".format(cmds["snpeff"], refs["novo_bed"], vcf_file, snpeff_vcf_file)
+
+        exe_tools = [
+            "BWA",
+            "PileupVCF",
+            "GenerateCircos",
+            "Collect"
+        ]
+
+        exe_cmds = [
+            " && ".join([cmd_align, cmd_sambam]),
+            " && ".join([cmd_pileup, cmd_filter]),
+            cmd_circos,
+            cmd_gather
+        ]
+
+        exe_path = [
+            alignment_path,
+            res_path,
+            res_path,
+            res_path
+        ]
+
+        for i, tool in enumerate(exe_tools, 0):
+            if tool in tools:
+                dependency = []
+                if tool in state_tools:
+                    self.logger.info("Skipping {0} as it looks like a previous run finished successfully. Results should be in {1}".format(tool, exe_path[i]\
+))
+                    continue
+
+                self.logger.info("Submitting {} run to slurm".format(tool))
+                cpu = str(cfg.resources[tool.lower()]["cpu"])
+                mem = cfg.resources[tool.lower()]["mem"]
+
+                exe_cmds[i] = exe_cmds[i].replace("waiting_for_cpu_number", cpu)
+
+                dependency = Queueing.get_jobs_by_name(sample_id, cfg.pipeline_name)
+                uid = "-".join([cfg.pipeline_name, tool, sample_id])
+                cmd = " && ".join([exe_cmds[i], cmd_samples + tool])
+                self.submit_job(uid, cmd, cpu, mem, exe_path[i], dependency, "")
+
+
+    def submit_job(self, uid, cmd, cores, mem_usage, job_dir, dependencies, mail):
+        """This function submits a job with the corresponding resources to slurm."""
+        already_running = Queueing.get_jobs_by_name(uid)
+        if not already_running:
+            module_file = os.path.join(cfg.module_dir, "build_env.sh")
+            que_sys = cfg.queueing_system
+            for i, cmd_split in enumerate(cmd.split(" && ")):
+                if not que_sys in ["slurm", "pbs"]:
+                    cmd_split = cmd_split.split(" ")
+                dependencies.extend(Queueing.get_jobs_by_name("{0}_CMD{1}".format(uid, i - 1)))
+                Queueing.submit(
+                    "{0}_CMD{1}".format(uid, i), 
+                    cmd_split, 
+                    cores, 
+                    mem_usage, 
+                    job_dir, 
+                    dependencies, 
+                    cfg.partition, 
+                    cfg.user, 
+                    cfg.time_limit, 
+                    mail, 
+                    module_file, 
+                    que_sys
+                )
+                time.sleep(0.5)
+
+        else:
+            self.logger.info(uid + " already running!")
+            
+
 def download_virus_db(db_path):
     cmds = []
-    print("Downloading fasta files.")
-    download_cmd = "wget -r -nd -np -A 'viral.*.genomic.fna.gz' ftp://ftp.ncbi.nlm.nih.gov/refseq/release/viral/"
+    download_cmd_1 = "wget -N https://ftp.ncbi.nlm.nih.gov/refseq/release/viral/viral.1.1.genomic.fna.gz"
+    download_cmd_2 = "wget -N https://ftp.ncbi.nlm.nih.gov/refseq/release/viral/viral.2.1.genomic.fna.gz"
+
     # inflate and write to 1 file
-    print("Inflating fasta files.")
     extract_cmd = "zcat viral.*.genomic.fna.gz > aux.viruses.fna"
 
     # changing 'chromosome' names from 'gi|167006425|ref|NC_010314.1|' to NC_010314.1
@@ -37,24 +153,28 @@ def download_virus_db(db_path):
 
     ids_cmd = "grep -oP '[A-Z]{2,2}_[0-9]*\.[0-9]{1,1}' all.viruses.fna > all.viruses.IDs.txt"
 
-    cmds.append(download_cmd)
-    cmds.append(extract_cmd)
-    cmds.append(sed_cmd)
-    cmds.append(ids_cmd)
+    cmds.append(("Download 1", download_cmd_1))
+    cmds.append(("Download 2", download_cmd_2))
+    cmds.append(("Zcat", extract_cmd))
+    cmds.append(("Replace IDs", sed_cmd))
+    cmds.append(("Extract IDs", ids_cmd))
 
 
     q = Queue()
-    for cmd in cmds:
+    for name, cmd in cmds:
+        print("{}: {}".format(name, cmd))
         q.submit_nonqueue(cmd, db_path)
 
 def main():
-    # build virus reference DB
-    virus_db_path = cfg.references["virus_db"]
+    parser = ArgumentParser(description="Automatically runs analysis pipeline")
 
-    IOMethods.create_folder(virus_db_path)
+    parser.add_argument("-i", "--input_folder", dest="input_folder", help="Specify input folder")
 
-    download_virus_db(virus_db_path)
+    args = parser.parse_args()
     
+    proc = Processing()
+
+    proc.run()
     
 
 if __name__ == "__main__":

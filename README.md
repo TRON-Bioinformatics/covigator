@@ -1,6 +1,6 @@
-# CAPE (Corona Analysis PipEline)
+# CoVigator (Corona Analysis PipEline)
 
-CAPE is a fully automatized Corona Analysis Pipeline integrating the following major steps:
+CoVigator is a fully automatized Corona Analysis Pipeline integrating the following major steps:
 
 * Generation/Download of Reference DBs
 * Starting of different workflows depending of input data type (e.g. RNA-Seq, Assembly)
