@@ -32,7 +32,8 @@ Layers:
 
 Generally use Python if possible.
 
-(System design)[system_design.png]
+
+![System design](system_design.png)
 
 ### Database
 
