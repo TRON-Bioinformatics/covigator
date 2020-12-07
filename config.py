@@ -33,6 +33,7 @@ cmds = {
 
 
 references = {
+    #"bwa_ref": "/",
     "sra_fastq_folder": "/scratch/info/projects/SARS-CoV-2/sra",
     "sra2_fastq_folder": "/scratch/info/projects/SARS-CoV-2/sra2",
     "novo_index": "/scratch/info/projects/SARS-CoV-2/Novoalign/novoindex/MN908947.3.nix",

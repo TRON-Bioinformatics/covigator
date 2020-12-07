@@ -1,4 +1,4 @@
-# CoVigator (Corona Analysis PipEline)
+# CoVigator (Corona Navigator)
 
 CoVigator is a fully automatized Corona Analysis Pipeline integrating the following major steps:
 

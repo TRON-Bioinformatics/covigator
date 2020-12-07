@@ -1,161 +1,115 @@
 #!/usr/bin/env python
 
+"""
+Input/Output method collection
+- Create folder and grant permission
+- Read fastq files from directories
+- get basename from full path
+
+@author: Tron (PASO)
+@version: 20181126
+"""
+
 import os
-import pwd
-import grp
+import sys
 import stat
-import pandas as pd
+import re
+import logging
 
-def convert_bed_line_to_exons(words):
-    """Returns a list of exons (chr,start,stop,transcript name,exon number,strand). Input is a list representing an eleven field bed line. The start and stop coordinates are returned as zero base closed interval."""
-    exon_list = []
-    start = int(words[1])
-#    cdef unsigned long int end = int(words[2])
-    name = words[3]
-#    (start,end,name) = words[1:4]
-#    start = int(start)
-    strand = words[5]
-#    print(strand, words[5])
-    num_exons = int(words[9])
-    exon_starts = words[11].strip(",").split(",")
-    exon_sizes = words[10].strip(",").split(",")
-    exon_startsI = [start + int(x) for x in exon_starts]
-    exon_sizesI = [int(x) for x in exon_sizes]
-    r = range(num_exons)
-    if strand == "-":
-        r = range(num_exons-1,-1,-1)
-    for ne in r:
-        abs_e_end = exon_startsI[ne] + exon_sizesI[ne] - 1
-        exon_number_correct_order = (num_exons - 1 - ne) if strand == "-" else ne
-        exon_words = [exon_startsI[ne],abs_e_end,name,exon_number_correct_order,strand]
-        exon_list.append(exon_words)
-    return exon_list
+logging.basicConfig(level=logging.INFO)
 
-class IOMethods(object):
-    @staticmethod
-    def create_folder(path):
-        '''This function creates a specified folder, if not already existing and grants the respective permission.'''
-        if not os.path.exists(path):
-            print("Creating folder", path)
-            os.makedirs(path)
-
-    @staticmethod
-    def get_fastq_files(paths):
-        '''This function returns a list of fastq files for the given list of paths.'''
-        fastqs = []
-        for path in paths:
-            if os.path.isdir(path):
-                files = os.listdir(path)
-                for file in files:
-                    file_path = os.path.join(path,file)
-                    if os.path.isfile(file_path) and file.endswith((".fastq.gz","fastq")):
-                        fastqs.append(file_path)
-                    elif os.path.isdir(file_path):
-                        fastqs_tmp = IOMethods.get_fastq_files([file_path])
-                        fastqs.extend(fastqs_tmp)
-            elif os.path.isfile(path) and path.endswith((".fastq.gz","fastq")):
-                fastqs.append(path)
-        return fastqs
+logger = logging.getLogger(__name__)
 
 
-    @staticmethod
-    def load_reference_transcripts(bedfile, gene_symbols_file = None):
-        gene_symbols = None
-        if gene_symbols_file:
-            gene_symbols = IOMethods.load_gene_symbols(gene_symbols_file)
-
-        exons = {}
-        transcripts = {}
-#        exlength = {}
-#        translength = {}
-        numt = 0
-        nume = 0
-
-        # read bed file
-        with open(bedfile, "r") as f:
-            for line in f:
-                elements = line.rstrip().split("\t")
-                chrom = elements[0]
-                t_start = int(elements[1])
-                t_end = int(elements[2])
-                t_strand = elements[5]
-                t_id = elements[3]
-
-                if gene_symbols_file:
-                    t_id = gene_symbols[t_id]
-#                t_ele = (t_start, t_end, t_id)
-#                t = Transcript(t_start, t_end, t_id)
-#                if chrom in transcripts:
-                try:
-                    transcripts[chrom].append((t_start, t_end, t_id))
-#                    transcripts[chrom].append(t_ele)
-#                    transcripts[chrom].append(t)
-                except:
-#                else:
-                    transcripts[chrom] = [(t_start, t_end, t_id)]
-#                    transcripts[chrom] = [t_ele]
-#                    transcripts[chrom] = [t]
-                # convert to exons
-                exon_list = convert_bed_line_to_exons(elements)
-                for exon in exon_list:
-#                    e_start, e_end, e_id, e_num, e_strand = exon
-                    e_start = exon[0]
-                    e_end = exon[1]
-#                    e_id = exon[2]
-#                    e_num = exon[3]
-#                    e_strand = exon[4]
-#                    e = Transcript(e_start, e_end, t_id)
-                    e_ele = (e_start, e_end, t_strand, t_id)
-                    try:
-#                        if e in exons[chrom]
-#                        exons[chrom].append((e_start, e_end, t_id))
-                        exons[chrom].append(e_ele)
-#                        exons[chrom].append(e)
-                    except:
-#                        exons[chrom] = [(e_start, e_end, t_id)]
-                        exons[chrom] = [e_ele]
-#                        exons[chrom] = [e]
-#        nume = numt = 0
-#        for i in exons.keys():
-
-        for i in exons:
-#            print(exons[i])
-            exons[i] = list(set(exons[i]))
-            
-#            exons[i] = set(exons[i])
-#            exons[i].sort(key = lambda x: x.start, reverse=False)
-            exons[i].sort()
-            nume += len(exons[i])
-#        for i in transcripts.keys():
-        for i in transcripts:
-#            transcripts[i].sort(key = lamdba x: x.start, reverse=False)
-            transcripts[i].sort()
-            numt += len(transcripts[i])
-
-        return transcripts, exons, numt, nume
-
-    @staticmethod
-    def load_gene_symbols(infile):
-        symbol_dict = {}
-        with open(infile) as inf:
-            for line in inf:
-                elements = line.rstrip().split("\t")
-                trans_id = elements[0]
-                gene_symbol = elements[1]
-                        
-                symbol_dict[trans_id] = gene_symbol
-        return symbol_dict
-
-    @staticmethod
-    def load_gene_symbols_pandas(infile):
-        pandas_tab = pd.read_table(infile, header=None, names = ["ID", "Gene Symbol", "Length"], usecols=["ID", "Gene Symbol"], sep="\t", index_col=0)
-        symbol_dict = pandas_tab.to_dict()
-#        print(symbol_dict)
-        return symbol_dict
+def create_folder(path):
+    '''This function creates a specified folder, if not already existing and grants the respective permission.'''
+    if not os.path.exists(path):
+        os.makedirs(path)
+        grant_permissions(path, stat.S_IRWXU | stat.S_IRWXG | stat.S_IROTH | stat.S_IXOTH)
+        logger.debug("Created folder {}".format(path))
+    else:
+        logger.debug("Folder {} already exists".format(path))
 
 
-def main():
-    pass
+def grant_permissions(path, mode):
+    '''This function grants specific permissions for a given folder or file.'''
+    for _, dirs, files in os.walk(path, topdown=False):
+        for dir in dirs:
+            os.chmod(dir, mode)
+        for file in files:
+            os.chmod(file, mode)
 
-if __name__ == '__main__':
-    main()
+
+def get_fastq_files(input_paths, exclude = "Undetermined"):
+    """Load fastq files, check file name consistency and return tuple of left/right pairs"""
+    # load fastq files from the provide path to a list
+    fastqs = []
+    for path in input_paths:
+        basename = os.path.basename(path)
+        if os.path.isdir(path):
+            files = os.listdir(path)
+            for filename in files:
+                file_path = os.path.join(path, filename)
+                
+                if os.path.isfile(file_path) and filename.endswith((".fastq.gz", ".fq.gz", ".fq", ".fastq")) and not filename.startswith(exclude):
+                    fastqs.append(file_path)
+                elif os.path.isdir(file_path):
+                    fastqs_tmp = get_fastq_files([file_path])
+                    fastqs.extend(fastqs_tmp)
+        elif os.path.isfile(path) and basename.endswith((".fastq.gz", ".fq.gz", ".fq", ".fastq")) and not basename.startswith(exclude):
+            fastqs.append(path)
+        
+    return fastqs
+
+def pair_fastq_files(fastqs):
+    """Pairs paired-end fastq files, if necessary using regular expressions."""
+    left = []
+    right = []
+    sample_id = []
+    # iterate over the sorted list of file names and check for left/right pair file
+    #print(fastqs)
+    #print(len(fastqs))
+
+    logger.info("\nGoing to process the following read files...")
+    for i, fq_file in enumerate(sorted(fastqs)):
+        logger.info("Fastq file {0}: {1}".format(i, fq_file))
+        # urla: handled cases are: abc_R1_xyz.fastq.gz || abc_R1_xyz.fq.gz || abc_R1.fastq.gz || abc_1.fastq.gz || etc
+        #print(fq_file)
+        try:
+            # Search for 1 or 2 between "_R|_" and "_|.f" in the basename of the file
+            #forrev = re.search('(\_|\_R)([1-2])(\_|\.f)', path_leaf(fq_file)).group(2)
+            # urla: replaced original (up) with the following <- worked in minimal test set, should be fine for everything
+
+            forrev = re.search('_R([1-2])(_|[.]f)', os.path.basename(fq_file)).group(1)
+            #print(forrev)
+        except AttributeError:
+            forrev = '-1'
+                                
+        if forrev == '1':
+            left.append(fq_file)
+        elif forrev == '2':
+            right.append(fq_file)
+        else:
+            logger.warning('Warning: Ignoring \"{}\" as it doesn\'t seem to be a valid fastq file'.format(fq_file))
+    # Check whether file names match between paired files
+    if right:
+        for i, _ in enumerate(left):
+            # urla: ids for comparison are not generally applicable here, as they remove lane numbers as well
+            #sample_id_l = re.search('(\w*)(\_|\_R)([1])(\_|\.f)', path_leaf(left[i])).group(1)
+            #sample_id_r = re.search('(\w*)(\_|\_R)([2])(\_|\.f)', path_leaf(right[i])).group(1)
+            # urla: replaced original (up) with the following <- worked in minimal test set, should be fine for everything
+            sample_id_l = re.search('(.*)_R1(_|[.]f)', os.path.basename(left[i])).group(1)
+            sample_id_r = re.search('(.*)_R2(_|[.]f)', os.path.basename(right[i])).group(1)
+            sample_id.append(sample_id_l)
+            #print(sample_id_l)
+            #print(sample_id_r)
+            if sample_id_l != sample_id_r:
+                logger.error('Error 99: Paired files names {0} and {1} do not match!'.format(sample_id_l, sample_id_r))
+                sys.exit(99)
+    return (left, right, sample_id)
+
+
+#def path_leaf(path):
+#    """Return the basename of a file path"""
+#    head, tail = ntpath.split(path)
+#    return tail or ntpath.basename(head)
