@@ -12,5 +12,8 @@ CoVigator is a fully automatized Corona Analysis Pipeline integrating the follow
 # Usage
 
 ```
-python processing.py
+python processing.py -i <path_to_input_fastqs> -w <working_dir>
 ```
+
+whereas <input_paths> should be a list of FASTQs or a path where the FASTQs are stored and
+<working_dir> describes the path to store the results in.
