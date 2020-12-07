@@ -1,0 +1,4 @@
+venv
+prototypes/venv
+prototypes/.ipynb_checkpoints
+*.backup
