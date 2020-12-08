@@ -2,3 +2,7 @@ venv
 prototypes/venv
 prototypes/.ipynb_checkpoints
 *.backup
+build
+dist
+.idea
+covigator.egg-info

@@ -1,0 +1,42 @@
+from setuptools import find_packages, setup
+
+
+# parses requirements from file
+with open("requirements.txt") as f:
+    required = f.read().splitlines()
+
+with open("README.md", "r") as f:
+    long_description = f.read()
+
+# Build the Python package
+setup(
+    name="covigator",
+    version="0.1.0",
+    packages=find_packages(),
+    include_package_data=True,
+    entry_points={
+        "console_scripts": [
+            "covigator-download=covigator.command_line:download",
+            "covigator-pipeline=covigator.command_line:pipeline",
+        ],
+    },
+    author_email="patrick.sorn@tron-mainz.de",
+    author="TRON - Translational Oncology at the University Medical Center of the Johannes Gutenberg University Mainz "
+           "- Computational Medicine group",
+    description="",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
+    url="",
+    requires=[],
+    # NOTE: always specify versions to ensure build reproducibility
+    # NOTE2: sklearn==0.19.0 is a hidden dependency as it is required by Classifier.pickle
+    install_requires=required,
+    setup_requires=[],
+    classifiers=[
+        "Development Status :: 3 - Alpha",  # Chose either "3 - Alpha", "4 - Beta" or "5 - Production/Stable" as the current state of your package
+        "Intended Audience :: Healthcare Industry",
+        "Intended Audience :: Science/Research",
+        "Topic :: Scientific/Engineering :: Bio-Informatics",
+        "Programming Language :: Python :: 3",
+    ],
+)
