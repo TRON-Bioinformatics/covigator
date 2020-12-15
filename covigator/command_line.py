@@ -1,6 +1,6 @@
 
 
-def download():
+def ena_accessor():
     raise NotImplementedError()
 
 

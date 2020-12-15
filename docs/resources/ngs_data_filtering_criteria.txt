@@ -1,0 +1,6 @@
+NGS data
+from https://www.ncbi.nlm.nih.gov/sra search
+txid2697049[Organism:noexp] NOT 00000000000[Mbases] AND ("platform illumina"[Properties] AND "strategy wgs"[Properties] OR "strategy wga"[Properties] OR "strategy wcs"[Properties] OR "strategy clone"[Properties] OR "strategy finishing"[Properties] OR "strategy validation"[Properties] AND "filetype fastq"[Properties]) AND "platform illumina"[Properties]
+
+In SRA Run selector filter
+- Host: homo sapiens

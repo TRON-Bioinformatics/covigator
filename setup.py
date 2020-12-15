@@ -16,7 +16,7 @@ setup(
     include_package_data=True,
     entry_points={
         "console_scripts": [
-            "covigator-download=covigator.command_line:download",
+            "covigator-ena-accessor=covigator.command_line:ena_accessor",
             "covigator-pipeline=covigator.command_line:pipeline",
         ],
     },
