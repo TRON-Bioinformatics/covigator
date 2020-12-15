@@ -1,8 +1,10 @@
 from typing import List
-
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, String, Float, Enum
+from sqlalchemy import Column, String, Float, Enum, create_engine
+from sqlalchemy.orm import Session, sessionmaker
 import enum
+import os
+from logzero import logger
 
 
 Base = declarative_base()
@@ -55,3 +57,34 @@ class EnaRun(Base):
 
     def get_fastqs_ftp(self) -> List:
         return self.fastq_ftp.split(";")
+
+
+class Database:
+
+    def __init__(self):
+        host = os.getenv("COVIGATOR_DB_HOST", "0.0.0.0")
+        database = os.getenv("COVIGATOR_DB_NAME", "covigator")
+        user = os.getenv("COVIGATOR_DB_USER", "covigator")
+        password = os.getenv("COVIGATOR_DB_PASSWORD", "covigator")
+        port = os.getenv("COVIGATOR_DB_PORT", "5432")
+        db_uri = "postgresql+psycopg2://%s:%s@%s:%s/%s" % (
+            user,
+            password,
+            host,
+            port,
+            database,
+        )
+        self.engine = create_engine(db_uri)
+        self.engine.connect()
+        self.Session = sessionmaker(bind=self.engine, autoflush=False)
+        # create database
+        # TODO: what happens if it exists already
+        self.create_database()
+
+    def create_database(self):
+        # this creates all tables in the database
+        Base.metadata.create_all(self.engine)
+        logger.info("Database initialized")
+
+    def get_database_session(self) -> Session:
+        return self.Session()

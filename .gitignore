@@ -6,3 +6,4 @@ build
 dist
 .idea
 covigator.egg-info
+.env
