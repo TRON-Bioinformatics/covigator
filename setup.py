@@ -1,4 +1,5 @@
 from setuptools import find_packages, setup
+import covigator
 
 
 # parses requirements from file
@@ -11,7 +12,7 @@ with open("README.md", "r") as f:
 # Build the Python package
 setup(
     name="covigator",
-    version="0.1.0",
+    version=covigator.VERSION,
     packages=find_packages(),
     include_package_data=True,
     entry_points={
