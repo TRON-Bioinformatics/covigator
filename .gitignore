@@ -7,3 +7,7 @@ dist
 .idea
 covigator.egg-info
 .env
+*.fastq.gz
+*.sqlite
+*.lock
+*.fa
