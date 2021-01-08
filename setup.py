@@ -18,7 +18,7 @@ setup(
     entry_points={
         "console_scripts": [
             "covigator-ena-accessor=covigator.command_line:ena_accessor",
-            "covigator-pipeline=covigator.command_line:pipeline",
+            "covigator-processor=covigator.command_line:processor",
         ],
     },
     author_email="patrick.sorn@tron-mainz.de",
