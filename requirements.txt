@@ -4,3 +4,4 @@ dask[complete]==2.30.0
 distributed==2.30.0
 logzero==1.6.3
 psycopg2-binary==2.8.6
+dash==1.18.1
