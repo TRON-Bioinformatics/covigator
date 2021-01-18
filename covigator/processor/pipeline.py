@@ -8,10 +8,9 @@ import sys
 import tempfile
 import time
 from typing import List
-
 from logzero import logger
+import covigator.config as cfg
 
-import config as cfg
 
 class Pipeline:
 
@@ -27,7 +26,6 @@ class Pipeline:
         fq1 = self.fastqs[0]
         fq2 = self.fastqs[1] if len(self.fastqs) > 1 else None
         fq_path = Path(self.fastqs[0]).parent
-        virus_db_path = refs["virus_db"]
         bwa_ref = refs["novo_fasta"]
         
         # Creating a temporary folder for the intermediate results
@@ -65,6 +63,7 @@ class Pipeline:
                     sys.exit(1)
 
         return snpeff_vcf_file
+
 
 if __name__ == "__main__":
     # Implementation of Argument Parser for easy testing of the pipeline

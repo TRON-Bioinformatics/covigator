@@ -44,7 +44,7 @@ def processor():
 
     args = parser.parse_args()
 
-    client = Client(n_workers=args.num_cpus, threads_per_worker=1)
+    client = Client(n_workers=int(args.num_cpus), threads_per_worker=1)
     Processor(database=Database(), dask_client=client).process()
 
 
