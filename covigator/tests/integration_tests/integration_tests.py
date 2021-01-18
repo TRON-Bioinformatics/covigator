@@ -4,6 +4,8 @@ from covigator.accessor.ena_accessor import EnaAccessor
 from covigator.model import Database
 from covigator.processor.processor import Processor
 from covigator.tests import SARS_COV_2_TAXID, HOMO_SAPIENS_TAXID
+import covigator.dashboard.dashboard as dashboard
+import time
 
 
 class IntegrationTests(TestCase):
@@ -21,3 +23,6 @@ class IntegrationTests(TestCase):
         processor = Processor(database=Database(), dask_client=client)
         processor.process()
 
+    def test_dashboard(self):
+        dashboard.main()
+        time.sleep(60)
