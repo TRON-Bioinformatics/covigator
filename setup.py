@@ -19,7 +19,7 @@ setup(
         "console_scripts": [
             "covigator-ena-accessor=covigator.command_line:ena_accessor",
             "covigator-processor=covigator.command_line:processor",
-            "covigator-dashboard=covigator.command_line:dashboard"
+            "covigator-dashboard=covigator.command_line:covigator_dashboard"
         ],
     },
     author_email="patrick.sorn@tron-mainz.de",

@@ -4,7 +4,7 @@ from dask.distributed import Client
 
 import covigator
 from covigator.accessor.ena_accessor import EnaAccessor
-from covigator.dashboard.dashboard import app
+import covigator.dashboard.dashboard as dashboard
 from covigator.model import Database
 from covigator.processor.processor import Processor
 
@@ -48,6 +48,5 @@ def processor():
     Processor(database=Database(), dask_client=client).process()
 
 
-def dashboard():
-    app.run_server(debug=True)
-    #Dashboard(database=Database()).run(debug=True)
+def covigator_dashboard():
+    dashboard.main()

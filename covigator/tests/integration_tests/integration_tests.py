@@ -1,10 +1,11 @@
 from unittest import TestCase
 from dask.distributed import Client
 from covigator.accessor.ena_accessor import EnaAccessor
-from covigator.dashboard.dashboard import Dashboard
 from covigator.model import Database
 from covigator.processor.processor import Processor
 from covigator.tests import SARS_COV_2_TAXID, HOMO_SAPIENS_TAXID
+import covigator.dashboard.dashboard as dashboard
+import time
 
 
 class IntegrationTests(TestCase):
@@ -23,5 +24,5 @@ class IntegrationTests(TestCase):
         processor.process()
 
     def test_dashboard(self):
-        Dashboard(database=Database()).run(debug=True)
-
+        dashboard.main()
+        time.sleep(60)
