@@ -100,11 +100,12 @@ class Processor:
                 run_accession=run_accession, session=session, status=JobStatus.DOWNLOADED)
             if job is not None:
                 try:
-                    # TODO: get the path to the VCF coming out of the pipeline
-                    Pipeline(fastqs=job.get_fastq_paths()).run()
+                    fastq1, fastq2 = job.get_fastq1_and_fastq2()
+                    vcf = Pipeline().run(fastq1=fastq1, fastq2=fastq2)
                     logger.info("Processed {}".format(job.run_accession))
                     job.status = JobStatus.PROCESSED
                     job.analysed_at = datetime.now()
+                    job.vcf_path = vcf
                 except Exception as e:  # TODO: do we want a less wide exception capture?
                     logger.info("Analysis error {} {}".format(run_accession, str(e)))
                     job.status = JobStatus.FAILED_PROCESSING

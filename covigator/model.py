@@ -98,9 +98,20 @@ class Job(Base):
 
     # local files storage
     fastq_path = Column(String)     # the local path where FASTQ files are stored in semi colon separated list
+    vcf_path = Column(String)
 
     def get_fastq_paths(self):
         return self.fastq_path.split(SEPARATOR) if self.fastq_path is not None else []
+
+    def get_fastq1_and_fastq2(self):
+        fastqs = self.get_fastq_paths()
+        if len(fastqs) > 1:
+            fastq1 = next("_1.fastq" in x for x in fastqs)
+            fastq2 = next("_2.fastq" in x for x in fastqs)
+        else:
+            fastq1 = fastqs[0]
+            fastq2 = None
+        return fastq1, fastq2
 
 
 class Database:
