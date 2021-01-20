@@ -116,18 +116,25 @@ service of any external data provider.
 
 #### Pipeline
 
+The pipeline runs BWA mem, samtools pileup and SnpEff.
+
 *Configuration*
 
-`config.py` contains all the essential configuration paths
+TODO
 
 *Usage*
 
+For paired end data:
 ```
-python processing.py -i <path_to_input_fastqs> -w <working_dir>
+covigator-pipeline --fastq1 /path/to/fastq_1.fastq.gz --fastq2 /path/to/fastq_2.fastq.gz
 ```
 
-whereas <input_paths> should be a list of FASTQs or a path where the FASTQs are stored and
-<working_dir> describes the path to store the results in.
+For single end data:
+```
+covigator-pipeline --fastq1 /path/to/fastq_1.fastq.gz
+```
+
+this will create an annotated VCF file in the same folder where the first FASTQ is located.
 
 #### Clean up
 

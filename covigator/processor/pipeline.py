@@ -40,6 +40,8 @@ class Pipeline:
             vcf_file = os.path.join(fq_path, "pileup.vcf")
             snpeff_vcf_file = os.path.join(fq_path, "snpeff.vcf")
 
+            # TODO: optimise pipeline by avoiding writing SAM file to disk by piping commands
+            # TODO: for instance: bwa mem ${reference} ${fastq} | samtools view -uS - | samtools sort - ${name}
             if fastq2:
                 cmd_align = "{} mem {} {} {} > {}".format(self.commands["bwa"], bwa_ref, fastq1, fastq2, sam_file)
             else:
@@ -49,11 +51,12 @@ class Pipeline:
             # Currently the pipeline supports both mpileup and lofreq
             cmd_pileup = "{0} mpileup -E -d 0 -A -f {1} {2} | {0} call -mv --ploidy 1 -Ov -o {3}".format(
                 self.commands["bcftools"], self.references["novo_fasta"], bam_file, vcf_file)
+
             cmd_snpeff = "{} ann -noStats -no-downstream -no-upstream -no-intergenic -no-intron -onlyProtein -fi {} " \
                          "SARS-COV2 {} > {}".format(
                 self.commands["snpeff"], self.references["novo_bed"], vcf_file, snpeff_vcf_file)
 
-            self._run_commands([cmd_align, cmd_pileup, cmd_sambam, cmd_snpeff], tmpdir)
+            self._run_commands([cmd_align, cmd_sambam, cmd_pileup, cmd_snpeff], tmpdir)
 
         return snpeff_vcf_file
 
