@@ -106,8 +106,8 @@ class Job(Base):
     def get_fastq1_and_fastq2(self):
         fastqs = self.get_fastq_paths()
         if len(fastqs) > 1:
-            fastq1 = next("_1.fastq" in x for x in fastqs)
-            fastq2 = next("_2.fastq" in x for x in fastqs)
+            fastq1 = next(filter(lambda x: "_1.fastq" in x, fastqs))
+            fastq2 = next(filter(lambda x: "_2.fastq" in x, fastqs))
         else:
             fastq1 = fastqs[0]
             fastq2 = None
