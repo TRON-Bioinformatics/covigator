@@ -1,6 +1,6 @@
 from unittest import TestCase
 from covigator.accessor.ena_accessor import EnaAccessor
-from covigator.model import Database
+from covigator.database import Database
 from covigator.tests import SARS_COV_2_TAXID, HOMO_SAPIENS_TAXID
 
 
