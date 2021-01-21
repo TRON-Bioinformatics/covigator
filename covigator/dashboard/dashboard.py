@@ -8,8 +8,8 @@ import dash_table
 import plotly.express as px
 import pandas as pd
 from dash.dependencies import Output, Input
-from covigator.model import Database, EnaRun
-
+from covigator.model import EnaRun
+from covigator.database import Database
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 

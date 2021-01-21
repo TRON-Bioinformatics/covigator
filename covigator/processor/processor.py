@@ -4,7 +4,8 @@ from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
 from covigator.misc import backoff_retrier
-from covigator.model import Database, EnaRun, JobStatus, Job
+from covigator.model import EnaRun, JobStatus, Job
+from covigator.database import Database, session_scope
 from logzero import logger
 from dask.distributed import Client
 import os
@@ -65,8 +66,7 @@ class Processor:
 
     @staticmethod
     def download(run_accession: str) -> str:
-        session = Database().get_database_session()
-        try:
+        with session_scope() as session:
             job = Processor.find_job_by_accession_and_status(
                 run_accession=run_accession, session=session, status=JobStatus.QUEUED)
             # NOTE: eventually we may want to generalize this to support some other jobs than ENA runs
@@ -84,44 +84,31 @@ class Processor:
                     job.status = JobStatus.FAILED_DOWNLOAD
                     job.failed_at = datetime.now()
                     job.error_message = str(e)
-            session.commit()
-        except Exception as e:
-            logger.exception(e)
-            session.rollback()
-        finally:
-            session.close()
         return run_accession
 
     @staticmethod
     def run_pipeline(run_accession: str) -> str:
-        session = Database().get_database_session()
-        try:
+        with session_scope() as session:
             job = Processor.find_job_by_accession_and_status(
                 run_accession=run_accession, session=session, status=JobStatus.DOWNLOADED)
             if job is not None:
                 try:
-                    # TODO: get the path to the VCF coming out of the pipeline
-                    Pipeline(fastqs=job.get_fastq_paths()).run()
+                    fastq1, fastq2 = job.get_fastq1_and_fastq2()
+                    vcf = Pipeline().run(fastq1=fastq1, fastq2=fastq2)
                     logger.info("Processed {}".format(job.run_accession))
                     job.status = JobStatus.PROCESSED
                     job.analysed_at = datetime.now()
+                    job.vcf_path = vcf
                 except Exception as e:  # TODO: do we want a less wide exception capture?
                     logger.info("Analysis error {} {}".format(run_accession, str(e)))
                     job.status = JobStatus.FAILED_PROCESSING
                     job.failed_at = datetime.now()
                     job.error_message = str(e)
-            session.commit()
-        except Exception as e:
-            logger.exception(e)
-            session.rollback()
-        finally:
-            session.close()
         return run_accession
 
     @staticmethod
     def delete(run_accession: str):
-        session = Database().get_database_session()
-        try:
+        with session_scope() as session:
             job = Processor.find_job_by_accession_and_status(
                 run_accession=run_accession, session=session, status=JobStatus.PROCESSED)
             if job is not None:
@@ -134,18 +121,11 @@ class Processor:
                 except Exception as e:  # TODO: do we want a less wide exception capture?
                     logger.error("File deletion error {} {}".format(run_accession, str(e)))
                     # we don't do anything as cleaning up is not really a must in the pipeline
-            session.commit()
-        except Exception as e:
-            logger.exception(e)
-            session.rollback()
-        finally:
-            session.close()
         return run_accession
 
     @staticmethod
     def load(run_accession: str):
-        session = Database().get_database_session()
-        try:
+        with session_scope() as session:
             job = Processor.find_job_by_accession_and_status(
                 run_accession=run_accession, session=session, status=JobStatus.PROCESSED)
             if job is not None:
@@ -159,12 +139,6 @@ class Processor:
                     job.status = JobStatus.FAILED_LOAD
                     job.failed_at = datetime.now()
                     job.error_message = str(e)
-            session.commit()
-        except Exception as e:
-            logger.exception(e)
-            session.rollback()
-        finally:
-            session.close()
         return run_accession
 
     @staticmethod
