@@ -39,10 +39,12 @@ class Pipeline:
             snpeff_vcf_file = os.path.join(fq_path, "snpeff.vcf")
 
             if fq2:
-                cmd_align = "{} mem {} {} {} > {}".format(cmds["bwa"], bwa_ref, fq1, fq2, sam_file)
+                #cmd_align = "{} mem {} {} {} > {}".format(cmds["bwa"], bwa_ref, fq1, fq2, sam_file)
+                cmd_align = "{} mem {} {} {} | {} sort -o {} -".format(cmds["bwa"], bwa_ref, fq1, fq2, cmds["samtools"], bam_file)
             else:
-                cmd_align = "{} mem {} {} > {}".format(cmds["bwa"], bwa_ref, fq1, sam_file)
-            cmd_sambam = "{} sort -O bam -o {} {}".format(cmds["samtools"], bam_file, sam_file)
+                #cmd_align = "{} mem {} {} > {}".format(cmds["bwa"], bwa_ref, fq1, sam_file)
+                cmd_align = "{} mem {} {} | {} sort -o {} -".format(cmds["bwa"], bwa_ref, fq1, cmds["samtools"], bam_file)
+            #cmd_sambam = "{} sort -O bam -o {} {}".format(cmds["samtools"], bam_file, sam_file)
 
             # Currently the pipeline supports both mpileup and lofreq
             cmd_pileup = "{0} mpileup -E -d 0 -A -f {1} {2} | {0} call -mv --ploidy 1 -Ov -o {3}".format(cmds["bcftools"], refs["novo_fasta"], bam_file, vcf_file)
@@ -51,8 +53,8 @@ class Pipeline:
 
             for cmd in [
                     cmd_align,
-                    cmd_sambam,
- #                   cmd_lofreq,
+                    #cmd_sambam,
+                    #cmd_lofreq,
                     cmd_pileup,
                     cmd_snpeff
             ]:
