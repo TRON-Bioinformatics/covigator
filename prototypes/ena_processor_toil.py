@@ -1,6 +1,7 @@
 from sqlalchemy import and_
 
-from covigator.model import Database, EnaRun, JobStatus
+from covigator.model import EnaRun, JobStatus
+from covigator.database import Database
 from logzero import logger
 from toil.common import Toil
 from toil.job import Job

@@ -1,6 +1,7 @@
 import requests
 from covigator.misc import backoff_retrier
-from covigator.model import Database, EnaRun, Job
+from covigator.model import EnaRun, Job
+from covigator.database import Database
 from logzero import logger
 
 NUMBER_RETRIES = 5

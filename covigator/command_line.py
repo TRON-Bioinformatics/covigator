@@ -1,11 +1,12 @@
 from argparse import ArgumentParser
 
 from dask.distributed import Client
-
 import covigator
 from covigator.accessor.ena_accessor import EnaAccessor
-from covigator.model import Database
+from covigator.database import Database
+from covigator.processor.pipeline import Pipeline
 from covigator.processor.processor import Processor
+from logzero import logger
 
 
 def ena_accessor():
@@ -43,5 +44,18 @@ def processor():
 
     args = parser.parse_args()
 
-    client = Client(n_workers=args.num_cpus, threads_per_worker=1)
+    client = Client(n_workers=int(args.num_cpus), threads_per_worker=1)
     Processor(database=Database(), dask_client=client).process()
+
+
+def pipeline():
+    parser = ArgumentParser(description="Run Pipeline for testing")
+    parser.add_argument("--fastq1", dest="fastq1",
+                        help="First FASTQ to process. In case of single end sequencing this will be the only FASTQ,"
+                             "in the case of paired end sequencing this will be the first from the pair", required=True)
+    parser.add_argument("--fastq2", dest="fastq2",
+                        help="Second FASTQ to process for paired end sequencing, otherwise leave empty")
+
+    args = parser.parse_args()
+    vcf_file = Pipeline().run(fastq1=args.fastq1, fastq2=args.fastq2)
+    logger.info("Output VCF file: {}".format(vcf_file))
