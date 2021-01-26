@@ -21,8 +21,7 @@ class Pipeline:
 
     # TODO: automate the download of references and configure location through environment variable
     references = {
-        "novo_fasta": "/scratch/info/projects/SARS-CoV-2/index/MN908947.3.fa",
-        "novo_bed": "/scratch/info/projects/SARS-CoV-2/Novoalign/novoindex/MN908947.3_gp02_Sgene.bed"
+        "novo_fasta": "/scratch/info/projects/SARS-CoV-2/index/MN908947.3.fa"
     }
 
     def run(self, fastq1: str, fastq2: str = None):
@@ -49,9 +48,8 @@ class Pipeline:
             cmd_pileup = "{0} mpileup -E -d 0 -A -f {1} {2} | {0} call -mv --ploidy 1 -Ov -o {3}".format(
                 self.commands["bcftools"], self.references["novo_fasta"], bam_file, vcf_file)
 
-            cmd_snpeff = "{} ann -noStats -no-downstream -no-upstream -no-intergenic -no-intron -onlyProtein -fi {} " \
-                         "SARS-COV2 {} > {}".format(
-                self.commands["snpeff"], self.references["novo_bed"], vcf_file, snpeff_vcf_file)
+            cmd_snpeff = "{} ann -noStats -no-downstream -no-upstream -no-intergenic -no-intron -onlyProtein " \
+                         "SARS-COV2 {} > {}".format(self.commands["snpeff"], vcf_file, snpeff_vcf_file)
 
             self._run_commands([cmd_align, cmd_pileup, cmd_snpeff], tmpdir)
 
