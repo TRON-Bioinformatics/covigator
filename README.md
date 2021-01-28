@@ -118,7 +118,7 @@ service of any external data provider.
 
 The pipeline runs BWA mem, samtools pileup and SnpEff.
 
-### Configuration
+##### Configuration
 
 - `COVIGATOR_BIN_SAMTOOLS`: the path to the samtools binary
 - `COVIGATOR_BIN_BWA`: the path to the bwa binary
@@ -127,9 +127,8 @@ The pipeline runs BWA mem, samtools pileup and SnpEff.
 - `COVIGATOR_BIN_BGZIP`: the path to the bgzip binary
 - `COVIGATOR_BIN_TABIX`: the path to the tabix binary
 - `COVIGATOR_REF_FASTA`: the path to the reference fasta
-- `COVIGATOR_REF_BED`: the path to the reference bed file (optional)
 
-### Usage
+##### Usage
 
 For paired end data:
 ```
@@ -149,8 +148,10 @@ Deletes the FASTQ files and eventually intermediate files left behind by the pip
 
 #### Loader
 
-**TODO**: teads the outcome of the pipeline (in VCF files?) and loads it into the database.
-
+Reads the outcoming VCF files of the pipeline and load them into the database.
+It stores variants in two tables:
+- Unique variants, the variant as an abstract concept with the annotations not sample specific, (eg: variant effect, non synonymous)
+- Variant observations, specific observation of a variant in a given sample with the sample specific annotations (eg: depth of coverage)
 
 
 ## Developer guide
