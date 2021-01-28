@@ -120,7 +120,12 @@ The pipeline runs BWA mem, samtools pileup and SnpEff.
 
 *Configuration*
 
-TODO
+- `COVIGATOR_BIN_SAMTOOLS`: the path to the samtools binary
+- `COVIGATOR_BIN_BWA`: the path to the bwa binary
+- `COVIGATOR_BIN_BCFTOOLS`: the path to the bcftools binary
+- `COVIGATOR_BIN_SNPEFF`: the path to the snpeff binary
+- `COVIGATOR_REF_FASTA`: the path to the reference fasta
+- `COVIGATOR_REF_BED`: the path to the reference bed file (optional)
 
 *Usage*
 

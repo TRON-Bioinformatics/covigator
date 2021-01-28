@@ -4,25 +4,31 @@ import subprocess
 import tempfile
 from logzero import logger
 
+from covigator import ENV_COVIGATOR_BIN_SAMTOOLS, ENV_COVIGATOR_BIN_BWA, ENV_COVIGATOR_BIN_BCFTOOLS, \
+    ENV_COVIGATOR_BIN_SNPEFF, ENV_COVIGATOR_REF_FASTA, ENV_COVIGATOR_REF_BED
 
 class CovigatorPipelineError(Exception):
     pass
 
 
 class Pipeline:
-
+    
     # TODO: make this configurable through environment variables
+
     commands = {
-        "samtools": "/code/samtools/1.9/samtools",
-        "bwa": "/code/bwa/0.7.17/bwa",
-        "bcftools": "/code/bcftools/1.9/bcftools",
-        "snpeff": "java -jar /code/snpEFF_latest_core/snpEff/snpEff.jar",
+        "samtools": os.getenv(ENV_COVIGATOR_BIN_SAMTOOLS, "/code/samtools/1.9/samtools"),
+        "bwa": os.getenv(ENV_COVIGATOR_BIN_BWA, "/code/bwa/0.7.17/bwa"),
+        "bcftools": os.getenv(ENV_COVIGATOR_BIN_BCFTOOLS, "/code/bcftools/1.9/bcftools"),
+        "snpeff": os.getenv(ENV_COVIGATOR_BIN_SNPEFF, "/code/snpEFF_latest_core/snpEff/snpEff.jar")
     }
 
     # TODO: automate the download of references and configure location through environment variable
+
     references = {
-        "novo_fasta": "/scratch/info/projects/SARS-CoV-2/index/MN908947.3.fa",
-        "novo_bed": "/scratch/info/projects/SARS-CoV-2/Novoalign/novoindex/MN908947.3_gp02_Sgene.bed"
+        "novo_fasta": os.getenv(ENV_COVIGATOR_REF_FASTA, 
+                                "/scratch/info/projects/SARS-CoV-2/index/MN908947.3.fa"),
+        "novo_bed": os.getenv(ENV_COVIGATOR_REF_BED, 
+                              "/scratch/info/projects/SARS-CoV-2/Novoalign/novoindex/MN908947.3_gp02_Sgene.bed")
     }
 
     def run(self, fastq1: str, fastq2: str = None):
@@ -49,7 +55,7 @@ class Pipeline:
             cmd_pileup = "{0} mpileup -E -d 0 -A -f {1} {2} | {0} call -mv --ploidy 1 -Ov -o {3}".format(
                 self.commands["bcftools"], self.references["novo_fasta"], bam_file, vcf_file)
 
-            cmd_snpeff = "{} ann -noStats -no-downstream -no-upstream -no-intergenic -no-intron -onlyProtein -fi {} " \
+            cmd_snpeff = "{} ann -noStats -no-downstream -no-upstream -no-intergenic -no-intron -onlyProtein "\
                          "SARS-COV2 {} > {}".format(
                 self.commands["snpeff"], self.references["novo_bed"], vcf_file, snpeff_vcf_file)
 
