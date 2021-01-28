@@ -162,9 +162,21 @@ It stores variants in two tables:
 2. Activate your virtual environment `source venv/bin/activate`
 3. Install all dependencies `pip install -r requirements.txt`
 
-### Run unit tests
+### Tests
 
-Unit tests can be run from an IDE like PyCharm or otherwise from the commmand line `python -m unittests discover covigator.tests`.
+There are two type of tests:
+- **Unit tests**. This need to have two attributes: being fast (in the order of milliseconds) and not depending on any external resource. The objective is to run these constantly during development and in a continuous integration environment and to provide a fast feedback loop. These are under `covigator.tests.unit_tests`
+- **Integration tests**. This tests are normally more complex, involve multiple components of the application and/or external resources, and they can be slow. These tests are not intended for automation.  These are under `covigator.tests.integration_tests`
+
+Tests can be run from an IDE like PyCharm or otherwise from the commmand line.
+
+Run all tests as follows:
+`python -m unittests discover covigator.tests.unit_tests`
+
+Run a specific test as follows:
+`python -m unittest covigator.tests.unit_tests.test_vcf_loader`
+
+**NOTE**: unit tests can make use of the database by initialising it as `Database(test=True)` will start an empty in memory SQLite database.
 
 ### Install the Python package
 
