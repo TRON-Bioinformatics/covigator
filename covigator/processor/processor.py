@@ -11,6 +11,7 @@ from dask.distributed import Client
 import os
 from covigator.processor.downloader import Downloader
 from covigator.processor.pipeline import Pipeline
+from covigator.processor.vcf_loader import VcfLoader
 
 NUMBER_RETRIES_DOWNLOADER = 5
 
@@ -130,7 +131,7 @@ class Processor:
                 run_accession=run_accession, session=session, status=JobStatus.PROCESSED)
             if job is not None:
                 try:
-                    # TODO: load VCFs in DB
+                    VcfLoader().load(vcf_file=job.vcf_path, sample=job.run_accession, session=session)
                     logger.info("Loaded {}".format(job.run_accession))
                     job.status = JobStatus.LOADED
                     job.loaded_at = datetime.now()

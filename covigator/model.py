@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import List
 
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, String, Float, Enum, DateTime, Integer
+from sqlalchemy import Column, String, Float, Enum, DateTime, Integer, Boolean
 import enum
 
 SEPARATOR = ";"
@@ -107,3 +107,82 @@ class Job(Base):
             fastq1 = fastqs[0]
             fastq2 = None
         return fastq1, fastq2
+
+
+class Variant(Base):
+
+    __tablename__ = 'variant'
+
+    chromosome = Column(String, primary_key=True)
+    position = Column(Integer, primary_key=True)
+    reference = Column(String, primary_key=True)
+    alternate = Column(String, primary_key=True)
+    overlaps_multiple_genes = Column(Boolean, default=False)
+    """
+    ##INFO=<ID=ANN,Number=.,Type=String,Description="Functional annotations: '
+    Allele |                    C 
+    Annotation |                missense_variant
+    Annotation_Impact |         MODERATE 
+    Gene_Name |                 orf1ab 
+    Gene_ID |                   gene-GU280_gp01 
+    Feature_Type |              transcript 
+    Feature_ID |                TRANSCRIPT_gene-GU280_gp01 
+    Transcript_BioType |        protein_coding 
+    Rank |                      1/1 
+    HGVS.c |                    c.33A>C 
+    HGVS.p |                    p.Lys11Asn 
+    cDNA.pos / cDNA.length |    33/21290 
+    CDS.pos / CDS.length |      33/21290 
+    AA.pos / AA.length |        11/7095 
+    Distance | 
+    ERRORS / WARNINGS / INFO'   
+    """
+    annotation = Column(String)
+    annotation_impact = Column(String)
+    gene_name = Column(String)
+    gene_id = Column(String)
+    biotype = Column(String)
+    hgvs_c = Column(String)
+    hgvs_p = Column(String)
+    cdna_pos_length = Column(String)
+    cds_pos_length = Column(String)
+    aa_pos_length = Column(String)
+
+
+class VariantObservation(Base):
+
+    __tablename__ = 'variant_observation'
+
+    sample = Column(String, primary_key=True)
+    chromosome = Column(String, primary_key=True)
+    position = Column(Integer, primary_key=True)
+    reference = Column(String, primary_key=True)
+    alternate = Column(String, primary_key=True)
+    quality = Column(Float)
+    filter = Column(String)
+    """
+    ##INFO=<ID=INDEL,Number=0,Type=Flag,Description="Indicates that the variant is an INDEL.">
+    ##INFO=<ID=IDV,Number=1,Type=Integer,Description="Maximum number of reads supporting an indel">
+    ##INFO=<ID=IMF,Number=1,Type=Float,Description="Maximum fraction of reads supporting an indel">
+    ##INFO=<ID=DP,Number=1,Type=Integer,Description="Raw read depth">
+    ##INFO=<ID=VDB,Number=1,Type=Float,Description="Variant Distance Bias for filtering splice-site artefacts in RNA-seq data (bigger is better)",Version="3">
+    ##INFO=<ID=RPB,Number=1,Type=Float,Description="Mann-Whitney U test of Read Position Bias (bigger is better)">
+    ##INFO=<ID=MQB,Number=1,Type=Float,Description="Mann-Whitney U test of Mapping Quality Bias (bigger is better)">
+    ##INFO=<ID=BQB,Number=1,Type=Float,Description="Mann-Whitney U test of Base Quality Bias (bigger is better)">
+    ##INFO=<ID=MQSB,Number=1,Type=Float,Description="Mann-Whitney U test of Mapping Quality vs Strand Bias (bigger is better)">
+    ##INFO=<ID=SGB,Number=1,Type=Float,Description="Segregation based metric.">
+    ##INFO=<ID=MQ0F,Number=1,Type=Float,Description="Fraction of MQ0 reads (smaller is better)">
+    ##INFO=<ID=ICB,Number=1,Type=Float,Description="Inbreeding Coefficient Binomial test (bigger is better)">
+    ##INFO=<ID=HOB,Number=1,Type=Float,Description="Bias in the number of HOMs number (smaller is better)">
+    ##INFO=<ID=AC,Number=A,Type=Integer,Description="Allele count in genotypes for each ALT allele, in the same order as listed">
+    ##INFO=<ID=AN,Number=1,Type=Integer,Description="Total number of alleles in called genotypes">
+    ##INFO=<ID=DP4,Number=4,Type=Integer,Description="Number of high-quality ref-forward , ref-reverse, alt-forward and alt-reverse bases">
+    ##INFO=<ID=MQ,Number=1,Type=Integer,Description="Average mapping quality">
+    """
+    dp = Column(Integer)
+    dp4_ref_forward = Column(Integer)
+    dp4_ref_reverse = Column(Integer)
+    dp4_alt_forward = Column(Integer)
+    dp4_alt_reverse = Column(Integer)
+    mapping_quality = Column(Integer)
+    mapping_quality_zero_fraction = Column(Float)

@@ -13,8 +13,6 @@ class CovigatorPipelineError(Exception):
 
 
 class Pipeline:
-    
-    # TODO: make this configurable through environment variables
 
     commands = {
         "samtools": os.getenv(ENV_COVIGATOR_BIN_SAMTOOLS, "/code/samtools/1.9/samtools"),
@@ -27,18 +25,13 @@ class Pipeline:
 
     # TODO: automate the download of references and configure location through environment variable
 
-    references = {
-        "novo_fasta": os.getenv(ENV_COVIGATOR_REF_FASTA, 
-                                "/scratch/info/projects/SARS-CoV-2/index/MN908947.3.fa"),
-        "novo_bed": os.getenv(ENV_COVIGATOR_REF_BED, 
-                              "/scratch/info/projects/SARS-CoV-2/Novoalign/novoindex/MN908947.3_gp02_Sgene.bed")
-    }
+    reference_genome = os.getenv(ENV_COVIGATOR_REF_FASTA, "/scratch/info/projects/SARS-CoV-2/index/MN908947.3.fa")
 
     def run(self, fastq1: str, fastq2: str = None):
 
         logger.info("Processing {} and {}".format(fastq1, fastq2))
         fq_path = Path(fastq1).parent
-        bwa_ref = self.references["novo_fasta"]
+        bwa_ref = self.reference_genome
         
         # Creating a temporary folder for the intermediate results
         # and copy the final VCF files to FASTQ folder
@@ -58,11 +51,11 @@ class Pipeline:
                     self.commands["bwa"], bwa_ref, fastq1, self.commands["samtools"], bam_file)
 
             cmd_pileup = "{0} mpileup -E -d 0 -A -f {1} {2} | {0} call -mv --ploidy 1 -Ov -o {3}".format(
-                self.commands["bcftools"], self.references["novo_fasta"], bam_file, vcf_file)
+                self.commands["bcftools"], bwa_ref, bam_file, vcf_file)
 
             cmd_snpeff = "java -jar {0} ann -noStats -no-downstream -no-upstream -no-intergenic -no-intron -onlyProtein "\
                          "SARS-COV2 {1} > {2} && {3} -c {2} > {4} && {5} -p vcf {4} > {6}".format(
-                             self.commands["snpeff"], vcf_file, snpeff_vcf_file, self.commands["bgzip"], 
+                             self.commands["snpeff"], vcf_file, snpeff_vcf_file, self.commands["bgzip"],
                              snpeff_vcf_file_gz, self.commands["tabix"], snpeff_vcf_file_gz_tbi)
 
             self._run_commands([cmd_align, cmd_pileup, cmd_snpeff], tmpdir)

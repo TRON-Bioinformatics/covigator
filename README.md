@@ -118,7 +118,7 @@ service of any external data provider.
 
 The pipeline runs BWA mem, samtools pileup and SnpEff.
 
-### Configuration
+##### Configuration
 
 - `COVIGATOR_BIN_SAMTOOLS`: the path to the samtools binary
 - `COVIGATOR_BIN_BWA`: the path to the bwa binary
@@ -127,9 +127,8 @@ The pipeline runs BWA mem, samtools pileup and SnpEff.
 - `COVIGATOR_BIN_BGZIP`: the path to the bgzip binary
 - `COVIGATOR_BIN_TABIX`: the path to the tabix binary
 - `COVIGATOR_REF_FASTA`: the path to the reference fasta
-- `COVIGATOR_REF_BED`: the path to the reference bed file (optional)
 
-### Usage
+##### Usage
 
 For paired end data:
 ```
@@ -149,8 +148,10 @@ Deletes the FASTQ files and eventually intermediate files left behind by the pip
 
 #### Loader
 
-**TODO**: teads the outcome of the pipeline (in VCF files?) and loads it into the database.
-
+Reads the outcoming VCF files of the pipeline and load them into the database.
+It stores variants in two tables:
+- Unique variants, the variant as an abstract concept with the annotations not sample specific, (eg: variant effect, non synonymous)
+- Variant observations, specific observation of a variant in a given sample with the sample specific annotations (eg: depth of coverage)
 
 
 ## Developer guide
@@ -161,9 +162,21 @@ Deletes the FASTQ files and eventually intermediate files left behind by the pip
 2. Activate your virtual environment `source venv/bin/activate`
 3. Install all dependencies `pip install -r requirements.txt`
 
-### Run unit tests
+### Tests
 
-Unit tests can be run from an IDE like PyCharm or otherwise from the commmand line `python -m unittests discover covigator.tests`.
+There are two type of tests:
+- **Unit tests**. This need to have two attributes: being fast (in the order of milliseconds) and not depending on any external resource. The objective is to run these constantly during development and in a continuous integration environment and to provide a fast feedback loop. These are under `covigator.tests.unit_tests`
+- **Integration tests**. This tests are normally more complex, involve multiple components of the application and/or external resources, and they can be slow. These tests are not intended for automation.  These are under `covigator.tests.integration_tests`
+
+Tests can be run from an IDE like PyCharm or otherwise from the commmand line.
+
+Run all tests as follows:
+`python -m unittests discover covigator.tests.unit_tests`
+
+Run a specific test as follows:
+`python -m unittest covigator.tests.unit_tests.test_vcf_loader`
+
+**NOTE**: unit tests can make use of the database by initialising it as `Database(test=True)` will start an empty in memory SQLite database.
 
 ### Install the Python package
 
