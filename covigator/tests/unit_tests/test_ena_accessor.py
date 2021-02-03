@@ -1,6 +1,8 @@
+from datetime import date
 from unittest import TestCase
 from covigator.accessor.ena_accessor import EnaAccessor
 from covigator.database import Database
+from covigator.model import EnaRun
 from covigator.tests import SARS_COV_2_TAXID, HOMO_SAPIENS_TAXID
 
 
@@ -220,3 +222,218 @@ class EnaAccessorTests(TestCase):
         ena_accessor.access()
         self.assertEqual(ena_accessor.included, 1)
         self.assertEqual(ena_accessor.excluded_existing, 2)
+
+    def test_country_parsing(self):
+        database = Database(test=True)
+        ena_accessor = FakeEnaAccessor(results=[
+            {"run_accession": "ERR4080483",
+             "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
+             "instrument_platform": "ILLUMINA",
+             "library_strategy": "WGS",
+             "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/003/ERR4080483/ERR4080483_1.fastq.gz",
+             "fastq_md5": "a91a9dfa2f7008e13a7ce9767aa9aaf3",
+             "host_tax_id": "9606",
+             "country": "england"},
+            {"run_accession": "ERR4080484",
+             "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
+             "instrument_platform": "ILLUMINA",
+             "library_strategy": "WGS",
+             "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/003/ERR4080483/ERR4080483_1.fastq.gz",
+             "fastq_md5": "c57fef34933cbbec2e9e08867f3c664c",
+             "host_tax_id": "9606",
+             "country": "GermaN"},
+            {"run_accession": "ERR4080485",
+             "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
+             "instrument_platform": "ILLUMINA",
+             "library_strategy": "WGS",
+             "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/005/ERR4080485/ERR4080485_1.fastq.gz",
+             "fastq_md5": "4de269d2b5831e1c5175586af694d21e",
+             "host_tax_id": "9606",
+             "country": "Morocco:Meknez"},
+            {"run_accession": "ERR4080486",
+             "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
+             "instrument_platform": "ILLUMINA",
+             "library_strategy": "WGS",
+             "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/005/ERR4080485/ERR4080485_1.fastq.gz",
+             "fastq_md5": "4de269d2b5831e1c5175586af694d21e",
+             "host_tax_id": "9606"},
+            {"run_accession": "ERR4080487",
+             "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
+             "instrument_platform": "ILLUMINA",
+             "library_strategy": "WGS",
+             "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/005/ERR4080485/ERR4080485_1.fastq.gz",
+             "fastq_md5": "4de269d2b5831e1c5175586af694d21e",
+             "host_tax_id": "9606",
+             "country": ""},
+            {"run_accession": "ERR4080488",
+             "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
+             "instrument_platform": "ILLUMINA",
+             "library_strategy": "WGS",
+             "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/005/ERR4080485/ERR4080485_1.fastq.gz",
+             "fastq_md5": "4de269d2b5831e1c5175586af694d21e",
+             "host_tax_id": "9606",
+             "country": "Jupiter"}
+        ], database=database)
+        ena_accessor.access()
+        self.assertEqual(ena_accessor.included, 6)
+        self.assertEqual(ena_accessor.excluded, 0)
+        session = database.get_database_session()
+        run = session.query(EnaRun).filter(EnaRun.run_accession == "ERR4080483").first()
+        self.assertEqual(run.country_raw, "england")
+        self.assertEqual(run.country, "United Kingdom")
+        self.assertEqual(run.country_alpha_2, "GB")
+        self.assertEqual(run.country_alpha_3, "GBR")
+        self.assertEqual(run.continent_alpha_2, "EU")
+        self.assertEqual(run.continent, "Europe")
+        run = session.query(EnaRun).filter(EnaRun.run_accession == "ERR4080484").first()
+        self.assertEqual(run.country_raw, "GermaN")
+        self.assertEqual(run.country, "Germany")
+        self.assertEqual(run.country_alpha_2, "DE")
+        self.assertEqual(run.country_alpha_3, "DEU")
+        self.assertEqual(run.continent_alpha_2, "EU")
+        self.assertEqual(run.continent, "Europe")
+        run = session.query(EnaRun).filter(EnaRun.run_accession == "ERR4080485").first()
+        self.assertEqual(run.country_raw, "Morocco:Meknez")
+        self.assertEqual(run.country, "Morocco")
+        self.assertEqual(run.country_alpha_2, "MA")
+        self.assertEqual(run.country_alpha_3, "MAR")
+        self.assertEqual(run.continent_alpha_2, "AF")
+        self.assertEqual(run.continent, "Africa")
+        run = session.query(EnaRun).filter(EnaRun.run_accession == "ERR4080486").first()
+        self.assertEqual(run.country_raw, None)
+        self.assertEqual(run.country, "Not available")
+        self.assertEqual(run.country_alpha_2, "None")
+        self.assertEqual(run.country_alpha_3, "None")
+        self.assertEqual(run.continent_alpha_2, "None")
+        self.assertEqual(run.continent, "None")
+        run = session.query(EnaRun).filter(EnaRun.run_accession == "ERR4080487").first()
+        self.assertEqual(run.country_raw, None)
+        self.assertEqual(run.country, "Not available")
+        self.assertEqual(run.country_alpha_2, "None")
+        self.assertEqual(run.country_alpha_3, "None")
+        self.assertEqual(run.continent_alpha_2, "None")
+        self.assertEqual(run.continent, "None")
+        run = session.query(EnaRun).filter(EnaRun.run_accession == "ERR4080488").first()
+        self.assertEqual(run.country_raw, "Jupiter")
+        self.assertEqual(run.country, "Not available")
+        self.assertEqual(run.country_alpha_2, "None")
+        self.assertEqual(run.country_alpha_3, "None")
+        self.assertEqual(run.continent_alpha_2, "None")
+        self.assertEqual(run.continent, "None")
+
+    def test_dates_parsing(self):
+        database = Database(test=True)
+        ena_accessor = FakeEnaAccessor(results=[
+            {"run_accession": "ERR4080483",
+             "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
+             "instrument_platform": "ILLUMINA",
+             "library_strategy": "WGS",
+             "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/003/ERR4080483/ERR4080483_1.fastq.gz",
+             "fastq_md5": "a91a9dfa2f7008e13a7ce9767aa9aaf3",
+             "host_tax_id": "9606",
+             "first_created": "2020-01-01",
+             "collection_date": "2019-12-31",
+             },
+            {"run_accession": "ERR4080484",
+             "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
+             "instrument_platform": "ILLUMINA",
+             "library_strategy": "WGS",
+             "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/003/ERR4080483/ERR4080483_1.fastq.gz",
+             "fastq_md5": "c57fef34933cbbec2e9e08867f3c664c",
+             "host_tax_id": "9606",
+             "first_created": "2020-01-01 14:50",
+             "collection_date": "2019-12-31 12:12:12"},
+            {"run_accession": "ERR4080485",
+             "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
+             "instrument_platform": "ILLUMINA",
+             "library_strategy": "WGS",
+             "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/005/ERR4080485/ERR4080485_1.fastq.gz",
+             "fastq_md5": "4de269d2b5831e1c5175586af694d21e",
+             "host_tax_id": "9606",
+             "first_created": "blah",
+             "collection_date": "blah"}
+        ], database=database)
+        ena_accessor.access()
+        self.assertEqual(ena_accessor.included, 3)
+        self.assertEqual(ena_accessor.excluded, 0)
+        session = database.get_database_session()
+
+        run = session.query(EnaRun).filter(EnaRun.run_accession == "ERR4080483").first()
+        self.assertEqual(run.collection_date, date.fromisoformat("2019-12-31"))
+        self.assertEqual(run.first_created, date.fromisoformat("2020-01-01"))
+
+        run = session.query(EnaRun).filter(EnaRun.run_accession == "ERR4080484").first()
+        self.assertIsNone(run.collection_date)
+        self.assertIsNone(run.first_created)
+
+        run = session.query(EnaRun).filter(EnaRun.run_accession == "ERR4080485").first()
+        self.assertIsNone(run.collection_date)
+        self.assertIsNone(run.first_created)
+
+    def test_numeric_values(self):
+        database = Database(test=True)
+        ena_accessor = FakeEnaAccessor(results=[
+            {"run_accession": "ERR4080483",
+             "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
+             "instrument_platform": "ILLUMINA",
+             "library_strategy": "WGS",
+             "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/003/ERR4080483/ERR4080483_1.fastq.gz",
+             "fastq_md5": "a91a9dfa2f7008e13a7ce9767aa9aaf3",
+             "host_tax_id": "9606",
+             "lat": "",
+             "lon": "",
+             "read_count": "",
+             "base_count": "",
+             "nominal_length": "",
+             },
+            {"run_accession": "ERR4080484",
+             "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
+             "instrument_platform": "ILLUMINA",
+             "library_strategy": "WGS",
+             "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/003/ERR4080483/ERR4080483_1.fastq.gz",
+             "fastq_md5": "c57fef34933cbbec2e9e08867f3c664c",
+             "host_tax_id": "9606",
+             "lat": "hey",
+             "lon": "hey",
+             "read_count": "hey",
+             "base_count": "hey",
+             "nominal_length": "hey"},
+            {"run_accession": "ERR4080485",
+             "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
+             "instrument_platform": "ILLUMINA",
+             "library_strategy": "WGS",
+             "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/005/ERR4080485/ERR4080485_1.fastq.gz",
+             "fastq_md5": "4de269d2b5831e1c5175586af694d21e",
+             "host_tax_id": "9606",
+             "lat": "1.1",
+             "lon": "1.1",
+             "read_count": "1",
+             "base_count": "1",
+             "nominal_length": "1"
+             }
+        ], database=database)
+        ena_accessor.access()
+        self.assertEqual(ena_accessor.included, 3)
+        self.assertEqual(ena_accessor.excluded, 0)
+        session = database.get_database_session()
+
+        run = session.query(EnaRun).filter(EnaRun.run_accession == "ERR4080483").first()
+        self.assertIsNone(run.lat)
+        self.assertIsNone(run.lon)
+        self.assertIsNone(run.nominal_length)
+        self.assertIsNone(run.read_count)
+        self.assertIsNone(run.base_count)
+
+        run = session.query(EnaRun).filter(EnaRun.run_accession == "ERR4080484").first()
+        self.assertIsNone(run.lat)
+        self.assertIsNone(run.lon)
+        self.assertIsNone(run.nominal_length)
+        self.assertIsNone(run.read_count)
+        self.assertIsNone(run.base_count)
+
+        run = session.query(EnaRun).filter(EnaRun.run_accession == "ERR4080485").first()
+        self.assertEqual(run.lat, 1.1)
+        self.assertEqual(run.lon, 1.1)
+        self.assertEqual(run.nominal_length, 1)
+        self.assertEqual(run.read_count, 1)
+        self.assertEqual(run.base_count, 1)
