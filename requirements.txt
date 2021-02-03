@@ -6,3 +6,5 @@ logzero==1.6.3
 psycopg2-binary==2.8.6
 dash==1.18.1
 cyvcf2==0.30.4
+pycountry==20.7.3
+pycountry-convert==0.7.2

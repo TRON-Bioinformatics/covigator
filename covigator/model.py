@@ -2,7 +2,8 @@ from datetime import datetime
 from typing import List
 
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, String, Float, Enum, DateTime, Integer, Boolean
+from sqlalchemy import Column, String, Float, Enum, DateTime, Integer, Boolean, Date, ForeignKey, UniqueConstraint, \
+    ForeignKeyConstraint, BigInteger
 import enum
 
 SEPARATOR = ";"
@@ -33,18 +34,18 @@ class EnaRun(Base):
     study_accession = Column(String)
     experiment_accession = Column(String)
     # TODO: store these as dates
-    first_created = Column(String)
-    collection_date = Column(String)
+    first_created = Column(Date)
+    collection_date = Column(Date)
     instrument_platform = Column(String)
     instrument_model = Column(String)
     library_name = Column(String)
-    nominal_length = Column(String)
+    nominal_length = Column(Integer)
     library_layout = Column(String)
     library_strategy = Column(String)
     library_source = Column(String)
     library_selection = Column(String)
-    read_count = Column(String)
-    base_count = Column(String)
+    read_count = Column(BigInteger)
+    base_count = Column(BigInteger)
     sample_collection = Column(String)
     sequencing_method = Column(String)
     center_name = Column(String)
@@ -65,7 +66,12 @@ class EnaRun(Base):
     # geographical data
     lat = Column(Float)
     lon = Column(Float)
-    country = Column(String)                                    # 'Denmark',
+    country_raw = Column(String)                                    # 'Denmark',
+    country = Column(String)
+    country_alpha_2 = Column(String)
+    country_alpha_3 = Column(String)
+    continent = Column(String)
+    continent_alpha_2 = Column(String)
 
     def get_fastqs_ftp(self) -> List:
         return self.fastq_ftp.split(SEPARATOR) if self.fastq_ftp is not None else []
@@ -78,7 +84,7 @@ class Job(Base):
 
     __tablename__ = 'job'
 
-    run_accession = Column(String, primary_key=True)
+    run_accession = Column(ForeignKey("ena_run.run_accession"), primary_key=True)
 
     # job status
     status = Column(Enum(JobStatus), default=JobStatus.PENDING)
@@ -137,9 +143,9 @@ class Variant(Base):
     Distance | 
     ERRORS / WARNINGS / INFO'   
     """
-    annotation = Column(String)
-    annotation_impact = Column(String)
-    gene_name = Column(String)
+    annotation = Column(String, index=True)
+    annotation_impact = Column(String, index=True)
+    gene_name = Column(String, index=True)
     gene_id = Column(String)
     biotype = Column(String)
     hgvs_c = Column(String)
@@ -153,7 +159,7 @@ class VariantObservation(Base):
 
     __tablename__ = 'variant_observation'
 
-    sample = Column(String, primary_key=True)
+    sample = Column(ForeignKey("ena_run.run_accession"), primary_key=True)
     chromosome = Column(String, primary_key=True)
     position = Column(Integer, primary_key=True)
     reference = Column(String, primary_key=True)
@@ -186,3 +192,7 @@ class VariantObservation(Base):
     dp4_alt_reverse = Column(Integer)
     mapping_quality = Column(Integer)
     mapping_quality_zero_fraction = Column(Float)
+    ForeignKeyConstraint(
+        [chromosome, position, reference, alternate],
+        [Variant.chromosome, Variant.position, Variant.reference, Variant.alternate])
+

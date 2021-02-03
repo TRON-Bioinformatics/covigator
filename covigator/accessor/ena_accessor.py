@@ -1,3 +1,7 @@
+from datetime import date
+
+import pycountry
+import pycountry_convert
 import requests
 from covigator.misc import backoff_retrier
 from covigator.model import EnaRun, Job
@@ -121,6 +125,7 @@ class EnaAccessor:
                 included_jobs.append(Job(run_accession=ena_run.run_accession))
             if len(included_runs) > 0:
                 session.add_all(included_runs)
+                session.commit()    # we need two commits to maintain integrity of FKs
                 session.add_all(included_jobs)
                 session.commit()
                 logger.info("Added {} new runs".format(len(included_runs)))
@@ -130,20 +135,52 @@ class EnaAccessor:
         finally:
             session.close()
 
+    def _parse_country(self, ena_run):
+        ena_run.country_raw = ena_run.country
+        if ena_run.country_raw is not None and ena_run.country_raw.strip() == "":
+            ena_run.country_raw = None
+        try:
+            match = pycountry.countries.search_fuzzy(ena_run.country_raw.split(":")[0])[0]
+            ena_run.country = match.name
+            ena_run.country_alpha_2 = match.alpha_2
+            ena_run.country_alpha_3 = match.alpha_3
+            ena_run.continent_alpha_2 = pycountry_convert.country_alpha2_to_continent_code(ena_run.country_alpha_2)
+            ena_run.continent = pycountry_convert.convert_continent_code_to_continent_name(ena_run.continent_alpha_2)
+        except (LookupError, AttributeError):
+            #logger.error("Error parsing country {}. Filling with NAs".format(ena_run.country))
+            ena_run.country = "Not available"
+            ena_run.country_alpha_2 = "None"    # don't use NA as that is the id of Namibia
+            ena_run.country_alpha_3 = "None"
+            ena_run.continent_alpha_2 = "None"
+            ena_run.continent = "None"
+
+    def _parse_dates(self, ena_run):
+        ena_run.collection_date = self._parse_abstract(ena_run.collection_date, date.fromisoformat)
+        ena_run.first_created = self._parse_abstract(ena_run.first_created, date.fromisoformat)
+
     def _parse_ena_run(self, run):
         ena_run = EnaRun(**run)
-        try:
-            ena_run.lat = float(ena_run.lat)
-        except (ValueError, TypeError):
-            ena_run.lat = None
-        try:
-            ena_run.lon = float(ena_run.lon)
-        except (ValueError, TypeError):
-            ena_run.lon = None
+        self._parse_country(ena_run)
+        self._parse_dates(ena_run)
+        self._parse_numeric_fields(ena_run)
         fastqs = ena_run.get_fastqs_ftp()
         # annotates with the number of FASTQ files, this is useful as we hold the FASTQs in a single string
         ena_run.num_fastqs = 0 if fastqs is None or fastqs == [""] else len(fastqs)
         return ena_run
+
+    def _parse_numeric_fields(self, ena_run):
+        ena_run.nominal_length = self._parse_abstract(ena_run.nominal_length, int)
+        ena_run.read_count = self._parse_abstract(ena_run.read_count, int)
+        ena_run.base_count = self._parse_abstract(ena_run.base_count, int)
+        ena_run.lat = self._parse_abstract(ena_run.lat, float)
+        ena_run.lon = self._parse_abstract(ena_run.lon, float)
+
+    def _parse_abstract(self, value, type):
+        try:
+            value = type(value)
+        except (ValueError, TypeError):
+            value = None
+        return value
 
     def _complies_with_inclusion_criteria(self, ena_run: EnaRun):
         included = True
