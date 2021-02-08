@@ -39,9 +39,7 @@ class Pipeline:
             logger.info("Temporary folder: {}".format(tmpdir))
             bam_file = os.path.join(tmpdir, "aligned.out.bam")
             vcf_file = os.path.join(tmpdir, "pileup.vcf")
-            snpeff_vcf_file = os.path.join(tmpdir, "snpeff.vcf")
-            snpeff_vcf_file_gz = os.path.join(tmpdir, "snpeff.vcf.gz")
-            snpeff_vcf_file_gz_tbi = os.path.join(fq_path, "snpeff.vcf.gz.tbi")
+            snpeff_vcf_file_gz = os.path.join(fq_path, "snpeff.vcf.gz")
 
             if fastq2:
                 cmd_align = "{} mem {} {} {} | {} sort -o {} -".format(
@@ -53,14 +51,15 @@ class Pipeline:
             cmd_pileup = "{0} mpileup -E -d 0 -A -f {1} {2} | {0} call -mv --ploidy 1 -Ov -o {3}".format(
                 self.commands["bcftools"], bwa_ref, bam_file, vcf_file)
 
-            cmd_snpeff = "java -jar {0} ann -noStats -no-downstream -no-upstream -no-intergenic -no-intron -onlyProtein "\
-                         "SARS-COV2 {1} > {2} && {3} -c {2} > {4} && {5} -p vcf {4} > {6}".format(
-                             self.commands["snpeff"], vcf_file, snpeff_vcf_file, self.commands["bgzip"],
-                             snpeff_vcf_file_gz, self.commands["tabix"], snpeff_vcf_file_gz_tbi)
+            cmd_snpeff = "java -jar {0} ann " \
+                         "-noStats -no-downstream -no-upstream -no-intergenic -no-intron -onlyProtein " \
+                         "SARS-COV2 {1} | {2} -c > {3} && {4} -p vcf {3}".format(
+                             self.commands["snpeff"], vcf_file, self.commands["bgzip"],
+                             snpeff_vcf_file_gz, self.commands["tabix"])
 
             self._run_commands([cmd_align, cmd_pileup, cmd_snpeff], tmpdir)
 
-        return snpeff_vcf_file
+        return snpeff_vcf_file_gz
 
     def _run_commands(self, commands, temporary_folder):
         for command in commands:
