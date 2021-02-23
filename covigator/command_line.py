@@ -1,5 +1,6 @@
 from argparse import ArgumentParser
 
+from covigator.dashboard.app import app
 from dask.distributed import Client
 import covigator
 from covigator.accessor.ena_accessor import EnaAccessor

@@ -152,5 +152,9 @@ def display_click_data(clickData, selectedData):
     return data.to_dict('records'), [{"name": i, "id": i} for i in runs.columns]
 
 
-def main():
-    app.run_server(debug=True)
+def main(debug=False):
+    app.run_server(debug=debug)
+
+
+if __name__ == '__main__':
+    main(debug=True)
