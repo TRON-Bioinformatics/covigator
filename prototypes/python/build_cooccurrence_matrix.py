@@ -10,9 +10,12 @@ def main():
     database = Database()
     session = database.get_database_session()
     logger.info("Computing cooccurrence matrix")
-    for sample in session.query(EnaRun).all():
+    samples = session.query(EnaRun).all()
+    processed = 0
+    for sample in samples:
         sample_id = sample.run_accession
-        logger.info("Processing cooccurrent variants for sample {}".format(sample_id))
+        processed += 1
+        logger.info("Processing cooccurrent variants for sample {}/{}".format(processed, len(samples)))
         # the order by position is important to ensure we store only half the matrix and the same half of the matrix
         variants = session.query(VariantObservation)\
             .filter(VariantObservation.sample == sample_id)\
@@ -43,7 +46,7 @@ def main():
                 )
                 session.add(variant_cooccurrence)
             variant_cooccurrence.count += 1
-            session.commit()
+        session.commit()
 
 
 if __name__ == '__main__':
