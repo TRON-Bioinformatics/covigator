@@ -2,7 +2,7 @@ from unittest import TestCase
 
 from toil.job import Job
 
-from prototypes.ena_processor_toil import EnaProcessor as EnaProcessorToil
+from prototypes.python.ena_processor_toil import EnaProcessor as EnaProcessorToil
 
 
 class EnaProcessorTests(TestCase):
