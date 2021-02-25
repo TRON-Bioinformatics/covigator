@@ -3,7 +3,7 @@ from typing import List
 
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, String, Float, Enum, DateTime, Integer, Boolean, Date, ForeignKey, UniqueConstraint, \
-    ForeignKeyConstraint, BigInteger
+    ForeignKeyConstraint, BigInteger, JSON
 import enum
 
 SEPARATOR = ";"
@@ -217,4 +217,12 @@ class VariantCooccurrence(Base):
     ForeignKeyConstraint(
         [chromosome_two, position_two, reference_two, alternate_two],
         [Variant.chromosome, Variant.position, Variant.reference, Variant.alternate])
+
+
+class Gene(Base):
+
+    __tablename__ = 'gene'
+    identifier = Column(String, primary_key=True)
+    name = Column(String)
+    data = Column(JSON)
 

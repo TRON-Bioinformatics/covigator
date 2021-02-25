@@ -4,35 +4,43 @@
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
-import dash_table
-import plotly.express as px
-import plotly.graph_objects as go
-import pandas as pd
-from dash.dependencies import Output, Input
-from sqlalchemy import func
+from sqlalchemy import func, text
 from sqlalchemy.orm import Session
+from tenacity import wait_exponential, stop_after_attempt
 
+from covigator.dashboard.figures import get_accumulated_samples_by_country, get_variants_plot
 from covigator.model import EnaRun, Job, JobStatus, Variant, VariantObservation
 from covigator.database import Database
+import tenacity
+from logzero import logger
 
-import flask
-import pkg_resources
-import os
-import random
+
+@tenacity.retry(wait=wait_exponential(multiplier=2, min=1, max=10), stop=stop_after_attempt(5))
+def get_database():
+    try:
+        database = Database()
+        session = database.get_database_session()
+        stmt = text("SELECT 1")
+        session.execute(stmt)
+        logger.info("Database connected!")
+    except Exception as e:
+        logger.error("Connection to database failed, retrying...")
+        raise e
+    return database
 
 
 def get_header():
-    logo = "/assets/CoVigator_logo_txt.png"
+    logo = "/assets/CoVigator_logo_txt_nobg.png"
     return html.Div(
             [
                 html.Div(
                     [html.Img(src=logo, id="covigator-logo",
-                              style={"height": "60px", "width": "auto", "margin-bottom": "25px",},)
+                              style={"height": "100px", "width": "auto", "margin-bottom": "25px",},)
                     ],
                     className="one-third column",
                 ),
                 html.Div(
-                    [html.Div([html.H1("Monitoring SARS-Cov-2 mutations")], style={"text-align": "left"})],
+                    [html.Div([html.H1("Monitoring SARS-Cov-2 mutations")], style={"text-align": "center"})],
                     className="two column",
                     id="title",
                 ),
@@ -68,18 +76,21 @@ def get_footer():
         ],
         # this bit makes sure the footer sticks at the bottom
         style={"position": "relative", "bottom": "0", "width": "100%", "overflow": "hidden",
-               "height": "100px", "background-color": "#CDCDCD"})
+               "height": "100px"})
 
 
 def get_tab_overview(session: Session):
-    # read all samples data
+
     count_samples = session.query(Job).filter(Job.status == JobStatus.LOADED).count()
-    count_countries = session.query(EnaRun).distinct(EnaRun.country).count()
+    count_countries = session.query(EnaRun).join(Job).filter(Job.status == JobStatus.LOADED).distinct(EnaRun.country)\
+        .count()
     count_variants = session.query(Variant).count()
     count_variants_observed = session.query(VariantObservation).count()
-    count_library_strategies = session.query(EnaRun.library_strategy, func.count(EnaRun.library_strategy))\
+    count_library_strategies = session.query(EnaRun.library_strategy, func.count(EnaRun.library_strategy)) \
+        .join(Job).filter(Job.status == JobStatus.LOADED)\
         .group_by(EnaRun.library_strategy).all()
     count_instrument_model = session.query(EnaRun.instrument_model, func.count(EnaRun.instrument_model)) \
+        .join(Job).filter(Job.status == JobStatus.LOADED) \
         .group_by(EnaRun.instrument_model).all()
 
     return dcc.Tab(label="About",
@@ -93,6 +104,15 @@ def get_tab_overview(session: Session):
                                        "incorporated in global efforts to sustainably prevent or treat infections. Thus, we "
                                        "envision to help guiding global vaccine design efforts to overcome the threats of this "
                                        "pandemic."),
+                                html.Br(),
+                                html.P("If you want to cite us:"),
+                                html.P([
+                                    "Schrörs, B., Gudimella, R., Bukur, T., Rösler, T., Löwer, M., & Sahin, U. (2021). "
+                                    "Large-scale analysis of SARS-CoV-2 spike-glycoprotein mutants demonstrates the "
+                                    "need for continuous screening of virus isolates. BioRxiv, 2021.02.04.429765. ",
+                                    html.A("https://doi.org/10.1101/2021.02.04.429765",
+                                           href="https://doi.org/10.1101/2021.02.04.429765")],
+                                    style={"font-style": "italic"}),
                                 html.Div(
                                     [
                                         html.Div(
@@ -132,14 +152,6 @@ def get_tab_overview(session: Session):
                                     className="row container-display",
                                 ),
                                 html.Br(),
-                                html.P("If you want to cite us:"),
-                                html.P([
-                                    "Schrörs, B., Gudimella, R., Bukur, T., Rösler, T., Löwer, M., & Sahin, U. (2021). "
-                                    "Large-scale analysis of SARS-CoV-2 spike-glycoprotein mutants demonstrates the "
-                                    "need for continuous screening of virus isolates. BioRxiv, 2021.02.04.429765. ",
-                                    html.A("https://doi.org/10.1101/2021.02.04.429765", href="https://doi.org/10.1101/2021.02.04.429765")],
-                                    style={"font-style": "italic"}),
-                                html.Br(),
                                 html.Br(),
                                 html.Br(),
                             ],
@@ -147,17 +159,31 @@ def get_tab_overview(session: Session):
                         )])
 
 
-def get_tab_samples():
+def get_tab_samples(session: Session):
+    figure = get_accumulated_samples_by_country(session)
     return dcc.Tab(label="Samples",
-                        children=[dcc.Input(placeholder="Enter value here", id="input_div"),
-                                  html.Button(children="OK", id="ok_button"),
-                                  dcc.Markdown(id="success_value_saved")])
+                        children=[
+                            dcc.Graph(figure=figure)
+                        ])
 
 
-def get_tab_variants():
+def get_tab_variants(session: Session):
+
+    # TODO: parametrise the gene name
+    gene_name = "S"
+    figure = get_variants_plot(session, gene_name=gene_name)
+
     return dcc.Tab(label="Variants",
-                         children=[html.Button(children="Show me the value", id="show_value_button"),
-                                   dcc.Markdown(id="show_value_div")])
+                   children=html.Div(
+                       id='needleplot-body', className='app-body',
+                       children=[
+                           html.H3("Variants on gene {}".format(gene_name)),
+                           dcc.Loading(
+                               className='dashbio-loading',
+                               children=html.Div(id='needleplot-wrapper', children=figure)
+                           )]
+                   )
+                   )
 
 
 def serve_layout():
@@ -166,8 +192,8 @@ def serve_layout():
     header = get_header()
     footer = get_footer()
     tab_overview = get_tab_overview(session)
-    tab_samples = get_tab_samples()
-    tab_variants = get_tab_variants()
+    tab_samples = get_tab_samples(session)
+    tab_variants = get_tab_variants(session)
 
     # assemble tabs in dcc.Tabs object
     tabs = dcc.Tabs(children=[tab_overview, tab_samples, tab_variants])
@@ -215,9 +241,8 @@ app = dash.Dash(
         }
     ]
 )
-database = Database()
+database = get_database()
 app.layout = serve_layout
-
 
 
 if __name__ == '__main__':
