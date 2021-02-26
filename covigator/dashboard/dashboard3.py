@@ -175,13 +175,22 @@ def get_tab_variants(session: Session):
 
     return dcc.Tab(label="Variants",
                    children=html.Div(
-                       id='needleplot-body', className='app-body',
+                       id='needleplot-body', className="row container-display",
                        children=[
-                           html.H3("Variants on gene {}".format(gene_name)),
-                           dcc.Loading(
-                               className='dashbio-loading',
-                               children=html.Div(id='needleplot-wrapper', children=figure)
-                           )]
+                           html.Div(children=[
+                               dcc.Markdown("""
+                                 **Select a gene**
+                                 """),
+                               dcc.Dropdown(
+                                   id='dropdown',
+                                   options=[{'label': c, 'value': c} for c in ["S", "N", "E"]],
+                                   value=gene_name,
+                                   multi=False
+                               ),
+                           ], className="three columns"),
+                           html.Div(children=figure, className="nine columns")
+
+                           ]
                    )
                    )
 

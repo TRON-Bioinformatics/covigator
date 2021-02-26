@@ -60,8 +60,8 @@ def get_variants_plot(session: Session, gene_name="S"):
     gene = session.query(Gene).filter(Gene.name == gene_name).first()
     start = int(gene.data.get("start"))
     protein_features = gene.data.get("transcripts", [])[0].get("translations", [])[0].get("protein_features")
-    domains = [{"name": f.get('interpro_name', f.get('name')), "coord": "{}-{}".format(
-        start + int(f["start"]), start + int(f["end"]))} for f in protein_features if 'interpro_name' in f]
+    domains = [{"name": f.get('description'), "coord": "{}-{}".format(
+        start + int(f["start"]), start + int(f["end"]))} for f in protein_features if f.get("dbname") == "Pfam"]
 
     # reads variants
     variants = pd.read_sql(
@@ -93,5 +93,8 @@ def get_variants_plot(session: Session, gene_name="S"):
         id='my-dashbio-needleplot',
         mutationData=mdata,
         rangeSlider=True,
-        ylabel="log(count observations)"
+        ylabel="log(count observations)",
+        domainStyle={
+            'displayMinorDomains': False
+        }
     )
