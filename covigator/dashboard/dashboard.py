@@ -1,159 +1,268 @@
-# Run this app with `python dashboard.py` and
-# visit http://127.0.0.1:8050/ in your web browser.
-
+import os
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
-import dash_table
-import plotly.express as px
-import pandas as pd
-from dash.dependencies import Output, Input
-from covigator.model import EnaRun
+from sqlalchemy import func, text
+from sqlalchemy.orm import Session
+from tenacity import wait_exponential, stop_after_attempt
+
+from covigator import ENV_COVIGATOR_DASHBOARD_HOST, ENV_COVIGATOR_DASHBOARD_PORT
+from covigator.dashboard.figures import get_accumulated_samples_by_country, get_variants_plot, get_circos_plot
+from covigator.model import EnaRun, Job, JobStatus, Variant, VariantObservation
 from covigator.database import Database
+import tenacity
+from logzero import logger
 
-external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
-app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
-session = Database().get_database_session()
+@tenacity.retry(wait=wait_exponential(multiplier=2, min=1, max=10), stop=stop_after_attempt(5))
+def get_database():
+    try:
+        database = Database()
+        session = database.get_database_session()
+        stmt = text("SELECT 1")
+        session.execute(stmt)
+        logger.info("Database connected!")
+    except Exception as e:
+        logger.error("Connection to database failed, retrying...")
+        raise e
+    return database
 
-styles = {
-    'pre': {
-        'border': 'thin lightgrey solid',
-        'overflowX': 'scroll'
-    }
-}
 
-# read all samples data
-runs = pd.read_sql(session.query(EnaRun).statement, session.bind)
-
-# sets up page layout
-
-app.layout = html.Div(children=[
-    html.H1(children='Covigator'),
-    dcc.Markdown('''
-    ### Covigator dash prototype
-    This is just to show off what could be done with dash **without needing to setup an API or implement a
-    dedicated frontend** https://dash.plotly.com. Dash is a dashboard based on plotly interactive visualizations.
-
-    This text is written in markup language by the way http://commonmark.org/.
-    
-    This prototype only uses the table of runs, loads it from the database in memory and visualizations are updated with callback functions.
-    For bigger datasets the callback functions could be triggering queries to the database.
-    '''),
-    html.Br(),
-      html.Div(className='row',  # Define the row element
-               children=[
-                   html.Div(className='three columns div-user-controls', children=[
-                        html.Div([
-                             dcc.Markdown("""
-                             #### Total samples: {}
-                             #### Number of countries: {}
-                             #### First sample: {}
-                             #### Last sample: {}
-                             """.format(runs.shape[0], len(set(runs.country)),
-                                        min(runs.collection_date[runs.collection_date != ""].dropna()),
-                                        max(runs.collection_date[runs.collection_date != ""].dropna())))
-                        ]),
-                        html.Br(),
-                        html.Div([
-                             dcc.Markdown("""
-                             **Select one or more countries**
-                             """),
-                            dcc.Dropdown(
-                                id='dropdown',
-                                options=[{'label': c, 'value': c} for c in
-                                         sorted(set(list(runs.country)))],
-                                value=None,
-                                multi=True
-                            ),
-                        ]),
-                   ]),
-                   html.Div(className='nine columns div-for-charts bg-grey', children=[
-                       dcc.Graph(id='example-graph'),
-                       dcc.Graph(id='count_by_country'),
-                       ])
-               ]),
-      html.Div(className="row", children=[
-          dash_table.DataTable(
-              id='table',
-              data=[],
-              page_size=10,
-            style_cell_conditional=[
-                {
-                    'if': {'column_id': c},
-                    'textAlign': 'left'
-                } for c in ['Date', 'Region']
+def get_header():
+    logo = "/assets/CoVigator_logo_txt_nobg.png"
+    return html.Div(
+            [
+                html.Div(
+                    [html.Img(src=logo, id="covigator-logo",
+                              style={"height": "100px", "width": "auto", "margin-bottom": "25px",},)
+                    ],
+                    className="one-third column",
+                ),
+                html.Div(
+                    [html.Div([html.H1("Monitoring SARS-Cov-2 mutations")], style={"text-align": "center"})],
+                    className="two column",
+                    id="title",
+                ),
             ],
-            style_data_conditional=[
-                {
-                    'if': {'row_index': 'odd'},
-                    'backgroundColor': 'rgb(248, 248, 248)'
-                }
-            ],
-            style_header={
-                'backgroundColor': 'rgb(230, 230, 230)',
-                'fontWeight': 'bold'
-            },
-            sort_action='native',
-            filter_action='native',
-            hidden_columns=["scientific_name", "library_name", "nominal_lenght", "library_source", "library_selection",
-                            "sample_collection", "sequencing_method", "fastq_ftp", "fastq_md5", "host_tax_id",
-                            "sample_accession", "study_accession", "experiment_accession"]
-              )
-      ])
-
-])
+            id="header",
+            className="row flex-display",
+            style={"margin-bottom": "25px"},
+        )
 
 
-@app.callback(
-    Output('example-graph', 'figure'),
-    Output('count_by_country', 'figure'),
-    Input('dropdown', 'value'))
-def update_figure(selected_country):
+def get_footer():
+    return html.Footer(
+        [
+            html.Br(),
+            html.Div(
+                [
+                    html.P(),
+                    html.P("© 2021 TRON Mainz. All Rights Reserved"),
+                    html.P()
+                ],
+                className="one-third column"
+            ),
+            html.Div(
+                [
+                    html.P(),
+                    html.P([html.A("DATA PROTECTION", href="https://tron-mainz.de/data-protection/"), " | ",
+                            html.A("IMPRINT", href="https://tron-mainz.de/imprint/")]),
+                    html.P()
+                ],
+                className="one-third column"
+            ),
+            html.Br(),
+        ],
+        # this bit makes sure the footer sticks at the bottom
+        style={"position": "relative", "bottom": "0", "width": "100%", "overflow": "hidden",
+               "height": "100px"})
 
-    # filters data
-    filtered_df = runs[runs.country.isin(selected_country)] \
-        if selected_country is not None and len(selected_country) > 0 else runs
 
-    fig = px.scatter(filtered_df, x="collection_date", y="country",
-                     color="library_strategy",  hover_name="run_accession", opacity=0.8,
-                     title="Samples through time") #, symbol="host_sex" size="read_count",)
-                        # log_x=True, size_max=60)
-    fig.update_layout(transition_duration=500)
-    fig.update_layout(clickmode='event+select')
-    fig.update_traces(marker_size=8)
+def get_tab_overview(session: Session):
 
-    counts = filtered_df.groupby(["country", "library_strategy"]).size().reset_index(name="counts")
-    fig2 = px.bar(counts, x="country", y="counts", color="library_strategy", title="Counts of samples")
-    fig2.update_layout(xaxis_tickangle=-45)
+    count_samples = session.query(Job).filter(Job.status == JobStatus.LOADED).count()
+    count_countries = session.query(EnaRun).join(Job).filter(Job.status == JobStatus.LOADED).distinct(EnaRun.country)\
+        .count()
+    count_variants = session.query(Variant).count()
+    count_variants_observed = session.query(VariantObservation).count()
+    count_library_strategies = session.query(EnaRun.library_strategy, func.count(EnaRun.library_strategy)) \
+        .join(Job).filter(Job.status == JobStatus.LOADED)\
+        .group_by(EnaRun.library_strategy).all()
+    count_instrument_model = session.query(EnaRun.instrument_model, func.count(EnaRun.instrument_model)) \
+        .join(Job).filter(Job.status == JobStatus.LOADED) \
+        .group_by(EnaRun.instrument_model).all()
 
-    return fig, fig2
+    return dcc.Tab(label="About",
+                        children=[html.Div(
+                            [
+                                html.H3("Covigator - Monitoring SARS-Cov-2 mutations"),
+                                html.P("Human infections with SARS-CoV-2 are spreading globally since the beginning of 2020, "
+                                       "necessitating preventive or therapeutic strategies and first steps towards an end to "
+                                       "this pandemic were done with the approval of the first mRNA vaccines against SARS-CoV-2. "
+                                       "We want to provide an interactive view on different types of variants that can be "
+                                       "incorporated in global efforts to sustainably prevent or treat infections. Thus, we "
+                                       "envision to help guiding global vaccine design efforts to overcome the threats of this "
+                                       "pandemic."),
+                                html.Br(),
+                                html.P("If you want to cite us:"),
+                                html.P([
+                                    "Schrörs, B., Gudimella, R., Bukur, T., Rösler, T., Löwer, M., & Sahin, U. (2021). "
+                                    "Large-scale analysis of SARS-CoV-2 spike-glycoprotein mutants demonstrates the "
+                                    "need for continuous screening of virus isolates. BioRxiv, 2021.02.04.429765. ",
+                                    html.A("https://doi.org/10.1101/2021.02.04.429765",
+                                           href="https://doi.org/10.1101/2021.02.04.429765")],
+                                    style={"font-style": "italic"}),
+                                html.Div(
+                                    [
+                                        html.Div(
+                                            [html.H6("No. of Samples"), html.H6(count_samples)],
+                                            className="mini_container",
+                                        ),
+                                        html.Div(
+                                            [html.H6("No. of countries"), html.H6(count_countries)],
+                                            className="mini_container",
+                                        ),
+                                        html.Div(
+                                            [html.H6("No. of unique variants"), html.H6(count_variants)],
+                                            className="mini_container",
+                                        ),
+                                        html.Div(
+                                            [html.H6("No. of variant observations"), html.H6(count_variants_observed)],
+                                            className="mini_container",
+                                        ),
+                                    ],
+                                    id="info-container",
+                                    className="row container-display",
+                                ),
+                                html.Div(
+                                    [
+                                        html.Div(
+                                            [html.H6("Sequencing technologies")] +
+                                            [html.P("{} - {}".format(l, c)) for l, c in count_library_strategies],
+                                            className="mini_container",
+                                        ),
+                                        html.Div(
+                                            [html.H6("Sequencing instruments")] +
+                                            [html.P("{} - {}".format(l, c)) for l, c in count_instrument_model],
+                                            className="mini_container",
+                                        ),
+                                    ],
+                                    id="info-container-2",
+                                    className="row container-display",
+                                ),
+                                html.Br(),
+                                html.Br(),
+                                html.Br(),
+                            ],
+                            style={"text-align": "left"}
+                        )])
 
 
-@app.callback(
-    [Output("table", "data"), Output('table', 'columns')],
-    Input('example-graph', 'clickData'),
-    Input('example-graph', 'selectedData'),
-)
-def display_click_data(clickData, selectedData):
-    run_accession = None
-    if clickData:
-        points = clickData.get("points")
-        if points and len(points) > 0:
-            run_accession = [points[0].get("hovertext")]
-    elif selectedData:
-        points = selectedData.get("points")
-        if points and len(points) > 0:
-            run_accession = [p.get("hovertext") for p in points]
+def get_tab_samples(session: Session):
+    figure = get_accumulated_samples_by_country(session)
+    return dcc.Tab(label="Samples",
+                        children=[
+                            dcc.Graph(figure=figure)
+                        ])
 
-    data = runs
-    if run_accession:
-        data = runs[runs.run_accession.isin(run_accession)]
-    return data.to_dict('records'), [{"name": i, "id": i} for i in runs.columns]
+
+def get_tab_variants(session: Session):
+
+    # TODO: parametrise the gene name
+    gene_name = "S"
+    needle_plot = get_variants_plot(session, gene_name=gene_name)
+    circos_plot = get_circos_plot()
+
+    return dcc.Tab(label="Variants",
+                   children=[html.Div(
+                       id='needleplot-body', className="row container-display",
+                       children=[
+                           html.Div(children=[
+                               dcc.Markdown("""
+                                 **Select a gene**
+                                 """),
+                               dcc.Dropdown(
+                                   id='dropdown',
+                                   options=[{'label': c, 'value': c} for c in ["S", "N", "E"]],
+                                   value=gene_name,
+                                   multi=False
+                               ),
+                           ], className="three columns"),
+                           html.Div(children=needle_plot, className="nine columns")
+                           ]
+                   ),
+                       circos_plot
+                   ]
+                   )
+
+
+def serve_layout():
+
+    session = database.get_database_session()
+    header = get_header()
+    footer = get_footer()
+    tab_overview = get_tab_overview(session)
+    tab_samples = get_tab_samples(session)
+    tab_variants = get_tab_variants(session)
+
+    # assemble tabs in dcc.Tabs object
+    tabs = dcc.Tabs(children=[tab_overview, tab_samples, tab_variants])
+
+    # create layout
+    layout = html.Div(children=[header, tabs, footer])
+
+    session.close()
+
+    return layout
+
+
+class CovigatorDashBoardInitialisationError(Exception):
+    pass
 
 
 def main(debug=False):
-    app.run_server(debug=debug)
+    host = os.getenv(ENV_COVIGATOR_DASHBOARD_HOST, "0.0.0.0")
+    try:
+        port = int(os.getenv(ENV_COVIGATOR_DASHBOARD_PORT, "8050"))
+    except ValueError as e:
+        logger.exception(e)
+        raise CovigatorDashBoardInitialisationError(e)
+    app.run_server(debug=debug, host=host, port=port)
+
+
+# creates the Dash application
+app = dash.Dash(
+    __name__,
+    title="CoVigator",
+    meta_tags=[
+        # A description of the app, used by e.g.
+        # search engines when displaying search results.
+        {
+            'name': 'description',
+            'content': 'CoVigator - monitoring Sars-Cov-2 mutations'
+        },
+        # A tag that tells Internet Explorer (IE)
+        # to use the latest renderer version available
+        # to that browser (e.g. Edge)
+        {
+            'http-equiv': 'X-UA-Compatible',
+            'content': 'IE=edge'
+        },
+        # A tag that tells the browser not to scale
+        # desktop widths to fit mobile screens.
+        # Sets the width of the viewport (browser)
+        # to the width of the device, and the zoom level
+        # (initial scale) to 1.
+        #
+        # Necessary for "true" mobile support.
+        {
+          'name': 'viewport',
+          'content': 'width=device-width, initial-scale=1.0'
+        }
+    ]
+)
+database = get_database()
+app.layout = serve_layout
 
 
 if __name__ == '__main__':
