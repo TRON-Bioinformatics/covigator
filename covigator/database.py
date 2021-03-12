@@ -8,7 +8,8 @@ from sqlalchemy.orm import sessionmaker, Session
 
 from covigator import ENV_COVIGATOR_DB_HOST, ENV_COVIGATOR_DB_NAME, ENV_COVIGATOR_DB_USER, ENV_COVIGATOR_DB_PASSWORD, \
     ENV_COVIGATOR_DB_PORT, ENV_COVIGATOR_DB_POOL_SIZE, ENV_COVIGATOR_DB_MAX_OVERFLOW
-from covigator.model import Base
+from covigator.model import Base, Gene
+from covigator.references.gene_annotations import GeneAnnotationsLoader
 
 
 class Database:
@@ -37,6 +38,12 @@ class Database:
         # this creates all tables in the database (when it exists nothing happens)
         Base.metadata.create_all(self.engine)
         logger.info("Database initialized")
+
+    def initialise_database(self):
+        session = self.get_database_session()
+        # loads reference genome if not set
+        if session.query(Gene).count() == 0:
+            GeneAnnotationsLoader(session).load_data()
 
     def get_database_session(self) -> Session:
         return self.Session()

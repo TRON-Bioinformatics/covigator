@@ -61,7 +61,3 @@ def pipeline():
     args = parser.parse_args()
     vcf_file = Pipeline().run(fastq1=args.fastq1, fastq2=args.fastq2)
     logger.info("Output VCF file: {}".format(vcf_file))
-
-
-def install_gene_annotations():
-    GeneAnnotationsLoader().load_data()
