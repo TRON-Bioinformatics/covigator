@@ -3,7 +3,7 @@ from typing import List
 
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, String, Float, Enum, DateTime, Integer, Boolean, Date, ForeignKey, UniqueConstraint, \
-    ForeignKeyConstraint, BigInteger
+    ForeignKeyConstraint, BigInteger, JSON
 import enum
 
 SEPARATOR = ";"
@@ -195,4 +195,34 @@ class VariantObservation(Base):
     ForeignKeyConstraint(
         [chromosome, position, reference, alternate],
         [Variant.chromosome, Variant.position, Variant.reference, Variant.alternate])
+
+
+class VariantCooccurrence(Base):
+
+    __tablename__ = 'variant_cooccurrence'
+
+    chromosome_one = Column(String, primary_key=True)
+    position_one = Column(Integer, primary_key=True)
+    reference_one = Column(String, primary_key=True)
+    alternate_one = Column(String, primary_key=True)
+    chromosome_two = Column(String, primary_key=True)
+    position_two = Column(Integer, primary_key=True)
+    reference_two = Column(String, primary_key=True)
+    alternate_two = Column(String, primary_key=True)
+    count = Column(Integer, default=0)
+
+    ForeignKeyConstraint(
+        [chromosome_one, position_one, reference_one, alternate_one],
+        [Variant.chromosome, Variant.position, Variant.reference, Variant.alternate])
+    ForeignKeyConstraint(
+        [chromosome_two, position_two, reference_two, alternate_two],
+        [Variant.chromosome, Variant.position, Variant.reference, Variant.alternate])
+
+
+class Gene(Base):
+
+    __tablename__ = 'gene'
+    identifier = Column(String, primary_key=True)
+    name = Column(String)
+    data = Column(JSON)
 

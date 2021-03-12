@@ -8,6 +8,8 @@ from covigator.processor.pipeline import Pipeline
 from covigator.processor.processor import Processor
 from logzero import logger
 
+from covigator.references.gene_annotations import GeneAnnotationsLoader
+
 
 def ena_accessor():
     parser = ArgumentParser(
@@ -59,3 +61,7 @@ def pipeline():
     args = parser.parse_args()
     vcf_file = Pipeline().run(fastq1=args.fastq1, fastq2=args.fastq2)
     logger.info("Output VCF file: {}".format(vcf_file))
+
+
+def install_gene_annotations():
+    GeneAnnotationsLoader().load_data()
