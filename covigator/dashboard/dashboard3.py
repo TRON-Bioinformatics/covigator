@@ -8,7 +8,7 @@ from sqlalchemy import func, text
 from sqlalchemy.orm import Session
 from tenacity import wait_exponential, stop_after_attempt
 
-from covigator.dashboard.figures import get_accumulated_samples_by_country, get_variants_plot
+from covigator.dashboard.figures import get_accumulated_samples_by_country, get_variants_plot, get_circos_plot
 from covigator.model import EnaRun, Job, JobStatus, Variant, VariantObservation
 from covigator.database import Database
 import tenacity
@@ -171,10 +171,11 @@ def get_tab_variants(session: Session):
 
     # TODO: parametrise the gene name
     gene_name = "S"
-    figure = get_variants_plot(session, gene_name=gene_name)
+    needle_plot = get_variants_plot(session, gene_name=gene_name)
+    circos_plot = get_circos_plot()
 
     return dcc.Tab(label="Variants",
-                   children=html.Div(
+                   children=[html.Div(
                        id='needleplot-body', className="row container-display",
                        children=[
                            html.Div(children=[
@@ -188,10 +189,11 @@ def get_tab_variants(session: Session):
                                    multi=False
                                ),
                            ], className="three columns"),
-                           html.Div(children=figure, className="nine columns")
-
+                           html.Div(children=needle_plot, className="nine columns")
                            ]
-                   )
+                   ),
+                       circos_plot
+                   ]
                    )
 
 
@@ -215,8 +217,8 @@ def serve_layout():
     return layout
 
 
-def main(debug=False):
-    app.run_server(debug=debug)
+def main(debug=False, host="0.0.0.0", port=8050):
+    app.run_server(debug=debug, host=host, port=port)
 
 
 # creates the Dash application

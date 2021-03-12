@@ -7,6 +7,11 @@ from sqlalchemy.orm import Session
 import dash_bio
 from covigator.model import EnaRun, Job, JobStatus, Variant, Gene, VariantObservation
 
+import json
+from six.moves.urllib import request as urlreq
+import dash_bio as dashbio
+
+
 
 def get_accumulated_samples_by_country(session: Session):
 
@@ -96,5 +101,25 @@ def get_variants_plot(session: Session, gene_name="S"):
         ylabel="log(count observations)",
         domainStyle={
             'displayMinorDomains': False
+        }
+    )
+
+
+def get_circos_plot():
+    data = urlreq.urlopen(
+        'https://raw.githubusercontent.com/plotly/dash-bio-docs-files/master/circos_graph_data.json').read()
+    circos_graph_data = json.loads(data)
+
+    layout = [{"id":"MN908947.3", "label": "MN908947.3", "color":"#996600", "len":29903}]
+
+    return dashbio.Circos(
+        layout=layout,
+        tracks=[{
+            'type': 'CHORDS',
+            'data': circos_graph_data['chords']
+        }],
+        config={
+            #'innerRadius': 40,
+            #'outerRadius': 200
         }
     )
