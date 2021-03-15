@@ -222,7 +222,7 @@ class VariantObservation(Base):
     """
     __tablename__ = 'variant_observation'
 
-    sample = Column(ForeignKey("sample.id"), primary_key=True)
+    sample = Column(String, primary_key=True)
     source = Column(Enum(DataSource), primary_key=True)
     chromosome = Column(String, primary_key=True)
     position = Column(Integer, primary_key=True)
@@ -256,6 +256,7 @@ class VariantObservation(Base):
     dp4_alt_reverse = Column(Integer)
     mapping_quality = Column(Integer)
     mapping_quality_zero_fraction = Column(Float)
+    ForeignKeyConstraint([sample, source], [Sample.id, Sample.source])
     ForeignKeyConstraint(
         [chromosome, position, reference, alternate],
         [Variant.chromosome, Variant.position, Variant.reference, Variant.alternate])
