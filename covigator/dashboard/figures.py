@@ -12,11 +12,33 @@ from six.moves.urllib import request as urlreq
 import dash_bio as dashbio
 
 
-
 def get_accumulated_samples_by_country(session: Session):
 
     # fetch data from database
     samples = pd.read_sql(session.query(SampleEna).join(JobEna).filter(JobEna.status == JobStatus.LOADED).statement, session.bind)
+
+    fig = None
+    if samples.shape[0] > 0:
+        data = _prepare_accumulated_samples(samples)
+        fig = px.area(data, x="date", y="cumsum", color="country",
+                      category_orders={
+                          "country": list(data.sort_values("cumsum", ascending=False).country.unique())[::-1]},
+                      labels={"cumsum": "num. samples", "count": "increment"},
+                      title="Accumulated samples per country",
+                      hover_data=["count"],
+                      color_discrete_sequence=random.shuffle(px.colors.qualitative.Dark24))
+        fig.update_layout(
+            legend={'traceorder': 'reversed'},
+            xaxis={'title': None},
+            yaxis={'dtick': 2000}
+        )
+    return fig
+
+
+def _prepare_accumulated_samples(samples: pd.DataFrame) -> pd.DataFrame:
+    """
+    Returns a DataFrame with columns: data, country, cumsum, count
+    """
 
     # merge countries with less than 10 samples into OTHER
     country_value_counts = samples.country.value_counts()
@@ -24,10 +46,13 @@ def get_accumulated_samples_by_country(session: Session):
     samples["country_merged"] = samples.country.transform(
         lambda c: "Other" if c in other_countries or c is None or c == "None" else c)
 
-    sample_counts = samples[["first_created", "run_accession", "country_merged"]]\
+    # counts samples by country and data
+    sample_counts = samples[["first_created", "run_accession", "country_merged"]] \
         .groupby(["first_created", "country_merged"]).count()
     sample_counts.reset_index(inplace=True)
     sample_counts.rename(columns={"run_accession": "count"}, inplace=True)
+
+    # accumulates count ordered by date
     sample_counts['cumsum'] = sample_counts.groupby(['country_merged'])['count'].cumsum()
 
     # creates empty table with all pairwise combinations of date and country
@@ -42,21 +67,9 @@ def get_accumulated_samples_by_country(session: Session):
     filled_table.fillna(0, inplace=True)
     filled_table.reset_index(inplace=True)
     filled_table['cumsum'] = filled_table.groupby(['country_merged'])['count'].cumsum()
-    filled_table.rename(columns={"first_created": "date", "country_merged": "country_merged"}, inplace=True)
+    filled_table.rename(columns={"first_created": "date", "country_merged": "country"}, inplace=True)
 
-    fig = px.area(filled_table, x="date", y="cumsum", color="country_merged",
-                  category_orders={
-                      "country_merged": list(filled_table.sort_values("cumsum", ascending=False).country_merged.unique())[::-1]},
-                  labels={"cumsum": "num. samples", "count": "increment"},
-                  title="Accumulated samples per country",
-                  hover_data=["count"],
-                  color_discrete_sequence=random.shuffle(px.colors.qualitative.Dark24))
-    fig.update_layout(
-        legend={'traceorder': 'reversed'},
-        xaxis={'title': None},
-        yaxis={'dtick': 2000}
-    )
-    return fig
+    return filled_table
 
 
 def get_variants_plot(session: Session, gene_name="S"):
