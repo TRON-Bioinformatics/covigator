@@ -25,8 +25,19 @@ before_script:
   - source venv/bin/activate
 
 stages:
+  - validation
   - test
   - deploy
+
+check_version_changes:
+  stage: validation
+  script:
+    # if the version number does not change between this branch and develop it fails
+    - git fetch origin develop
+    - if git diff origin/develop -- covigator/__init__.py | grep VERSION; then exit 0; else echo "Version needs to be increased!"; exit -1; fi
+  except:
+    - develop
+    - master
 
 run_test:
   stage: test
