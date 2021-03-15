@@ -1,6 +1,6 @@
 from sqlalchemy import and_
 
-from covigator.model import EnaRun, JobStatus
+from covigator.model import SampleEna, JobStatus
 from covigator.database import Database
 from logzero import logger
 from toil.common import Toil
@@ -13,9 +13,9 @@ def parent_job(job):
     count = 0
     try:
         while True:
-            ena_run = session.query(EnaRun)\
-                .filter(EnaRun.status == JobStatus.PENDING)\
-                .order_by(EnaRun.first_created.desc())\
+            ena_run = session.query(SampleEna)\
+                .filter(SampleEna.status == JobStatus.PENDING)\
+                .order_by(SampleEna.first_created.desc())\
                 .first()
 
             if not ena_run:
@@ -98,7 +98,7 @@ class EnaProcessor:
 
     @staticmethod
     def find_ena_run_by_accession_and_status(ena_run_accession, session, status: JobStatus):
-        ena_run = session.query(EnaRun) \
-            .filter(and_(EnaRun.run_accession == ena_run_accession, EnaRun.status == status)) \
+        ena_run = session.query(SampleEna) \
+            .filter(and_(SampleEna.run_accession == ena_run_accession, SampleEna.status == status)) \
             .first()
         return ena_run

@@ -1,5 +1,5 @@
 from unittest import TestCase
-from covigator.model import EnaRun
+from covigator.model import SampleEna
 from covigator.processor.downloader import Downloader, CovigatorMD5CheckSumError
 import os
 
@@ -11,7 +11,7 @@ class DownloaderTest(TestCase):
 
     def test_download_ena_run(self):
         run_accession = "TEST12345"
-        ena_run = EnaRun(
+        ena_run = SampleEna(
             run_accession=run_accession,
             fastq_ftp="ftp.sra.ebi.ac.uk/vol1/fastq/ERR419/002/ERR4192722/ERR4192722.fastq.gz;"
                        "ftp.sra.ebi.ac.uk/vol1/fastq/ERR419/002/ERR4192722/ERR4192722_1.fastq.gz;"

@@ -6,7 +6,7 @@ import shutil
 import hashlib
 from logzero import logger
 from covigator import ENV_COVIGATOR_STORAGE_FOLDER
-from covigator.model import EnaRun, SEPARATOR
+from covigator.model import SampleEna, SEPARATOR
 import re
 
 FTP_PROTOCOL = "ftp://"
@@ -24,7 +24,7 @@ class Downloader:
         pathlib.Path(self.storage_folder).mkdir(parents=True, exist_ok=True)
         assert os.path.exists(self.storage_folder), "Storage folder does not exist"
 
-    def download(self, ena_run: EnaRun) -> str:
+    def download(self, ena_run: SampleEna) -> str:
         assert ena_run.run_accession is not None, "A run accession is required as it is part of the file path"
         assert ena_run.fastq_ftp is not None, "Cannot download empty URLs"
         assert ena_run.fastq_md5 is not None, "Cannot do MD5 checks without MD5"

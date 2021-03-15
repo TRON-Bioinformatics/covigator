@@ -4,7 +4,7 @@ from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
 from covigator.misc import backoff_retrier
-from covigator.model import EnaRun, JobStatus, Job
+from covigator.model import SampleEna, JobStatus, JobEna, Sample, DataSource
 from covigator.database import Database, session_scope
 from logzero import logger
 from dask.distributed import Client
@@ -30,9 +30,9 @@ class Processor:
         try:
             futures = []
             while True:
-                job = session.query(Job)\
-                    .filter(Job.status == JobStatus.PENDING)\
-                    .order_by(Job.created_at.desc())\
+                job = session.query(JobEna)\
+                    .filter(JobEna.status == JobStatus.PENDING)\
+                    .order_by(JobEna.created_at.desc())\
                     .first()
                 if not job:
                     logger.info("No more jobs to process after sending {} runs to process".format(count))
@@ -131,7 +131,10 @@ class Processor:
                 run_accession=run_accession, session=session, status=JobStatus.PROCESSED)
             if job is not None:
                 try:
-                    VcfLoader().load(vcf_file=job.vcf_path, sample=job.run_accession, session=session)
+                    VcfLoader().load(
+                        vcf_file=job.vcf_path,
+                        sample=Sample(id=job.run_accession, source=DataSource.ENA),
+                        session=session)
                     logger.info("Loaded {}".format(job.run_accession))
                     job.status = JobStatus.LOADED
                     job.loaded_at = datetime.now()
@@ -143,13 +146,13 @@ class Processor:
         return run_accession
 
     @staticmethod
-    def find_job_by_accession_and_status(run_accession: str, session: Session, status: JobStatus) -> Job:
-        job = session.query(Job) \
-            .filter(and_(Job.run_accession == run_accession, Job.status == status)) \
+    def find_job_by_accession_and_status(run_accession: str, session: Session, status: JobStatus) -> JobEna:
+        job = session.query(JobEna) \
+            .filter(and_(JobEna.run_accession == run_accession, JobEna.status == status)) \
             .first()
         return job
 
     @staticmethod
-    def find_ena_run_by_accession(run_accession: str, session: Session) -> EnaRun:
-        ena_run = session.query(EnaRun).filter(EnaRun.run_accession == run_accession).first()
+    def find_ena_run_by_accession(run_accession: str, session: Session) -> SampleEna:
+        ena_run = session.query(SampleEna).filter(SampleEna.run_accession == run_accession).first()
         return ena_run

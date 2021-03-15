@@ -5,7 +5,7 @@ import plotly.express as px
 from sqlalchemy import and_, func
 from sqlalchemy.orm import Session
 import dash_bio
-from covigator.model import EnaRun, Job, JobStatus, Variant, Gene, VariantObservation
+from covigator.model import SampleEna, JobEna, JobStatus, Variant, Gene, VariantObservation
 
 import json
 from six.moves.urllib import request as urlreq
@@ -16,7 +16,7 @@ import dash_bio as dashbio
 def get_accumulated_samples_by_country(session: Session):
 
     # fetch data from database
-    samples = pd.read_sql(session.query(EnaRun).join(Job).filter(Job.status == JobStatus.LOADED).statement, session.bind)
+    samples = pd.read_sql(session.query(SampleEna).join(JobEna).filter(JobEna.status == JobStatus.LOADED).statement, session.bind)
 
     # merge countries with less than 10 samples into OTHER
     country_value_counts = samples.country.value_counts()
@@ -79,7 +79,7 @@ def get_variants_plot(session: Session, gene_name="S"):
         session.bind)
 
     # reads total number of samples and calculates frequencies
-    count_samples = session.query(Job).filter(Job.status == JobStatus.LOADED).count()
+    count_samples = session.query(JobEna).filter(JobEna.status == JobStatus.LOADED).count()
     variants["af"] = variants.count_1 / count_samples
     variants["log_af"] = variants.af.transform(lambda x: np.log(x + 1))
     variants["log_count"] = variants.count_1.transform(lambda x: np.log(x))

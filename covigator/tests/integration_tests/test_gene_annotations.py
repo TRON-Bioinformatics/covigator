@@ -1,5 +1,5 @@
 from unittest import TestCase
-from covigator.model import EnaRun
+from covigator.model import SampleEna
 from covigator.processor.downloader import Downloader, CovigatorMD5CheckSumError
 import os
 

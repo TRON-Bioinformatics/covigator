@@ -1,16 +1,16 @@
 from cyvcf2 import VCF, Variant
 import os
 from sqlalchemy.orm import Session
-from covigator.model import Variant as CovigatorVariant, VariantObservation
+from covigator.model import Variant as CovigatorVariant, VariantObservation, Sample
 
 
 class VcfLoader:
 
-    def load(self, vcf_file: str, sample: str, session: Session):
+    def load(self, vcf_file: str, sample: Sample, session: Session):
 
         assert vcf_file is not None or vcf_file == "", "Missing VCF file provided to VcfLoader"
         assert os.path.exists(vcf_file) and os.path.isfile(vcf_file), "Non existing VCF file provided to VcfLoader"
-        assert sample is not None or sample == "", "Missing sample"
+        assert sample.id is not None or sample.id == "", "Missing sample"
         assert session is not None, "Missing DB session"
 
         observed_variants = []
@@ -54,11 +54,12 @@ class VcfLoader:
                 parsed_variant.aa_pos_length=values[13].strip()
         return parsed_variant
 
-    def _parse_variant_observation(self, variant: Variant, sample: str) -> VariantObservation:
+    def _parse_variant_observation(self, variant: Variant, sample: Sample) -> VariantObservation:
 
         dp4 = variant.INFO.get("DP4")
         return VariantObservation(
-            sample=sample,
+            sample=sample.id,
+            source=sample.source,
             chromosome=variant.CHROM,
             position=variant.POS,
             reference=variant.REF,
