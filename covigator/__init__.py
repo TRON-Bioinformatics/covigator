@@ -1,4 +1,4 @@
-VERSION = "0.1.6"
+VERSION = "0.1.7"
 
 # configuration environment variables
 ENV_COVIGATOR_STORAGE_FOLDER = "COVIGATOR_STORAGE_FOLDER"

@@ -37,6 +37,7 @@ class Database:
     def create_database(self):
         # this creates all tables in the database (when it exists nothing happens)
         Base.metadata.create_all(self.engine)
+        self.initialise_database()
         logger.info("Database initialized")
 
     def initialise_database(self):
