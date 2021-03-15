@@ -4,7 +4,7 @@ import pycountry
 import pycountry_convert
 import requests
 from covigator.misc import backoff_retrier
-from covigator.model import EnaRun, Job
+from covigator.model import SampleEna, JobEna, Sample, DataSource
 from covigator.database import Database
 from logzero import logger
 
@@ -110,30 +110,42 @@ class EnaAccessor:
     def _process_runs(self, list_runs):
 
         session = self.database.get_database_session()
-        included_runs = []
+        #included_samples_ena = []
+        included_samples = []
         included_jobs = []
         try:
             for run in list_runs:
-                ena_run = self._parse_ena_run(run)
-                if not self._complies_with_inclusion_criteria(ena_run):
+                sample_ena = self._parse_ena_run(run)
+                sample = self._build_sample(sample_ena)
+                if not self._complies_with_inclusion_criteria(sample_ena):
                     continue    # skips runs not complying with inclusion criteria
-                if session.query(EnaRun).filter_by(run_accession=ena_run.run_accession).count() > 0:
+                if session.query(SampleEna).filter_by(run_accession=sample_ena.run_accession).count() > 0:
                     self.excluded_existing += 1
                     continue    # skips runs already registered in the database
                 self.included += 1
-                included_runs.append(ena_run)
-                included_jobs.append(Job(run_accession=ena_run.run_accession))
-            if len(included_runs) > 0:
-                session.add_all(included_runs)
+                #included_samples_ena.append(sample_ena)
+                included_samples.append(sample_ena)
+                included_samples.append(sample)
+                included_jobs.append(JobEna(run_accession=sample_ena.run_accession))
+            if len(included_samples) > 0:
+                #session.add_all(included_samples_ena)
+                session.add_all(included_samples)
                 session.commit()    # we need two commits to maintain integrity of FKs
                 session.add_all(included_jobs)
                 session.commit()
-                logger.info("Added {} new runs".format(len(included_runs)))
+                logger.info("Added {} new runs".format(len(included_jobs)))
         except Exception as e:
             logger.exception(e)
             session.rollback()
         finally:
             session.close()
+
+    def _build_sample(self, sample_ena):
+        return Sample(
+            id=sample_ena.run_accession,
+            source=DataSource.ENA,
+            ena_id=sample_ena.run_accession
+        )
 
     def _parse_country(self, ena_run):
         ena_run.country_raw = ena_run.country
@@ -159,7 +171,7 @@ class EnaAccessor:
         ena_run.first_created = self._parse_abstract(ena_run.first_created, date.fromisoformat)
 
     def _parse_ena_run(self, run):
-        ena_run = EnaRun(**run)
+        ena_run = SampleEna(**run)
         self._parse_country(ena_run)
         self._parse_dates(ena_run)
         self._parse_numeric_fields(ena_run)
@@ -182,7 +194,7 @@ class EnaAccessor:
             value = None
         return value
 
-    def _complies_with_inclusion_criteria(self, ena_run: EnaRun):
+    def _complies_with_inclusion_criteria(self, ena_run: SampleEna):
         included = True
         if ena_run.host_tax_id is None or ena_run.host_tax_id.strip() == "" or ena_run.host_tax_id != self.host_tax_id:
             included = False    # skips runs where the host is empty or does not match

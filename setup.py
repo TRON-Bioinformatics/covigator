@@ -19,7 +19,7 @@ setup(
         "console_scripts": [
             "covigator-ena-accessor=covigator.command_line:ena_accessor",
             "covigator-processor=covigator.command_line:processor",
-            "covigator-dashboard=covigator.dashboard.dashboard3:main",
+            "covigator-dashboard=covigator.dashboard.dashboard:main",
             "covigator-pipeline=covigator.command_line:pipeline"
         ],
     },

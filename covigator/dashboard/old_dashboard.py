@@ -8,7 +8,7 @@ import dash_table
 import plotly.express as px
 import pandas as pd
 from dash.dependencies import Output, Input
-from covigator.model import EnaRun
+from covigator.model import SampleEna
 from covigator.database import Database
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
@@ -24,7 +24,7 @@ styles = {
 }
 
 # read all samples data
-runs = pd.read_sql(session.query(EnaRun).statement, session.bind)
+runs = pd.read_sql(session.query(SampleEna).statement, session.bind)
 
 # sets up page layout
 

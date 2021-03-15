@@ -1,8 +1,7 @@
 from datetime import datetime
 from typing import List
-
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, String, Float, Enum, DateTime, Integer, Boolean, Date, ForeignKey, UniqueConstraint, \
+from sqlalchemy import Column, String, Float, Enum, DateTime, Integer, Boolean, Date, ForeignKey, \
     ForeignKeyConstraint, BigInteger, JSON
 import enum
 
@@ -11,7 +10,22 @@ SEPARATOR = ";"
 Base = declarative_base()
 
 
+class Gene(Base):
+    """
+    This table holds the genes in the organism genome and its annotations in the field `data`. The annotations
+    are in JSON format. This data is fetched from ftp://ftp.ensemblgenomes.org/pub/viruses/json/sars_cov_2/sars_cov_2.json
+    """
+    __tablename__ = 'gene'
+
+    identifier = Column(String, primary_key=True)
+    name = Column(String)
+    data = Column(JSON)
+
+
 class JobStatus(enum.Enum):
+    """
+    Valid job status
+    """
     PENDING = 1
     QUEUED = 2
     DOWNLOADED = 3
@@ -22,9 +36,43 @@ class JobStatus(enum.Enum):
     FAILED_LOAD = 8
 
 
-class EnaRun(Base):
+class DataSource(enum.Enum):
+    """
+    Valid sources of data
+    """
+    ENA = 1
+    GISAID = 2
 
-    __tablename__ = 'ena_run'
+
+class Sample(Base):
+    """
+    This table holds all samples loaded into Covigator irrespective of the data source.
+    The same sample may be loaded from different data sources.
+    There are foreign keys fields pointing to the source-specific tables with all metadata for the sample.
+    """
+    __tablename__ = 'sample'
+
+    id = Column(String, primary_key=True)
+    source = Column(Enum(DataSource), primary_key=True)
+    # NOTE: should have only one filled, either ena_id or gisaid_id and be coherent with the value of source
+    ena_id = Column(ForeignKey("sample_ena.run_accession"))
+    gisaid_id = Column(ForeignKey("sample_gisaid.id"))
+
+
+class SampleGisaid(Base):
+    """
+    The table that holds all metadata for a GISAID sample
+    """
+    __tablename__ = 'sample_gisaid'
+
+    id = Column(String, primary_key=True)
+
+
+class SampleEna(Base):
+    """
+    The table that holds all metadata for a ENA sample
+    """
+    __tablename__ = 'sample_ena'
 
     # data on run
     # TODO: add foreign keys to jobs
@@ -80,11 +128,22 @@ class EnaRun(Base):
         return self.fastq_md5.split(SEPARATOR) if self.fastq_md5 is not None else []
 
 
-class Job(Base):
+class JobGisaid(Base):
+    """
+    The table that holds an GISAID job
+    """
+    __tablename__ = 'job_gisaid'
 
-    __tablename__ = 'job'
+    id = Column(ForeignKey("sample_gisaid.id"), primary_key=True)
 
-    run_accession = Column(ForeignKey("ena_run.run_accession"), primary_key=True)
+
+class JobEna(Base):
+    """
+    The table that holds an ENA job
+    """
+    __tablename__ = 'job_ena'
+
+    run_accession = Column(ForeignKey("sample_ena.run_accession"), primary_key=True)
 
     # job status
     status = Column(Enum(JobStatus), default=JobStatus.PENDING)
@@ -116,7 +175,9 @@ class Job(Base):
 
 
 class Variant(Base):
-
+    """
+    A variant with its specific annotations. THis does not contain any sample specific annotations.
+    """
     __tablename__ = 'variant'
 
     chromosome = Column(String, primary_key=True)
@@ -156,10 +217,13 @@ class Variant(Base):
 
 
 class VariantObservation(Base):
-
+    """
+    A variant observation in a particular sample. This contains all annotations of a specific observation of a variant.
+    """
     __tablename__ = 'variant_observation'
 
-    sample = Column(ForeignKey("ena_run.run_accession"), primary_key=True)
+    sample = Column(ForeignKey("sample.id"), primary_key=True)
+    source = Column(Enum(DataSource), primary_key=True)
     chromosome = Column(String, primary_key=True)
     position = Column(Integer, primary_key=True)
     reference = Column(String, primary_key=True)
@@ -217,12 +281,3 @@ class VariantCooccurrence(Base):
     ForeignKeyConstraint(
         [chromosome_two, position_two, reference_two, alternate_two],
         [Variant.chromosome, Variant.position, Variant.reference, Variant.alternate])
-
-
-class Gene(Base):
-
-    __tablename__ = 'gene'
-    identifier = Column(String, primary_key=True)
-    name = Column(String)
-    data = Column(JSON)
-

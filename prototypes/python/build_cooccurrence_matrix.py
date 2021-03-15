@@ -2,7 +2,7 @@
 from itertools import combinations
 from sqlalchemy import and_
 from covigator.database import Database
-from covigator.model import EnaRun, VariantObservation, VariantCooccurrence
+from covigator.model import SampleEna, VariantObservation, VariantCooccurrence
 from logzero import logger
 
 
@@ -10,7 +10,7 @@ def main():
     database = Database()
     session = database.get_database_session()
     logger.info("Computing cooccurrence matrix")
-    samples = session.query(EnaRun).all()
+    samples = session.query(SampleEna).all()
     processed = 0
     for sample in samples:
         sample_id = sample.run_accession

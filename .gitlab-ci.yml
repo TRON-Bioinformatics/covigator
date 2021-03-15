@@ -26,6 +26,7 @@ before_script:
 
 stages:
   - test
+  - deploy
 
 run_test:
   stage: test
@@ -34,3 +35,13 @@ run_test:
     - pip uninstall -y covigator
     - pip install dist/covigator-*.whl
     - python -m unittest discover covigator.tests.unit_tests
+
+publish_package:
+  stage: deploy
+  script:
+    - pip install twine
+    - python setup.py sdist bdist_wheel
+    - TWINE_PASSWORD=${CI_JOB_TOKEN} TWINE_USERNAME=gitlab-ci-token python -m twine upload --repository-url https://gitlab.rlp.net/api/v4/projects/${CI_PROJECT_ID}/packages/pypi dist/*
+  only:
+    - develop
+    - main

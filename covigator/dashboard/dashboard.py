@@ -8,7 +8,7 @@ from tenacity import wait_exponential, stop_after_attempt
 
 from covigator import ENV_COVIGATOR_DASHBOARD_HOST, ENV_COVIGATOR_DASHBOARD_PORT
 from covigator.dashboard.figures import get_accumulated_samples_by_country, get_variants_plot, get_circos_plot
-from covigator.model import EnaRun, Job, JobStatus, Variant, VariantObservation
+from covigator.model import SampleEna, JobEna, JobStatus, Variant, VariantObservation
 from covigator.database import Database
 import tenacity
 from logzero import logger
@@ -80,17 +80,17 @@ def get_footer():
 
 def get_tab_overview(session: Session):
 
-    count_samples = session.query(Job).filter(Job.status == JobStatus.LOADED).count()
-    count_countries = session.query(EnaRun).join(Job).filter(Job.status == JobStatus.LOADED).distinct(EnaRun.country)\
+    count_samples = session.query(JobEna).filter(JobEna.status == JobStatus.LOADED).count()
+    count_countries = session.query(SampleEna).join(JobEna).filter(JobEna.status == JobStatus.LOADED).distinct(SampleEna.country)\
         .count()
     count_variants = session.query(Variant).count()
     count_variants_observed = session.query(VariantObservation).count()
-    count_library_strategies = session.query(EnaRun.library_strategy, func.count(EnaRun.library_strategy)) \
-        .join(Job).filter(Job.status == JobStatus.LOADED)\
-        .group_by(EnaRun.library_strategy).all()
-    count_instrument_model = session.query(EnaRun.instrument_model, func.count(EnaRun.instrument_model)) \
-        .join(Job).filter(Job.status == JobStatus.LOADED) \
-        .group_by(EnaRun.instrument_model).all()
+    count_library_strategies = session.query(SampleEna.library_strategy, func.count(SampleEna.library_strategy)) \
+        .join(JobEna).filter(JobEna.status == JobStatus.LOADED)\
+        .group_by(SampleEna.library_strategy).all()
+    count_instrument_model = session.query(SampleEna.instrument_model, func.count(SampleEna.instrument_model)) \
+        .join(JobEna).filter(JobEna.status == JobStatus.LOADED) \
+        .group_by(SampleEna.instrument_model).all()
 
     return dcc.Tab(label="About",
                         children=[html.Div(

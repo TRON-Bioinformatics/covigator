@@ -1,5 +1,5 @@
 from unittest import TestCase
-from covigator.model import EnaRun
+from covigator.model import SampleEna
 from covigator.processor.downloader import Downloader, CovigatorMD5CheckSumError
 import os
 
@@ -11,7 +11,7 @@ class DownloaderTest(TestCase):
 
     def test_download_ena_run_with_bad_md5(self):
         run_accession = "TEST12345"
-        ena_run = EnaRun(
+        ena_run = SampleEna(
             run_accession=run_accession,
             fastq_ftp="ftp.sra.ebi.ac.uk/vol1/fastq/ERR419/002/ERR4192722/ERR4192722.fastq.gz;"
                        "ftp.sra.ebi.ac.uk/vol1/fastq/ERR419/002/ERR4192722/ERR4192722_1.fastq.gz;"
@@ -25,7 +25,7 @@ class DownloaderTest(TestCase):
 
     def test_download_http(self):
         run_accession = "TEST12346"
-        ena_run = EnaRun(
+        ena_run = SampleEna(
             run_accession=run_accession,
             fastq_ftp="https://tron-mainz.de/wp-content/uploads/2020/07/TRON_Logo_Science.svg",
             fastq_md5="ca72bacad0dfcf665df49bfc53cc8b60"
@@ -38,13 +38,13 @@ class DownloaderTest(TestCase):
     def test_download_http_without_md5(self):
         run_accession = "TEST12347"
         with self.assertRaises(AssertionError):
-            self.downloader.download(EnaRun(
+            self.downloader.download(SampleEna(
                 run_accession=run_accession,
                 fastq_ftp="https://commons.wikimedia.org/wiki/File:Google-Logo.svg",
                 fastq_md5=None
             ))
         with self.assertRaises(CovigatorMD5CheckSumError):
-            self.downloader.download(EnaRun(
+            self.downloader.download(SampleEna(
                 run_accession=run_accession,
                 fastq_ftp="https://commons.wikimedia.org/wiki/File:Google-Logo.svg",
                 fastq_md5=""
