@@ -91,31 +91,34 @@ def get_variants_plot(session: Session, gene_name="S"):
             .statement,
         session.bind)
 
-    # reads total number of samples and calculates frequencies
-    count_samples = session.query(JobEna).filter(JobEna.status == JobStatus.LOADED).count()
-    variants["af"] = variants.count_1 / count_samples
-    variants["log_af"] = variants.af.transform(lambda x: np.log(x + 1))
-    variants["log_count"] = variants.count_1.transform(lambda x: np.log(x))
+    fig = None
+    if variants.shape[0] > 0:
+        # reads total number of samples and calculates frequencies
+        count_samples = session.query(JobEna).filter(JobEna.status == JobStatus.LOADED).count()
+        variants["af"] = variants.count_1 / count_samples
+        variants["log_af"] = variants.af.transform(lambda x: np.log(x + 1))
+        variants["log_count"] = variants.count_1.transform(lambda x: np.log(x))
 
-    # TODO: do something in the data ingestion about multiple annotations on the same variant
-    variants.annotation = variants.annotation.transform(lambda a: a.split("&")[0])
+        # TODO: do something in the data ingestion about multiple annotations on the same variant
+        variants.annotation = variants.annotation.transform(lambda a: a.split("&")[0])
 
-    mdata = {
-        "x": list(variants.position.transform(lambda x: str(x))),
-        "y": list(variants.log_count.transform(lambda x: round(x, 3))),
-        "mutationGroups": list(variants.annotation),
-        "domains": domains
-    }
-
-    return dash_bio.NeedlePlot(
-        id='my-dashbio-needleplot',
-        mutationData=mdata,
-        rangeSlider=True,
-        ylabel="log(count observations)",
-        domainStyle={
-            'displayMinorDomains': False
+        mdata = {
+            "x": list(variants.position.transform(lambda x: str(x))),
+            "y": list(variants.log_count.transform(lambda x: round(x, 3))),
+            "mutationGroups": list(variants.annotation),
+            "domains": domains
         }
-    )
+
+        fig = dash_bio.NeedlePlot(
+            id='my-dashbio-needleplot',
+            mutationData=mdata,
+            rangeSlider=True,
+            ylabel="log(count observations)",
+            domainStyle={
+                'displayMinorDomains': False
+            }
+        )
+    return fig
 
 
 def get_circos_plot():

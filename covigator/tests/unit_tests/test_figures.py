@@ -2,7 +2,7 @@ from datetime import date
 from unittest import TestCase
 import random
 
-from covigator.dashboard.figures import get_accumulated_samples_by_country
+from covigator.dashboard.figures import get_accumulated_samples_by_country, get_variants_plot
 from covigator.database import Database
 from covigator.model import SampleEna, Sample, DataSource, JobEna, JobStatus
 
@@ -46,4 +46,8 @@ class FiguresTests(TestCase):
 
     def test_samples_by_country_no_data(self):
         figure = get_accumulated_samples_by_country(session=self.session)
+        self.assertIsNone(figure)
+
+    def test_needle_plot_no_data(self):
+        figure = get_variants_plot(session=self.session)
         self.assertIsNone(figure)
