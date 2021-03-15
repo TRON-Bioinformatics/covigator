@@ -1,3 +1,4 @@
+import pathlib
 import shutil
 from contextlib import closing
 from urllib import request
@@ -6,12 +7,14 @@ import json
 from sqlalchemy.orm import Session
 from covigator import ENV_COVIGATOR_STORAGE_FOLDER
 from covigator.model import Gene
+from logzero import logger
 
 
 class GeneAnnotationsLoader:
 
     def __init__(self, session: Session):
         self.storage_folder = os.getenv(ENV_COVIGATOR_STORAGE_FOLDER, "./data/covigator")
+        pathlib.Path(self.storage_folder).mkdir(parents=True, exist_ok=True)
         # TODO: this is hardcoded which fixes covigator to Sars-Cov-2, but the problem is that other infectious
         #  organisms do not have their reference in JSON format, this is new and more complete than GFF
         self.reference_file = "ftp://ftp.ensemblgenomes.org/pub/viruses/json/sars_cov_2/sars_cov_2.json"
@@ -28,3 +31,4 @@ class GeneAnnotationsLoader:
         for g in data["genes"]:
             self.session.add(Gene(identifier=g["id"], name=g["name"], data=g))
         self.session.commit()
+        logger.info("Loaded into the database {} genes".format(len(data["genes"])))
