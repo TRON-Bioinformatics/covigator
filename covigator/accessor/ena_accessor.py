@@ -88,22 +88,22 @@ class EnaAccessor:
         offset = 0
         finished = False
         session = self.database.get_database_session()
-        while not finished:
-            list_runs = self._get_ena_runs_page(offset)
-            try:
+        try:
+            while not finished:
+                list_runs = self._get_ena_runs_page(offset)
                 self._process_runs(list_runs, session)
-            except Exception as e:
-                logger.exception(e)
-                session.rollback()
-                self.has_error = True
-                break
-            # finishes when no more data or when test parameter maximum is reached
-            if len(list_runs) < self.PAGE_SIZE or (self.maximum is not None and self.included >= self.maximum):
-                finished = True
-            offset += len(list_runs)
-        self._write_execution_log(session)
-        session.close()
-        self._log_results()
+                # finishes when no more data or when test parameter maximum is reached
+                if len(list_runs) < self.PAGE_SIZE or (self.maximum is not None and self.included >= self.maximum):
+                    finished = True
+                offset += len(list_runs)
+        except Exception as e:
+            logger.exception(e)
+            session.rollback()
+            self.has_error = True
+        finally:
+            self._write_execution_log(session)
+            session.close()
+            self._log_results()
 
     def _get_ena_runs_page(self, offset):
         return self.get_with_retries(

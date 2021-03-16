@@ -4,7 +4,7 @@ from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
 from covigator.misc import backoff_retrier
-from covigator.model import SampleEna, JobStatus, JobEna, Sample, DataSource
+from covigator.model import SampleEna, JobStatus, JobEna, Sample, DataSource, Log, CovigatorModule
 from covigator.database import Database, session_scope
 from logzero import logger
 from dask.distributed import Client
@@ -16,9 +16,11 @@ from covigator.processor.vcf_loader import VcfLoader
 NUMBER_RETRIES_DOWNLOADER = 5
 
 
-class Processor:
+class EnaProcessor:
 
     def __init__(self, database: Database, dask_client: Client):
+        self.start_time = datetime.now()
+        self.has_error = False
         self.database = database
         assert self.database is not None, "Empty database"
         self.dask_client = dask_client
@@ -47,31 +49,34 @@ class Processor:
                 futures.extend(self._process_run(run_accession=job.run_accession))
                 count += 1
             self.dask_client.gather(futures=futures)
+
         except Exception as e:
             logger.exception(e)
             session.rollback()
+            self.has_error = True
         finally:
+            self._write_execution_log(session, count)
             session.close()
 
     def _process_run(self, run_accession: str):
         # NOTE: here we set the priority of each step to ensure a depth first processing
         future_download = self.dask_client.submit(
-            Processor.download, run_accession, priority=-1)
+            EnaProcessor.download, run_accession, priority=-1)
         future_process = self.dask_client.submit(
-            Processor.run_pipeline, future_download, priority=1)
+            EnaProcessor.run_pipeline, future_download, priority=1)
         future_delete = self.dask_client.submit(
-            Processor.delete, future_process, priority=3)
+            EnaProcessor.delete, future_process, priority=3)
         future_load = self.dask_client.submit(
-            Processor.load, future_process, priority=2)
+            EnaProcessor.load, future_process, priority=2)
         return [future_download, future_process, future_delete, future_load]
 
     @staticmethod
     def download(run_accession: str) -> str:
         with session_scope() as session:
-            job = Processor.find_job_by_accession_and_status(
+            job = EnaProcessor.find_job_by_accession_and_status(
                 run_accession=run_accession, session=session, status=JobStatus.QUEUED)
             # NOTE: eventually we may want to generalize this to support some other jobs than ENA runs
-            ena_run = Processor.find_ena_run_by_accession(run_accession, session)
+            ena_run = EnaProcessor.find_ena_run_by_accession(run_accession, session)
             if job is not None:
                 try:
                     # ensures that the download is done with retries, even after MD5 check sum failure
@@ -90,7 +95,7 @@ class Processor:
     @staticmethod
     def run_pipeline(run_accession: str) -> str:
         with session_scope() as session:
-            job = Processor.find_job_by_accession_and_status(
+            job = EnaProcessor.find_job_by_accession_and_status(
                 run_accession=run_accession, session=session, status=JobStatus.DOWNLOADED)
             if job is not None:
                 try:
@@ -110,7 +115,7 @@ class Processor:
     @staticmethod
     def delete(run_accession: str):
         with session_scope() as session:
-            job = Processor.find_job_by_accession_and_status(
+            job = EnaProcessor.find_job_by_accession_and_status(
                 run_accession=run_accession, session=session, status=JobStatus.PROCESSED)
             if job is not None:
                 try:
@@ -127,7 +132,7 @@ class Processor:
     @staticmethod
     def load(run_accession: str):
         with session_scope() as session:
-            job = Processor.find_job_by_accession_and_status(
+            job = EnaProcessor.find_job_by_accession_and_status(
                 run_accession=run_accession, session=session, status=JobStatus.PROCESSED)
             if job is not None:
                 try:
@@ -156,3 +161,18 @@ class Processor:
     def find_ena_run_by_accession(run_accession: str, session: Session) -> SampleEna:
         ena_run = session.query(SampleEna).filter(SampleEna.run_accession == run_accession).first()
         return ena_run
+
+    def _write_execution_log(self, session: Session, count):
+        end_time = datetime.now()
+        session.add(Log(
+            start=self.start_time,
+            end=end_time,
+            source=DataSource.ENA,
+            module=CovigatorModule.PROCESSOR,
+            has_error=self.has_error,
+            data={
+                "processed": count
+            }
+        ))
+        session.commit()
+
