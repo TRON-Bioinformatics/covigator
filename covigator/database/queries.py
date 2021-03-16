@@ -24,7 +24,7 @@ def get_date_of_most_recent_ena_sample(session: Session) -> date:
     return result[0] if result is not None else result
 
 
-def get_date_of_last_ena_check(session: Session, data_source: DataSource):
+def get_date_of_last_check(session: Session, data_source: DataSource):
     """
     Returns the date of the latest non failed accessor check that also has a subsequent non failed processor run.
     Until the processor has ran the data fetched from the accessor is not available.
@@ -41,7 +41,7 @@ def get_date_of_last_ena_check(session: Session, data_source: DataSource):
     return result2[0] if result2 is not None else result2
 
 
-def get_date_of_last_ena_update(session: Session, data_source: DataSource):
+def get_date_of_last_update(session: Session, data_source: DataSource):
     """
     Returns the date of the latest non failed accessor check **with some new data** that also has a subsequent non
     failed processor run.
