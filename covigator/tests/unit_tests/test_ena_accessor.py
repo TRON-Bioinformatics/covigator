@@ -5,7 +5,7 @@ from sqlalchemy import and_
 
 from covigator.accessor.ena_accessor import EnaAccessor
 from covigator.database import Database
-from covigator.model import SampleEna, Sample, JobEna
+from covigator.model import SampleEna, Sample, JobEna, Log, DataSource, CovigatorModule
 from covigator.tests import SARS_COV_2_TAXID, HOMO_SAPIENS_TAXID
 
 
@@ -484,3 +484,49 @@ class EnaAccessorTests(TestCase):
         self.assertEqual(session.query(Sample).filter(
             and_(Sample.id == identifier, Sample.ena_id == identifier)).count(), 1)
         self.assertEqual(session.query(JobEna).filter(JobEna.run_accession == identifier).count(), 1)
+
+    def test_writing_logs(self):
+        database = Database(test=True)
+        ena_accessor = FakeEnaAccessor(results=[
+            {"run_accession": "ERR4080483",
+             "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
+             "instrument_platform": "ILLUMINA",
+             "library_strategy": "WGS",
+             "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/003/ERR4080483/ERR4080483_1.fastq.gz",
+             "fastq_md5": "a91a9dfa2f7008e13a7ce9767aa9aaf3",
+             "host_tax_id": "9606"
+             },
+            {"run_accession": "ERR4080484",
+             "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
+             "instrument_platform": "ILLUMINA",
+             "library_strategy": "WGS",
+             "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/003/ERR4080483/ERR4080483_1.fastq.gz",
+             "fastq_md5": "c57fef34933cbbec2e9e08867f3c664c",
+             "host_tax_id": "9606"
+            },
+            {"run_accession": "ERR4080485",
+             "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
+             "instrument_platform": "ILLUMINA",
+             "library_strategy": "WGS",
+             "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/005/ERR4080485/ERR4080485_1.fastq.gz",
+             "fastq_md5": "4de269d2b5831e1c5175586af694d21e",
+             "host_tax_id": "9606"
+             }
+        ], database=database)
+        ena_accessor.access()
+
+        session = database.get_database_session()
+        self.assertEqual(session.query(Log).count(), 1)
+        log = session.query(Log).first()
+        self.assertIsNotNone(log.start)
+        self.assertIsNotNone(log.end)
+        self.assertEqual(log.source, DataSource.ENA)
+        self.assertEqual(log.module, CovigatorModule.ACCESSOR)
+        data = log.data
+        self.assertEqual(data.get("included"), 3)
+        self.assertEqual(data.get("excluded").get("existing"), 0)
+        self.assertEqual(data.get("excluded").get("excluded_by_criteria"), 0)
+        self.assertEqual(data.get("excluded").get("missing_fastq"), 0)
+        self.assertIsInstance(data.get("excluded").get("platform"), dict)
+        self.assertIsInstance(data.get("excluded").get("library_strategy"), dict)
+        self.assertIsInstance(data.get("excluded").get("host"), dict)

@@ -1,10 +1,12 @@
-from datetime import date
+from datetime import date, datetime
 
 import pycountry
 import pycountry_convert
 import requests
+from sqlalchemy.orm import Session
+
 from covigator.misc import backoff_retrier
-from covigator.model import SampleEna, JobEna, Sample, DataSource
+from covigator.model import SampleEna, JobEna, Sample, DataSource, Log, CovigatorModule
 from covigator.database import Database
 from logzero import logger
 
@@ -59,6 +61,8 @@ class EnaAccessor:
     ]
 
     def __init__(self, tax_id: str, host_tax_id: str, database: Database, maximum=None):
+        self.start_time = datetime.now()
+        self.has_error = False
         self.tax_id = tax_id
         assert self.tax_id is not None and self.tax_id.strip() != "", "Empty tax id"
         logger.info("Tax id {}".format(self.tax_id))
@@ -83,13 +87,22 @@ class EnaAccessor:
     def access(self):
         offset = 0
         finished = False
+        session = self.database.get_database_session()
         while not finished:
             list_runs = self._get_ena_runs_page(offset)
-            self._process_runs(list_runs)
+            try:
+                self._process_runs(list_runs, session)
+            except Exception as e:
+                logger.exception(e)
+                session.rollback()
+                self.has_error = True
+                break
             # finishes when no more data or when test parameter maximum is reached
             if len(list_runs) < self.PAGE_SIZE or (self.maximum is not None and self.included >= self.maximum):
                 finished = True
             offset += len(list_runs)
+        self._write_execution_log(session)
+        session.close()
         self._log_results()
 
     def _get_ena_runs_page(self, offset):
@@ -107,38 +120,25 @@ class EnaAccessor:
                 fields=",".join(self.ENA_FIELDS)
             )).json()
 
-    def _process_runs(self, list_runs):
+    def _process_runs(self, list_runs, session: Session):
 
-        session = self.database.get_database_session()
-        #included_samples_ena = []
         included_samples = []
-        included_jobs = []
-        try:
-            for run in list_runs:
-                sample_ena = self._parse_ena_run(run)
-                sample = self._build_sample(sample_ena)
-                if not self._complies_with_inclusion_criteria(sample_ena):
-                    continue    # skips runs not complying with inclusion criteria
-                if session.query(SampleEna).filter_by(run_accession=sample_ena.run_accession).count() > 0:
-                    self.excluded_existing += 1
-                    continue    # skips runs already registered in the database
-                self.included += 1
-                #included_samples_ena.append(sample_ena)
-                included_samples.append(sample_ena)
-                included_samples.append(sample)
-                included_jobs.append(JobEna(run_accession=sample_ena.run_accession))
-            if len(included_samples) > 0:
-                #session.add_all(included_samples_ena)
-                session.add_all(included_samples)
-                session.commit()    # we need two commits to maintain integrity of FKs
-                session.add_all(included_jobs)
-                session.commit()
-                logger.info("Added {} new runs".format(len(included_jobs)))
-        except Exception as e:
-            logger.exception(e)
-            session.rollback()
-        finally:
-            session.close()
+        for run in list_runs:
+            sample_ena = self._parse_ena_run(run)
+            sample = self._build_sample(sample_ena)
+            if not self._complies_with_inclusion_criteria(sample_ena):
+                continue    # skips runs not complying with inclusion criteria
+            if session.query(SampleEna).filter_by(run_accession=sample_ena.run_accession).count() > 0:
+                self.excluded_existing += 1
+                continue    # skips runs already registered in the database
+            self.included += 1
+            included_samples.append(sample_ena)
+            included_samples.append(sample)
+            included_samples.append(JobEna(run_accession=sample_ena.run_accession))
+        if len(included_samples) > 0:
+            session.add_all(included_samples)
+            session.commit()
+            logger.info("Added {} new runs".format(len(included_samples) / 3))
 
     def _build_sample(self, sample_ena):
         return Sample(
@@ -223,3 +223,25 @@ class EnaAccessor:
         logger.info("Excluded by platform runs = {}".format(self.excluded_samples_by_instrument_platform))
         logger.info("Excluded by host if runs = {}".format(self.excluded_samples_by_host_tax_id))
         logger.info("Excluded by library strategy = {}".format(self.excluded_samples_by_library_strategy))
+
+    def _write_execution_log(self, session: Session):
+        end_time = datetime.now()
+        session.add(Log(
+            start=self.start_time,
+            end=end_time,
+            source=DataSource.ENA,
+            module=CovigatorModule.ACCESSOR,
+            has_error=self.has_error,
+            data={
+                "included": self.included,
+                "excluded": {
+                    "existing": self.excluded_existing,
+                    "excluded_by_criteria": self.excluded,
+                    "missing_fastq": self.excluded_samples_by_fastq_ftp,
+                    "platform": self.excluded_samples_by_instrument_platform,
+                    "library_strategy": self.excluded_samples_by_library_strategy,
+                    "host": self.excluded_samples_by_host_tax_id
+                }
+            }
+        ))
+        session.commit()
