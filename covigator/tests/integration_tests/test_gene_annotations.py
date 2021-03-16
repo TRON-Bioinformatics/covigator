@@ -1,7 +1,4 @@
 from unittest import TestCase
-from covigator.model import SampleEna
-from covigator.processor.downloader import Downloader, CovigatorMD5CheckSumError
-import os
 
 from covigator.references.gene_annotations import GeneAnnotationsLoader
 

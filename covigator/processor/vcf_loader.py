@@ -1,7 +1,7 @@
 from cyvcf2 import VCF, Variant
 import os
 from sqlalchemy.orm import Session
-from covigator.model import Variant as CovigatorVariant, VariantObservation, Sample
+from covigator.database.model import Variant as CovigatorVariant, VariantObservation, Sample
 
 
 class VcfLoader:

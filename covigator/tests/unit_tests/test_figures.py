@@ -1,10 +1,9 @@
-from datetime import date
 from unittest import TestCase
-import random
-
 from covigator.dashboard.figures import get_accumulated_samples_by_country, get_variants_plot
-from covigator.database import Database
-from covigator.model import SampleEna, Sample, DataSource, JobEna, JobStatus
+from covigator.database.database import Database
+from faker import Faker
+
+from covigator.tests.unit_tests.mocked import get_mocked_ena_sample
 
 
 class FiguresTests(TestCase):
@@ -13,32 +12,12 @@ class FiguresTests(TestCase):
         # intialise database
         self.database = Database(test=True)
         self.session = self.database.get_database_session()
-
-    def _get_mocked_sample(self):
-        identifier = str(random.uniform(1, 1000000))
-        sample_ena = SampleEna(
-            run_accession=identifier,
-            first_created=date.fromisoformat("2021-01-01"),
-            country="Germany",
-            fastq_ftp="ftp.fastq",
-            fastq_md5="123456789",
-            num_fastqs=1
-        )
-        sample = Sample(
-            id=identifier,
-            source=DataSource.ENA,
-            ena_id=identifier
-        )
-        job = JobEna(
-            run_accession=identifier,
-            status=JobStatus.LOADED
-        )
-        return sample_ena, sample, job
+        self.faker = Faker()
 
     def test_samples_by_country(self):
         # populates the ENA samples tables
         for _ in range(100):
-            sample_ena, sample, job = self._get_mocked_sample()
+            sample_ena, sample, job = get_mocked_ena_sample(faker=self.faker)
             self.session.add_all([sample_ena, sample, job])
         self.session.commit()
         figure = get_accumulated_samples_by_country(session=self.session)

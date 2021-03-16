@@ -1,9 +1,9 @@
 from unittest import TestCase
-from covigator.database import Database
-from covigator.model import Gene
+from covigator.database.database import Database
+from covigator.database.model import Gene
 
 
-class FiguresTests(TestCase):
+class DatabaseInitialisationTests(TestCase):
 
     def setUp(self) -> None:
         # intialise database
@@ -18,7 +18,7 @@ class FiguresTests(TestCase):
 
         # creates another connection
         database2 = Database(test=True)
-        session2 = self.database.get_database_session()
+        session2 = database2.get_database_session()
 
         count_genes_2 = session2.query(Gene).count()
         self.assertEqual(count_genes, count_genes_2)

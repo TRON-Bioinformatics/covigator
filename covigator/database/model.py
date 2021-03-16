@@ -282,3 +282,25 @@ class VariantCooccurrence(Base):
     ForeignKeyConstraint(
         [chromosome_two, position_two, reference_two, alternate_two],
         [Variant.chromosome, Variant.position, Variant.reference, Variant.alternate])
+
+
+class CovigatorModule(enum.Enum):
+    ACCESSOR = 1
+    PROCESSOR = 2
+
+
+class Log(Base):
+    """
+    The table that holds an ENA job
+    """
+    __tablename__ = 'log'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    start = Column(DateTime(timezone=True), nullable=False)
+    end = Column(DateTime(timezone=True), nullable=False)
+    source = Column(Enum(DataSource), nullable=False)
+    module = Column(Enum(CovigatorModule), nullable=False)
+
+    has_error = Column(Boolean, default=False)
+    data = Column(JSON)

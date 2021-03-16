@@ -8,7 +8,7 @@ from sqlalchemy.orm import sessionmaker, Session
 
 from covigator import ENV_COVIGATOR_DB_HOST, ENV_COVIGATOR_DB_NAME, ENV_COVIGATOR_DB_USER, ENV_COVIGATOR_DB_PASSWORD, \
     ENV_COVIGATOR_DB_PORT, ENV_COVIGATOR_DB_POOL_SIZE, ENV_COVIGATOR_DB_MAX_OVERFLOW
-from covigator.model import Base, Gene
+from covigator.database.model import Base, Gene
 from covigator.references.gene_annotations import GeneAnnotationsLoader
 
 

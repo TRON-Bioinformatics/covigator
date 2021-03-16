@@ -8,10 +8,13 @@ from tenacity import wait_exponential, stop_after_attempt
 
 from covigator import ENV_COVIGATOR_DASHBOARD_HOST, ENV_COVIGATOR_DASHBOARD_PORT
 from covigator.dashboard.figures import get_accumulated_samples_by_country, get_variants_plot, get_circos_plot
-from covigator.model import SampleEna, JobEna, JobStatus, Variant, VariantObservation
-from covigator.database import Database
+from covigator.database.model import SampleEna, JobEna, JobStatus, Variant, VariantObservation, DataSource
+from covigator.database.database import Database
 import tenacity
 from logzero import logger
+
+from covigator.database.queries import get_date_of_first_ena_sample, get_date_of_most_recent_ena_sample, \
+    get_date_of_last_check, get_date_of_last_update
 
 
 @tenacity.retry(wait=wait_exponential(multiplier=2, min=1, max=10), stop=stop_after_attempt(5))
@@ -92,6 +95,11 @@ def get_tab_overview(session: Session):
         .join(JobEna).filter(JobEna.status == JobStatus.LOADED) \
         .group_by(SampleEna.instrument_model).all()
 
+    date_of_first_ena_sample = get_date_of_first_ena_sample(session)
+    date_of_most_recent_ena_sample = get_date_of_most_recent_ena_sample(session)
+    date_of_last_check_ena = get_date_of_last_check(session, data_source=DataSource.ENA)
+    date_of_last_update_ena = get_date_of_last_update(session, data_source=DataSource.ENA)
+
     return dcc.Tab(label="About",
                         children=[html.Div(
                             [
@@ -131,7 +139,53 @@ def get_tab_overview(session: Session):
                                             className="mini_container",
                                         ),
                                     ],
-                                    id="info-container",
+                                    id="info-container-1",
+                                    className="row container-display",
+                                ),
+                                html.Div(html.H4("European Nucleotide Archive (ENA)")),
+                                html.Div(
+                                    [
+                                        html.Div(
+                                            [html.H6("First sample"), html.H6(date_of_first_ena_sample)],
+                                            className="mini_container",
+                                        ),
+                                        html.Div(
+                                            [html.H6("Most recent sample"), html.H6(date_of_most_recent_ena_sample)],
+                                            className="mini_container",
+                                        ),
+                                        html.Div(
+                                            [html.H6("Last checked"), html.H6(date_of_last_check_ena)],
+                                            className="mini_container",
+                                        ),
+                                        html.Div(
+                                            [html.H6("Last updated"), html.H6(date_of_last_update_ena)],
+                                            className="mini_container",
+                                        ),
+                                    ],
+                                    id="info-container-2",
+                                    className="row container-display",
+                                ),
+                                html.Div(html.H4("GISAID")),
+                                html.Div(
+                                    [
+                                        html.Div(
+                                            [html.H6("First sample"), html.H6("-")],
+                                            className="mini_container",
+                                        ),
+                                        html.Div(
+                                            [html.H6("Most recent sample"), html.H6("-")],
+                                            className="mini_container",
+                                        ),
+                                        html.Div(
+                                            [html.H6("Last checked"), html.H6("-")],
+                                            className="mini_container",
+                                        ),
+                                        html.Div(
+                                            [html.H6("Last updated"), html.H6("-")],
+                                            className="mini_container",
+                                        ),
+                                    ],
+                                    id="info-container-3",
                                     className="row container-display",
                                 ),
                                 html.Div(
@@ -147,7 +201,7 @@ def get_tab_overview(session: Session):
                                             className="mini_container",
                                         ),
                                     ],
-                                    id="info-container-2",
+                                    id="info-container-4",
                                     className="row container-display",
                                 ),
                                 html.Br(),

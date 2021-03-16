@@ -3,9 +3,9 @@ from argparse import ArgumentParser
 from dask.distributed import Client
 import covigator
 from covigator.accessor.ena_accessor import EnaAccessor
-from covigator.database import Database
+from covigator.database.database import Database
 from covigator.processor.pipeline import Pipeline
-from covigator.processor.processor import Processor
+from covigator.processor.ena_processor import EnaProcessor
 from logzero import logger
 
 from covigator.references.gene_annotations import GeneAnnotationsLoader
@@ -47,7 +47,7 @@ def processor():
     args = parser.parse_args()
 
     client = Client(n_workers=int(args.num_cpus), threads_per_worker=1)
-    Processor(database=Database(), dask_client=client).process()
+    EnaProcessor(database=Database(), dask_client=client).process()
 
 
 def pipeline():

@@ -1,8 +1,8 @@
 from unittest import TestCase
 import pkg_resources
 import covigator.tests
-from covigator.database import Database
-from covigator.model import Variant, VariantObservation, DataSource, Sample
+from covigator.database.database import Database
+from covigator.database.model import Variant, VariantObservation, DataSource, Sample
 from covigator.processor.vcf_loader import VcfLoader
 
 

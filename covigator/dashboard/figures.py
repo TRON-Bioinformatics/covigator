@@ -5,7 +5,7 @@ import plotly.express as px
 from sqlalchemy import and_, func
 from sqlalchemy.orm import Session
 import dash_bio
-from covigator.model import SampleEna, JobEna, JobStatus, Variant, Gene, VariantObservation
+from covigator.database.model import SampleEna, JobEna, JobStatus, Variant, Gene, VariantObservation
 
 import json
 from six.moves.urllib import request as urlreq
