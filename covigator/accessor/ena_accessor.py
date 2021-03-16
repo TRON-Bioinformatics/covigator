@@ -88,10 +88,14 @@ class EnaAccessor:
         offset = 0
         finished = False
         session = self.database.get_database_session()
+        # NOTE: holding in memory the whole list of existing ids is much faster than querying every time
+        # it assumes there will be no repetitions
+        existing_sample_ids = [value for value, in session.query(SampleEna.run_accession).all()]
         try:
             while not finished:
                 list_runs = self._get_ena_runs_page(offset)
-                self._process_runs(list_runs, session)
+                logger.info("Read page of {} ENA samples".format(len(list_runs)))
+                self._process_runs(list_runs, existing_sample_ids, session)
                 # finishes when no more data or when test parameter maximum is reached
                 if len(list_runs) < self.PAGE_SIZE or (self.maximum is not None and self.included >= self.maximum):
                     finished = True
@@ -120,25 +124,32 @@ class EnaAccessor:
                 fields=",".join(self.ENA_FIELDS)
             )).json()
 
-    def _process_runs(self, list_runs, session: Session):
+    def _process_runs(self, list_runs, existing_sample_ids, session: Session):
 
         included_samples = []
+        included_samples_ena = []
+        included_jobs = []
         for run in list_runs:
-            sample_ena = self._parse_ena_run(run)
-            sample = self._build_sample(sample_ena)
-            if not self._complies_with_inclusion_criteria(sample_ena):
-                continue    # skips runs not complying with inclusion criteria
-            if session.query(SampleEna).filter_by(run_accession=sample_ena.run_accession).count() > 0:
+            if run.get("run_accession") in existing_sample_ids:
                 self.excluded_existing += 1
                 continue    # skips runs already registered in the database
+            if not self._complies_with_inclusion_criteria(run):
+                continue    # skips runs not complying with inclusion criteria
+            # NOTE: this parse operation is costly
+            sample_ena = self._parse_ena_run(run)
+            sample = self._build_sample(sample_ena)
             self.included += 1
-            included_samples.append(sample_ena)
+            included_samples_ena.append(sample_ena)
             included_samples.append(sample)
-            included_samples.append(JobEna(run_accession=sample_ena.run_accession))
+            included_jobs.append(JobEna(run_accession=sample_ena.run_accession))
         if len(included_samples) > 0:
-            session.add_all(included_samples)
+            session.add_all(included_samples_ena)
             session.commit()
-            logger.info("Added {} new runs".format(len(included_samples) / 3))
+            session.add_all(included_samples)
+            session.add_all(included_jobs)
+            session.commit()
+            logger.info("Added {} new ENA samples".format(len(included_samples)))
+        logger.info("Processed {} ENA samples".format(len(list_runs)))
 
     def _build_sample(self, sample_ena):
         return Sample(
@@ -194,23 +205,28 @@ class EnaAccessor:
             value = None
         return value
 
-    def _complies_with_inclusion_criteria(self, ena_run: SampleEna):
+    def _complies_with_inclusion_criteria(self, ena_run: dict):
+        # NOTE: this uses the original dictionary instead of the parsed SampleEna class for performance reasons
         included = True
-        if ena_run.host_tax_id is None or ena_run.host_tax_id.strip() == "" or ena_run.host_tax_id != self.host_tax_id:
+        host_tax_id = ena_run.get("host_tax_id")
+        if host_tax_id is None or host_tax_id.strip() == "" or host_tax_id != self.host_tax_id:
             included = False    # skips runs where the host is empty or does not match
-            self.excluded_samples_by_host_tax_id[str(ena_run.host_tax_id)] = \
-                self.excluded_samples_by_host_tax_id.get(str(ena_run.host_tax_id), 0) + 1
-        if ena_run.fastq_ftp is None or ena_run.fastq_ftp == "":
+            self.excluded_samples_by_host_tax_id[str(host_tax_id)] = \
+                self.excluded_samples_by_host_tax_id.get(str(host_tax_id), 0) + 1
+        fastq_ftp = ena_run.get("fastq_ftp")
+        if fastq_ftp is None or fastq_ftp == "":
             included = False    # skips runs without FTP URL
             self.excluded_samples_by_fastq_ftp += 1
-        if ena_run.instrument_platform.upper() != "ILLUMINA":
+        instrument_platform = ena_run.get("instrument_platform")
+        if instrument_platform.upper() != "ILLUMINA":
             included = False    # skips non Illumina data
-            self.excluded_samples_by_instrument_platform[str(ena_run.instrument_platform)] = \
-                self.excluded_samples_by_instrument_platform.get(str(ena_run.instrument_platform), 0) + 1
-        if ena_run.library_strategy not in self.INCLUDED_LIBRARY_STRATEGIES:
+            self.excluded_samples_by_instrument_platform[str(instrument_platform)] = \
+                self.excluded_samples_by_instrument_platform.get(str(instrument_platform), 0) + 1
+        library_strategy = ena_run.get("library_strategy")
+        if library_strategy not in self.INCLUDED_LIBRARY_STRATEGIES:
             included = False  # skips not included library strategies
-            self.excluded_samples_by_library_strategy[str(ena_run.library_strategy)] = \
-                self.excluded_samples_by_library_strategy.get(str(ena_run.library_strategy), 0) + 1
+            self.excluded_samples_by_library_strategy[str(library_strategy)] = \
+                self.excluded_samples_by_library_strategy.get(str(library_strategy), 0) + 1
         if not included:
             self.excluded += 1
         return included
