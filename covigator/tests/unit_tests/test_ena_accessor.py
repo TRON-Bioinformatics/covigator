@@ -4,8 +4,8 @@ from unittest import TestCase
 from sqlalchemy import and_
 
 from covigator.accessor.ena_accessor import EnaAccessor
-from covigator.database import Database
-from covigator.model import SampleEna, Sample, JobEna, Log, DataSource, CovigatorModule
+from covigator.database.database import Database
+from covigator.database.model import SampleEna, Sample, JobEna, Log, DataSource, CovigatorModule
 from covigator.tests import SARS_COV_2_TAXID, HOMO_SAPIENS_TAXID
 
 

@@ -1,7 +1,7 @@
 from unittest import TestCase
 from dask.distributed import Client
 from covigator.accessor.ena_accessor import EnaAccessor
-from covigator.database import Database
+from covigator.database.database import Database
 from covigator.processor.ena_processor import EnaProcessor
 from covigator.tests import SARS_COV_2_TAXID, HOMO_SAPIENS_TAXID
 import covigator.dashboard.dashboard as dashboard

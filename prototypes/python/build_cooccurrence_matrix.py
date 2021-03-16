@@ -2,7 +2,7 @@
 from itertools import combinations
 from sqlalchemy import and_
 from covigator.database import Database
-from covigator.model import SampleEna, VariantObservation, VariantCooccurrence
+from covigator.database.model import SampleEna, VariantObservation, VariantCooccurrence
 from logzero import logger
 
 

@@ -2,9 +2,10 @@ from unittest import TestCase
 
 from dask.distributed import Client
 
-from covigator.database import Database
-from covigator.model import Log, DataSource, CovigatorModule
+from covigator.database.database import Database
+from covigator.database.model import Log, DataSource, CovigatorModule, SampleEna
 from covigator.processor.ena_processor import EnaProcessor
+from faker import Faker
 
 
 class EnaProcessorTests(TestCase):
@@ -14,6 +15,7 @@ class EnaProcessorTests(TestCase):
         self.database = Database(test=True)
         self.session = self.database.get_database_session()
         self.processor = EnaProcessor(database=self.database, dask_client=Client(n_workers=int(1), threads_per_worker=1))
+        self.faker = Faker()
 
     def test_no_jobs(self):
         self.processor.process()

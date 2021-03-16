@@ -8,8 +8,8 @@ from tenacity import wait_exponential, stop_after_attempt
 
 from covigator import ENV_COVIGATOR_DASHBOARD_HOST, ENV_COVIGATOR_DASHBOARD_PORT
 from covigator.dashboard.figures import get_accumulated_samples_by_country, get_variants_plot, get_circos_plot
-from covigator.model import SampleEna, JobEna, JobStatus, Variant, VariantObservation
-from covigator.database import Database
+from covigator.database.model import SampleEna, JobEna, JobStatus, Variant, VariantObservation
+from covigator.database.database import Database
 import tenacity
 from logzero import logger
 

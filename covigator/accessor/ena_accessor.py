@@ -6,8 +6,8 @@ import requests
 from sqlalchemy.orm import Session
 
 from covigator.misc import backoff_retrier
-from covigator.model import SampleEna, JobEna, Sample, DataSource, Log, CovigatorModule
-from covigator.database import Database
+from covigator.database.model import SampleEna, JobEna, Sample, DataSource, Log, CovigatorModule
+from covigator.database.database import Database
 from logzero import logger
 
 NUMBER_RETRIES = 5

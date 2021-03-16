@@ -3,7 +3,7 @@ from argparse import ArgumentParser
 from dask.distributed import Client
 import covigator
 from covigator.accessor.ena_accessor import EnaAccessor
-from covigator.database import Database
+from covigator.database.database import Database
 from covigator.processor.pipeline import Pipeline
 from covigator.processor.ena_processor import EnaProcessor
 from logzero import logger

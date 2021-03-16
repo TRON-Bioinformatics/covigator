@@ -6,7 +6,7 @@ import shutil
 import hashlib
 from logzero import logger
 from covigator import ENV_COVIGATOR_STORAGE_FOLDER
-from covigator.model import SampleEna, SEPARATOR
+from covigator.database.model import SampleEna, SEPARATOR
 import re
 
 FTP_PROTOCOL = "ftp://"

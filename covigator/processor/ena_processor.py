@@ -4,8 +4,8 @@ from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
 from covigator.misc import backoff_retrier
-from covigator.model import SampleEna, JobStatus, JobEna, Sample, DataSource, Log, CovigatorModule
-from covigator.database import Database, session_scope
+from covigator.database.model import SampleEna, JobStatus, JobEna, Sample, DataSource, Log, CovigatorModule
+from covigator.database.database import Database, session_scope
 from logzero import logger
 from dask.distributed import Client
 import os

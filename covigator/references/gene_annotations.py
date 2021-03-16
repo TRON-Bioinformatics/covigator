@@ -6,7 +6,7 @@ import os
 import json
 from sqlalchemy.orm import Session
 from covigator import ENV_COVIGATOR_STORAGE_FOLDER
-from covigator.model import Gene
+from covigator.database.model import Gene
 from logzero import logger
 
 
@@ -27,7 +27,8 @@ class GeneAnnotationsLoader:
             with open(file_name, 'wb') as f:
                 shutil.copyfileobj(r, f)
         # reads the JSON
-        data = json.load(open(file_name))
+        with open(file_name) as fd:
+            data = json.load(fd)
         for g in data["genes"]:
             self.session.add(Gene(identifier=g["id"], name=g["name"], data=g))
         self.session.commit()
