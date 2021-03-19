@@ -6,11 +6,12 @@ from sqlalchemy import func, text
 from sqlalchemy.orm import Session
 from tenacity import wait_exponential, stop_after_attempt
 
-from covigator import ENV_COVIGATOR_DASHBOARD_HOST, ENV_COVIGATOR_DASHBOARD_PORT
+from covigator import ENV_COVIGATOR_DASHBOARD_HOST, ENV_COVIGATOR_DASHBOARD_PORT, ENV_COVIGATOR_DASHBOARD_LOG_FILE
 from covigator.dashboard.figures import get_accumulated_samples_by_country, get_variants_plot, get_circos_plot
 from covigator.database.model import SampleEna, JobEna, JobStatus, Variant, VariantObservation, DataSource
 from covigator.database.database import Database
 import tenacity
+import logzero
 from logzero import logger
 
 from covigator.database.queries import get_date_of_first_ena_sample, get_date_of_most_recent_ena_sample, \
@@ -275,6 +276,9 @@ class CovigatorDashBoardInitialisationError(Exception):
 
 
 def main(debug=False):
+    log_file = os.getenv(ENV_COVIGATOR_DASHBOARD_LOG_FILE)
+    if log_file is not None:
+        logzero.logfile(log_file, maxBytes=1e6, backupCount=3)
     host = os.getenv(ENV_COVIGATOR_DASHBOARD_HOST, "0.0.0.0")
     try:
         port = int(os.getenv(ENV_COVIGATOR_DASHBOARD_PORT, "8050"))
