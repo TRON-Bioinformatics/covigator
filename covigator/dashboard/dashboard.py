@@ -222,7 +222,7 @@ def get_tab_overview(session: Session):
 
 
 def _print_date(date: datetime.date):
-    return str(date) if date else MISSING_VALUE
+    return str(date) if date is not None else MISSING_VALUE
 
 
 def get_tab_samples(session: Session):
