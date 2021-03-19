@@ -69,7 +69,7 @@ class QueriesTests(TestCase):
         self.assertIsNone(observed_date)
 
     def test_get_date_of_last_ena_update(self):
-        logs = [get_mocked_log(faker=self.faker) for _ in range(50)]
+        logs = [get_mocked_log(faker=self.faker, source=DataSource.ENA) for _ in range(50)]
         self.session.add_all(logs)
         self.session.commit()
         observed_date = get_date_of_last_update(session=self.session, data_source=DataSource.ENA)
