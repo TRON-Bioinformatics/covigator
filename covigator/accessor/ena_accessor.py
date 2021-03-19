@@ -63,6 +63,7 @@ class EnaAccessor:
     def __init__(self, tax_id: str, host_tax_id: str, database: Database, maximum=None):
         self.start_time = datetime.now()
         self.has_error = False
+        self.error_message = None
         self.tax_id = tax_id
         assert self.tax_id is not None and self.tax_id.strip() != "", "Empty tax id"
         logger.info("Tax id {}".format(self.tax_id))
@@ -104,6 +105,7 @@ class EnaAccessor:
             logger.exception(e)
             session.rollback()
             self.has_error = True
+            self.error_message = str(e)
         finally:
             self._write_execution_log(session)
             session.close()
@@ -248,6 +250,7 @@ class EnaAccessor:
             source=DataSource.ENA,
             module=CovigatorModule.ACCESSOR,
             has_error=self.has_error,
+            error_message=self.error_message,
             data={
                 "included": self.included,
                 "excluded": {
