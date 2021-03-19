@@ -303,4 +303,5 @@ class Log(Base):
     module = Column(Enum(CovigatorModule), nullable=False)
 
     has_error = Column(Boolean, default=False)
+    error_message = Column(String)
     data = Column(JSON)
