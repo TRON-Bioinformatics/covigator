@@ -100,10 +100,10 @@ def get_tab_overview(session: Session):
         .join(JobEna).filter(JobEna.status == JobStatus.LOADED) \
         .group_by(SampleEna.instrument_model).all()
 
-    date_of_first_ena_sample = get_date_of_first_ena_sample(session)
-    date_of_most_recent_ena_sample = get_date_of_most_recent_ena_sample(session)
-    date_of_last_check_ena = get_date_of_last_check(session, data_source=DataSource.ENA)
-    date_of_last_update_ena = get_date_of_last_update(session, data_source=DataSource.ENA)
+    date_of_first_ena_sample = str(get_date_of_first_ena_sample(session))
+    date_of_most_recent_ena_sample = str(get_date_of_most_recent_ena_sample(session))
+    date_of_last_check_ena = str(get_date_of_last_check(session, data_source=DataSource.ENA))
+    date_of_last_update_ena = str(get_date_of_last_update(session, data_source=DataSource.ENA))
 
     return dcc.Tab(label="About",
                         children=[html.Div(
