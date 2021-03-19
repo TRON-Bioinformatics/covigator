@@ -1,4 +1,6 @@
 import os
+from datetime import datetime
+
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
@@ -6,15 +8,18 @@ from sqlalchemy import func, text
 from sqlalchemy.orm import Session
 from tenacity import wait_exponential, stop_after_attempt
 
-from covigator import ENV_COVIGATOR_DASHBOARD_HOST, ENV_COVIGATOR_DASHBOARD_PORT
+from covigator import ENV_COVIGATOR_DASHBOARD_HOST, ENV_COVIGATOR_DASHBOARD_PORT, ENV_COVIGATOR_DASHBOARD_LOG_FILE
 from covigator.dashboard.figures import get_accumulated_samples_by_country, get_variants_plot, get_circos_plot
 from covigator.database.model import SampleEna, JobEna, JobStatus, Variant, VariantObservation, DataSource
 from covigator.database.database import Database
 import tenacity
+import logzero
 from logzero import logger
 
 from covigator.database.queries import get_date_of_first_ena_sample, get_date_of_most_recent_ena_sample, \
     get_date_of_last_check, get_date_of_last_update
+
+MISSING_VALUE = "-"
 
 
 @tenacity.retry(wait=wait_exponential(multiplier=2, min=1, max=10), stop=stop_after_attempt(5))
@@ -95,10 +100,10 @@ def get_tab_overview(session: Session):
         .join(JobEna).filter(JobEna.status == JobStatus.LOADED) \
         .group_by(SampleEna.instrument_model).all()
 
-    date_of_first_ena_sample = get_date_of_first_ena_sample(session)
-    date_of_most_recent_ena_sample = get_date_of_most_recent_ena_sample(session)
-    date_of_last_check_ena = get_date_of_last_check(session, data_source=DataSource.ENA)
-    date_of_last_update_ena = get_date_of_last_update(session, data_source=DataSource.ENA)
+    date_of_first_ena_sample = str(get_date_of_first_ena_sample(session))
+    date_of_most_recent_ena_sample = str(get_date_of_most_recent_ena_sample(session))
+    date_of_last_check_ena = str(get_date_of_last_check(session, data_source=DataSource.ENA))
+    date_of_last_update_ena = str(get_date_of_last_update(session, data_source=DataSource.ENA))
 
     return dcc.Tab(label="About",
                         children=[html.Div(
@@ -146,19 +151,23 @@ def get_tab_overview(session: Session):
                                 html.Div(
                                     [
                                         html.Div(
-                                            [html.H6("First sample"), html.H6(date_of_first_ena_sample)],
+                                            [html.H6("First sample"),
+                                             html.H6(_print_date(date_of_first_ena_sample))],
                                             className="mini_container",
                                         ),
                                         html.Div(
-                                            [html.H6("Most recent sample"), html.H6(date_of_most_recent_ena_sample)],
+                                            [html.H6("Most recent sample"),
+                                             html.H6(_print_date(date_of_most_recent_ena_sample))],
                                             className="mini_container",
                                         ),
                                         html.Div(
-                                            [html.H6("Last checked"), html.H6(date_of_last_check_ena)],
+                                            [html.H6("Last checked"),
+                                             html.H6(_print_date(date_of_last_check_ena))],
                                             className="mini_container",
                                         ),
                                         html.Div(
-                                            [html.H6("Last updated"), html.H6(date_of_last_update_ena)],
+                                            [html.H6("Last updated"),
+                                             html.H6(_print_date(date_of_last_update_ena))],
                                             className="mini_container",
                                         ),
                                     ],
@@ -169,19 +178,19 @@ def get_tab_overview(session: Session):
                                 html.Div(
                                     [
                                         html.Div(
-                                            [html.H6("First sample"), html.H6("-")],
+                                            [html.H6("First sample"), html.H6(MISSING_VALUE)],
                                             className="mini_container",
                                         ),
                                         html.Div(
-                                            [html.H6("Most recent sample"), html.H6("-")],
+                                            [html.H6("Most recent sample"), html.H6(MISSING_VALUE)],
                                             className="mini_container",
                                         ),
                                         html.Div(
-                                            [html.H6("Last checked"), html.H6("-")],
+                                            [html.H6("Last checked"), html.H6(MISSING_VALUE)],
                                             className="mini_container",
                                         ),
                                         html.Div(
-                                            [html.H6("Last updated"), html.H6("-")],
+                                            [html.H6("Last updated"), html.H6(MISSING_VALUE)],
                                             className="mini_container",
                                         ),
                                     ],
@@ -210,6 +219,10 @@ def get_tab_overview(session: Session):
                             ],
                             style={"text-align": "left"}
                         )])
+
+
+def _print_date(date: datetime.date):
+    return str(date) if date else MISSING_VALUE
 
 
 def get_tab_samples(session: Session):
@@ -275,6 +288,9 @@ class CovigatorDashBoardInitialisationError(Exception):
 
 
 def main(debug=False):
+    log_file = os.getenv(ENV_COVIGATOR_DASHBOARD_LOG_FILE)
+    if log_file is not None:
+        logzero.logfile(log_file, maxBytes=1e6, backupCount=3)
     host = os.getenv(ENV_COVIGATOR_DASHBOARD_HOST, "0.0.0.0")
     try:
         port = int(os.getenv(ENV_COVIGATOR_DASHBOARD_PORT, "8050"))

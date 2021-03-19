@@ -21,6 +21,7 @@ class EnaProcessor:
     def __init__(self, database: Database, dask_client: Client):
         self.start_time = datetime.now()
         self.has_error = False
+        self.error_message = None
         self.database = database
         assert self.database is not None, "Empty database"
         self.dask_client = dask_client
@@ -53,6 +54,7 @@ class EnaProcessor:
         except Exception as e:
             logger.exception(e)
             session.rollback()
+            self.error_message = str(e)
             self.has_error = True
         finally:
             self._write_execution_log(session, count)
@@ -170,6 +172,7 @@ class EnaProcessor:
             source=DataSource.ENA,
             module=CovigatorModule.PROCESSOR,
             has_error=self.has_error,
+            error_message=self.error_message,
             data={
                 "processed": count
             }
