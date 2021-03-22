@@ -38,5 +38,7 @@ def get_mocked_log(faker: Faker, source: DataSource = None, module: CovigatorMod
         module=module if module else faker.random_choices((CovigatorModule.ACCESSOR, CovigatorModule.PROCESSOR),
                                                           length=1)[0],
         has_error=faker.boolean(),
-        data={"included": faker.random_digit()}
+        processed=faker.random_digit(),
+        data={"included": faker.random_digit(),
+              "excluded": {"this": faker.random_digit(), "that": faker.random_digit()}}
     )

@@ -173,6 +173,7 @@ class EnaProcessor:
             module=CovigatorModule.PROCESSOR,
             has_error=self.has_error,
             error_message=self.error_message,
+            processed=count,
             data={
                 "processed": count
             }

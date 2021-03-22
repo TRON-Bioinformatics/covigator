@@ -304,4 +304,5 @@ class Log(Base):
 
     has_error = Column(Boolean, default=False)
     error_message = Column(String)
+    processed = Column(Integer)
     data = Column(JSON)

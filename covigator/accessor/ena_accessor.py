@@ -251,6 +251,7 @@ class EnaAccessor:
             module=CovigatorModule.ACCESSOR,
             has_error=self.has_error,
             error_message=self.error_message,
+            processed=self.included,
             data={
                 "included": self.included,
                 "excluded": {
