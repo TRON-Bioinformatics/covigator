@@ -1,7 +1,5 @@
 from datetime import datetime
 from typing import List
-
-from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, String, Float, Enum, DateTime, Integer, Boolean, Date, ForeignKey, \
     ForeignKeyConstraint, BigInteger, JSON
@@ -306,4 +304,5 @@ class Log(Base):
 
     has_error = Column(Boolean, default=False)
     error_message = Column(String)
-    data = Column(JSONB)
+    processed = Column(Integer)
+    data = Column(JSON)

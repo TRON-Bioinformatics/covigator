@@ -55,7 +55,7 @@ def get_date_of_last_update(session: Session, data_source: DataSource) -> date:
     if most_recent_processor_run:
         result2 = session.query(Log.start).filter(
             and_(Log.source == data_source, Log.module == CovigatorModule.ACCESSOR, Log.has_error == False,
-                 Log.data["included"].astext.cast(Integer) > 0, Log.start < most_recent_processor_run)) \
+                 Log.processed > 0, Log.start < most_recent_processor_run)) \
             .order_by(desc(Log.start)).first()
     return result2[0] if result2 is not None else result2
 
