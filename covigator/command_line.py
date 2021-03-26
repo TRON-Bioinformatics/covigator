@@ -5,7 +5,9 @@ import covigator
 from covigator.accessor.ena_accessor import EnaAccessor
 from covigator.database.database import Database
 from covigator.processor.pipeline import Pipeline
+from covigator.processor.gisaid_pipeline import GisaidPipeline
 from covigator.processor.ena_processor import EnaProcessor
+from covigator.processor.gisaid_processor import GisaidProcessor
 from logzero import logger
 
 from covigator.references.gene_annotations import GeneAnnotationsLoader
@@ -37,6 +39,12 @@ def processor():
     parser = ArgumentParser(
         description="Covigator {} processor".format(covigator.VERSION))
     parser.add_argument(
+        "--source",
+        dest="data_source",
+        help="Specify data source. This can be either ENA or GISAID",
+        required=True
+    )
+    parser.add_argument(
         "--num-cpus",
         dest="num_cpus",
         help="number of CPUs to be used by the processor, this reflects the number of jobs that will be processed in "
@@ -47,8 +55,12 @@ def processor():
     args = parser.parse_args()
 
     client = Client(n_workers=int(args.num_cpus), threads_per_worker=1)
-    EnaProcessor(database=Database(), dask_client=client).process()
-
+    if args.data_source == "ENA":
+        EnaProcessor(database=Database(), dask_client=client).process()
+    elif args.data_source == "GISAID":
+        GisaidProcessor(database=Database(), dask_client=client).process()
+    else:
+        logger.error("Unknown data source. Please choose either ENA or GISAID")
 
 def pipeline():
     parser = ArgumentParser(description="Run Pipeline for testing")
@@ -60,4 +72,13 @@ def pipeline():
 
     args = parser.parse_args()
     vcf_file = Pipeline().run(fastq1=args.fastq1, fastq2=args.fastq2)
+    logger.info("Output VCF file: {}".format(vcf_file))
+
+
+def gisaid_pipeline():
+    parser = ArgumentParser(description="Run Pipeline for testing")
+    parser.add_argument("--run_accession", dest="run_accession", help="Specify run accession to process", required=True)
+
+    args = parser.parse_args()
+    vcf_file = GisaidPipeline().run(run_accession=args.run_accession)
     logger.info("Output VCF file: {}".format(vcf_file))

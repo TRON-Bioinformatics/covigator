@@ -56,7 +56,7 @@ class Sample(Base):
     source = Column(Enum(DataSource), primary_key=True)
     # NOTE: should have only one filled, either ena_id or gisaid_id and be coherent with the value of source
     ena_id = Column(ForeignKey("sample_ena.run_accession"))
-    gisaid_id = Column(ForeignKey("sample_gisaid.id"))
+    gisaid_id = Column(ForeignKey("sample_gisaid.run_accession"))
 
 
 class SampleGisaid(Base):
@@ -65,7 +65,34 @@ class SampleGisaid(Base):
     """
     __tablename__ = 'sample_gisaid'
 
-    id = Column(String, primary_key=True)
+    run_accession = Column(String, primary_key=True)
+
+    #sample_accession = Column(String)
+    virus_name = Column(String)
+
+    first_created = Column(Date)
+    collection_date = Column(Date)
+
+    instrument_platform = Column(String)
+    instrument_model = Column(String)
+
+    assembly_method = Column(String)
+
+    # Host information
+    host_tax_id = Column(String) 
+    host = Column(String)
+    host_body_site = Column(String)
+    
+    # geographical data
+    lat = Column(Float)
+    lon = Column(Float)
+    country_raw = Column(String)
+    country = Column(String)
+    country_alpha_2 = Column(String)
+    country_alpha_3 = Column(String)
+
+    continent = Column(String)
+    continent_alpha_2 = Column(String)
 
 
 class SampleEna(Base):
@@ -134,7 +161,25 @@ class JobGisaid(Base):
     """
     __tablename__ = 'job_gisaid'
 
-    id = Column(ForeignKey("sample_gisaid.id"), primary_key=True)
+    run_accession = Column(ForeignKey("sample_gisaid.run_accession"), primary_key=True)
+
+    # job status
+    status = Column(Enum(JobStatus), default=JobStatus.PENDING)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.now())
+    queued_at = Column(DateTime(timezone=True))
+    #downloaded_at = Column(DateTime(timezone=True))
+    analysed_at = Column(DateTime(timezone=True))
+    #cleaned_at = Column(DateTime(timezone=True))
+    loaded_at = Column(DateTime(timezone=True))
+    failed_at = Column(DateTime(timezone=True))
+    error_message = Column(String)
+
+    # TODO: Test DB size, sequence should be approx 30000bp, compress maybe
+    sequence = Column(String)
+    # local files storage
+    vcf_path = Column(String)
+
+
 
 
 class JobEna(Base):

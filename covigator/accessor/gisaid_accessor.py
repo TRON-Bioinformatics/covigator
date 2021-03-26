@@ -85,10 +85,41 @@ class GisaidAccessor:
             self._log_results()
 
     def _get_gisaid_runs(self):
+        # Exemplary columns to be read
+        # 'Virus name': 'hCoV-19/USA/MA-MGH-00523/2020', 
+        # 'Accession ID': 'EPI_ISL_460262', 
+        # 'Collection date': '2020-03-18', 
+        # 'Location': 'North America / USA / Massachusetts', 
+        # 'Host': 'Human', 
+        # 'Passage': 'Original', 
+        # 'Specimen': 'oronasopharynx', 
+        # 'Additional host information': '', 
+        # 'Sequencing technology': 'Illumina NovaSeq', 
+        # 'Assembly method': '', 
+        # 'Comment': '', 
+        # 'Comment type': '', 
+        # 'Lineage': 'B.1', 
+        # 'Clade': 'GH'
 
+        results = []
         with open(self.GISAID_METADATA_FILE) as infile:
-            reader = csv.reader(infile)
-            return {rows[1]:rows[2] for rows in reader}
+            reader = csv.DictReader(infile, delimiter='\t')
+            for row in reader:
+                fields = {}
+                fields["run_accession"] = row["Accession ID"]
+                fields["virus_name"] = row["Virus name"]
+                fields["collection_date"] = row["Collection date"]
+                fields["host"] = row["Host"]
+                fields["host_body_site"] = row["Specimen"]
+                if "ILLUMINA" in row["Sequencing technology"].upper():
+                    fields["instrument_platform"] = "ILLUMINA"
+                else:
+                    fields["instrument_platform"] = "Unknown"
+                fields["instrument_model"] = row["Sequencing technology"]
+                fields["assembly_method"] = row["Assembly method"]
+                fields["country"] = row["Location"].split("/")[1].strip()
+                results.append(fields)
+        return results
 
     def _process_runs(self, list_runs, existing_sample_ids, session: Session):
 

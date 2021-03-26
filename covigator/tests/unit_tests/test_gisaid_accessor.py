@@ -46,3 +46,9 @@ class GisaidAccessorTests(TestCase):
         self.assertEqual(gisaid_accessor.excluded, 2)
         self.assertEqual(gisaid_accessor.excluded_samples_by_assembly_method.get("Seattle Flu Assembly-Pipeline"), 1)
         self.assertEqual(gisaid_accessor.excluded_samples_by_assembly_method.get("CLC Genomics Workbench"), 1)
+
+    def test_get_gisaid_runs(self):
+        gisaid_accessor = GisaidAccessor(tax_id=SARS_COV_2_TAXID, host_tax_id=HOMO_SAPIENS_TAXID,
+                         database=Database(test=True))
+
+        gisaid_accessor.access()
