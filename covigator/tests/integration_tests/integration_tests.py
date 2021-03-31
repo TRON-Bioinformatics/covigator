@@ -24,5 +24,5 @@ class IntegrationTests(TestCase):
         processor.process()
 
     def test_dashboard(self):
-        dashboard.main(debug=True)
+        dashboard.start_dashboard(debug=True)
         time.sleep(60)

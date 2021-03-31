@@ -61,6 +61,7 @@ class EnaAccessor:
     ]
 
     def __init__(self, tax_id: str, host_tax_id: str, database: Database, maximum=None):
+        logger.info("Initialising ENA accessor")
         self.start_time = datetime.now()
         self.has_error = False
         self.error_message = None
@@ -86,6 +87,7 @@ class EnaAccessor:
         self.get_with_retries = backoff_retrier.wrapper(requests.get, NUMBER_RETRIES)
 
     def access(self):
+        logger.info("Starting ENA accessor")
         offset = 0
         finished = False
         session = self.database.get_database_session()
@@ -110,6 +112,7 @@ class EnaAccessor:
             self._write_execution_log(session)
             session.close()
             self._log_results()
+            logger.info("Finished ENA accessor")
 
     def _get_ena_runs_page(self, offset):
         return self.get_with_retries(

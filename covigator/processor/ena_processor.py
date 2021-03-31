@@ -19,6 +19,7 @@ NUMBER_RETRIES_DOWNLOADER = 5
 class EnaProcessor:
 
     def __init__(self, database: Database, dask_client: Client):
+        logger.info("Initialising ENA processor")
         self.start_time = datetime.now()
         self.has_error = False
         self.error_message = None
@@ -28,6 +29,7 @@ class EnaProcessor:
         assert self.dask_client is not None, "Empty dask client"
 
     def process(self):
+        logger.info("Starting ENA processor")
         session = self.database.get_database_session()
         count = 0
         try:
@@ -59,6 +61,7 @@ class EnaProcessor:
         finally:
             self._write_execution_log(session, count)
             session.close()
+            logger.info("Finished ENA processor")
 
     def _process_run(self, run_accession: str):
         # NOTE: here we set the priority of each step to ensure a depth first processing
