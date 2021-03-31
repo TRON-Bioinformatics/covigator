@@ -2,8 +2,7 @@ from unittest import TestCase, skip
 from faker import Faker
 from covigator.database.database import Database
 from covigator.database.model import JobStatus, DataSource
-from covigator.database.queries import get_date_of_first_ena_sample, get_date_of_most_recent_ena_sample, \
-    get_date_of_last_check, get_date_of_last_update
+from covigator.database.queries import Queries
 from covigator.tests.unit_tests.mocked import get_mocked_ena_sample, get_mocked_log
 
 
@@ -13,6 +12,7 @@ class QueriesTests(TestCase):
         # intialise database
         self.database = Database(test=True)
         self.session = self.database.get_database_session()
+        self.queries = Queries(session=self.session)
         self.faker = Faker()
 
     def test_get_date_of_first_ena_sample(self):
@@ -28,11 +28,11 @@ class QueriesTests(TestCase):
                 if sample_ena.first_created < first_sample_date:
                     first_sample_date = sample_ena.first_created
         self.session.commit()
-        observed_date = get_date_of_first_ena_sample(session=self.session)
+        observed_date = self.queries.get_date_of_first_ena_sample()
         self.assertEqual(observed_date, first_sample_date.date())
 
     def test_get_date_of_first_ena_sample_empty(self):
-        observed_date = get_date_of_first_ena_sample(session=self.session)
+        observed_date = self.queries.get_date_of_first_ena_sample()
         self.assertIsNone(observed_date)
 
     def test_get_date_of_most_recent_ena_sample(self):
@@ -48,24 +48,24 @@ class QueriesTests(TestCase):
                 if sample_ena.first_created > most_recent_sample_date:
                     most_recent_sample_date = sample_ena.first_created
         self.session.commit()
-        observed_date = get_date_of_most_recent_ena_sample(session=self.session)
+        observed_date = self.queries.get_date_of_most_recent_ena_sample()
         self.assertEqual(observed_date, most_recent_sample_date.date())
 
     def test_get_date_of_most_recent_ena_sample_empty(self):
-        observed_date = get_date_of_most_recent_ena_sample(session=self.session)
+        observed_date = self.queries.get_date_of_most_recent_ena_sample()
         self.assertIsNone(observed_date)
 
     def test_get_date_of_last_ena_check(self):
         logs = [get_mocked_log(faker=self.faker) for _ in range(50)]
         self.session.add_all(logs)
         self.session.commit()
-        observed_date = get_date_of_last_check(session=self.session, data_source=DataSource.ENA)
+        observed_date = self.queries.get_date_of_last_check(data_source=DataSource.ENA)
         self.assertIsNotNone(observed_date)
 
     def test_get_date_of_last_ena_check_empty(self):
-        observed_date = get_date_of_last_check(session=self.session, data_source=DataSource.ENA)
+        observed_date = self.queries.get_date_of_last_check(data_source=DataSource.ENA)
         self.assertIsNone(observed_date)
-        observed_date = get_date_of_last_check(session=self.session, data_source=DataSource.GISAID)
+        observed_date = self.queries.get_date_of_last_check(data_source=DataSource.GISAID)
         self.assertIsNone(observed_date)
 
     def test_get_date_of_last_ena_update(self):
@@ -73,11 +73,11 @@ class QueriesTests(TestCase):
         logs = [get_mocked_log(faker=self.faker, source=DataSource.ENA) for _ in range(50)]
         self.session.add_all(logs)
         self.session.commit()
-        observed_date = get_date_of_last_update(session=self.session, data_source=DataSource.ENA)
+        observed_date = self.queries.get_date_of_last_update(data_source=DataSource.ENA)
         self.assertIsNotNone(observed_date)
 
     def test_get_date_of_last_ena_update_empty(self):
-        observed_date = get_date_of_last_update(session=self.session, data_source=DataSource.ENA)
+        observed_date = self.queries.get_date_of_last_update(data_source=DataSource.ENA)
         self.assertIsNone(observed_date)
-        observed_date = get_date_of_last_update(session=self.session, data_source=DataSource.GISAID)
+        observed_date = self.queries.get_date_of_last_update(data_source=DataSource.GISAID)
         self.assertIsNone(observed_date)
