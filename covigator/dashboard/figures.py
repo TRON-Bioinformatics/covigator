@@ -4,8 +4,11 @@ import dash_table
 import numpy as np
 import plotly
 import plotly.express as px
+import plotly.graph_objects as go
 import dash_core_components as dcc
 import json
+
+from plotly.subplots import make_subplots
 from six.moves.urllib import request as urlreq
 import dash_bio as dashbio
 import re
@@ -50,34 +53,44 @@ class Figures:
         # reads variants
         variants = self.queries.get_non_synonymous_variants_by_gene(gene_name)
 
-        fig = dcc.Markdown("""**No variants for the current selection**""")
+        fig1 = dcc.Markdown("""**No variants for the current selection**""")
         if variants.shape[0] > 0:
             # reads total number of samples and calculates frequencies
             count_samples = self.queries.count_ena_samples_loaded()
             variants["af"] = variants.count_occurrences / count_samples
             variants["log_af"] = variants.af.transform(lambda x: np.log(x + 1))
             variants["log_count"] = variants.count_occurrences.transform(lambda x: np.log(x))
-
             # TODO: do something in the data ingestion about multiple annotations on the same variant
             variants.annotation = variants.annotation.transform(lambda a: a.split("&")[0])
-            fig = px.scatter(x=variants.position, y=variants.count_occurrences, color=variants.annotation, log_y=True,
-                             template="simple_white", hover_name=variants.hgvs_p, opacity=0.6,
-                             color_discrete_sequence=plotly.express.colors.qualitative.D3,
-                             labels={"x": "Genomic position",  "y": "Count occurrences", "color": "Effect"})
-            fig.update_yaxes(showgrid=True)
-            fig.update_xaxes(ticksuffix=" bp", tickformat="digits")
-            #fig.update_layout(hovermode='x unified')
-            for f, c in zip(pfam_protein_features, plotly.express.colors.sequential.Greys[-len(pfam_protein_features):]):
-                domain_start = start + int(f["start"])
-                domain_end = start + int(f["end"])
-                fig.add_scatter(x=[domain_start, domain_start, domain_end, domain_end, domain_start],
-                                y=[0.3, 0.5, 0.5, 0.3, 0.3], fill="toself", fillcolor=c, opacity=0.6,
-                                line=dict(width=0), name=f.get('description'), hoveron="fills", mode="lines")
-                fig.add_vrect(x0=domain_start, x1=domain_end, fillcolor=c, opacity=0.1, layer="below", line_width=0),
-                #fig.add_annotation(x=domain_start + (domain_end - domain_start) / 2, y=variants.count_1.max() / 10000000000,
-                #                   text=f.get('description'), showarrow=False)
 
-        return fig
+            #fig = make_subplots(rows=2, cols=1)
+            fig1 = px.scatter(x=variants.position, y=variants.af, symbol=variants.annotation,
+                             color=variants.af, log_y=True,
+                             template="simple_white", hover_name=variants.hgvs_p, #opacity=0.6,
+                             #color_discrete_sequence=plotly.express.colors.qualitative.D3,
+                             color_continuous_scale=plotly.express.colors.sequential.YlOrRd,
+                             color_continuous_midpoint=0.2,
+                             labels={"x": "Genomic position",  "y": "Allele frequency", "symbol": "Effect"},
+                             #hover_data=[variants.annotation, variants.af]
+                           )
+            fig1.update_yaxes(showgrid=True)
+            fig1.update_xaxes(ticksuffix=" bp", tickformat="digits")
+            fig1.update_layout(coloraxis_showscale=False)
+            #fig.add_trace(fig1, row=1, col=1)
+
+            #fig2 = px.scatter()
+            #for f, c in zip(pfam_protein_features, plotly.express.colors.sequential.Greys[-len(pfam_protein_features):]):
+            #    domain_start = start + int(f["start"])
+            #    domain_end = start + int(f["end"])
+            #    fig2.add_scatter(x=[domain_start, domain_start, domain_end, domain_end, domain_start],
+            #                    y=[-0.1, 0.0, 0.0, -0.1, -0.1], fill="toself", fillcolor=c, opacity=0.6,
+            #                    line=dict(width=0), name=f.get('description'), hoveron="fills", mode="lines")
+            #    fig2.add_vrect(x0=domain_start, x1=domain_end, fillcolor=c, opacity=0.1, layer="below", line_width=0),
+            #    #fig.add_annotation(x=domain_start + (domain_end - domain_start) / 2, y=variants.count_1.max() / 10000000000,
+            #    #                   text=f.get('description'), showarrow=False)
+            #fig.add_trace(fig2, row=2, col=1)
+
+        return fig1
 
     def get_circos_plot(self):
         data = urlreq.urlopen(
