@@ -356,7 +356,7 @@ class Dashboard:
         def update_needle_plot(gene_name):
             plot = None
             if gene_name is not None:
-                plot = self.figures.get_variants_plot(gene_name=gene_name)
+                plot = dcc.Graph(figure=self.figures.get_variants_plot(gene_name=gene_name))
             return plot
 
         @app.callback(
