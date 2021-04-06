@@ -301,7 +301,6 @@ class Dashboard:
                                    html.H4("Top occurring variants"),
                                    html.Div(id='top-occurring-variants'),
                                    html.Br(),
-                                   html.H4("Needle plot"),
                                    html.Div(id='needle-plot'),
                                    html.Br(),
                                ], className="ten columns")
@@ -346,9 +345,19 @@ class Dashboard:
             Input('dropdown-date-range-end', 'value')
         )
         def update_top_occurring_variants(top_variants, gene_name, date_range_start, date_range_end):
-            return self.figures.get_top_occurring_variants_plot(
-                top=top_variants, gene_name=gene_name, date_range_start=date_range_start,
-                date_range_end=date_range_end)
+            return html.Div(children=[
+                    self.figures.get_top_occurring_variants_plot(
+                        top=top_variants, gene_name=gene_name, date_range_start=date_range_start,
+                        date_range_end=date_range_end),
+                    dcc.Markdown("""
+                    *Top {} variants{} according to their frequency across all samples.
+                    The counts per month are only shown between {} and {}*
+                    """.format(
+                        top_variants,
+                        " in gene {}".format(gene_name) if gene_name else "",
+                        date_range_start,
+                        date_range_end))
+                    ])
 
         @app.callback(
             Output('needle-plot', 'children'),
@@ -356,7 +365,16 @@ class Dashboard:
         def update_needle_plot(gene_name):
             plot = None
             if gene_name is not None:
-                plot = dcc.Graph(figure=self.figures.get_variants_plot(gene_name=gene_name))
+                plot = html.Div(children=[
+                    dcc.Graph(figure=self.figures.get_variants_plot(gene_name=gene_name)),
+                    dcc.Markdown("""
+                    *Non synonymous variants occurring in at least two samples on gene {}.*
+                    *Other variants include frameshift indels, stop codon gain and lost and start lost variants.*
+                    *The variants are colored according to their frequency as rare variants (< 0.1 %), 
+                    low frequency variants (>= 0.1% and < 1%), 
+                    common variants (>= 1% and < 10%) and very common variants (>= 10%)*
+                    """.format(gene_name))
+                    ])
             return plot
 
         @app.callback(

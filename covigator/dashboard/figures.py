@@ -8,13 +8,26 @@ import plotly.graph_objects as go
 import dash_core_components as dcc
 import json
 
-from plotly.subplots import make_subplots
 from six.moves.urllib import request as urlreq
 import dash_bio as dashbio
 import re
 from covigator.database.queries import Queries
 
+OTHER_VARIANT_SYMBOL = "x"
 
+INSERTION_SYMBOL = "triangle-up"
+
+DELETION_SYMBOL = "triangle-down"
+
+MISSENSE_VARIANT_SYMBOL = "circle"
+
+VERY_COMMON_VARIANTS_COLOR = plotly.express.colors.sequential.Reds[-1]
+COMMON_VARIANTS_COLOR = plotly.express.colors.sequential.Reds[-3]
+RARE_VARIANTS_COLOR = plotly.express.colors.sequential.Reds[-7]
+COMMON_VARIANTS_THRESHOLD = 0.1
+LOW_FREQUENCY_VARIANTS_THRESHOLD = 0.01
+LOW_FREQUENCY_VARIANTS_COLOR = plotly.express.colors.sequential.Reds[-5]
+RARE_VARIANTS_THRESHOLD = 0.001
 MONTH_PATTERN = re.compile('[0-9]{4}-[0-9]{2}')
 
 
@@ -42,18 +55,90 @@ class Figures:
             )
         return fig
 
-    def get_variants_plot(self, gene_name="S"):
+    def _get_color_by_af(self, af):
+        color = None
+        if af < RARE_VARIANTS_THRESHOLD:
+            color = RARE_VARIANTS_COLOR
+        elif RARE_VARIANTS_THRESHOLD <= af < LOW_FREQUENCY_VARIANTS_THRESHOLD:
+            color = LOW_FREQUENCY_VARIANTS_COLOR
+        elif LOW_FREQUENCY_VARIANTS_THRESHOLD <= af < COMMON_VARIANTS_THRESHOLD:
+            color = COMMON_VARIANTS_COLOR
+        elif af >= COMMON_VARIANTS_THRESHOLD:
+            color = VERY_COMMON_VARIANTS_COLOR
+        return color
+
+    def _get_table_style_by_af(self):
+        return [
+            {
+                'if': {
+                    'filter_query': '{{frequency}} >= 0 && {{frequency}} < {}'.format(RARE_VARIANTS_THRESHOLD),
+                    'column_id': "frequency"
+                },
+                'backgroundColor': RARE_VARIANTS_COLOR,
+                'color': 'inherit'
+            },
+            {
+                'if': {
+                    'filter_query': '{{frequency}} >= {} && {{frequency}} < {}'.format(
+                        RARE_VARIANTS_THRESHOLD, LOW_FREQUENCY_VARIANTS_THRESHOLD),
+                    'column_id': "frequency"
+                },
+                'backgroundColor': LOW_FREQUENCY_VARIANTS_COLOR,
+                'color': 'inherit'
+            },
+            {
+                'if': {
+                    'filter_query': '{{frequency}} >= {} && {{frequency}} < {}'.format(
+                        LOW_FREQUENCY_VARIANTS_THRESHOLD, COMMON_VARIANTS_THRESHOLD),
+                    'column_id': "frequency"
+                },
+                'backgroundColor': COMMON_VARIANTS_COLOR,
+                'color': 'white'
+            },
+            {
+                'if': {
+                    'filter_query': '{{frequency}} >= {}'.format(COMMON_VARIANTS_THRESHOLD),
+                    'column_id': "frequency"
+                },
+                'backgroundColor': VERY_COMMON_VARIANTS_COLOR,
+                'color': 'white'
+            }
+        ]
+
+    def _get_variants_scatter(self, variants, name, symbol):
+        return go.Scatter(
+            x=variants.position,
+            y=variants.af,
+            name=name,
+            mode='markers',
+            # opacity=0.5,
+            marker=dict(
+                symbol=symbol,
+                color=variants.af.transform(self._get_color_by_af),
+                showscale=False
+            ),
+            xaxis='x1',
+            showlegend=True,
+            legendgroup='variants',
+            text=variants[["hgvs_p", "annotation"]].apply(lambda x: "{} ({})".format(x[0], x[1]), axis=1),
+            hovertemplate='<b>%{text}</b><br>' +
+                          'Allele frequency: %{y:.2f}<br>' +
+                          'Genomic Position: %{x}'
+        )
+
+    def get_variants_plot(self, gene_name):
 
         # reads gene annotations
         gene = self.queries.get_gene(gene_name)
-        start = int(gene.data.get("start"))
+        gene_start = int(gene.data.get("start"))
+        gene_end = int(gene.data.get("end"))
         protein_features = gene.data.get("transcripts", [])[0].get("translations", [])[0].get("protein_features")
         pfam_protein_features = [f for f in protein_features if f.get("dbname") == "Pfam"]
 
         # reads variants
         variants = self.queries.get_non_synonymous_variants_by_gene(gene_name)
 
-        fig1 = dcc.Markdown("""**No variants for the current selection**""")
+        fig = dcc.Markdown("""**No variants for the current selection**""")
         if variants.shape[0] > 0:
             # reads total number of samples and calculates frequencies
             count_samples = self.queries.count_ena_samples_loaded()
@@ -63,34 +148,97 @@ class Figures:
             # TODO: do something in the data ingestion about multiple annotations on the same variant
             variants.annotation = variants.annotation.transform(lambda a: a.split("&")[0])
 
-            #fig = make_subplots(rows=2, cols=1)
-            fig1 = px.scatter(x=variants.position, y=variants.af, symbol=variants.annotation,
-                             color=variants.af, log_y=True,
-                             template="simple_white", hover_name=variants.hgvs_p, #opacity=0.6,
-                             #color_discrete_sequence=plotly.express.colors.qualitative.D3,
-                             color_continuous_scale=plotly.express.colors.sequential.YlOrRd,
-                             color_continuous_midpoint=0.2,
-                             labels={"x": "Genomic position",  "y": "Allele frequency", "symbol": "Effect"},
-                             #hover_data=[variants.annotation, variants.af]
-                           )
-            fig1.update_yaxes(showgrid=True)
-            fig1.update_xaxes(ticksuffix=" bp", tickformat="digits")
-            fig1.update_layout(coloraxis_showscale=False)
-            #fig.add_trace(fig1, row=1, col=1)
+            variants_traces = []
+            missense_variants = variants[variants.annotation == "missense_variant"]
+            if missense_variants.shape[0] > 0:
+                variants_traces.append(self._get_variants_scatter(
+                    missense_variants, name="missense variants", symbol=MISSENSE_VARIANT_SYMBOL))
 
-            #fig2 = px.scatter()
-            #for f, c in zip(pfam_protein_features, plotly.express.colors.sequential.Greys[-len(pfam_protein_features):]):
-            #    domain_start = start + int(f["start"])
-            #    domain_end = start + int(f["end"])
-            #    fig2.add_scatter(x=[domain_start, domain_start, domain_end, domain_end, domain_start],
-            #                    y=[-0.1, 0.0, 0.0, -0.1, -0.1], fill="toself", fillcolor=c, opacity=0.6,
-            #                    line=dict(width=0), name=f.get('description'), hoveron="fills", mode="lines")
-            #    fig2.add_vrect(x0=domain_start, x1=domain_end, fillcolor=c, opacity=0.1, layer="below", line_width=0),
-            #    #fig.add_annotation(x=domain_start + (domain_end - domain_start) / 2, y=variants.count_1.max() / 10000000000,
-            #    #                   text=f.get('description'), showarrow=False)
-            #fig.add_trace(fig2, row=2, col=1)
+            deletion_variants = variants[variants.annotation.isin(
+                ["disruptive_inframe_deletion", "conservative_inframe_deletion"])]
+            if deletion_variants.shape[0] > 0:
+                variants_traces.append(self._get_variants_scatter(
+                    deletion_variants, name="inframe deletions", symbol=DELETION_SYMBOL))
 
-        return fig1
+            insertion_variants = variants[variants.annotation.isin(
+                ["disruptive_inframe_insertion", "conservative_inframe_insertion"])]
+            if insertion_variants.shape[0] > 0:
+                variants_traces.append(self._get_variants_scatter(
+                    insertion_variants, name="inframe insertions", symbol=INSERTION_SYMBOL))
+
+            other_variants = variants[~variants.annotation.isin([
+                "missense_variant", "disruptive_inframe_deletion", "conservative_inframe_deletion",
+                "disruptive_inframe_insertion", "conservative_inframe_insertion"])]
+            if other_variants.shape[0] > 0:
+                variants_traces.append(self._get_variants_scatter(
+                    other_variants, name="other variants", symbol=OTHER_VARIANT_SYMBOL))
+
+            gene_trace = go.Scatter(
+                mode='lines',
+                x=[gene_start, gene_end, gene_end, gene_start],
+                y=[0.4, 0.4, 0.6, 0.6],
+                name=gene_name,
+                fill="toself",
+                fillcolor="grey",
+                hovertext=gene_name,
+                hoveron="fills",
+                line=dict(width=0),
+                yaxis='y2',
+                xaxis='x1',
+                legendgroup='gene'
+            )
+            domain_traces = []
+            for d, c in zip(pfam_protein_features, plotly.express.colors.qualitative.Plotly[0:len(pfam_protein_features)]):
+                domain_start = gene_start + int(d["start"])
+                domain_end = gene_start + int(d["end"])
+                domain_name = d.get('description')
+                domain_traces.append(go.Scatter(
+                    mode='lines',
+                    x=[domain_start, domain_end, domain_end, domain_start],
+                    y=[0, 0, 1, 1],
+                    name=domain_name,
+                    fill="toself",
+                    fillcolor=c,
+                    hovertext=domain_name,
+                    hoveron="fills",
+                    line=dict(width=0),
+                    yaxis='y2',
+                    xaxis='x1',
+                    legendgroup='domains'
+                ))
+
+            data = variants_traces + [gene_trace] + domain_traces
+            layout = go.Layout(
+                template="plotly_white",
+                xaxis=dict(
+                    domain=[0, 1.0],
+                    tickformat=',d',
+                    hoverformat=',d',
+                    visible=False
+                ),
+                xaxis2=dict(
+                    title='Genomic position',
+                    tickformat=',d',
+                    hoverformat=',d',
+                    domain=[0, 1.0],
+                    anchor='y2'
+                ),
+                yaxis=dict(
+                    title='Allele frequency',
+                    type='log',
+                    domain=[0.1, 1.0],
+                    anchor='x2'
+                ),
+                yaxis2=dict(
+                    domain=[0.0, 0.1],
+                    visible=False,
+                    anchor='x2'
+                ),
+                margin=go.layout.Margin(l=0, r=0, b=0, t=0)
+            )
+            fig = go.Figure(data=data, layout=layout)
+
+        return fig
 
     def get_circos_plot(self):
         data = urlreq.urlopen(
@@ -124,7 +272,7 @@ class Figures:
 
             # set the styles of the cells
             styles_counts = self.discrete_background_color_bins(data, columns=included_month_colums)
-            styles_frequency = self.discrete_background_color_bins(data, columns=["frequency"], colors="Reds")
+            styles_frequency = self._get_table_style_by_af()
             styles_striped = [{
                 'if': {'row_index': 'odd'},
                 'backgroundColor': 'rgb(248, 248, 248)'
