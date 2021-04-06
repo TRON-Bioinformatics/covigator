@@ -29,5 +29,5 @@ class FiguresTests(TestCase):
         self.assertIsNone(figure)
 
     def test_needle_plot_no_data(self):
-        figure = self.figures.get_variants_plot()
-        self.assertIsNone(figure)
+        figure = self.figures.get_variants_plot(gene_name="S")
+        self.assertIsNotNone(figure)

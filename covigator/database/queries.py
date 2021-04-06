@@ -69,14 +69,13 @@ class Queries:
         return [g[0] for g in self.session.query(Gene.name).all()]
 
     def get_non_synonymous_variants_by_gene(self, gene_name) -> pd.DataFrame:
+        subquery = self.session.query(VariantObservation.position, Variant.annotation, Variant.hgvs_p,
+                               func.count(VariantObservation.position).label("count_occurrences"))\
+            .join(Variant)\
+            .filter(and_(Variant.gene_name == gene_name, Variant.annotation != SYNONYMOUS_VARIANT))\
+            .group_by(VariantObservation.position, Variant.annotation, Variant.hgvs_p).subquery()
         return pd.read_sql(
-            self.session.query(VariantObservation.position, Variant.annotation, func.count(VariantObservation.position))
-                .join(Variant)
-                # filter out synonymous variants
-                .filter(and_(Variant.gene_name == gene_name, Variant.annotation != SYNONYMOUS_VARIANT))
-                .group_by(VariantObservation.position, Variant.annotation)
-                .statement,
-            self.session.bind)
+            self.session.query(subquery).filter(subquery.c.count_occurrences > 1).statement, self.session.bind)
 
     def count_ena_samples_loaded(self) -> int:
         return self.session.query(JobEna).filter(JobEna.status == JobStatus.LOADED).count()
