@@ -6,6 +6,7 @@ import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Output, Input
 
+import covigator
 from covigator import ENV_COVIGATOR_DASHBOARD_HOST, ENV_COVIGATOR_DASHBOARD_PORT, ENV_COVIGATOR_DASHBOARD_LOG_FILE
 
 from covigator.database.model import DataSource
@@ -70,7 +71,7 @@ class Dashboard:
                 html.Div(
                     [
                         html.P(),
-                        html.P("© 2021 TRON Mainz. All Rights Reserved"),
+                        html.P("Covigator {} © 2021 TRON Mainz. All Rights Reserved".format(covigator.VERSION)),
                         html.P()
                     ],
                     className="one-third column"
