@@ -18,7 +18,9 @@ class IntegrationTests(TestCase):
         accessor.access()
 
     def test_process_dask(self):
-
+        """
+        If given enough time, this processes all ENA samples in the database
+        """
         client = Client(n_workers=6, threads_per_worker=1)
         processor = EnaProcessor(database=Database(), dask_client=client)
         processor.process()

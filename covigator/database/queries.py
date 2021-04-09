@@ -6,7 +6,7 @@ from sqlalchemy import and_, desc, asc, func
 from sqlalchemy.orm import Session
 
 from covigator.database.model import Log, DataSource, CovigatorModule, SampleEna, JobEna, JobStatus, VariantObservation, \
-    Gene, Variant
+    Gene, Variant, VariantCooccurrence
 
 SYNONYMOUS_VARIANT = "synonymous_variant"
 
@@ -76,6 +76,24 @@ class Queries:
             .group_by(VariantObservation.position, Variant.annotation, Variant.hgvs_p).subquery()
         return pd.read_sql(
             self.session.query(subquery).filter(subquery.c.count_occurrences > 1).statement, self.session.bind)
+
+    def get_variants_by_sample(self, sample_id) -> List[VariantObservation]:
+        return self.session.query(VariantObservation) \
+            .filter(VariantObservation.sample == sample_id) \
+            .order_by(VariantObservation.chromosome, VariantObservation.position) \
+            .all()
+
+    def get_variant_cooccurrence(self, variant_one: Variant, variant_two: Variant) -> VariantCooccurrence:
+        return self.session.query(VariantCooccurrence) \
+            .filter(and_(VariantCooccurrence.chromosome_one == variant_one.chromosome,
+                         VariantCooccurrence.position_one == variant_one.position,
+                         VariantCooccurrence.reference_one == variant_one.reference,
+                         VariantCooccurrence.alternate_one == variant_one.alternate,
+                         VariantCooccurrence.chromosome_two == variant_two.chromosome,
+                         VariantCooccurrence.position_two == variant_two.position,
+                         VariantCooccurrence.reference_two == variant_two.reference,
+                         VariantCooccurrence.alternate_two == variant_two.alternate)) \
+            .first()
 
     def count_ena_samples_loaded(self) -> int:
         return self.session.query(JobEna).filter(JobEna.status == JobStatus.LOADED).count()

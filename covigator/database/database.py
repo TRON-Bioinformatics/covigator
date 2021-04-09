@@ -16,11 +16,11 @@ from covigator.references.gene_annotations import GeneAnnotationsLoader
 
 class Database:
 
-    def __init__(self, test=False):
+    def __init__(self, test=False, verbose=False):
         if test:
             # creates a SQLite in memory database for testing purposes
             db_uri = 'sqlite://'
-            self.engine: Engine = create_engine(db_uri, echo=True)
+            self.engine: Engine = create_engine(db_uri, echo=verbose)
         else:
             host = os.getenv(ENV_COVIGATOR_DB_HOST, "0.0.0.0")
             database = os.getenv(ENV_COVIGATOR_DB_NAME, "covigator")
@@ -31,7 +31,7 @@ class Database:
             # these are the default SQLAlchemy values, this values may need to be increased for the dashboard
             pool_size = int(os.getenv(ENV_COVIGATOR_DB_POOL_SIZE, 5))
             max_overflow = int(os.getenv(ENV_COVIGATOR_DB_MAX_OVERFLOW, 10))
-            self.engine: Engine = create_engine(db_uri, pool_size=pool_size, max_overflow=max_overflow, echo=True)
+            self.engine: Engine = create_engine(db_uri, pool_size=pool_size, max_overflow=max_overflow, echo=verbose)
         self.engine.connect()
         self.Session = sessionmaker(bind=self.engine, autoflush=False)
         self.create_database()

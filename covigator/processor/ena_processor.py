@@ -9,6 +9,8 @@ from covigator.database.database import Database, session_scope
 from logzero import logger
 from dask.distributed import Client
 import os
+
+from covigator.processor.cooccurrence_matrix import CooccurrenceMatrix
 from covigator.processor.downloader import Downloader
 from covigator.processor.pipeline import Pipeline
 from covigator.processor.vcf_loader import VcfLoader
@@ -73,7 +75,9 @@ class EnaProcessor:
             EnaProcessor.delete, future_process, priority=3)
         future_load = self.dask_client.submit(
             EnaProcessor.load, future_process, priority=2)
-        return [future_download, future_process, future_delete, future_load]
+        future_cooccurrence = self.dask_client.submit(
+            EnaProcessor.compute_cooccurrence, future_load, priority=2)
+        return [future_download, future_process, future_delete, future_load, future_cooccurrence]
 
     @staticmethod
     def download(run_accession: str) -> str:
@@ -151,6 +155,26 @@ class EnaProcessor:
                 except Exception as e:  # TODO: do we want a less wide exception capture?
                     logger.info("Loading error {} {}".format(run_accession, str(e)))
                     job.status = JobStatus.FAILED_LOAD
+                    job.failed_at = datetime.now()
+                    job.error_message = str(e)
+        return run_accession
+
+    @staticmethod
+    def compute_cooccurrence(run_accession: str):
+        with session_scope() as session:
+            job = EnaProcessor.find_job_by_accession_and_status(
+                run_accession=run_accession, session=session, status=JobStatus.LOADED)
+            if job is not None:
+                try:
+                    CooccurrenceMatrix().compute(
+                        sample=Sample(id=job.run_accession, source=DataSource.ENA),
+                        session=session)
+                    logger.info("Cooccurrence matrix computed {}".format(job.run_accession))
+                    job.status = JobStatus.COOCCURRENCE
+                    job.cooccurrence_at = datetime.now()
+                except Exception as e:  # TODO: do we want a less wide exception capture?
+                    logger.info("Loading error {} {}".format(run_accession, str(e)))
+                    job.status = JobStatus.FAILED_COOCCURRENCE
                     job.failed_at = datetime.now()
                     job.error_message = str(e)
         return run_accession
