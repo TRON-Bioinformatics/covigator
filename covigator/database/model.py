@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 from typing import List
 from sqlalchemy.ext.declarative import declarative_base
@@ -5,9 +6,16 @@ from sqlalchemy import Column, String, Float, Enum, DateTime, Integer, Boolean, 
     ForeignKeyConstraint, BigInteger, JSON, Index
 import enum
 
+from covigator import ENV_COVIGATOR_TABLE_VERSION
+
 SEPARATOR = ";"
 
 Base = declarative_base()
+
+
+def get_table_versioned_name(basename):
+    return basename if ENV_COVIGATOR_TABLE_VERSION not in os.environ \
+        else "{}_{}".format(basename, os.environ.get(ENV_COVIGATOR_TABLE_VERSION))
 
 
 class Gene(Base):
@@ -15,7 +23,7 @@ class Gene(Base):
     This table holds the genes in the organism genome and its annotations in the field `data`. The annotations
     are in JSON format. This data is fetched from ftp://ftp.ensemblgenomes.org/pub/viruses/json/sars_cov_2/sars_cov_2.json
     """
-    __tablename__ = 'gene'
+    __tablename__ = get_table_versioned_name('gene')
 
     identifier = Column(String, primary_key=True)
     name = Column(String)
@@ -50,7 +58,7 @@ class Sample(Base):
     The same sample may be loaded from different data sources.
     There are foreign keys fields pointing to the source-specific tables with all metadata for the sample.
     """
-    __tablename__ = 'sample'
+    __tablename__ = get_table_versioned_name('sample')
 
     id = Column(String, primary_key=True)
     source = Column(Enum(DataSource), primary_key=True)
@@ -63,7 +71,7 @@ class SampleGisaid(Base):
     """
     The table that holds all metadata for a GISAID sample
     """
-    __tablename__ = 'sample_gisaid'
+    __tablename__ = get_table_versioned_name('sample_gisaid')
 
     id = Column(String, primary_key=True)
 
@@ -72,7 +80,7 @@ class SampleEna(Base):
     """
     The table that holds all metadata for a ENA sample
     """
-    __tablename__ = 'sample_ena'
+    __tablename__ = get_table_versioned_name('sample_ena')
 
     # data on run
     # TODO: add foreign keys to jobs
@@ -132,7 +140,7 @@ class JobGisaid(Base):
     """
     The table that holds an GISAID job
     """
-    __tablename__ = 'job_gisaid'
+    __tablename__ = get_table_versioned_name('job_gisaid')
 
     id = Column(ForeignKey("sample_gisaid.id"), primary_key=True)
 
@@ -141,7 +149,7 @@ class JobEna(Base):
     """
     The table that holds an ENA job
     """
-    __tablename__ = 'job_ena'
+    __tablename__ = get_table_versioned_name('job_ena')
 
     run_accession = Column(ForeignKey("sample_ena.run_accession"), primary_key=True)
 
@@ -178,7 +186,7 @@ class Variant(Base):
     """
     A variant with its specific annotations. THis does not contain any sample specific annotations.
     """
-    __tablename__ = 'variant'
+    __tablename__ = get_table_versioned_name('variant')
 
     chromosome = Column(String, primary_key=True)
     position = Column(Integer, primary_key=True)
@@ -220,7 +228,7 @@ class VariantObservation(Base):
     """
     A variant observation in a particular sample. This contains all annotations of a specific observation of a variant.
     """
-    __tablename__ = 'variant_observation'
+    __tablename__ = get_table_versioned_name('variant_observation')
 
     sample = Column(String, primary_key=True)
     source = Column(Enum(DataSource), primary_key=True)
@@ -264,7 +272,7 @@ class VariantObservation(Base):
 
 class VariantCooccurrence(Base):
 
-    __tablename__ = 'variant_cooccurrence'
+    __tablename__ = get_table_versioned_name('variant_cooccurrence')
 
     chromosome_one = Column(String, primary_key=True)
     position_one = Column(Integer, primary_key=True)
@@ -293,7 +301,7 @@ class Log(Base):
     """
     The table that holds an ENA job
     """
-    __tablename__ = 'log'
+    __tablename__ = get_table_versioned_name('log')
 
     id = Column(Integer, primary_key=True, autoincrement=True)
 
