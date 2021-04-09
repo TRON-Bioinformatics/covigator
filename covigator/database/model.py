@@ -23,6 +23,9 @@ JOB_GISAID_TABLE_NAME = get_table_versioned_name('job_gisaid')
 SAMPLE_TABLE_NAME = get_table_versioned_name('sample')
 SAMPLE_GISAID_TABLE_NAME = get_table_versioned_name('sample_gisaid')
 SAMPLE_ENA_TABLE_NAME = get_table_versioned_name('sample_ena')
+JOB_STATUS_CONSTRAINT_NAME = get_table_versioned_name('job_status')
+DATA_SOURCE_CONSTRAINT_NAME = get_table_versioned_name('data_source')
+COVIGATOR_MODULE_CONSTRAINT_NAME = get_table_versioned_name('covigator_module')
 SEPARATOR = ";"
 
 Base = declarative_base()
@@ -44,6 +47,8 @@ class JobStatus(enum.Enum):
     """
     Valid job status
     """
+    __constraint_name__ = JOB_STATUS_CONSTRAINT_NAME
+
     PENDING = 1
     QUEUED = 2
     DOWNLOADED = 3
@@ -60,6 +65,8 @@ class DataSource(enum.Enum):
     """
     Valid sources of data
     """
+    __constraint_name__ = DATA_SOURCE_CONSTRAINT_NAME
+
     ENA = 1
     GISAID = 2
 
@@ -142,7 +149,7 @@ class Sample(Base):
     __tablename__ = SAMPLE_TABLE_NAME
 
     id = Column(String, primary_key=True)
-    source = Column(Enum(DataSource), primary_key=True)
+    source = Column(Enum(DataSource, name=DataSource.__constraint_name__), primary_key=True)
     # NOTE: should have only one filled, either ena_id or gisaid_id and be coherent with the value of source
     ena_id = Column(ForeignKey("{}.run_accession".format(SampleEna.__tablename__)))
     gisaid_id = Column(ForeignKey("{}.id".format(SampleGisaid.__tablename__)))
@@ -166,7 +173,7 @@ class JobEna(Base):
     run_accession = Column(ForeignKey("{}.run_accession".format(SampleEna.__tablename__)), primary_key=True)
 
     # job status
-    status = Column(Enum(JobStatus), default=JobStatus.PENDING)
+    status = Column(Enum(JobStatus, name=JobStatus.__constraint_name__), default=JobStatus.PENDING)
     created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.now())
     queued_at = Column(DateTime(timezone=True))
     downloaded_at = Column(DateTime(timezone=True))
@@ -244,7 +251,7 @@ class VariantObservation(Base):
     __tablename__ = VARIANT_OBSERVATION_TABLE_NAME
 
     sample = Column(String, primary_key=True)
-    source = Column(Enum(DataSource), primary_key=True)
+    source = Column(Enum(DataSource, name=DataSource.__constraint_name__), primary_key=True)
     chromosome = Column(String, primary_key=True)
     position = Column(Integer, primary_key=True)
     reference = Column(String, primary_key=True)
@@ -306,6 +313,9 @@ class VariantCooccurrence(Base):
 
 
 class CovigatorModule(enum.Enum):
+
+    __constraint_name__ = COVIGATOR_MODULE_CONSTRAINT_NAME
+
     ACCESSOR = 1
     PROCESSOR = 2
 
@@ -320,8 +330,8 @@ class Log(Base):
 
     start = Column(DateTime(timezone=True), nullable=False)
     end = Column(DateTime(timezone=True), nullable=False)
-    source = Column(Enum(DataSource), nullable=False)
-    module = Column(Enum(CovigatorModule), nullable=False)
+    source = Column(Enum(DataSource, name=DataSource.__constraint_name__), nullable=False)
+    module = Column(Enum(CovigatorModule, name=CovigatorModule.__constraint_name__), nullable=False)
 
     has_error = Column(Boolean, default=False)
     error_message = Column(String)
