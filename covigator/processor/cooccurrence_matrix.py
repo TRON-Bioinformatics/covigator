@@ -1,23 +1,22 @@
-#!/bin/bash
 from itertools import combinations
-from covigator.database.database import Database
-from covigator.database.model import SampleEna, VariantCooccurrence
+from sqlalchemy.orm import Session
+from covigator.database.model import Sample, VariantCooccurrence
 from logzero import logger
-
 from covigator.database.queries import Queries
 
 
-def main():
-    database = Database()
-    session = database.get_database_session()
-    queries = Queries(session=session)
-    logger.info("Computing cooccurrence matrix")
-    samples = session.query(SampleEna).all()
-    processed = 0
-    for sample in samples:
-        sample_id = sample.run_accession
-        processed += 1
-        logger.info("Processing cooccurrent variants for sample {}/{}".format(processed, len(samples)))
+class CooccurrenceMatrix:
+
+    def compute(self, sample: Sample, session: Session):
+
+        assert sample is not None, "Missing sample"
+        assert sample.id is not None or sample.id == "", "Missing sample identifier"
+        assert session is not None, "Missing DB session"
+
+        queries = Queries(session=session)
+        sample_id = sample.id
+        logger.info("Processing cooccurrent variants for sample {}".format(sample_id))
+
         # the order by position is important to ensure we store only half the matrix and the same half of the matrix
         variants = queries.get_variants_by_sample(sample_id)
         for (variant_one, variant_two) in combinations(variants, 2):
@@ -36,8 +35,3 @@ def main():
                 )
                 session.add(variant_cooccurrence)
             variant_cooccurrence.count += 1
-        session.commit()
-
-
-if __name__ == '__main__':
-    main()

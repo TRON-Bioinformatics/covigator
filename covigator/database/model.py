@@ -42,6 +42,8 @@ class JobStatus(enum.Enum):
     FAILED_DOWNLOAD = 6
     FAILED_PROCESSING = 7
     FAILED_LOAD = 8
+    COOCCURRENCE = 9
+    FAILED_COOCCURRENCE = 10
 
 
 class DataSource(enum.Enum):
@@ -161,6 +163,7 @@ class JobEna(Base):
     analysed_at = Column(DateTime(timezone=True))
     cleaned_at = Column(DateTime(timezone=True))
     loaded_at = Column(DateTime(timezone=True))
+    cooccurrence_at = Column(DateTime(timezone=True))
     failed_at = Column(DateTime(timezone=True))
     error_message = Column(String)
 
