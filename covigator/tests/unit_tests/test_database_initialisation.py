@@ -26,7 +26,7 @@ class DatabaseInitialisationTests(TestCase):
         self.assertEqual(count_genes, count_genes_2)
 
     def test_versioned_tables(self):
-        os.environ[ENV_COVIGATOR_TABLE_VERSION] = "v1"
+        os.environ[ENV_COVIGATOR_TABLE_VERSION] = "_v1"
         self.assertEqual("gene_v1", get_table_versioned_name(Gene.__table__.name))
-        os.environ[ENV_COVIGATOR_TABLE_VERSION] = "v2"
+        os.environ[ENV_COVIGATOR_TABLE_VERSION] = "_v2"
         self.assertEqual("variant_v2", get_table_versioned_name(Variant.__table__.name))
