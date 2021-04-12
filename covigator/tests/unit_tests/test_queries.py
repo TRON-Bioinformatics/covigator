@@ -22,7 +22,7 @@ class QueriesTests(TestCase):
                   [get_mocked_ena_sample(faker=self.faker, job_status=JobStatus.FAILED_LOAD) for _ in range(50)]
         for sample_ena, sample, job in samples:
             self.session.add_all([sample_ena, sample, job])
-            if job.status == JobStatus.LOADED:
+            if job.status == JobStatus.COOCCURRENCE:
                 if first_sample_date is None:
                     first_sample_date = sample_ena.first_created
                 if sample_ena.first_created < first_sample_date:
@@ -42,7 +42,7 @@ class QueriesTests(TestCase):
                   [get_mocked_ena_sample(faker=self.faker, job_status=JobStatus.FAILED_LOAD) for _ in range(50)]
         for sample_ena, sample, job in samples:
             self.session.add_all([sample_ena, sample, job])
-            if job.status == JobStatus.LOADED:
+            if job.status == JobStatus.COOCCURRENCE:
                 if most_recent_sample_date is None:
                     most_recent_sample_date = sample_ena.first_created
                 if sample_ena.first_created > most_recent_sample_date:

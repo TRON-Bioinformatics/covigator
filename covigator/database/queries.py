@@ -13,6 +13,8 @@ SYNONYMOUS_VARIANT = "synonymous_variant"
 
 class Queries:
 
+    FINAL_JOB_STATE = JobStatus.COOCCURRENCE
+
     def __init__(self, session: Session):
         self.session = session
 
@@ -20,7 +22,7 @@ class Queries:
         """
         Returns a DataFrame with columns: data, country, cumsum, count
         """
-        samples = pd.read_sql(self.session.query(SampleEna).join(JobEna).filter(JobEna.status == JobStatus.LOADED).statement,
+        samples = pd.read_sql(self.session.query(SampleEna).join(JobEna).filter(JobEna.status == self.FINAL_JOB_STATE).statement,
                               self.session.bind)
 
         filled_table = None
@@ -59,7 +61,7 @@ class Queries:
     def get_sample_months(self, pattern) -> List[datetime]:
         dates = [
             d[0] for d in
-            self.session.query(SampleEna.first_created).join(JobEna).filter(JobEna.status == JobStatus.LOADED).all()]
+            self.session.query(SampleEna.first_created).join(JobEna).filter(JobEna.status == self.FINAL_JOB_STATE).all()]
         return sorted(set([d.strftime(pattern) for d in dates]))
 
     def get_gene(self, gene_name: str):
@@ -96,10 +98,10 @@ class Queries:
             .first()
 
     def count_ena_samples_loaded(self) -> int:
-        return self.session.query(JobEna).filter(JobEna.status == JobStatus.LOADED).count()
+        return self.session.query(JobEna).filter(JobEna.status == self.FINAL_JOB_STATE).count()
 
     def count_countries(self):
-        return self.session.query(SampleEna).join(JobEna).filter(JobEna.status == JobStatus.LOADED)\
+        return self.session.query(SampleEna).join(JobEna).filter(JobEna.status == self.FINAL_JOB_STATE)\
             .distinct(SampleEna.country).count()
 
     def count_variants(self):
@@ -112,7 +114,7 @@ class Queries:
         """
         Returns the date of the earliest ENA sample loaded in the database
         """
-        result = self.session.query(SampleEna.first_created).join(JobEna).filter(JobEna.status == JobStatus.LOADED) \
+        result = self.session.query(SampleEna.first_created).join(JobEna).filter(JobEna.status == self.FINAL_JOB_STATE) \
             .order_by(asc(SampleEna.first_created)).first()
         return result[0] if result is not None else result
 
@@ -120,7 +122,7 @@ class Queries:
         """
         Returns the date of the latest ENA sample loaded in the database
         """
-        result = self.session.query(SampleEna.first_created).join(JobEna).filter(JobEna.status == JobStatus.LOADED) \
+        result = self.session.query(SampleEna.first_created).join(JobEna).filter(JobEna.status == self.FINAL_JOB_STATE) \
             .order_by(desc(SampleEna.first_created)).first()
         return result[0] if result is not None else result
 
