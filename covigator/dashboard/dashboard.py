@@ -304,6 +304,8 @@ class Dashboard:
                                    html.Br(),
                                    html.Div(id='needle-plot'),
                                    html.Br(),
+                                   html.Div(id='cooccurrence-heatmap'),
+                                   html.Br(),
                                ], className="ten columns")
                            ]),
                        ]
@@ -392,6 +394,21 @@ class Dashboard:
                 multi=False,
                 clearable=False
             )
+
+        @app.callback(
+            Output('cooccurrence-heatmap', 'children'),
+            Input('dropdown-gene', 'value'))
+        def update_cooccurrence_heatmap(gene_name):
+            plot = None
+            if gene_name is not None:
+                plot = html.Div(children=[
+                    dcc.Graph(figure=self.figures.get_cooccurrence_heatmap(gene_name=gene_name)),
+                    dcc.Markdown("""
+                            *Variant pairs co-occurring in at least five samples on gene {}.*
+                            *Synonymous variants are excluded.*
+                            """.format(gene_name))
+                ])
+            return plot
 
     def get_application(self) -> dash.Dash:
 
