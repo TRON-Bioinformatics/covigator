@@ -345,3 +345,51 @@ class Figures:
                 })
 
         return styles
+
+    def get_cooccurrence_heatmap(self, gene_name):
+        data = self.queries.get_variants_cooccurrence_by_gene(gene_name=gene_name)
+        fig = dcc.Markdown("""**No co-occurrent variants for the current selection**""")
+        if data is not None and data.shape[0] > 0:
+            data.sort_values(["variant_one", "variant_two"], inplace=True)
+            all_variants = data.variant_one.unique()
+            values = np.array_split(data["count"], len(all_variants))
+            heatmap = go.Heatmap(
+                z=values,
+                x=all_variants,
+                y=all_variants,
+                colorscale="Greens",
+                hoverongaps=False)
+            layout = go.Layout(
+                template="plotly_white",
+                height=700,
+                yaxis=dict(
+                    #scaleanchor='x',
+                    visible=False),
+                # xaxis=dict(
+                #     domain=[0, 1.0],
+                #     tickformat=',d',
+                #     hoverformat=',d',
+                #     visible=False
+                # ),
+                # xaxis2=dict(
+                #     title='Genomic position',
+                #     tickformat=',d',
+                #     hoverformat=',d',
+                #     domain=[0, 1.0],
+                #     anchor='y2'
+                # ),
+                # yaxis=dict(
+                #     title='Allele frequency',
+                #     type='log',
+                #     domain=[0.1, 1.0],
+                #     anchor='x2'
+                # ),
+                # yaxis2=dict(
+                #     domain=[0.0, 0.1],
+                #     visible=False,
+                #     anchor='x2'
+                # ),
+                margin=go.layout.Margin(l=0, r=0, b=0, t=0)
+            )
+            fig = go.Figure(data=[heatmap], layout=layout)
+        return fig

@@ -12,3 +12,4 @@ tenacity==6.3.1
 dash_bio==0.6.1
 faker==6.6.1
 colorlover==0.3.0
+biopython==1.76
