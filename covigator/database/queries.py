@@ -3,7 +3,7 @@ from typing import List
 
 import pandas as pd
 from sqlalchemy import and_, desc, asc, func
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, aliased
 
 from covigator.database.model import Log, DataSource, CovigatorModule, SampleEna, JobEna, JobStatus, VariantObservation, \
     Gene, Variant, VariantCooccurrence
@@ -231,3 +231,58 @@ class Queries:
             .group_by(VariantObservation.position, VariantObservation.reference,
                       VariantObservation.alternate, func.date_trunc('month', SampleEna.first_created))
         return pd.read_sql(query.statement, self.session.bind)
+
+    def get_variants_cooccurrence_by_gene(self, gene_name, min_cooccurrence=5) -> pd.DataFrame:
+        """
+        Returns the full cooccurrence matrix of all non synonymous variants in a gene with at least
+        min_occurrences occurrences.
+        """
+        variant_one = aliased(Variant)
+        variant_two = aliased(Variant)
+        query = self.session.query(VariantCooccurrence)\
+            .filter(VariantCooccurrence.count >= min_cooccurrence)\
+            .join(variant_one, and_(VariantCooccurrence.chromosome_one == variant_one.chromosome,
+                                    VariantCooccurrence.position_one == variant_one.position,
+                                    VariantCooccurrence.reference_one == variant_one.reference,
+                                    VariantCooccurrence.alternate_one == variant_one.alternate)) \
+            .join(variant_two, and_(VariantCooccurrence.chromosome_two == variant_two.chromosome,
+                                    VariantCooccurrence.position_two == variant_two.position,
+                                    VariantCooccurrence.reference_two == variant_two.reference,
+                                    VariantCooccurrence.alternate_two == variant_two.alternate)) \
+            .filter(and_(variant_one.gene_name == gene_name,
+                         variant_one.annotation != SYNONYMOUS_VARIANT,
+                         variant_two.gene_name == gene_name,
+                         variant_two.annotation != SYNONYMOUS_VARIANT))
+        data = pd.read_sql(query.statement, self.session.bind)
+
+        def get_variant_id(x):
+            return "{position}:{reference}:{alternate}".format(position=x[0], reference=x[1], alternate=x[2])
+
+        full_matrix = None
+        if data.shape[0] > 0:
+            # build a single column identifying each variant
+            data["variant_one"] = data[['position_one', 'reference_one', 'alternate_one']].apply(get_variant_id, axis=1)
+            data["variant_two"] = data[['position_two', 'reference_two', 'alternate_two']].apply(get_variant_id, axis=1)
+            del data["chromosome_one"]
+            del data["position_one"]
+            del data["reference_one"]
+            del data["alternate_one"]
+            del data["chromosome_two"]
+            del data["position_two"]
+            del data["reference_two"]
+            del data["alternate_two"]
+
+            # from the sparse matrix builds in memory the complete matrix
+            # TODO: would plotly improve its heatmap implementation so we don't need this memory misuse??
+            all_variants = pd.concat([data.variant_one, data.variant_two], axis=0)
+            all_variants = all_variants.sort_values().unique()
+            empty_table = pd.DataFrame(
+                index=pd.MultiIndex.from_product([all_variants, all_variants], names=["variant_one", "variant_two"]))
+            empty_table["count"] = 0
+
+            # adds values into empty table
+            full_matrix = empty_table + data.set_index(["variant_one", "variant_two"])
+            full_matrix.fillna(0, inplace=True)
+            full_matrix.reset_index(inplace=True)
+
+        return full_matrix

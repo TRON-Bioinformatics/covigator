@@ -345,3 +345,6 @@ class Figures:
                 })
 
         return styles
+
+    def get_cooccurrence_heatmap(self, gene_name):
+        pass

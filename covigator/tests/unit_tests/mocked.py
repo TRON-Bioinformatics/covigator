@@ -1,18 +1,19 @@
 from typing import Tuple
-
 from faker import Faker
-
 from covigator.database.model import SampleEna, Sample, DataSource, JobEna, JobStatus, Log, CovigatorModule, Variant, \
-    VariantObservation
+    VariantObservation, VariantCooccurrence
+from Bio.Alphabet.IUPAC import IUPACData
 
 
-def get_mocked_variant(faker: Faker) -> Variant:
+def get_mocked_variant(faker: Faker, chromosome=None, gene_name=None) -> Variant:
     return Variant(
-        chromosome=faker.bothify(text="chr##"),
+        chromosome=chromosome if chromosome else faker.bothify(text="chr##"),
         position=faker.random_int(min=1, max=30000),
-        reference=faker.random_choices(["A", "C", "G", "T"], length=1)[0],
+        reference=faker.random_choices(list(IUPACData.unambiguous_dna_letters), length=1)[0],
         # TODO: reference and alternate could be equal!
-        alternate=faker.random_choices(["A", "C", "G", "T"], length=1)[0]
+        alternate=faker.random_choices(list(IUPACData.unambiguous_dna_letters), length=1)[0],
+        gene_name=gene_name,
+        annotation=faker.random_choices(["non_synonymous", "inframe_deletion", "inframe_insertion"], length=1)[0]
     )
 
 
@@ -63,4 +64,18 @@ def get_mocked_log(faker: Faker, source: DataSource = None, module: CovigatorMod
         processed=faker.random_digit(),
         data={"included": faker.random_digit(),
               "excluded": {"this": faker.random_digit(), "that": faker.random_digit()}}
+    )
+
+
+def get_mocked_variant_cooccurrence(faker: Faker, variant_one: Variant, variant_two: Variant) -> VariantCooccurrence:
+    return VariantCooccurrence(
+        chromosome_one=variant_one.chromosome,
+        position_one=variant_one.position,
+        reference_one=variant_one.reference,
+        alternate_one=variant_one.alternate,
+        chromosome_two=variant_two.chromosome,
+        position_two=variant_two.position,
+        reference_two=variant_two.reference,
+        alternate_two=variant_two.alternate,
+        count=faker.random_int(min=1, max=10)
     )
