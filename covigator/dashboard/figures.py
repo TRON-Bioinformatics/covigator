@@ -243,6 +243,13 @@ class Figures:
             )
             fig = go.Figure(data=data, layout=layout)
 
+            # add vertical transparent rectangles with domains
+            for d, c in zip(pfam_protein_features,
+                            plotly.express.colors.qualitative.Plotly[0:len(pfam_protein_features)]):
+                fig.add_vrect(
+                    x0=gene_start + int(d["start"]),
+                    x1=gene_start + int(d["end"]),
+                    line_width=0, fillcolor=c, opacity=0.1)
         return fig
 
     def get_top_occurring_variants_plot(self, top, gene_name, date_range_start, date_range_end):
