@@ -117,7 +117,7 @@ class Figures:
                 color=variants.af.transform(self._get_color_by_af),
                 showscale=False
             ),
-            xaxis='x1',
+            xaxis='x',
             showlegend=True,
             text=variants[["hgvs_p", "annotation"]].apply(lambda x: "{} ({})".format(x[0], x[1]), axis=1),
             hovertemplate='<b>%{text}</b><br>' +
@@ -183,7 +183,7 @@ class Figures:
                 hoveron="fills",
                 line=dict(width=0),
                 yaxis='y2',
-                xaxis='x1',
+                xaxis='x',
                 legendgroup='gene'
             )
             domain_traces = []
@@ -202,7 +202,7 @@ class Figures:
                     hoveron="fills",
                     line=dict(width=0),
                     yaxis='y2',
-                    xaxis='x1',
+                    xaxis='x',
                     legendgroup='domains'
                 ))
 
@@ -210,19 +210,21 @@ class Figures:
             layout = go.Layout(
                 template="plotly_white",
                 xaxis=dict(
+                    title='Genomic position',
                     domain=[0, 1.0],
                     tickformat=',d',
                     hoverformat=',d',
-                    visible=False,
+                    visible=True,
+                    anchor="y2",
                     showspikes=True,
                     spikemode='toaxis'  # or 'across' or 'marker'
                 ),
                 xaxis2=dict(
-                    title='Genomic position',
                     tickformat=',d',
                     hoverformat=',d',
                     domain=[0, 1.0],
                     anchor='y2',
+                    visible=False,
                     showspikes=True,
                     spikemode='toaxis' # or 'across' or 'marker'
                 ),
