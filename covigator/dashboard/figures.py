@@ -121,7 +121,7 @@ class Figures:
             showlegend=True,
             text=variants[["hgvs_p", "annotation"]].apply(lambda x: "{} ({})".format(x[0], x[1]), axis=1),
             hovertemplate='<b>%{text}</b><br>' +
-                          'Allele frequency: %{y:.2f}<br>' +
+                          'Allele frequency: %{y:.5f}<br>' +
                           'Genomic Position: %{x}'
         )
 
