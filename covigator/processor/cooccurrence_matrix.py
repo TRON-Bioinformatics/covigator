@@ -25,7 +25,9 @@ class CooccurrenceMatrix:
         # the order by position is important to ensure we store only half the matrix and the same half of the matrix
         variants = queries.get_variants_by_sample(sample_id)
         failed_variants = []
-        for (variant_one, variant_two) in combinations(variants, 2):
+
+        # process all pairwise combinations without repetitions including the diagoonal
+        for (variant_one, variant_two) in list(combinations(variants, 2)) + list(zip(variants, variants)):
             try:
                 variant_cooccurrence = queries.get_variant_cooccurrence(variant_one, variant_two)
                 if variant_cooccurrence is None:
