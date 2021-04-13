@@ -18,6 +18,17 @@ class Queries:
     def __init__(self, session: Session):
         self.session = session
 
+    def find_job_by_accession_and_status(self, run_accession: str, status: JobStatus) -> JobEna:
+        return self.session.query(JobEna)\
+            .filter(and_(JobEna.run_accession == run_accession, JobEna.status == status)) \
+            .first()
+
+    def find_job_by_accession(self, run_accession: str) -> JobEna:
+        return self.session.query(JobEna).filter(JobEna.run_accession == run_accession).first()
+
+    def find_ena_run_by_accession(self, run_accession: str) -> SampleEna:
+        return self.session.query(SampleEna).filter(SampleEna.run_accession == run_accession).first()
+
     def get_accumulated_samples_by_country(self) -> pd.DataFrame:
         """
         Returns a DataFrame with columns: data, country, cumsum, count

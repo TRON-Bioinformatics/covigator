@@ -66,8 +66,11 @@ class CooccurrenceMatrixTests(TestCase):
         CooccurrenceMatrix().compute(self.samples[0], self.session)
         self.session.commit()
         count = self.session.query(VariantCooccurrence).count()
+        # size of matrix = n*(n-1)/2 + n (one half of matrix + diagonal)
         self.assertEqual(
-            count, self.NUM_VARIANT_OBSERVATIONS_PER_SAMPLE * (self.NUM_VARIANT_OBSERVATIONS_PER_SAMPLE - 1) / 2)
+            count, (self.NUM_VARIANT_OBSERVATIONS_PER_SAMPLE * (self.NUM_VARIANT_OBSERVATIONS_PER_SAMPLE - 1) / 2) +
+                   self.NUM_VARIANT_OBSERVATIONS_PER_SAMPLE)
+
         self._assert_cooccurrence_matrix(assert_cooccurrence=False)
 
     def test_all_samples(self):
@@ -89,7 +92,7 @@ class CooccurrenceMatrixTests(TestCase):
         for vo in variant_cooccurrences:
             self.assertLessEqual(vo.chromosome_one, vo.chromosome_two)
             if vo.chromosome_one == vo.chromosome_two:
-                self.assertLess(vo.position_one, vo.position_two)
+                self.assertLessEqual(vo.position_one, vo.position_two)
             self.assertLessEqual(vo.count, self.NUM_SAMPLES)
             self.assertGreater(vo.count, 0)
             if vo.count > 1:

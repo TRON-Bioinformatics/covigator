@@ -1,14 +1,15 @@
 from datetime import datetime
 
-from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
+from covigator.database.queries import Queries
 from covigator.misc import backoff_retrier
-from covigator.database.model import SampleEna, JobStatus, JobEna, Sample, DataSource, Log, CovigatorModule
+from covigator.database.model import JobStatus, JobEna, Sample, DataSource, Log, CovigatorModule
 from covigator.database.database import Database, session_scope
 from logzero import logger
 from dask.distributed import Client
 import os
+import traceback
 
 from covigator.processor.cooccurrence_matrix import CooccurrenceMatrix
 from covigator.processor.downloader import Downloader
@@ -58,7 +59,7 @@ class EnaProcessor:
         except Exception as e:
             logger.exception(e)
             session.rollback()
-            self.error_message = str(e)
+            self.error_message = EnaProcessor._get_traceback_from_exception(e)
             self.has_error = True
         finally:
             self._write_execution_log(session, count)
@@ -81,70 +82,69 @@ class EnaProcessor:
 
     @staticmethod
     def download(run_accession: str) -> str:
-        with session_scope() as session:
-            job = EnaProcessor.find_job_by_accession_and_status(
-                run_accession=run_accession, session=session, status=JobStatus.QUEUED)
-            # NOTE: eventually we may want to generalize this to support some other jobs than ENA runs
-            ena_run = EnaProcessor.find_ena_run_by_accession(run_accession, session)
-            if job is not None:
-                try:
+        try:
+            with session_scope() as session:
+                queries = Queries(session)
+                job = queries.find_job_by_accession_and_status(
+                    run_accession=run_accession, status=JobStatus.QUEUED)
+                # NOTE: eventually we may want to generalize this to support some other jobs than ENA runs
+                ena_run = queries.find_ena_run_by_accession(run_accession)
+                if job is not None:
                     # ensures that the download is done with retries, even after MD5 check sum failure
                     download_with_retries = backoff_retrier.wrapper(Downloader().download, NUMBER_RETRIES_DOWNLOADER)
                     paths = download_with_retries(ena_run=ena_run)
                     job.fastq_path = paths
                     job.status = JobStatus.DOWNLOADED
                     job.downloaded_at = datetime.now()
-                except Exception as e:  # TODO: do we want a less wide exception capture?
-                    logger.info("Download error {} {}".format(run_accession, str(e)))
-                    job.status = JobStatus.FAILED_DOWNLOAD
-                    job.failed_at = datetime.now()
-                    job.error_message = str(e)
+        except Exception as e:
+            # captures any possible exception happening, but logs it in the DB
+            EnaProcessor._log_error_in_job(
+                run_accession=run_accession, exception=e, status=JobStatus.FAILED_DOWNLOAD)
         return run_accession
 
     @staticmethod
     def run_pipeline(run_accession: str) -> str:
-        with session_scope() as session:
-            job = EnaProcessor.find_job_by_accession_and_status(
-                run_accession=run_accession, session=session, status=JobStatus.DOWNLOADED)
-            if job is not None:
-                try:
+        try:
+            with session_scope() as session:
+                job = Queries(session).find_job_by_accession_and_status(
+                    run_accession=run_accession, status=JobStatus.DOWNLOADED)
+                if job is not None:
                     fastq1, fastq2 = job.get_fastq1_and_fastq2()
                     vcf = Pipeline().run(fastq1=fastq1, fastq2=fastq2)
                     logger.info("Processed {}".format(job.run_accession))
                     job.status = JobStatus.PROCESSED
                     job.analysed_at = datetime.now()
                     job.vcf_path = vcf
-                except Exception as e:  # TODO: do we want a less wide exception capture?
-                    logger.info("Analysis error {} {}".format(run_accession, str(e)))
-                    job.status = JobStatus.FAILED_PROCESSING
-                    job.failed_at = datetime.now()
-                    job.error_message = str(e)
+        except Exception as e:
+            # captures any possible exception happening, but logs it in the DB
+            EnaProcessor._log_error_in_job(
+                run_accession=run_accession, exception=e, status=JobStatus.FAILED_PROCESSING)
         return run_accession
 
     @staticmethod
     def delete(run_accession: str):
-        with session_scope() as session:
-            job = EnaProcessor.find_job_by_accession_and_status(
-                run_accession=run_accession, session=session, status=JobStatus.PROCESSED)
-            if job is not None:
-                try:
+        try:
+            with session_scope() as session:
+                job = Queries(session).find_job_by_accession_and_status(
+                    run_accession=run_accession, status=JobStatus.PROCESSED)
+                if job is not None:
                     # delete FASTQ files from the file system here
                     for fastq in job.get_fastq_paths():
                         os.remove(fastq)
                     logger.info("Deleted {}".format(job.run_accession))
                     job.cleaned_at = datetime.now()
-                except Exception as e:  # TODO: do we want a less wide exception capture?
-                    logger.error("File deletion error {} {}".format(run_accession, str(e)))
-                    # we don't do anything as cleaning up is not really a must in the pipeline
+        except Exception as e:
+            # we don't do track in the db if cleanup fails
+            logger.warning("Clean up for job {} failed: {}".format(run_accession, str(e)))
         return run_accession
 
     @staticmethod
     def load(run_accession: str):
-        with session_scope() as session:
-            job = EnaProcessor.find_job_by_accession_and_status(
-                run_accession=run_accession, session=session, status=JobStatus.PROCESSED)
-            if job is not None:
-                try:
+        try:
+            with session_scope() as session:
+                job = Queries(session).find_job_by_accession_and_status(
+                    run_accession=run_accession, status=JobStatus.PROCESSED)
+                if job is not None:
                     VcfLoader().load(
                         vcf_file=job.vcf_path,
                         sample=Sample(id=job.run_accession, source=DataSource.ENA),
@@ -152,44 +152,39 @@ class EnaProcessor:
                     logger.info("Loaded {}".format(job.run_accession))
                     job.status = JobStatus.LOADED
                     job.loaded_at = datetime.now()
-                except Exception as e:  # TODO: do we want a less wide exception capture?
-                    logger.info("Loading error {} {}".format(run_accession, str(e)))
-                    job.status = JobStatus.FAILED_LOAD
-                    job.failed_at = datetime.now()
-                    job.error_message = str(e)
+        except Exception as e:
+            # captures any possible exception happening, but logs it in the DB
+            EnaProcessor._log_error_in_job(
+                run_accession=run_accession, exception=e, status=JobStatus.FAILED_LOAD)
         return run_accession
 
     @staticmethod
     def compute_cooccurrence(run_accession: str):
-        with session_scope() as session:
-            job = EnaProcessor.find_job_by_accession_and_status(
-                run_accession=run_accession, session=session, status=JobStatus.LOADED)
-            if job is not None:
-                try:
+        try:
+            with session_scope() as session:
+                job = Queries(session).find_job_by_accession_and_status(
+                    run_accession=run_accession, status=JobStatus.LOADED)
+                if job is not None:
                     CooccurrenceMatrix().compute(
                         sample=Sample(id=job.run_accession, source=DataSource.ENA),
                         session=session)
                     logger.info("Cooccurrence matrix computed {}".format(job.run_accession))
                     job.status = JobStatus.COOCCURRENCE
                     job.cooccurrence_at = datetime.now()
-                except Exception as e:  # TODO: do we want a less wide exception capture?
-                    logger.info("Loading error {} {}".format(run_accession, str(e)))
-                    job.status = JobStatus.FAILED_COOCCURRENCE
-                    job.failed_at = datetime.now()
-                    job.error_message = str(e)
+        except Exception as e:
+            # captures any possible exception happening, but logs it in the DB
+            EnaProcessor._log_error_in_job(
+                run_accession=run_accession, exception=e, status=JobStatus.FAILED_COOCCURRENCE)
         return run_accession
 
     @staticmethod
-    def find_job_by_accession_and_status(run_accession: str, session: Session, status: JobStatus) -> JobEna:
-        job = session.query(JobEna) \
-            .filter(and_(JobEna.run_accession == run_accession, JobEna.status == status)) \
-            .first()
-        return job
-
-    @staticmethod
-    def find_ena_run_by_accession(run_accession: str, session: Session) -> SampleEna:
-        ena_run = session.query(SampleEna).filter(SampleEna.run_accession == run_accession).first()
-        return ena_run
+    def _log_error_in_job(run_accession: str, exception: Exception, status: JobStatus):
+        with session_scope() as session:
+            logger.info("Error on job {} on state {}: {}".format(run_accession, status, str(exception)))
+            job = Queries(session).find_job_by_accession(run_accession=run_accession)
+            job.status = status
+            job.failed_at = datetime.now()
+            job.error_message = EnaProcessor._get_traceback_from_exception(exception)
 
     def _write_execution_log(self, session: Session, count):
         end_time = datetime.now()
@@ -206,4 +201,9 @@ class EnaProcessor:
             }
         ))
         session.commit()
+
+    @staticmethod
+    def _get_traceback_from_exception(e):
+        return "".join(traceback.format_exception(
+            etype=type(e), value=e, tb=e.__traceback__))
 
