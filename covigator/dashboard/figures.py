@@ -213,27 +213,33 @@ class Figures:
                     domain=[0, 1.0],
                     tickformat=',d',
                     hoverformat=',d',
-                    visible=False
+                    visible=False,
+                    showspikes=True,
+                    spikemode='toaxis'  # or 'across' or 'marker'
                 ),
                 xaxis2=dict(
                     title='Genomic position',
                     tickformat=',d',
                     hoverformat=',d',
                     domain=[0, 1.0],
-                    anchor='y2'
+                    anchor='y2',
+                    showspikes=True,
+                    spikemode='toaxis' # or 'across' or 'marker'
                 ),
                 yaxis=dict(
                     title='Allele frequency',
                     type='log',
                     domain=[0.1, 1.0],
-                    anchor='x2'
+                    anchor='x2',
+                    showspikes=True,
+                    spikemode='toaxis'  # or 'across' or 'marker'
                 ),
                 yaxis2=dict(
                     domain=[0.0, 0.1],
                     visible=False,
                     anchor='x2'
                 ),
-                margin=go.layout.Margin(l=0, r=0, b=0, t=0)
+                margin=go.layout.Margin(l=0, r=0, b=0, t=20)
             )
             fig = go.Figure(data=data, layout=layout)
 

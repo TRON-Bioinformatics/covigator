@@ -369,7 +369,13 @@ class Dashboard:
             plot = None
             if gene_name is not None:
                 plot = html.Div(children=[
-                    dcc.Graph(figure=self.figures.get_variants_plot(gene_name=gene_name)),
+                    dcc.Graph(
+                        figure=self.figures.get_variants_plot(gene_name=gene_name),
+                        config={
+                            'displaylogo': False,
+                            'displayModeBar': False
+                        }
+                    ),
                     dcc.Markdown("""
                     *Non synonymous variants occurring in at least two samples on gene {}.*
                     *Other variants include frameshift indels, stop codon gain and lost and start lost variants.*
@@ -402,7 +408,13 @@ class Dashboard:
             plot = None
             if gene_name is not None:
                 plot = html.Div(children=[
-                    dcc.Graph(figure=self.figures.get_cooccurrence_heatmap(gene_name=gene_name)),
+                    dcc.Graph(
+                        figure=self.figures.get_cooccurrence_heatmap(gene_name=gene_name),
+                        config={
+                            'displaylogo': False,
+                            'displayModeBar': False
+                        }
+                    ),
                     dcc.Markdown("""
                             *Variant pairs co-occurring in at least five samples on gene {}.*
                             *Synonymous variants are excluded.*
