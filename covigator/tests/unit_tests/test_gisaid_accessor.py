@@ -23,29 +23,30 @@ class FakeGisaidAccessor(GisaidAccessor):
 
 class GisaidAccessorTests(TestCase):
 
-    def test_filtering_by_assembly_methods(self):
+    def test_filtering_by_instrument_platform(self):
         gisaid_accessor = FakeGisaidAccessor([
             {"run_accession": "EPI_ISL_417090",
              "virus_name": "hCoV-19/USA/WA-S37/2020",
-             "instrument_platform": "ILLUMINA",
-             "assembly_method": "Seattle Flu Assembly-Pipeline",
+             "instrument_platform": "illumina",
              "host_tax_id": "9606"},
             {"run_accession": "EPI_ISL_413513",
              "virus_name": "hCoV-19/South Korea/KUMC03/2020",
-             "instrument_platform": "ILLUMINA",
-             "assembly_method": "CLC Genomics Workbench",
+             "instrument_platform": "illumina",
              "host_tax_id": "9606"},
             {"run_accession": "EPI_ISL_413594",
              "virus_name": "hCoV-19/Australia/NSW08/2020",
-             "instrument_platform": "ILLUMINA",
-             "assembly_method": "Geneious Prime",
+             "instrument_platform": "ion torrent",
+             "host_tax_id": "9606"},
+             {"run_accession": "EPI_ISL_413594",
+             "virus_name": "hCoV-19/Australia/NSW08/2020",
+             "instrument_platform": "none",
              "host_tax_id": "9606"}
         ])
         gisaid_accessor.access()
-        self.assertEqual(gisaid_accessor.included, 1)
-        self.assertEqual(gisaid_accessor.excluded, 2)
-        self.assertEqual(gisaid_accessor.excluded_samples_by_assembly_method.get("Seattle Flu Assembly-Pipeline"), 1)
-        self.assertEqual(gisaid_accessor.excluded_samples_by_assembly_method.get("CLC Genomics Workbench"), 1)
+        self.assertEqual(gisaid_accessor.included, 3)
+        self.assertEqual(gisaid_accessor.excluded, 1)
+        #self.assertEqual(gisaid_accessor.excluded_samples_by_instrument_platform.get("illumina"), 1)
+        self.assertEqual(gisaid_accessor.excluded_samples_by_instrument_platform.get("none"), 1)
 
     def test_get_gisaid_runs(self):
         gisaid_accessor = GisaidAccessor(tax_id=SARS_COV_2_TAXID, host_tax_id=HOMO_SAPIENS_TAXID,

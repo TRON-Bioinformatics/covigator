@@ -8,7 +8,7 @@ from covigator.processor.gisaid_processor import GisaidProcessor
 from faker import Faker
 
 
-class EnaProcessorTests(TestCase):
+class GisaidProcessorTests(TestCase):
 
     def setUp(self) -> None:
         # intialise database

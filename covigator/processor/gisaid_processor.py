@@ -10,7 +10,7 @@ from logzero import logger
 from dask.distributed import Client
 import os
 from covigator.processor.downloader import Downloader
-from covigator.processor.gisaid_pipeline import GisaidPipeline
+from covigator.processor.gisaid_pipeline import Pipeline
 from covigator.processor.vcf_loader import VcfLoader
 
 NUMBER_RETRIES_DOWNLOADER = 5

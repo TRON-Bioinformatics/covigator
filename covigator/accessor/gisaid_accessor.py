@@ -14,7 +14,7 @@ from logzero import logger
 
 
 class GisaidAccessor:
-    GISAID_METADATA_FILE = "/scratch/info/projects/SARS-CoV-2/gisaid/20201002_human_host_low_cov_excl/gisaid_hcov-19_2020_10_02_11_ST.tsv"
+    GISAID_METADATA_FILE = "/scratch/info/projects/SARS-CoV-2/gisaid/gisaid_hcov-19_2020_10_02_11_ST_corrected_v2.tsv"
     
     GISAID_FIELDS = [
         # data on run
@@ -30,6 +30,19 @@ class GisaidAccessor:
         "lat",
         "lon",
         "country"
+    ]
+
+    INCLUDED_INSTRUMENT_PLATFORMS = [
+        "ILLUMINA",
+        "ION TORRENT",
+        "SANGER",
+        "MGISEQ",
+        "NANOPORE",
+        "BGISEQ",
+        "BIOELECTRONSEQ",
+        "PACBIO",
+        "THERMOFISHER",
+        "UNKNOWN"
     ]
 
     # Not normalized within GISAID data; too many; will not be used for now
@@ -72,6 +85,7 @@ class GisaidAccessor:
         existing_sample_ids = [value for value, in session.query(SampleGisaid.run_accession).all()]
         try:
             list_runs = self._get_gisaid_runs()
+            #print(list_runs)
             logger.info("Read file of {} GISAID samples".format(len(list_runs)))
             self._process_runs(list_runs, existing_sample_ids, session)
 
@@ -104,20 +118,30 @@ class GisaidAccessor:
         results = []
         with open(self.GISAID_METADATA_FILE) as infile:
             reader = csv.DictReader(infile, delimiter='\t')
+            #{'run_accession': 'EPI_ISL_463264', 
+            # 'virus_name': 'hCoV-19/Canada/BC_27280425/2020', 
+            # 'collection_date': '2020-03', 
+            # 'host': 'Human', 
+            # 'host_body_site': 'NA', 
+            # 'instrument_platform': 'nanopore', 
+            # 'instrument_model': 'oxford nanopore', 
+            # 'country': 'Canada'}
             for row in reader:
                 fields = {}
-                fields["run_accession"] = row["Accession ID"]
-                fields["virus_name"] = row["Virus name"]
-                fields["collection_date"] = row["Collection date"]
-                fields["host"] = row["Host"]
-                fields["host_body_site"] = row["Specimen"]
-                if "ILLUMINA" in row["Sequencing technology"].upper():
-                    fields["instrument_platform"] = "ILLUMINA"
-                else:
-                    fields["instrument_platform"] = "Unknown"
-                fields["instrument_model"] = row["Sequencing technology"]
-                fields["assembly_method"] = row["Assembly method"]
-                fields["country"] = row["Location"].split("/")[1].strip()
+                fields["host_tax_id"] = self.host_tax_id
+                fields["run_accession"] = row["accession_id"]
+                fields["virus_name"] = row["virus_name"]
+                fields["collection_date"] = row["collection_date"]
+                fields["host"] = row["host"]
+                fields["host_body_site"] = row["specimen"]
+                fields["instrument_platform"] = row["sequencing_class"]
+                #if "ILLUMINA" in row["sequencing_technology"].upper():
+                #    fields["instrument_platform"] = "ILLUMINA"
+                #else:
+                #    fields["instrument_platform"] = "unknown"
+                fields["instrument_model"] = row["sequencing_technology"]
+                #fields["assembly_method"] = row["assembly_method"]
+                fields["country"] = row["location"].split("/")[1].strip()
                 results.append(fields)
         return results
 
@@ -206,16 +230,16 @@ class GisaidAccessor:
                 self.excluded_samples_by_host_tax_id.get(str(host_tax_id), 0) + 1
         # too messy within GISAID metadata; requires normalization; maybe skip for now
         instrument_platform = gisaid_run.get("instrument_platform")
-        if instrument_platform.upper() != "ILLUMINA":
+        if instrument_platform.upper() not in self.INCLUDED_INSTRUMENT_PLATFORMS:
             included = False    # skips non Illumina data
             self.excluded_samples_by_instrument_platform[str(instrument_platform)] = \
                 self.excluded_samples_by_instrument_platform.get(str(instrument_platform), 0) + 1
         # too messy within GISAID metadata; requires normalization; maybe skip for now
-        assembly_method = gisaid_run.get("assembly_method")
-        if assembly_method not in self.INCLUDED_ASSEMBLY_METHODS:
-            included = False  # skips not included library strategies
-            self.excluded_samples_by_assembly_method[str(assembly_method)] = \
-                self.excluded_samples_by_assembly_method.get(str(assembly_method), 0) + 1
+        #assembly_method = gisaid_run.get("assembly_method")
+        #if assembly_method not in self.INCLUDED_ASSEMBLY_METHODS:
+        #    included = False  # skips not included library strategies
+        #    self.excluded_samples_by_assembly_method[str(assembly_method)] = \
+        #        self.excluded_samples_by_assembly_method.get(str(assembly_method), 0) + 1
         if not included:
             self.excluded += 1
         return included
