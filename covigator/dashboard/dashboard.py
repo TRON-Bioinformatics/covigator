@@ -5,6 +5,7 @@ import dash
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Output, Input
+import dash_table
 
 import covigator
 from covigator import ENV_COVIGATOR_DASHBOARD_HOST, ENV_COVIGATOR_DASHBOARD_PORT, ENV_COVIGATOR_DASHBOARD_LOG_FILE
@@ -300,7 +301,7 @@ class Dashboard:
                                ], className="two columns"),
                                html.Div(children=[
                                    html.H4("Top occurring variants"),
-                                   html.Div(id='top-occurring-variants'),
+                                   html.Div(id='top-occurring-variants', children=dash_table.DataTable(id="top-occurring-variants-table")),
                                    html.Br(),
                                    html.Div(id='needle-plot'),
                                    html.Br(),
@@ -369,7 +370,7 @@ class Dashboard:
             Input('top-occurring-variants-table', "derived_virtual_selected_rows")
         )
         def update_needle_plot(gene_name, rows, selected_rows_indices):
-            plot = html.Div(children=dcc.Markdown("blabla"))
+            plot = html.Div(children=None)
             if gene_name is not None:
                 selected_rows = [rows[s] for s in selected_rows_indices]
                 plot = html.Div(children=[

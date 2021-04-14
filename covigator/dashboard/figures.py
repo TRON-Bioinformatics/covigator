@@ -6,23 +6,14 @@ import plotly
 import plotly.express as px
 import plotly.graph_objects as go
 import dash_core_components as dcc
-import json
-
-from six.moves.urllib import request as urlreq
-import dash_bio as dashbio
 import re
-
-from covigator.database.model import Variant
 from covigator.database.queries import Queries
 
+
 OTHER_VARIANT_SYMBOL = "x"
-
 INSERTION_SYMBOL = "triangle-up"
-
 DELETION_SYMBOL = "triangle-down"
-
 MISSENSE_VARIANT_SYMBOL = "circle"
-
 VERY_COMMON_VARIANTS_COLOR = plotly.express.colors.sequential.Reds[-1]
 COMMON_VARIANTS_COLOR = plotly.express.colors.sequential.Reds[-3]
 RARE_VARIANTS_COLOR = plotly.express.colors.sequential.Reds[-7]
@@ -39,7 +30,6 @@ class Figures:
         self.queries = queries
 
     def get_accumulated_samples_by_country_plot(self):
-
         data = self.queries.get_accumulated_samples_by_country()
         fig = None
         if data is not None:
