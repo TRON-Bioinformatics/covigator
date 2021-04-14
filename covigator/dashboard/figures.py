@@ -217,24 +217,21 @@ class Figures:
                     visible=True,
                     anchor="y2",
                     showspikes=True,
-                    spikemode='toaxis'  # or 'across' or 'marker'
+                    spikemode='toaxis',
+                    spikethickness=2
                 ),
                 xaxis2=dict(
                     tickformat=',d',
                     hoverformat=',d',
                     domain=[0, 1.0],
                     anchor='y2',
-                    visible=False,
-                    showspikes=True,
-                    spikemode='toaxis' # or 'across' or 'marker'
+                    visible=False
                 ),
                 yaxis=dict(
                     title='Allele frequency',
                     type='log',
                     domain=[0.1, 1.0],
-                    anchor='x2',
-                    showspikes=True,
-                    spikemode='toaxis'  # or 'across' or 'marker'
+                    anchor='x2'
                 ),
                 yaxis2=dict(
                     domain=[0.0, 0.1],
@@ -299,7 +296,8 @@ class Figures:
                         'backgroundColor': 'rgb(230, 230, 230)',
                         'fontWeight': 'bold'
                     },
-                    sort_by=[{"column_id": "frequency", "direction": "desc"}]
+                    sort_by=[{"column_id": "frequency", "direction": "desc"}],
+                    row_selectable='multi'
                 )
 
         return fig
