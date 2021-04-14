@@ -416,10 +416,18 @@ class Figures:
                 yaxis=dict(
                     visible=True,
                     tickfont={"size": 10},
+                    showgrid=False,
+                    showspikes=True,
+                    spikemode='toaxis',
+                    spikethickness=2
                 ),
                 xaxis=dict(
                     tickangle=-45,
                     tickfont={"size": 10},
+                    showgrid=False,
+                    showspikes=True,
+                    spikemode='toaxis',
+                    spikethickness=2
                 ),
                 margin=go.layout.Margin(l=0, r=0, b=0, t=0)
             )

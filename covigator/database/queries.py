@@ -308,7 +308,7 @@ class Queries:
 
             # adds values into empty table
             full_matrix = empty_table + data.set_index(["variant_one", "variant_two"])
-            full_matrix.fillna(0, inplace=True)
+            #full_matrix.fillna(0, inplace=True)
             full_matrix_with_annotations = full_matrix.join(annotations.set_index(["variant_one", "variant_two"]))
             full_matrix_with_annotations.reset_index(inplace=True)
 
