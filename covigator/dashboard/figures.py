@@ -2,6 +2,7 @@ import random
 import colorlover
 import dash_table
 import numpy as np
+import pandas as pd
 import plotly
 import plotly.express as px
 import plotly.graph_objects as go
@@ -365,8 +366,13 @@ class Figures:
         data = self.queries.get_variants_cooccurrence_by_gene(gene_name=gene_name)
         fig = dcc.Markdown("""**No co-occurrent variants for the current selection**""")
         if data is not None and data.shape[0] > 0:
-            data.sort_values(["variant_one", "variant_two"], inplace=True)
-            all_variants = data.variant_one.unique()
+
+            # NOTE: transpose matrix manually as plotly transpose does not work with labels
+            # the database return the upper diagonal, the lower is best for plots
+            data.sort_values(["variant_two", "variant_one"], inplace=True)
+
+            # shortens very long ids
+            all_variants = [v if len(v) < 15 else v[0:15] + "..." for v in data.variant_one.unique()]
             values = np.array_split(data["count"], len(all_variants))
             texts = np.array_split(
                 data[["hgvs_p_one", "hgvs_p_two"]].apply(
@@ -380,13 +386,13 @@ class Figures:
                 colorscale="Oranges",
                 hoverongaps=False,
                 text=texts,
-                hovertemplate=hovertemplate
+                hovertemplate=hovertemplate,
             )
             if selected_variants:
-                # TODO: fix this nasty conversion
-                selected_variant_ids = [v.get("dna_mutation").replace(">", ":") for v in selected_variants]
+                selected_variant_ids = [v.get("dna_mutation") for v in selected_variants]
                 values_selected = np.array_split(data[["variant_one", "variant_two", "count"]].apply(
-                    lambda x: x["count"] if x.variant_one in selected_variant_ids or x.variant_two in selected_variant_ids else None, axis=1),
+                    lambda x: x["count"] if x.variant_one in selected_variant_ids or
+                                            x.variant_two in selected_variant_ids else None, axis=1),
                     len(all_variants))
                 texts_selected = np.array_split(data[["variant_one", "variant_two", "hgvs_p_one", "hgvs_p_two"]].apply(
                     lambda x: "{} - {}".format(x.hgvs_p_one, x.hgvs_p_two)
@@ -402,38 +408,19 @@ class Figures:
                     hoverongaps=False,
                     showscale=False,
                     text=texts_selected,
-                    hovertemplate=hovertemplate
+                    hovertemplate=hovertemplate,
                 )
             layout = go.Layout(
                 template="plotly_white",
                 height=700,
                 yaxis=dict(
-                    #scaleanchor='x',
-                    visible=False),
-                # xaxis=dict(
-                #     domain=[0, 1.0],
-                #     tickformat=',d',
-                #     hoverformat=',d',
-                #     visible=False
-                # ),
-                # xaxis2=dict(
-                #     title='Genomic position',
-                #     tickformat=',d',
-                #     hoverformat=',d',
-                #     domain=[0, 1.0],
-                #     anchor='y2'
-                # ),
-                # yaxis=dict(
-                #     title='Allele frequency',
-                #     type='log',
-                #     domain=[0.1, 1.0],
-                #     anchor='x2'
-                # ),
-                # yaxis2=dict(
-                #     domain=[0.0, 0.1],
-                #     visible=False,
-                #     anchor='x2'
-                # ),
+                    visible=True,
+                    tickfont={"size": 10},
+                ),
+                xaxis=dict(
+                    tickangle=-45,
+                    tickfont={"size": 10},
+                ),
                 margin=go.layout.Margin(l=0, r=0, b=0, t=0)
             )
             traces = [heatmap]
@@ -441,10 +428,7 @@ class Figures:
                 traces.append(heatmap_selected)
             fig = go.Figure(data=traces, layout=layout)
 
-            # add selected variants
-            #for v in selected_variants:
-            #    fig.add_vrect(
-            #        x0=v.get("dna_mutation"),
-            #        x1=v.get("dna_mutation"),
-            #        line_width=0, fillcolor="blue", opacity=0.1)
+            # the y index is reversed in plotly heatmap
+            fig.update_yaxes(autorange="reversed")
+
         return fig

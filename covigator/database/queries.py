@@ -2,6 +2,7 @@ from datetime import date, datetime
 from typing import List
 
 import pandas as pd
+import numpy as np
 from sqlalchemy import and_, desc, asc, func
 from sqlalchemy.orm import Session, aliased
 
@@ -271,7 +272,7 @@ class Queries:
         data = pd.read_sql(query.statement, self.session.bind)
 
         def get_variant_id(x):
-            return "{position}:{reference}:{alternate}".format(position=x[0], reference=x[1], alternate=x[2])
+            return "{position}:{reference}>{alternate}".format(position=x[0], reference=x[1], alternate=x[2])
 
         full_matrix_with_annotations = None
         if data.shape[0] > 0:
@@ -307,8 +308,13 @@ class Queries:
 
             # adds values into empty table
             full_matrix = empty_table + data.set_index(["variant_one", "variant_two"])
-            #full_matrix.fillna(0, inplace=True)
+            full_matrix.fillna(0, inplace=True)
             full_matrix_with_annotations = full_matrix.join(annotations.set_index(["variant_one", "variant_two"]))
             full_matrix_with_annotations.reset_index(inplace=True)
+
+            # removes the upper triangle
+            full_matrix_with_annotations["count"] = full_matrix_with_annotations[[
+                "variant_one", "variant_two", "count"]].apply(
+                lambda x: x["count"] if x.variant_one <= x.variant_two else None, axis=1)
 
         return full_matrix_with_annotations
