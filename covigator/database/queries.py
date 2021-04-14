@@ -264,11 +264,17 @@ class Queries:
             .join(variant_two, and_(VariantCooccurrence.chromosome_two == variant_two.chromosome,
                                     VariantCooccurrence.position_two == variant_two.position,
                                     VariantCooccurrence.reference_two == variant_two.reference,
-                                    VariantCooccurrence.alternate_two == variant_two.alternate)) \
-            .filter(and_(variant_one.gene_name == gene_name,
+                                    VariantCooccurrence.alternate_two == variant_two.alternate))
+
+        if gene_name is not None:
+            query = query.filter(and_(variant_one.gene_name == gene_name,
                          variant_one.annotation != SYNONYMOUS_VARIANT,
                          variant_two.gene_name == gene_name,
                          variant_two.annotation != SYNONYMOUS_VARIANT))
+        else:
+            query = query.filter(and_(variant_one.annotation != SYNONYMOUS_VARIANT,
+                                      variant_two.annotation != SYNONYMOUS_VARIANT))
+
         data = pd.read_sql(query.statement, self.session.bind)
 
         count_samples = self.count_ena_samples()

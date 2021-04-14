@@ -262,6 +262,7 @@ class Dashboard:
                                        multi=False
                                    ),
                                    html.Br(),
+                                   html.H4("Top occurring variants"),
                                    dcc.Markdown("""
                                              Number of top occurring variants
                                              """),
@@ -298,13 +299,39 @@ class Dashboard:
                                                 className="six column"),
                                    ], className="row container-display"),
                                    html.Br(),
+                                   html.H4("Co-occurrence heatmap"),
+                                   dcc.Markdown("""
+                                   Metric to assess paiwise co-occurrence
+                                   """),
+                                   dcc.Dropdown(
+                                       id='dropdown-heatmap-metric',
+                                       options=[{'label': "count", 'value': "count"},
+                                                {'label': "frequency", 'value': "frequency"}],
+                                       value="count",
+                                       clearable=False,
+                                       multi=False
+                                   ),
+                                   dcc.Markdown("""
+                                   Minimum number of pairwise co-occurrences
+                                   """),
+                                   dcc.Slider(
+                                       id='slider-min-cooccurrences',
+                                       min=1,
+                                       max=100,
+                                       step=5,
+                                       value=20,
+                                       dots=True,
+                                       marks={i: '{}'.format(i) for i in [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]}
+                                   ),
                                ], className="two columns"),
                                html.Div(children=[
                                    html.H4("Top occurring variants"),
                                    html.Div(id='top-occurring-variants', children=dash_table.DataTable(id="top-occurring-variants-table")),
                                    html.Br(),
+                                   html.H4("Gene view"),
                                    html.Div(id='needle-plot'),
                                    html.Br(),
+                                   html.H4("Co-occurrence heatmap"),
                                    html.Div(id='cooccurrence-heatmap'),
                                    html.Br(),
                                ], className="ten columns")
@@ -410,26 +437,30 @@ class Dashboard:
             Output('cooccurrence-heatmap', 'children'),
             Input('dropdown-gene', 'value'),
             Input('top-occurring-variants-table', "derived_virtual_data"),
-            Input('top-occurring-variants-table', "derived_virtual_selected_rows")
+            Input('top-occurring-variants-table', "derived_virtual_selected_rows"),
+            Input('dropdown-heatmap-metric', 'value'),
+            Input('slider-min-cooccurrences', 'value'),
+
         )
-        def update_cooccurrence_heatmap(gene_name, rows, selected_rows_indices):
-            plot = None
-            if gene_name is not None:
-                selected_rows = [rows[s] for s in selected_rows_indices] if selected_rows_indices else None
-                plot = html.Div(children=[
-                    dcc.Graph(
-                        figure=self.figures.get_cooccurrence_heatmap(
-                            gene_name=gene_name, selected_variants=selected_rows),
-                        config={
-                            'displaylogo': False,
-                            'displayModeBar': False
-                        }
-                    ),
-                    dcc.Markdown("""
-                            *Variant pairs co-occurring in at least five samples on gene {}.*
-                            *Synonymous variants are excluded.*
-                            """.format(gene_name))
-                ])
+        def update_cooccurrence_heatmap(gene_name, rows, selected_rows_indices, metric, min_occurrences):
+
+            selected_rows = [rows[s] for s in selected_rows_indices] if selected_rows_indices else None
+            plot = html.Div(children=[
+                dcc.Graph(
+                    figure=self.figures.get_cooccurrence_heatmap(
+                        gene_name=gene_name, selected_variants=selected_rows, metric=metric,
+                        min_occurrences=min_occurrences),
+                    config={
+                        'displaylogo': False,
+                        'displayModeBar': False
+                    }
+                ),
+                dcc.Markdown("""
+                        *Variant pairs co-occurring in at least {} samples{}.*
+                        *Co-occurrence metric: {}*
+                        *Synonymous variants are excluded.*
+                        """.format(min_occurrences, metric, " on gene {}".format(gene_name) if gene_name else ""))
+            ])
             return plot
 
     def get_application(self) -> dash.Dash:

@@ -362,17 +362,17 @@ class Figures:
 
         return styles
 
-    def get_cooccurrence_heatmap(self, gene_name, selected_variants):
-        data = self.queries.get_variants_cooccurrence_by_gene(gene_name=gene_name)
+    def get_cooccurrence_heatmap(self, gene_name, selected_variants, metric="frequency", min_occurrences=5):
+        data = self.queries.get_variants_cooccurrence_by_gene(gene_name=gene_name, min_cooccurrence=min_occurrences)
         fig = dcc.Markdown("""**No co-occurrent variants for the current selection**""")
         if data is not None and data.shape[0] > 0:
 
             # NOTE: transpose matrix manually as plotly transpose does not work with labels
             # the database return the upper diagonal, the lower is best for plots
-            data.position_one = data.variant_one.transform(lambda x: x.split(":")[0])
+            data.position_one = data.variant_one.transform(lambda x: int(x.split(":")[0]))
             data.reference_one = data.variant_one.transform(lambda x: x.split(":")[1].split(">")[0])
             data.alternate_one = data.variant_one.transform(lambda x: x.split(":")[1].split(">")[1])
-            data.position_two = data.variant_two.transform(lambda x: x.split(":")[0])
+            data.position_two = data.variant_two.transform(lambda x: int(x.split(":")[0]))
             data.reference_two = data.variant_two.transform(lambda x: x.split(":")[1].split(">")[0])
             data.alternate_two = data.variant_two.transform(lambda x: x.split(":")[1].split(">")[1])
             data.sort_values(["position_two", "reference_two", "alternate_two",
@@ -388,12 +388,12 @@ class Figures:
 
             all_variants = [shorten_variant_id(v) for v in data.variant_one.dropna().unique()]
 
-            values = np.array_split(data["count"], len(all_variants))
+            values = np.array_split(data[metric], len(all_variants))
             texts = np.array_split(
                 data[["hgvs_p_one", "hgvs_p_two"]].apply(
                     lambda x: "{} - {}".format(x.hgvs_p_one, x.hgvs_p_two), axis=1),
                 len(all_variants))
-            hovertemplate = '<b>%{text}</b><br>' + 'Cooccurrences: %{z:.5f}<br>' + 'Variant one: %{x}<br>' + 'Variant two: %{y}'
+            hovertemplate = '<b>%{text}</b><br>' + 'Cooccurrence: %{z:.5f}<br>' + 'Variant one: %{x}<br>' + 'Variant two: %{y}'
             heatmap = go.Heatmap(
                 z=values,
                 x=all_variants,
@@ -405,8 +405,8 @@ class Figures:
             )
             if selected_variants:
                 selected_variant_ids = [v.get("dna_mutation") for v in selected_variants]
-                values_selected = np.array_split(data[["variant_one", "variant_two", "count"]].apply(
-                    lambda x: x["count"] if x.variant_one in selected_variant_ids or
+                values_selected = np.array_split(data[["variant_one", "variant_two", metric]].apply(
+                    lambda x: x[metric] if x.variant_one in selected_variant_ids or
                                             x.variant_two in selected_variant_ids else None, axis=1),
                     len(all_variants))
                 texts_selected = np.array_split(data[["variant_one", "variant_two", "hgvs_p_one", "hgvs_p_two"]].apply(
