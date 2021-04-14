@@ -11,6 +11,8 @@ import json
 from six.moves.urllib import request as urlreq
 import dash_bio as dashbio
 import re
+
+from covigator.database.model import Variant
 from covigator.database.queries import Queries
 
 OTHER_VARIANT_SYMBOL = "x"
@@ -125,7 +127,7 @@ class Figures:
                           'Genomic Position: %{x}'
         )
 
-    def get_variants_plot(self, gene_name):
+    def get_variants_plot(self, gene_name, selected_variants):
 
         # reads gene annotations
         gene = self.queries.get_gene(gene_name)
@@ -172,6 +174,28 @@ class Figures:
                 variants_traces.append(self._get_variants_scatter(
                     other_variants, name="other variants", symbol=OTHER_VARIANT_SYMBOL))
 
+            selected_variants_trace = None
+            if selected_variants:
+                selected_variants_trace = go.Scatter(
+                    x=[int(v.get("dna_mutation").split(":")[0]) for v in selected_variants],
+                    y=[v.get("frequency") for v in selected_variants],
+                    name="selected variants",
+                    mode='markers',
+                    # opacity=0.5,
+                    marker=dict(
+                        symbol="circle",
+                        color="blue",
+                        size=10,
+                        showscale=False
+                    ),
+                    xaxis='x',
+                    showlegend=True,
+                    text=["{} ({})".format(v.get("hgvs_p"), v.get("annotation")) for v in selected_variants],
+                    hovertemplate='<b>%{text}</b><br>' +
+                                  'Allele frequency: %{y:.5f}<br>' +
+                                  'Genomic Position: %{x}'
+                )
+
             gene_trace = go.Scatter(
                 mode='lines',
                 x=[gene_start, gene_end, gene_end, gene_start],
@@ -207,6 +231,8 @@ class Figures:
                 ))
 
             data = variants_traces + [gene_trace] + domain_traces
+            if selected_variants_trace is not None:
+                data.append(selected_variants_trace)
             layout = go.Layout(
                 template="plotly_white",
                 xaxis=dict(
@@ -279,6 +305,7 @@ class Figures:
             month_columns[0]['name'][0] = 'Monthly count'
 
             fig = dash_table.DataTable(
+                    id="top-occurring-variants-table",
                     data=data.to_dict('records'),
                     sort_action='native',
                     columns=[
