@@ -210,10 +210,11 @@ class Figures:
             layout = go.Layout(
                 template="plotly_white",
                 xaxis=dict(
-                    title='Genomic position',
                     domain=[0, 1.0],
                     tickformat=',d',
                     hoverformat=',d',
+                    ticksuffix=" bp",
+                    ticks="outside",
                     visible=True,
                     anchor="y2",
                     showspikes=True,
@@ -221,8 +222,6 @@ class Figures:
                     spikethickness=2
                 ),
                 xaxis2=dict(
-                    tickformat=',d',
-                    hoverformat=',d',
                     domain=[0, 1.0],
                     anchor='y2',
                     visible=False
