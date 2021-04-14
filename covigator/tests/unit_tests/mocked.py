@@ -13,6 +13,11 @@ def get_mocked_variant(faker: Faker, chromosome=None, gene_name=None) -> Variant
         # TODO: reference and alternate could be equal!
         alternate=faker.random_choices(list(IUPACData.unambiguous_dna_letters), length=1)[0],
         gene_name=gene_name,
+        hgvs_p="p.{}{}{}".format(
+            faker.random_choices(list(IUPACData.protein_letters_1to3.values()), length=1)[0],
+            faker.random_int(min=1, max=500),
+            faker.random_choices(list(IUPACData.protein_letters_1to3.values()), length=1)[0]
+        ),
         annotation=faker.random_choices(["non_synonymous", "inframe_deletion", "inframe_insertion"], length=1)[0]
     )
 

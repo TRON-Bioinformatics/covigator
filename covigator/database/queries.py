@@ -250,7 +250,11 @@ class Queries:
         """
         variant_one = aliased(Variant)
         variant_two = aliased(Variant)
-        query = self.session.query(VariantCooccurrence)\
+        query = self.session.query(VariantCooccurrence,
+                                   variant_one.hgvs_p.label("hgvs_p_one"),
+                                   variant_one.annotation.label("annotation_one"),
+                                   variant_two.hgvs_p.label("hgvs_p_two"),
+                                   variant_two.annotation.label("annotation_two")) \
             .filter(VariantCooccurrence.count >= min_cooccurrence)\
             .join(variant_one, and_(VariantCooccurrence.chromosome_one == variant_one.chromosome,
                                     VariantCooccurrence.position_one == variant_one.position,
@@ -269,11 +273,17 @@ class Queries:
         def get_variant_id(x):
             return "{position}:{reference}:{alternate}".format(position=x[0], reference=x[1], alternate=x[2])
 
-        full_matrix = None
+        full_matrix_with_annotations = None
         if data.shape[0] > 0:
             # build a single column identifying each variant
             data["variant_one"] = data[['position_one', 'reference_one', 'alternate_one']].apply(get_variant_id, axis=1)
             data["variant_two"] = data[['position_two', 'reference_two', 'alternate_two']].apply(get_variant_id, axis=1)
+
+            # save annotations to a different dataframe
+            annotations = data[["variant_one", "variant_two", "hgvs_p_one", "annotation_one", "hgvs_p_two",
+                                "annotation_two"]]
+
+            # delete other columns
             del data["chromosome_one"]
             del data["position_one"]
             del data["reference_one"]
@@ -282,6 +292,10 @@ class Queries:
             del data["position_two"]
             del data["reference_two"]
             del data["alternate_two"]
+            del data["hgvs_p_one"]
+            del data["annotation_one"]
+            del data["hgvs_p_two"]
+            del data["annotation_two"]
 
             # from the sparse matrix builds in memory the complete matrix
             # TODO: would plotly improve its heatmap implementation so we don't need this memory misuse??
@@ -293,7 +307,8 @@ class Queries:
 
             # adds values into empty table
             full_matrix = empty_table + data.set_index(["variant_one", "variant_two"])
-            full_matrix.fillna(0, inplace=True)
-            full_matrix.reset_index(inplace=True)
+            #full_matrix.fillna(0, inplace=True)
+            full_matrix_with_annotations = full_matrix.join(annotations.set_index(["variant_one", "variant_two"]))
+            full_matrix_with_annotations.reset_index(inplace=True)
 
-        return full_matrix
+        return full_matrix_with_annotations

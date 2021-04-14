@@ -7,7 +7,6 @@ from covigator.database.model import JobStatus, DataSource
 from covigator.database.queries import Queries
 from covigator.tests.unit_tests.mocked import get_mocked_ena_sample, get_mocked_log, get_mocked_variant, \
     get_mocked_variant_cooccurrence
-import pandas as pd
 
 
 class QueriesTests(TestCase):
@@ -116,7 +115,7 @@ class QueriesTests(TestCase):
         self.assertIsNotNone(data)
         num_unique_variants = len(set([c.position_one for c in cooccurrences] + [c.position_two for c in cooccurrences]))
         self.assertEqual(data.shape[0], num_unique_variants * (num_unique_variants - 1) + num_unique_variants)
-        self.assertEqual(data.shape[1], 3)
+        self.assertEqual(data.shape[1], 7)
         self.assertEqual(data[data["count"] > 0].shape[0], 5)
 
         data = self.queries.get_variants_cooccurrence_by_gene(gene_name="S", min_cooccurrence=11)
@@ -127,5 +126,5 @@ class QueriesTests(TestCase):
 
         data = self.queries.get_variants_cooccurrence_by_gene(gene_name="N", min_cooccurrence=1)
         self.assertIsNotNone(data)
-        self.assertEqual(data.shape[1], 3)
+        self.assertEqual(data.shape[1], 7)
         self.assertEqual(data[data["count"] > 0].shape[0], 5)

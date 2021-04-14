@@ -368,13 +368,19 @@ class Figures:
             data.sort_values(["variant_one", "variant_two"], inplace=True)
             all_variants = data.variant_one.unique()
             values = np.array_split(data["count"], len(all_variants))
+            texts = np.array_split(
+                data[["hgvs_p_one", "hgvs_p_two"]].apply(
+                    lambda x: "{} - {}".format(x.hgvs_p_one, x.hgvs_p_two), axis=1),
+                len(all_variants))
+            hovertemplate = '<b>%{text}</b><br>' + 'Cooccurrences: %{z:.5f}<br>' + 'Variant one: %{x}<br>' + 'Variant two: %{y}'
             heatmap = go.Heatmap(
                 z=values,
                 x=all_variants,
                 y=all_variants,
                 colorscale="Oranges",
                 hoverongaps=False,
-                #opacity=0.2 if selected_variants else 1.0
+                text=texts,
+                hovertemplate=hovertemplate
             )
             if selected_variants:
                 # TODO: fix this nasty conversion
@@ -382,14 +388,21 @@ class Figures:
                 values_selected = np.array_split(data[["variant_one", "variant_two", "count"]].apply(
                     lambda x: x["count"] if x.variant_one in selected_variant_ids or x.variant_two in selected_variant_ids else None, axis=1),
                     len(all_variants))
+                texts_selected = np.array_split(data[["variant_one", "variant_two", "hgvs_p_one", "hgvs_p_two"]].apply(
+                    lambda x: "{} - {}".format(x.hgvs_p_one, x.hgvs_p_two)
+                    if x.variant_one in selected_variant_ids or x.variant_two in selected_variant_ids else None,
+                    axis=1),
+                    len(all_variants))
+
                 heatmap_selected = go.Heatmap(
                     z=values_selected,
                     x=all_variants,
                     y=all_variants,
                     colorscale="Blues",
                     hoverongaps=False,
-                    showscale=False
-                    #opacity=1.0 if selected_variants else 0.1
+                    showscale=False,
+                    text=texts_selected,
+                    hovertemplate=hovertemplate
                 )
             layout = go.Layout(
                 template="plotly_white",
