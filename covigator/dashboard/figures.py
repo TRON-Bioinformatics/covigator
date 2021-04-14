@@ -248,6 +248,12 @@ class Figures:
                     x0=gene_start + int(d["start"]),
                     x1=gene_start + int(d["end"]),
                     line_width=0, fillcolor=c, opacity=0.1)
+
+            # add horizontal lines on the frequency boundaries
+            fig.add_hline(y=0.1, line_width=1, line_dash="dash", line_color=VERY_COMMON_VARIANTS_COLOR)
+            fig.add_hline(y=0.01, line_width=1, line_dash="dash", line_color=COMMON_VARIANTS_COLOR)
+            fig.add_hline(y=0.001, line_width=1, line_dash="dash", line_color=RARE_VARIANTS_COLOR)
+
         return fig
 
     def get_top_occurring_variants_plot(self, top, gene_name, date_range_start, date_range_end):
