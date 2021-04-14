@@ -217,7 +217,7 @@ class Figures:
                     visible=True,
                     anchor="y2",
                     showspikes=True,
-                    spikemode='toaxis',
+                    spikemode='across',
                     spikethickness=2
                 ),
                 xaxis2=dict(
