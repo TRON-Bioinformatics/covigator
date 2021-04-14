@@ -361,7 +361,7 @@ class Figures:
 
         return styles
 
-    def get_cooccurrence_heatmap(self, gene_name):
+    def get_cooccurrence_heatmap(self, gene_name, selected_variants):
         data = self.queries.get_variants_cooccurrence_by_gene(gene_name=gene_name)
         fig = dcc.Markdown("""**No co-occurrent variants for the current selection**""")
         if data is not None and data.shape[0] > 0:
@@ -372,8 +372,25 @@ class Figures:
                 z=values,
                 x=all_variants,
                 y=all_variants,
-                colorscale="Greens",
-                hoverongaps=False)
+                colorscale="Oranges",
+                hoverongaps=False,
+                #opacity=0.2 if selected_variants else 1.0
+            )
+            if selected_variants:
+                # TODO: fix this nasty conversion
+                selected_variant_ids = [v.get("dna_mutation").replace(">", ":") for v in selected_variants]
+                values_selected = np.array_split(data[["variant_one", "variant_two", "count"]].apply(
+                    lambda x: x["count"] if x.variant_one in selected_variant_ids or x.variant_two in selected_variant_ids else None, axis=1),
+                    len(all_variants))
+                heatmap_selected = go.Heatmap(
+                    z=values_selected,
+                    x=all_variants,
+                    y=all_variants,
+                    colorscale="Blues",
+                    hoverongaps=False,
+                    showscale=False
+                    #opacity=1.0 if selected_variants else 0.1
+                )
             layout = go.Layout(
                 template="plotly_white",
                 height=700,
@@ -406,5 +423,15 @@ class Figures:
                 # ),
                 margin=go.layout.Margin(l=0, r=0, b=0, t=0)
             )
-            fig = go.Figure(data=[heatmap], layout=layout)
+            traces = [heatmap]
+            if selected_variants:
+                traces.append(heatmap_selected)
+            fig = go.Figure(data=traces, layout=layout)
+
+            # add selected variants
+            #for v in selected_variants:
+            #    fig.add_vrect(
+            #        x0=v.get("dna_mutation"),
+            #        x1=v.get("dna_mutation"),
+            #        line_width=0, fillcolor="blue", opacity=0.1)
         return fig

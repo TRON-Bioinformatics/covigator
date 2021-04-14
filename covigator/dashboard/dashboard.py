@@ -372,7 +372,7 @@ class Dashboard:
         def update_needle_plot(gene_name, rows, selected_rows_indices):
             plot = html.Div(children=None)
             if gene_name is not None:
-                selected_rows = [rows[s] for s in selected_rows_indices]
+                selected_rows = [rows[s] for s in selected_rows_indices] if selected_rows_indices else None
                 plot = html.Div(children=[
                     dcc.Graph(
                         figure=self.figures.get_variants_plot(gene_name=gene_name, selected_variants=selected_rows),
@@ -408,13 +408,18 @@ class Dashboard:
 
         @app.callback(
             Output('cooccurrence-heatmap', 'children'),
-            Input('dropdown-gene', 'value'))
-        def update_cooccurrence_heatmap(gene_name):
+            Input('dropdown-gene', 'value'),
+            Input('top-occurring-variants-table', "derived_virtual_data"),
+            Input('top-occurring-variants-table', "derived_virtual_selected_rows")
+        )
+        def update_cooccurrence_heatmap(gene_name, rows, selected_rows_indices):
             plot = None
             if gene_name is not None:
+                selected_rows = [rows[s] for s in selected_rows_indices] if selected_rows_indices else None
                 plot = html.Div(children=[
                     dcc.Graph(
-                        figure=self.figures.get_cooccurrence_heatmap(gene_name=gene_name),
+                        figure=self.figures.get_cooccurrence_heatmap(
+                            gene_name=gene_name, selected_variants=selected_rows),
                         config={
                             'displaylogo': False,
                             'displayModeBar': False
