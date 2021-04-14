@@ -2,6 +2,7 @@ import random
 from itertools import combinations
 from unittest import TestCase, skip
 from faker import Faker
+import numpy as np
 from covigator.database.database import Database
 from covigator.database.model import JobStatus, DataSource
 from covigator.database.queries import Queries
@@ -102,20 +103,37 @@ class QueriesTests(TestCase):
         # adds some cooccurrences
         cooccurrences = []
         other_cooccurrences = []
-        for (variant_one, variant_two) in random.sample(list(combinations(variants, 2)), 5):
+        variants_to_sample = {"{}-{}".format(v1.hgvs_p, v2.hgvs_p):(v1, v2) for v1, v2 in
+                              list(combinations(variants, 2))}
+        other_variants_to_sample = {"{}-{}".format(v1.hgvs_p, v2.hgvs_p): (v1, v2) for v1, v2 in
+                              list(combinations(other_variants, 2))}
+        combined_variants_to_sample = {"{}-{}".format(v1.hgvs_p, v2.hgvs_p): (v1, v2) for v1, v2 in
+                                    list(zip(variants, other_variants))}
+        for (variant_one, variant_two) in [variants_to_sample.get(k) for k in
+                                           np.random.choice(list(variants_to_sample.keys()), 5, replace=False)]:
             cooccurrences.append(get_mocked_variant_cooccurrence(self.faker, variant_one, variant_two))
-        for (variant_one, variant_two) in random.sample(list(combinations(other_variants, 2)), 5):
+        for (variant_one, variant_two) in [other_variants_to_sample.get(k) for k in
+                                           np.random.choice(list(other_variants_to_sample.keys()), 5, replace=False)]:
             other_cooccurrences.append(get_mocked_variant_cooccurrence(self.faker, variant_one, variant_two))
-        for (variant_one, variant_two) in random.sample(list(zip(variants, other_variants)), 5):
+        for (variant_one, variant_two) in [combined_variants_to_sample.get(k) for k in
+                                           np.random.choice(list(combined_variants_to_sample.keys()), 5, replace=False)]:
             other_cooccurrences.append(get_mocked_variant_cooccurrence(self.faker, variant_one, variant_two))
         self.session.add_all(cooccurrences + other_cooccurrences)
         self.session.commit()
+
+        # add some samples to compute the frequency right
+        for _ in range(10):
+            sample_ena, sample, job = get_mocked_ena_sample(Faker())
+            self.session.add(sample_ena)
+            self.session.add(sample)
+            self.session.add(job)
+            self.session.commit()
 
         data = self.queries.get_variants_cooccurrence_by_gene(gene_name="S", min_cooccurrence=1)
         self.assertIsNotNone(data)
         num_unique_variants = len(set([c.position_one for c in cooccurrences] + [c.position_two for c in cooccurrences]))
         self.assertEqual(data.shape[0], num_unique_variants * (num_unique_variants - 1) + num_unique_variants)
-        self.assertEqual(data.shape[1], 7)
+        self.assertEqual(data.shape[1], 14)
         self.assertEqual(data[data["count"] > 0].shape[0], 5)
 
         data = self.queries.get_variants_cooccurrence_by_gene(gene_name="S", min_cooccurrence=11)
@@ -126,5 +144,5 @@ class QueriesTests(TestCase):
 
         data = self.queries.get_variants_cooccurrence_by_gene(gene_name="N", min_cooccurrence=1)
         self.assertIsNotNone(data)
-        self.assertEqual(data.shape[1], 7)
+        self.assertEqual(data.shape[1], 14)
         self.assertEqual(data[data["count"] > 0].shape[0], 5)

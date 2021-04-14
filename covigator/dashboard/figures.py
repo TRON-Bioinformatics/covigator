@@ -133,7 +133,7 @@ class Figures:
         fig = dcc.Markdown("""**No variants for the current selection**""")
         if variants.shape[0] > 0:
             # reads total number of samples and calculates frequencies
-            count_samples = self.queries.count_ena_samples_loaded()
+            count_samples = self.queries.count_ena_samples()
             variants["af"] = variants.count_occurrences / count_samples
             variants["log_af"] = variants.af.transform(lambda x: np.log(x + 1))
             variants["log_count"] = variants.count_occurrences.transform(lambda x: np.log(x))
@@ -369,10 +369,25 @@ class Figures:
 
             # NOTE: transpose matrix manually as plotly transpose does not work with labels
             # the database return the upper diagonal, the lower is best for plots
-            data.sort_values(["variant_two", "variant_one"], inplace=True)
+            data.position_one = data.variant_one.transform(lambda x: x.split(":")[0])
+            data.reference_one = data.variant_one.transform(lambda x: x.split(":")[1].split(">")[0])
+            data.alternate_one = data.variant_one.transform(lambda x: x.split(":")[1].split(">")[1])
+            data.position_two = data.variant_two.transform(lambda x: x.split(":")[0])
+            data.reference_two = data.variant_two.transform(lambda x: x.split(":")[1].split(">")[0])
+            data.alternate_two = data.variant_two.transform(lambda x: x.split(":")[1].split(">")[1])
+            data.sort_values(["position_two", "reference_two", "alternate_two",
+                              "position_one", "reference_two", "alternate_two"], inplace=True)
 
             # shortens very long ids
-            all_variants = [v if len(v) < 15 else v[0:15] + "..." for v in data.variant_one.unique()]
+            def shorten_variant_id(variant_id):
+                max_variant_length = 15
+                if len(variant_id) <= max_variant_length:
+                    return variant_id
+                else:
+                    return variant_id[0:max_variant_length] + "..."
+
+            all_variants = [shorten_variant_id(v) for v in data.variant_one.dropna().unique()]
+
             values = np.array_split(data["count"], len(all_variants))
             texts = np.array_split(
                 data[["hgvs_p_one", "hgvs_p_two"]].apply(

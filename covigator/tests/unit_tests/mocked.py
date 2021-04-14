@@ -73,14 +73,28 @@ def get_mocked_log(faker: Faker, source: DataSource = None, module: CovigatorMod
 
 
 def get_mocked_variant_cooccurrence(faker: Faker, variant_one: Variant, variant_two: Variant) -> VariantCooccurrence:
-    return VariantCooccurrence(
-        chromosome_one=variant_one.chromosome,
-        position_one=variant_one.position,
-        reference_one=variant_one.reference,
-        alternate_one=variant_one.alternate,
-        chromosome_two=variant_two.chromosome,
-        position_two=variant_two.position,
-        reference_two=variant_two.reference,
-        alternate_two=variant_two.alternate,
-        count=faker.random_int(min=1, max=10)
-    )
+    if variant_one.position <= variant_two.position:
+        cooccurrence = VariantCooccurrence(
+            chromosome_one=variant_one.chromosome,
+            position_one=variant_one.position,
+            reference_one=variant_one.reference,
+            alternate_one=variant_one.alternate,
+            chromosome_two=variant_two.chromosome,
+            position_two=variant_two.position,
+            reference_two=variant_two.reference,
+            alternate_two=variant_two.alternate,
+            count=faker.random_int(min=1, max=10)
+        )
+    else:
+        cooccurrence = VariantCooccurrence(
+            chromosome_two=variant_one.chromosome,
+            position_two=variant_one.position,
+            reference_two=variant_one.reference,
+            alternate_two=variant_one.alternate,
+            chromosome_one=variant_two.chromosome,
+            position_one=variant_two.position,
+            reference_one=variant_two.reference,
+            alternate_one=variant_two.alternate,
+            count=faker.random_int(min=1, max=10)
+        )
+    return cooccurrence

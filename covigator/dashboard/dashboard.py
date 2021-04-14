@@ -94,7 +94,7 @@ class Dashboard:
 
     def get_tab_overview(self):
 
-        count_samples = self.queries.count_ena_samples_loaded()
+        count_samples = self.queries.count_ena_samples()
         count_countries = self.queries.count_countries()
         count_variants = self.queries.count_variants()
         count_variants_observed = self.queries.count_variant_observations()

@@ -109,7 +109,7 @@ class Queries:
                          VariantCooccurrence.alternate_two == variant_two.alternate)) \
             .first()
 
-    def count_ena_samples_loaded(self) -> int:
+    def count_ena_samples(self) -> int:
         return self.session.query(JobEna).filter(JobEna.status == self.FINAL_JOB_STATE).count()
 
     def count_countries(self):
@@ -218,7 +218,7 @@ class Queries:
             del top_occurring_variants["alternate"]
 
             # replace the total count by the frequency
-            count_samples = self.count_ena_samples_loaded()
+            count_samples = self.count_ena_samples()
             top_occurring_variants['frequency'] = top_occurring_variants.total.transform(
                 lambda t: round(float(t) / count_samples, 3))
             del top_occurring_variants['total']
@@ -271,6 +271,8 @@ class Queries:
                          variant_two.annotation != SYNONYMOUS_VARIANT))
         data = pd.read_sql(query.statement, self.session.bind)
 
+        count_samples = self.count_ena_samples()
+
         def get_variant_id(x):
             return "{position}:{reference}>{alternate}".format(position=x[0], reference=x[1], alternate=x[2])
 
@@ -282,17 +284,12 @@ class Queries:
 
             # save annotations to a different dataframe
             annotations = data[["variant_one", "variant_two", "hgvs_p_one", "annotation_one", "hgvs_p_two",
-                                "annotation_two"]]
+                                "annotation_two", "position_one", "position_two", "reference_one", "reference_two",
+                                "alternate_one", "alternate_two"]]
 
             # delete other columns
             del data["chromosome_one"]
-            del data["position_one"]
-            del data["reference_one"]
-            del data["alternate_one"]
             del data["chromosome_two"]
-            del data["position_two"]
-            del data["reference_two"]
-            del data["alternate_two"]
             del data["hgvs_p_one"]
             del data["annotation_one"]
             del data["hgvs_p_two"]
@@ -300,11 +297,25 @@ class Queries:
 
             # from the sparse matrix builds in memory the complete matrix
             # TODO: would plotly improve its heatmap implementation so we don't need this memory misuse??
-            all_variants = pd.concat([data.variant_one, data.variant_two], axis=0)
-            all_variants = all_variants.sort_values().unique()
+            all_variants = pd.concat([data[["variant_one", "position_one", "reference_one", "alternate_one"]],
+                                      data[["variant_two", "position_two", "reference_two", "alternate_two"]].rename(
+                                          columns={'variant_two': 'variant_one',
+                                                   'position_two': 'position_one',
+                                                   'reference_two': 'reference_one',
+                                                   'alternate_two': 'alternate_one'})], axis=0)
+            all_variants = all_variants.sort_values(
+                by=["position_one", "reference_one", "alternate_one"]).variant_one.unique()
             empty_table = pd.DataFrame(
                 index=pd.MultiIndex.from_product([all_variants, all_variants], names=["variant_one", "variant_two"]))
             empty_table["count"] = 0
+
+            # delete other columns that were used to sort
+            del data["position_one"]
+            del data["reference_one"]
+            del data["alternate_one"]
+            del data["position_two"]
+            del data["reference_two"]
+            del data["alternate_two"]
 
             # adds values into empty table
             full_matrix = empty_table + data.set_index(["variant_one", "variant_two"])
@@ -312,9 +323,7 @@ class Queries:
             full_matrix_with_annotations = full_matrix.join(annotations.set_index(["variant_one", "variant_two"]))
             full_matrix_with_annotations.reset_index(inplace=True)
 
-            # removes the upper triangle
-            full_matrix_with_annotations["count"] = full_matrix_with_annotations[[
-                "variant_one", "variant_two", "count"]].apply(
-                lambda x: x["count"] if x.variant_one <= x.variant_two else None, axis=1)
+            # calculate pair cooccurrence frequency
+            full_matrix_with_annotations["frequency"] = full_matrix_with_annotations["count"] / count_samples
 
         return full_matrix_with_annotations
