@@ -1,10 +1,31 @@
+import os
 from datetime import datetime
 from typing import List
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, String, Float, Enum, DateTime, Integer, Boolean, Date, ForeignKey, \
-    ForeignKeyConstraint, BigInteger, JSON
+    ForeignKeyConstraint, BigInteger, JSON, Index
 import enum
 
+from covigator import ENV_COVIGATOR_TABLE_VERSION
+
+
+def get_table_versioned_name(basename):
+    return "{}{}".format(basename, os.environ.get(ENV_COVIGATOR_TABLE_VERSION, ""))
+
+
+GENE_TABLE_NAME = get_table_versioned_name('gene')
+LOG_TABLE_NAME = get_table_versioned_name('log')
+VARIANT_COOCCURRENCE_TABLE_NAME = get_table_versioned_name('variant_cooccurrence')
+VARIANT_OBSERVATION_TABLE_NAME = get_table_versioned_name('variant_observation')
+VARIANT_TABLE_NAME = get_table_versioned_name('variant')
+JOB_ENA_TABLE_NAME = get_table_versioned_name('job_ena')
+JOB_GISAID_TABLE_NAME = get_table_versioned_name('job_gisaid')
+SAMPLE_TABLE_NAME = get_table_versioned_name('sample')
+SAMPLE_GISAID_TABLE_NAME = get_table_versioned_name('sample_gisaid')
+SAMPLE_ENA_TABLE_NAME = get_table_versioned_name('sample_ena')
+JOB_STATUS_CONSTRAINT_NAME = get_table_versioned_name('job_status')
+DATA_SOURCE_CONSTRAINT_NAME = get_table_versioned_name('data_source')
+COVIGATOR_MODULE_CONSTRAINT_NAME = get_table_versioned_name('covigator_module')
 SEPARATOR = ";"
 
 Base = declarative_base()
@@ -15,7 +36,7 @@ class Gene(Base):
     This table holds the genes in the organism genome and its annotations in the field `data`. The annotations
     are in JSON format. This data is fetched from ftp://ftp.ensemblgenomes.org/pub/viruses/json/sars_cov_2/sars_cov_2.json
     """
-    __tablename__ = 'gene'
+    __tablename__ = GENE_TABLE_NAME
 
     identifier = Column(String, primary_key=True)
     name = Column(String)
@@ -26,6 +47,8 @@ class JobStatus(enum.Enum):
     """
     Valid job status
     """
+    __constraint_name__ = JOB_STATUS_CONSTRAINT_NAME
+
     PENDING = 1
     QUEUED = 2
     DOWNLOADED = 3
@@ -34,55 +57,37 @@ class JobStatus(enum.Enum):
     FAILED_DOWNLOAD = 6
     FAILED_PROCESSING = 7
     FAILED_LOAD = 8
+    COOCCURRENCE = 9
+    FAILED_COOCCURRENCE = 10
 
 
 class DataSource(enum.Enum):
     """
     Valid sources of data
     """
+    __constraint_name__ = DATA_SOURCE_CONSTRAINT_NAME
+
     ENA = 1
     GISAID = 2
-
-
-class Sample(Base):
-    """
-    This table holds all samples loaded into Covigator irrespective of the data source.
-    The same sample may be loaded from different data sources.
-    There are foreign keys fields pointing to the source-specific tables with all metadata for the sample.
-    """
-    __tablename__ = 'sample'
-
-    id = Column(String, primary_key=True)
-    source = Column(Enum(DataSource), primary_key=True)
-    # NOTE: should have only one filled, either ena_id or gisaid_id and be coherent with the value of source
-    ena_id = Column(ForeignKey("sample_ena.run_accession"))
-    gisaid_id = Column(ForeignKey("sample_gisaid.run_accession"))
 
 
 class SampleGisaid(Base):
     """
     The table that holds all metadata for a GISAID sample
     """
-    __tablename__ = 'sample_gisaid'
+    __tablename__ = SAMPLE_GISAID_TABLE_NAME
 
     run_accession = Column(String, primary_key=True)
-
-    #sample_accession = Column(String)
     virus_name = Column(String)
-
     first_created = Column(Date)
     collection_date = Column(Date)
-
     instrument_platform = Column(String)
     instrument_model = Column(String)
-
     assembly_method = Column(String)
-
     # Host information
-    host_tax_id = Column(String) 
+    host_tax_id = Column(String)
     host = Column(String)
     host_body_site = Column(String)
-    
     # geographical data
     lat = Column(Float)
     lon = Column(Float)
@@ -90,7 +95,6 @@ class SampleGisaid(Base):
     country = Column(String)
     country_alpha_2 = Column(String)
     country_alpha_3 = Column(String)
-
     continent = Column(String)
     continent_alpha_2 = Column(String)
 
@@ -99,7 +103,7 @@ class SampleEna(Base):
     """
     The table that holds all metadata for a ENA sample
     """
-    __tablename__ = 'sample_ena'
+    __tablename__ = SAMPLE_ENA_TABLE_NAME
 
     # data on run
     # TODO: add foreign keys to jobs
@@ -155,11 +159,26 @@ class SampleEna(Base):
         return self.fastq_md5.split(SEPARATOR) if self.fastq_md5 is not None else []
 
 
+class Sample(Base):
+    """
+    This table holds all samples loaded into Covigator irrespective of the data source.
+    The same sample may be loaded from different data sources.
+    There are foreign keys fields pointing to the source-specific tables with all metadata for the sample.
+    """
+    __tablename__ = SAMPLE_TABLE_NAME
+
+    id = Column(String, primary_key=True)
+    source = Column(Enum(DataSource, name=DataSource.__constraint_name__), primary_key=True)
+    # NOTE: should have only one filled, either ena_id or gisaid_id and be coherent with the value of source
+    ena_id = Column(ForeignKey("{}.run_accession".format(SampleEna.__tablename__)))
+    gisaid_id = Column(ForeignKey("{}.run_accession".format(SampleGisaid.__tablename__)))
+
+
 class JobGisaid(Base):
     """
     The table that holds an GISAID job
     """
-    __tablename__ = 'job_gisaid'
+    __tablename__ = JOB_GISAID_TABLE_NAME
 
     run_accession = Column(ForeignKey("sample_gisaid.run_accession"), primary_key=True)
 
@@ -186,18 +205,19 @@ class JobEna(Base):
     """
     The table that holds an ENA job
     """
-    __tablename__ = 'job_ena'
+    __tablename__ = JOB_ENA_TABLE_NAME
 
-    run_accession = Column(ForeignKey("sample_ena.run_accession"), primary_key=True)
+    run_accession = Column(ForeignKey("{}.run_accession".format(SampleEna.__tablename__)), primary_key=True)
 
     # job status
-    status = Column(Enum(JobStatus), default=JobStatus.PENDING)
+    status = Column(Enum(JobStatus, name=JobStatus.__constraint_name__), default=JobStatus.PENDING)
     created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.now())
     queued_at = Column(DateTime(timezone=True))
     downloaded_at = Column(DateTime(timezone=True))
     analysed_at = Column(DateTime(timezone=True))
     cleaned_at = Column(DateTime(timezone=True))
     loaded_at = Column(DateTime(timezone=True))
+    cooccurrence_at = Column(DateTime(timezone=True))
     failed_at = Column(DateTime(timezone=True))
     error_message = Column(String)
 
@@ -223,7 +243,7 @@ class Variant(Base):
     """
     A variant with its specific annotations. THis does not contain any sample specific annotations.
     """
-    __tablename__ = 'variant'
+    __tablename__ = VARIANT_TABLE_NAME
 
     chromosome = Column(String, primary_key=True)
     position = Column(Integer, primary_key=True)
@@ -265,10 +285,10 @@ class VariantObservation(Base):
     """
     A variant observation in a particular sample. This contains all annotations of a specific observation of a variant.
     """
-    __tablename__ = 'variant_observation'
+    __tablename__ = VARIANT_OBSERVATION_TABLE_NAME
 
     sample = Column(String, primary_key=True)
-    source = Column(Enum(DataSource), primary_key=True)
+    source = Column(Enum(DataSource, name=DataSource.__constraint_name__), primary_key=True)
     chromosome = Column(String, primary_key=True)
     position = Column(Integer, primary_key=True)
     reference = Column(String, primary_key=True)
@@ -309,7 +329,7 @@ class VariantObservation(Base):
 
 class VariantCooccurrence(Base):
 
-    __tablename__ = 'variant_cooccurrence'
+    __tablename__ = VARIANT_COOCCURRENCE_TABLE_NAME
 
     chromosome_one = Column(String, primary_key=True)
     position_one = Column(Integer, primary_key=True)
@@ -330,6 +350,9 @@ class VariantCooccurrence(Base):
 
 
 class CovigatorModule(enum.Enum):
+
+    __constraint_name__ = COVIGATOR_MODULE_CONSTRAINT_NAME
+
     ACCESSOR = 1
     PROCESSOR = 2
 
@@ -338,14 +361,16 @@ class Log(Base):
     """
     The table that holds an ENA job
     """
-    __tablename__ = 'log'
+    __tablename__ = LOG_TABLE_NAME
 
     id = Column(Integer, primary_key=True, autoincrement=True)
 
     start = Column(DateTime(timezone=True), nullable=False)
     end = Column(DateTime(timezone=True), nullable=False)
-    source = Column(Enum(DataSource), nullable=False)
-    module = Column(Enum(CovigatorModule), nullable=False)
+    source = Column(Enum(DataSource, name=DataSource.__constraint_name__), nullable=False)
+    module = Column(Enum(CovigatorModule, name=CovigatorModule.__constraint_name__), nullable=False)
 
     has_error = Column(Boolean, default=False)
+    error_message = Column(String)
+    processed = Column(Integer)
     data = Column(JSON)

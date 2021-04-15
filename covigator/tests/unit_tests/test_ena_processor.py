@@ -25,5 +25,6 @@ class EnaProcessorTests(TestCase):
         self.assertIsNotNone(log.end)
         self.assertEqual(log.source, DataSource.ENA)
         self.assertEqual(log.module, CovigatorModule.PROCESSOR)
+        self.assertEqual(log.processed, 0)
         data = log.data
         self.assertEqual(data.get("processed"), 0)
