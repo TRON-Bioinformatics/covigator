@@ -2,6 +2,7 @@ from datetime import date, datetime
 from typing import List
 
 import pandas as pd
+import numpy as np
 from sqlalchemy import and_, desc, asc, func
 from sqlalchemy.orm import Session, aliased
 
@@ -108,7 +109,7 @@ class Queries:
                          VariantCooccurrence.alternate_two == variant_two.alternate)) \
             .first()
 
-    def count_ena_samples_loaded(self) -> int:
+    def count_ena_samples(self) -> int:
         return self.session.query(JobEna).filter(JobEna.status == self.FINAL_JOB_STATE).count()
 
     def count_countries(self):
@@ -217,7 +218,7 @@ class Queries:
             del top_occurring_variants["alternate"]
 
             # replace the total count by the frequency
-            count_samples = self.count_ena_samples_loaded()
+            count_samples = self.count_ena_samples()
             top_occurring_variants['frequency'] = top_occurring_variants.total.transform(
                 lambda t: round(float(t) / count_samples, 3))
             del top_occurring_variants['total']
@@ -250,7 +251,11 @@ class Queries:
         """
         variant_one = aliased(Variant)
         variant_two = aliased(Variant)
-        query = self.session.query(VariantCooccurrence)\
+        query = self.session.query(VariantCooccurrence,
+                                   variant_one.hgvs_p.label("hgvs_p_one"),
+                                   variant_one.annotation.label("annotation_one"),
+                                   variant_two.hgvs_p.label("hgvs_p_two"),
+                                   variant_two.annotation.label("annotation_two")) \
             .filter(VariantCooccurrence.count >= min_cooccurrence)\
             .join(variant_one, and_(VariantCooccurrence.chromosome_one == variant_one.chromosome,
                                     VariantCooccurrence.position_one == variant_one.position,
@@ -259,41 +264,72 @@ class Queries:
             .join(variant_two, and_(VariantCooccurrence.chromosome_two == variant_two.chromosome,
                                     VariantCooccurrence.position_two == variant_two.position,
                                     VariantCooccurrence.reference_two == variant_two.reference,
-                                    VariantCooccurrence.alternate_two == variant_two.alternate)) \
-            .filter(and_(variant_one.gene_name == gene_name,
+                                    VariantCooccurrence.alternate_two == variant_two.alternate))
+
+        if gene_name is not None:
+            query = query.filter(and_(variant_one.gene_name == gene_name,
                          variant_one.annotation != SYNONYMOUS_VARIANT,
                          variant_two.gene_name == gene_name,
                          variant_two.annotation != SYNONYMOUS_VARIANT))
+        else:
+            query = query.filter(and_(variant_one.annotation != SYNONYMOUS_VARIANT,
+                                      variant_two.annotation != SYNONYMOUS_VARIANT))
+
         data = pd.read_sql(query.statement, self.session.bind)
 
-        def get_variant_id(x):
-            return "{position}:{reference}:{alternate}".format(position=x[0], reference=x[1], alternate=x[2])
+        count_samples = self.count_ena_samples()
 
-        full_matrix = None
+        def get_variant_id(x):
+            return "{position}:{reference}>{alternate}".format(position=x[0], reference=x[1], alternate=x[2])
+
+        full_matrix_with_annotations = None
         if data.shape[0] > 0:
             # build a single column identifying each variant
             data["variant_one"] = data[['position_one', 'reference_one', 'alternate_one']].apply(get_variant_id, axis=1)
             data["variant_two"] = data[['position_two', 'reference_two', 'alternate_two']].apply(get_variant_id, axis=1)
+
+            # save annotations to a different dataframe
+            annotations = data[["variant_one", "variant_two", "hgvs_p_one", "annotation_one", "hgvs_p_two",
+                                "annotation_two", "position_one", "position_two", "reference_one", "reference_two",
+                                "alternate_one", "alternate_two"]]
+
+            # delete other columns
             del data["chromosome_one"]
-            del data["position_one"]
-            del data["reference_one"]
-            del data["alternate_one"]
             del data["chromosome_two"]
-            del data["position_two"]
-            del data["reference_two"]
-            del data["alternate_two"]
+            del data["hgvs_p_one"]
+            del data["annotation_one"]
+            del data["hgvs_p_two"]
+            del data["annotation_two"]
 
             # from the sparse matrix builds in memory the complete matrix
             # TODO: would plotly improve its heatmap implementation so we don't need this memory misuse??
-            all_variants = pd.concat([data.variant_one, data.variant_two], axis=0)
-            all_variants = all_variants.sort_values().unique()
+            all_variants = pd.concat([data[["variant_one", "position_one", "reference_one", "alternate_one"]],
+                                      data[["variant_two", "position_two", "reference_two", "alternate_two"]].rename(
+                                          columns={'variant_two': 'variant_one',
+                                                   'position_two': 'position_one',
+                                                   'reference_two': 'reference_one',
+                                                   'alternate_two': 'alternate_one'})], axis=0)
+            all_variants = all_variants.sort_values(
+                by=["position_one", "reference_one", "alternate_one"]).variant_one.unique()
             empty_table = pd.DataFrame(
                 index=pd.MultiIndex.from_product([all_variants, all_variants], names=["variant_one", "variant_two"]))
             empty_table["count"] = 0
 
+            # delete other columns that were used to sort
+            del data["position_one"]
+            del data["reference_one"]
+            del data["alternate_one"]
+            del data["position_two"]
+            del data["reference_two"]
+            del data["alternate_two"]
+
             # adds values into empty table
             full_matrix = empty_table + data.set_index(["variant_one", "variant_two"])
-            full_matrix.fillna(0, inplace=True)
-            full_matrix.reset_index(inplace=True)
+            #full_matrix.fillna(0, inplace=True)
+            full_matrix_with_annotations = full_matrix.join(annotations.set_index(["variant_one", "variant_two"]))
+            full_matrix_with_annotations.reset_index(inplace=True)
 
-        return full_matrix
+            # calculate pair cooccurrence frequency
+            full_matrix_with_annotations["frequency"] = full_matrix_with_annotations["count"] / count_samples
+
+        return full_matrix_with_annotations

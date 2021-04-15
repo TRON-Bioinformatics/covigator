@@ -2,25 +2,19 @@ import random
 import colorlover
 import dash_table
 import numpy as np
+import pandas as pd
 import plotly
 import plotly.express as px
 import plotly.graph_objects as go
 import dash_core_components as dcc
-import json
-
-from six.moves.urllib import request as urlreq
-import dash_bio as dashbio
 import re
 from covigator.database.queries import Queries
 
+
 OTHER_VARIANT_SYMBOL = "x"
-
 INSERTION_SYMBOL = "triangle-up"
-
 DELETION_SYMBOL = "triangle-down"
-
 MISSENSE_VARIANT_SYMBOL = "circle"
-
 VERY_COMMON_VARIANTS_COLOR = plotly.express.colors.sequential.Reds[-1]
 COMMON_VARIANTS_COLOR = plotly.express.colors.sequential.Reds[-3]
 RARE_VARIANTS_COLOR = plotly.express.colors.sequential.Reds[-7]
@@ -37,7 +31,6 @@ class Figures:
         self.queries = queries
 
     def get_accumulated_samples_by_country_plot(self):
-
         data = self.queries.get_accumulated_samples_by_country()
         fig = None
         if data is not None:
@@ -117,16 +110,15 @@ class Figures:
                 color=variants.af.transform(self._get_color_by_af),
                 showscale=False
             ),
-            xaxis='x1',
+            xaxis='x',
             showlegend=True,
-            legendgroup='variants',
             text=variants[["hgvs_p", "annotation"]].apply(lambda x: "{} ({})".format(x[0], x[1]), axis=1),
             hovertemplate='<b>%{text}</b><br>' +
-                          'Allele frequency: %{y:.2f}<br>' +
+                          'Allele frequency: %{y:.5f}<br>' +
                           'Genomic Position: %{x}'
         )
 
-    def get_variants_plot(self, gene_name):
+    def get_variants_plot(self, gene_name, selected_variants):
 
         # reads gene annotations
         gene = self.queries.get_gene(gene_name)
@@ -141,7 +133,7 @@ class Figures:
         fig = dcc.Markdown("""**No variants for the current selection**""")
         if variants.shape[0] > 0:
             # reads total number of samples and calculates frequencies
-            count_samples = self.queries.count_ena_samples_loaded()
+            count_samples = self.queries.count_ena_samples()
             variants["af"] = variants.count_occurrences / count_samples
             variants["log_af"] = variants.af.transform(lambda x: np.log(x + 1))
             variants["log_count"] = variants.count_occurrences.transform(lambda x: np.log(x))
@@ -173,6 +165,28 @@ class Figures:
                 variants_traces.append(self._get_variants_scatter(
                     other_variants, name="other variants", symbol=OTHER_VARIANT_SYMBOL))
 
+            selected_variants_trace = None
+            if selected_variants:
+                selected_variants_trace = go.Scatter(
+                    x=[int(v.get("dna_mutation").split(":")[0]) for v in selected_variants],
+                    y=[v.get("frequency") for v in selected_variants],
+                    name="selected variants",
+                    mode='markers',
+                    # opacity=0.5,
+                    marker=dict(
+                        symbol="circle",
+                        color="blue",
+                        size=10,
+                        showscale=False
+                    ),
+                    xaxis='x',
+                    showlegend=True,
+                    text=["{} ({})".format(v.get("hgvs_p"), v.get("annotation")) for v in selected_variants],
+                    hovertemplate='<b>%{text}</b><br>' +
+                                  'Allele frequency: %{y:.5f}<br>' +
+                                  'Genomic Position: %{x}'
+                )
+
             gene_trace = go.Scatter(
                 mode='lines',
                 x=[gene_start, gene_end, gene_end, gene_start],
@@ -184,7 +198,7 @@ class Figures:
                 hoveron="fills",
                 line=dict(width=0),
                 yaxis='y2',
-                xaxis='x1',
+                xaxis='x',
                 legendgroup='gene'
             )
             domain_traces = []
@@ -203,25 +217,31 @@ class Figures:
                     hoveron="fills",
                     line=dict(width=0),
                     yaxis='y2',
-                    xaxis='x1',
+                    xaxis='x',
                     legendgroup='domains'
                 ))
 
             data = variants_traces + [gene_trace] + domain_traces
+            if selected_variants_trace is not None:
+                data.append(selected_variants_trace)
             layout = go.Layout(
                 template="plotly_white",
                 xaxis=dict(
                     domain=[0, 1.0],
                     tickformat=',d',
                     hoverformat=',d',
-                    visible=False
+                    ticksuffix=" bp",
+                    ticks="outside",
+                    visible=True,
+                    anchor="y2",
+                    showspikes=True,
+                    spikemode='across',
+                    spikethickness=2
                 ),
                 xaxis2=dict(
-                    title='Genomic position',
-                    tickformat=',d',
-                    hoverformat=',d',
                     domain=[0, 1.0],
-                    anchor='y2'
+                    anchor='y2',
+                    visible=False
                 ),
                 yaxis=dict(
                     title='Allele frequency',
@@ -234,30 +254,24 @@ class Figures:
                     visible=False,
                     anchor='x2'
                 ),
-                margin=go.layout.Margin(l=0, r=0, b=0, t=0)
+                margin=go.layout.Margin(l=0, r=0, b=0, t=20)
             )
             fig = go.Figure(data=data, layout=layout)
 
+            # add vertical transparent rectangles with domains
+            for d, c in zip(pfam_protein_features,
+                            plotly.express.colors.qualitative.Plotly[0:len(pfam_protein_features)]):
+                fig.add_vrect(
+                    x0=gene_start + int(d["start"]),
+                    x1=gene_start + int(d["end"]),
+                    line_width=0, fillcolor=c, opacity=0.1)
+
+            # add horizontal lines on the frequency boundaries
+            fig.add_hline(y=0.1, line_width=1, line_dash="dash", line_color=VERY_COMMON_VARIANTS_COLOR)
+            fig.add_hline(y=0.01, line_width=1, line_dash="dash", line_color=COMMON_VARIANTS_COLOR)
+            fig.add_hline(y=0.001, line_width=1, line_dash="dash", line_color=RARE_VARIANTS_COLOR)
+
         return fig
-
-    def get_circos_plot(self):
-        data = urlreq.urlopen(
-            'https://raw.githubusercontent.com/plotly/dash-bio-docs-files/master/circos_graph_data.json').read()
-        circos_graph_data = json.loads(data)
-
-        layout = [{"id":"MN908947.3", "label": "MN908947.3", "color":"#996600", "len":29903}]
-
-        return dashbio.Circos(
-            layout=layout,
-            tracks=[{
-                'type': 'CHORDS',
-                'data': circos_graph_data['chords']
-            }],
-            config={
-                #'innerRadius': 40,
-                #'outerRadius': 200
-            }
-        )
 
     def get_top_occurring_variants_plot(self, top, gene_name, date_range_start, date_range_end):
         data = self.queries.get_top_occurring_variants(top, gene_name)
@@ -282,6 +296,7 @@ class Figures:
             month_columns[0]['name'][0] = 'Monthly count'
 
             fig = dash_table.DataTable(
+                    id="top-occurring-variants-table",
                     data=data.to_dict('records'),
                     sort_action='native',
                     columns=[
@@ -304,7 +319,8 @@ class Figures:
                         'backgroundColor': 'rgb(230, 230, 230)',
                         'fontWeight': 'bold'
                     },
-                    sort_by=[{"column_id": "frequency", "direction": "desc"}]
+                    sort_by=[{"column_id": "frequency", "direction": "desc"}],
+                    row_selectable='multi'
                 )
 
         return fig
@@ -346,50 +362,96 @@ class Figures:
 
         return styles
 
-    def get_cooccurrence_heatmap(self, gene_name):
-        data = self.queries.get_variants_cooccurrence_by_gene(gene_name=gene_name)
+    def get_cooccurrence_heatmap(self, gene_name, selected_variants, metric="frequency", min_occurrences=5):
+        data = self.queries.get_variants_cooccurrence_by_gene(gene_name=gene_name, min_cooccurrence=min_occurrences)
         fig = dcc.Markdown("""**No co-occurrent variants for the current selection**""")
         if data is not None and data.shape[0] > 0:
-            data.sort_values(["variant_one", "variant_two"], inplace=True)
-            all_variants = data.variant_one.unique()
-            values = np.array_split(data["count"], len(all_variants))
+
+            # NOTE: transpose matrix manually as plotly transpose does not work with labels
+            # the database return the upper diagonal, the lower is best for plots
+            data.position_one = data.variant_one.transform(lambda x: int(x.split(":")[0]))
+            data.reference_one = data.variant_one.transform(lambda x: x.split(":")[1].split(">")[0])
+            data.alternate_one = data.variant_one.transform(lambda x: x.split(":")[1].split(">")[1])
+            data.position_two = data.variant_two.transform(lambda x: int(x.split(":")[0]))
+            data.reference_two = data.variant_two.transform(lambda x: x.split(":")[1].split(">")[0])
+            data.alternate_two = data.variant_two.transform(lambda x: x.split(":")[1].split(">")[1])
+            data.sort_values(["position_two", "reference_two", "alternate_two",
+                              "position_one", "reference_two", "alternate_two"], inplace=True)
+
+            # shortens very long ids
+            def shorten_variant_id(variant_id):
+                max_variant_length = 15
+                if len(variant_id) <= max_variant_length:
+                    return variant_id
+                else:
+                    return variant_id[0:max_variant_length] + "..."
+
+            all_variants = [shorten_variant_id(v) for v in data.variant_one.dropna().unique()]
+
+            values = np.array_split(data[metric], len(all_variants))
+            texts = np.array_split(
+                data[["hgvs_p_one", "hgvs_p_two"]].apply(
+                    lambda x: "{} - {}".format(x.hgvs_p_one, x.hgvs_p_two), axis=1),
+                len(all_variants))
+            hovertemplate = '<b>%{text}</b><br>' + 'Cooccurrence: %{z:.5f}<br>' + 'Variant one: %{x}<br>' + 'Variant two: %{y}'
             heatmap = go.Heatmap(
                 z=values,
                 x=all_variants,
                 y=all_variants,
-                colorscale="Greens",
-                hoverongaps=False)
+                colorscale="Oryel",
+                hoverongaps=False,
+                text=texts,
+                hovertemplate=hovertemplate,
+            )
+            if selected_variants:
+                selected_variant_ids = [v.get("dna_mutation") for v in selected_variants]
+                values_selected = np.array_split(data[["variant_one", "variant_two", metric]].apply(
+                    lambda x: x[metric] if x.variant_one in selected_variant_ids or
+                                            x.variant_two in selected_variant_ids else None, axis=1),
+                    len(all_variants))
+                texts_selected = np.array_split(data[["variant_one", "variant_two", "hgvs_p_one", "hgvs_p_two"]].apply(
+                    lambda x: "{} - {}".format(x.hgvs_p_one, x.hgvs_p_two)
+                    if x.variant_one in selected_variant_ids or x.variant_two in selected_variant_ids else None,
+                    axis=1),
+                    len(all_variants))
+
+                heatmap_selected = go.Heatmap(
+                    z=values_selected,
+                    x=all_variants,
+                    y=all_variants,
+                    colorscale="Teal",
+                    hoverongaps=False,
+                    showscale=False,
+                    text=texts_selected,
+                    hovertemplate=hovertemplate,
+                )
             layout = go.Layout(
                 template="plotly_white",
                 height=700,
                 yaxis=dict(
-                    #scaleanchor='x',
-                    visible=False),
-                # xaxis=dict(
-                #     domain=[0, 1.0],
-                #     tickformat=',d',
-                #     hoverformat=',d',
-                #     visible=False
-                # ),
-                # xaxis2=dict(
-                #     title='Genomic position',
-                #     tickformat=',d',
-                #     hoverformat=',d',
-                #     domain=[0, 1.0],
-                #     anchor='y2'
-                # ),
-                # yaxis=dict(
-                #     title='Allele frequency',
-                #     type='log',
-                #     domain=[0.1, 1.0],
-                #     anchor='x2'
-                # ),
-                # yaxis2=dict(
-                #     domain=[0.0, 0.1],
-                #     visible=False,
-                #     anchor='x2'
-                # ),
+                    visible=True,
+                    tickfont={"size": 10},
+                    showgrid=False,
+                    showspikes=True,
+                    spikemode='toaxis',
+                    spikethickness=2
+                ),
+                xaxis=dict(
+                    tickangle=-45,
+                    tickfont={"size": 10},
+                    showgrid=False,
+                    showspikes=True,
+                    spikemode='toaxis',
+                    spikethickness=2
+                ),
                 margin=go.layout.Margin(l=0, r=0, b=0, t=0)
             )
-            fig = go.Figure(data=[heatmap], layout=layout)
+            traces = [heatmap]
+            if selected_variants:
+                traces.append(heatmap_selected)
+            fig = go.Figure(data=traces, layout=layout)
+
+            # the y index is reversed in plotly heatmap
+            fig.update_yaxes(autorange="reversed")
+
         return fig
