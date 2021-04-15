@@ -7,6 +7,8 @@ import pycountry_convert
 import requests
 from sqlalchemy.orm import Session
 
+from COVIGATOR import ENV_META_GISAID
+
 from covigator.misc import backoff_retrier
 from covigator.database.model import SampleGisaid, JobGisaid, Sample, DataSource, Log, CovigatorModule
 from covigator.database.database import Database
@@ -14,7 +16,7 @@ from logzero import logger
 
 
 class GisaidAccessor:
-    GISAID_METADATA_FILE = "/scratch/info/projects/SARS-CoV-2/gisaid/gisaid_hcov-19_2020_10_02_11_ST_corrected_v2.tsv"
+    GISAID_METADATA_FILE = os.getenv(ENV_COVIGATOR_REF_GISAID, "/scratch/info/projects/SARS-CoV-2/gisaid/gisaid_hcov-19_2020_10_02_11_ST_corrected_v2.tsv")
     
     GISAID_FIELDS = [
         # data on run

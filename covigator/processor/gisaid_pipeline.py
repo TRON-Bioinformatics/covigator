@@ -7,10 +7,10 @@ from Bio import SeqIO, pairwise2
 from Bio.Align import AlignInfo
 
 
-class Pipeline:
+class GisaidPipeline:
     
-    reference_file = "/projects/SARS-CoV-2/RefSeq_surface_glycoprotein.fasta"
-    gisaid_file = "/scratch/info/projects/SARS-CoV-2/gisaid/gisaid_cov2020_sequences_01APR2020_human_host_low_cov_excl.fasta"
+    reference_file = os.getenv(ENV_COVIGATOR_REF_GISAID, "/projects/SARS-CoV-2/RefSeq_surface_glycoprotein.fasta")
+    gisaid_file = os.getenv(ENV_COVIGATOR_SEQ_GISAID, "/scratch/info/projects/SARS-CoV-2/gisaid/gisaid_cov2020_sequences_01APR2020_human_host_low_cov_excl.fasta")
 
     def get_sequence(self, sequence_id):
         for record in SeqIO.parse(self.gisaid_file, "fasta"):

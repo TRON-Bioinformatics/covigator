@@ -3,6 +3,7 @@ from argparse import ArgumentParser
 from dask.distributed import Client
 import covigator
 from covigator.accessor.ena_accessor import EnaAccessor
+from covigator.accessor.gisaid_accessor import GisaidAccessor
 from covigator.database.database import Database
 from covigator.processor.pipeline import Pipeline
 from covigator.processor.gisaid_pipeline import GisaidPipeline
@@ -33,6 +34,28 @@ def ena_accessor():
     tax_id = args.tax_id
     host_tax_id = args.host_tax_id
     EnaAccessor(tax_id=tax_id, host_tax_id=host_tax_id, database=Database()).access()
+
+
+def gisaid_accessor():
+    parser = ArgumentParser(
+        description="Covigator {} GISAID accessor".format(covigator.VERSION))
+    parser.add_argument(
+        "--tax-id",
+        dest="tax_id",
+        help="the taxonomy id of the organism to analyse, eg: 2697049 for Sars-COV-2",
+        required=True
+    )
+    parser.add_argument(
+        "--host-tax-id",
+        dest="host_tax_id",
+        help="the taxonomy id of the host organism, eg: 9606 for Homo sapiens",
+        required=True
+    )
+
+    args = parser.parse_args()
+    tax_id = args.tax_id
+    host_tax_id = args.host_tax_id
+    GisaidAccessor(tax_id=tax_id, host_tax_id=host_tax_id, database=Database()).access()
 
 
 def processor():
