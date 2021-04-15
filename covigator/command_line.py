@@ -1,5 +1,5 @@
+import os
 from argparse import ArgumentParser
-
 from dask.distributed import Client
 import covigator
 from covigator.accessor.ena_accessor import EnaAccessor
@@ -9,9 +9,8 @@ from covigator.processor.pipeline import Pipeline
 from covigator.processor.gisaid_pipeline import GisaidPipeline
 from covigator.processor.ena_processor import EnaProcessor
 from covigator.processor.gisaid_processor import GisaidProcessor
+import logzero
 from logzero import logger
-
-from covigator.references.gene_annotations import GeneAnnotationsLoader
 
 
 def ena_accessor():
@@ -33,6 +32,9 @@ def ena_accessor():
     args = parser.parse_args()
     tax_id = args.tax_id
     host_tax_id = args.host_tax_id
+    log_file = os.getenv(covigator.ENV_COVIGATOR_ACCESSOR_LOG_FILE)
+    if log_file is not None:
+        logzero.logfile(log_file, maxBytes=1e6, backupCount=3)
     EnaAccessor(tax_id=tax_id, host_tax_id=host_tax_id, database=Database()).access()
 
 
@@ -76,7 +78,9 @@ def processor():
     )
 
     args = parser.parse_args()
-
+    log_file = os.getenv(covigator.ENV_COVIGATOR_PROCESSOR_LOG_FILE)
+    if log_file is not None:
+        logzero.logfile(log_file, maxBytes=1e6, backupCount=3)
     client = Client(n_workers=int(args.num_cpus), threads_per_worker=1)
     if args.data_source == "ENA":
         EnaProcessor(database=Database(), dask_client=client).process()
@@ -84,6 +88,7 @@ def processor():
         GisaidProcessor(database=Database(), dask_client=client).process()
     else:
         logger.error("Unknown data source. Please choose either ENA or GISAID")
+
 
 def pipeline():
     parser = ArgumentParser(description="Run Pipeline for testing")

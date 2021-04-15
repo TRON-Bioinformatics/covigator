@@ -522,6 +522,7 @@ class EnaAccessorTests(TestCase):
         self.assertIsNotNone(log.end)
         self.assertEqual(log.source, DataSource.ENA)
         self.assertEqual(log.module, CovigatorModule.ACCESSOR)
+        self.assertEqual(log.processed, 3)
         data = log.data
         self.assertEqual(data.get("included"), 3)
         self.assertEqual(data.get("excluded").get("existing"), 0)
