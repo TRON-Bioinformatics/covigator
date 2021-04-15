@@ -6,6 +6,7 @@ import sys
 from Bio import SeqIO, pairwise2
 from Bio.Align import AlignInfo
 
+from covigator import ENV_COVIGATOR_REF_GISAID, ENV_COVIGATOR_SEQ_GISAID
 
 class GisaidPipeline:
     
