@@ -18,8 +18,11 @@ from logzero import logger
 from covigator.database.queries import Queries
 from covigator.dashboard.figures import Figures
 
+PLOTLY_CONFIG = {
+    'displaylogo': False,
+    'displayModeBar': False
+}
 MONTH_PATTERN = "%Y-%m"
-
 MISSING_VALUE = "-"
 
 
@@ -238,7 +241,6 @@ class Dashboard:
 
     def get_tab_variants(self):
 
-        #circos_plot = self.figures.get_circos_plot()
         genes = self.queries.get_genes()
         months = self.queries.get_sample_months(MONTH_PATTERN)
         today = datetime.now()
@@ -397,16 +399,12 @@ class Dashboard:
             Input('top-occurring-variants-table', "derived_virtual_selected_rows")
         )
         def update_needle_plot(gene_name, rows, selected_rows_indices):
-            plot = html.Div(children=None)
             if gene_name is not None:
                 selected_rows = [rows[s] for s in selected_rows_indices] if selected_rows_indices else None
                 plot = html.Div(children=[
                     dcc.Graph(
                         figure=self.figures.get_variants_plot(gene_name=gene_name, selected_variants=selected_rows),
-                        config={
-                            'displaylogo': False,
-                            'displayModeBar': False
-                        }
+                        config=PLOTLY_CONFIG
                     ),
                     dcc.Markdown("""
                     *Non synonymous variants occurring in at least two samples on gene {}.*
@@ -416,6 +414,16 @@ class Dashboard:
                     common variants (>= 1% and < 10%) and very common variants (>= 10%)*
                     """.format(gene_name))
                     ])
+            else:
+                plot = html.Div(children=[
+                    dcc.Graph(
+                        figure=self.figures.get_variants_abundance_plot(bin_size=100),
+                        config=PLOTLY_CONFIG
+                    ),
+                    dcc.Markdown("""
+                                    *Abundance of variants with a bin size of 50 bp*
+                                    """.format(gene_name))
+                ])
             return plot
 
         @app.callback(
@@ -450,10 +458,7 @@ class Dashboard:
                     figure=self.figures.get_cooccurrence_heatmap(
                         gene_name=gene_name, selected_variants=selected_rows, metric=metric,
                         min_occurrences=min_occurrences),
-                    config={
-                        'displaylogo': False,
-                        'displayModeBar': False
-                    }
+                    config=PLOTLY_CONFIG
                 ),
                 dcc.Markdown("""
                         *Variant pairs co-occurring in at least {} samples{}.*

@@ -455,3 +455,78 @@ class Figures:
             fig.update_yaxes(autorange="reversed")
 
         return fig
+
+    def get_variants_abundance_plot(self, bin_size=50):
+
+        data = self.queries.get_variant_abundance_histogram(bin_size=bin_size)
+        genes = self.queries.get_genes_metadata()
+
+        layout = go.Layout(
+            template="plotly_white",
+            xaxis=dict(
+                domain=[0, 1.0],
+                tickformat=',d',
+                hoverformat=',d',
+                ticksuffix=" bp",
+                ticks="outside",
+                visible=True,
+                anchor="y3",
+                showspikes=True,
+                spikemode='across',
+                spikethickness=2
+            ),
+            xaxis2=dict(
+                domain=[0, 1.0],
+                anchor='y3',
+                visible=False
+            ),
+            xaxis3=dict(
+                domain=[0, 1.0],
+                anchor='y3',
+                visible=False
+            ),
+            yaxis=dict(
+                title='Variant observations',
+                domain=[0.55, 1.0],
+                anchor='x3'
+            ),
+            yaxis2=dict(
+                title='Unique variants',
+                domain=[0.1, 0.55],
+                anchor='x3'
+            ),
+            yaxis3=dict(
+                title='Genes',
+                domain=[0.0, 0.1],
+                anchor='x3',
+                visible=False
+            ),
+            margin=go.layout.Margin(l=0, r=0, b=0, t=20),
+            showlegend=False
+        )
+
+        gene_traces = []
+        for g, c in zip(genes, plotly.express.colors.qualitative.Plotly[0:len(genes)]):
+            gene_start = int(g.data["start"])
+            gene_end = int(g.data["end"])
+            gene_name = g.data.get('name')
+            gene_traces.append(go.Scatter(
+                mode='lines',
+                x=[gene_start, gene_end, gene_end, gene_start],
+                y=[0, 0, 1, 1],
+                name=gene_name,
+                fill="toself",
+                fillcolor=c,
+                hovertext=gene_name,
+                hoveron="fills",
+                line=dict(width=0),
+                yaxis='y3',
+                xaxis='x',
+                legendgroup='genes'
+            ))
+
+        fig = go.Figure(data=[
+            go.Scatter(x=data.position_bin, y=data.count_unique_variants),
+            go.Scatter(x=data.position_bin, y=data.count_variant_observations, yaxis='y2')
+        ] + gene_traces, layout=layout)
+        return fig

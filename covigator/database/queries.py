@@ -82,6 +82,9 @@ class Queries:
     def get_genes(self):
         return [g[0] for g in self.session.query(Gene.name).all()]
 
+    def get_genes_metadata(self):
+        return self.session.query(Gene).all()
+
     def get_non_synonymous_variants_by_gene(self, gene_name) -> pd.DataFrame:
         subquery = self.session.query(VariantObservation.position, Variant.annotation, Variant.hgvs_p,
                                func.count(VariantObservation.position).label("count_occurrences"))\
