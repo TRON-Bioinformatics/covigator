@@ -4,10 +4,10 @@ from unittest import TestCase, skip
 from faker import Faker
 import numpy as np
 from covigator.database.database import Database
-from covigator.database.model import JobStatus, DataSource
+from covigator.database.model import JobStatus, DataSource, Sample
 from covigator.database.queries import Queries
 from covigator.tests.unit_tests.mocked import get_mocked_ena_sample, get_mocked_log, get_mocked_variant, \
-    get_mocked_variant_cooccurrence
+    get_mocked_variant_cooccurrence, get_mocked_variant_observation
 
 
 class QueriesTests(TestCase):
@@ -146,3 +146,42 @@ class QueriesTests(TestCase):
         self.assertIsNotNone(data)
         self.assertEqual(data.shape[1], 14)
         self.assertEqual(data[data["count"] > 0].shape[0], 5)
+
+    def test_get_variant_abundance_histogram(self):
+
+        # gets an empty histogram
+        histogram = self.queries.get_variant_abundance_histogram()
+        self.assertIsNone(histogram)
+
+        # mocks a 100 variants
+        num_variants = 100
+        variants = [get_mocked_variant(faker=self.faker, chromosome="chr_test") for _ in range(num_variants)]
+        self.session.add_all(variants)
+        self.session.commit()
+
+        # gets an histogram over 100 variants without variant observations
+        histogram = self.queries.get_variant_abundance_histogram()
+        self.assertIsNotNone(histogram)
+        self.assertGreater(histogram.shape[0], 0)
+        self.assertEqual(histogram.shape[1], 3)
+        self.assertEqual(histogram.count_unique_variants.sum(), num_variants)
+        self.assertEqual(histogram.count_variant_observations.sum(), 0)
+
+        # mock some variant observations
+        test_samples = [Sample(id=self.faker.unique.uuid4(), source=DataSource.ENA) for _ in range(5)]
+        self.session.add_all(test_samples)
+        self.session.commit()
+        variant_observations = []
+        for v in variants:
+            for i in range(self.faker.random_int(min=1, max=5)):
+                variant_observations.append(get_mocked_variant_observation(variant=v, sample=test_samples[i]))
+        self.session.add_all(variant_observations)
+        self.session.commit()
+
+        # gets an histogram over 100 variants
+        histogram = self.queries.get_variant_abundance_histogram()
+        self.assertIsNotNone(histogram)
+        self.assertGreater(histogram.shape[0], 0)
+        self.assertEqual(histogram.shape[1], 3)
+        self.assertEqual(histogram.count_unique_variants.sum(), num_variants)
+        self.assertEqual(histogram.count_variant_observations.sum(), len(variant_observations))

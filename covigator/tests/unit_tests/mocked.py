@@ -22,10 +22,10 @@ def get_mocked_variant(faker: Faker, chromosome=None, gene_name=None) -> Variant
     )
 
 
-def get_mocked_variant_observation(sample: Sample, variant: Variant):
+def get_mocked_variant_observation(sample: Sample, variant: Variant, faker=Faker()):
     return VariantObservation(
-                    sample=sample.id,
-                    source=sample.source,
+                    sample=sample.id if sample else faker.unique.uuid4(),
+                    source=sample.source if sample else faker.random_choices((DataSource.ENA, DataSource.GISAID)),
                     chromosome=variant.chromosome,
                     position=variant.position,
                     reference=variant.reference,
