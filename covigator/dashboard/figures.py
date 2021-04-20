@@ -541,19 +541,19 @@ class Figures:
                 anchor='x7',
             ),
             yaxis2=dict(
-                domain=[0.7, 0.9],
+                domain=[0.6, 0.9],
                 anchor='x7'
             ),
             yaxis3=dict(
-                domain=[0.5, 0.7],
+                domain=[0.45, 0.6],
                 anchor='x7'
             ),
             yaxis4=dict(
-                domain=[0.3, 0.5],
+                domain=[0.3, 0.45],
                 anchor='x7'
             ),
             yaxis5=dict(
-                domain=[0.1, 0.3],
+                domain=[0.15, 0.3],
                 anchor='x7'
             ),
             yaxis6=dict(
@@ -590,7 +590,7 @@ class Figures:
             ))
 
         domain_traces = []
-        for (g, d), c in zip(domains, plotly.express.colors.sequential.Blues[1:len(domains)+1]):
+        for (g, d), c in zip(domains, plotly.express.colors.sequential.Greens[1:len(domains)+1]):
             gene_start = int(g.data.get("start"))
             domain_start = gene_start + int(d["start"])
             domain_end = gene_start + int(d["end"])
@@ -607,17 +607,52 @@ class Figures:
                 line=dict(width=0),
                 yaxis='y7',
                 xaxis='x',
-                legendgroup='domains'
+                legendgroup='domains',
+                showlegend=False
             ))
 
         fig = go.Figure(
             data=[
-                     go.Scatter(x=data.position_bin, y=data.count_variant_observations, name="All variants"),
-                     go.Scatter(x=data.position_bin, y=data.count_unique_variants, yaxis='y2', name="Unique variants"),
-                     go.Scatter(x=data.position_bin, y=data.conservation, yaxis='y3', name="Conservation SARS-CoV-2"),
-                     go.Scatter(x=data.position_bin, y=data.conservation_sarbecovirus, yaxis='y4', name="Conservation SARS-like betacoronavirus"),
-                     go.Scatter(x=data.position_bin, y=data.conservation_vertebrates, yaxis='y5', name="Conservation vertebrates")
+                     go.Scatter(x=data.position_bin, y=data.count_variant_observations,
+                                name="All variants", text="All variants", showlegend=False,
+                                line_color=plotly.express.colors.sequential.Blues[-2], line_width=1),
+                     go.Scatter(x=data.position_bin,
+                                y=[data.count_unique_variants.mean() for _ in range(data.shape[0])],
+                                yaxis='y2', name="Mean unique variants", text="Mean unique variants",
+                                line_width=1,
+                                showlegend=False, line_color=plotly.express.colors.sequential.Blues[-3]),
+                     go.Scatter(x=data.position_bin, y=data.count_unique_variants, yaxis='y2',
+                                name="Unique variants", text="Unique variants", showlegend=False, fill='tonexty',
+                                line_color=plotly.express.colors.sequential.Blues[-4], line_width=1),
+                     go.Scatter(x=data.position_bin, y=data.conservation, yaxis='y3',
+                                text="Conservation SARS-CoV-2", textposition="top right", showlegend=False,
+                                fill='tozeroy', line_color="grey", line_width=1),
+                     go.Scatter(x=data.position_bin, y=data.conservation_sarbecovirus, yaxis='y4',
+                                text="Conservation SARS-like betacoronavirus", textposition="top right",
+                                showlegend=False, fill='tozeroy', line_color="grey", line_width=1),
+                     go.Scatter(x=data.position_bin, y=data.conservation_vertebrates, yaxis='y5',
+                                text="Conservation vertebrates", textposition="top right", showlegend=False,
+                                fill='tozeroy', line_color="grey", line_width=1)
                  ] + gene_traces + domain_traces, layout=layout)
+
+        # add track names
+        fig.add_annotation(x=0.98, y=1.1, xref="x domain", yref="y domain", text="All variants",
+                           showarrow=False, yshift=10)
+        fig.add_annotation(x=0.98, y=0.9, xref="x domain", yref="y2 domain", text="Unique variants",
+                           showarrow=False, yshift=10)
+        fig.add_annotation(x=0.98, y=1.0, xref="x domain", yref="y3 domain", text="Conservation SARS-CoV-2",
+                           showarrow=False, yshift=10)
+        fig.add_annotation(x=0.98, y=1.0, xref="x domain", yref="y4 domain", text="Conservation SARS-like betaCoV",
+                           showarrow=False, yshift=10)
+        fig.add_annotation(x=0.98, y=1.0, xref="x domain", yref="y5 domain", text="Conservation vertebrate CoV",
+                           showarrow=False, yshift=10)
+
+        #fig.add_hline(y=data.count_unique_variants.mean(), line_width=1, line_dash="dash",
+        #              line_color="red", row=2)
+        #fig.add_shape(go.layout.Shape(type='line', yref='y2', xref='x7', x0=0, x1=data.position_bin.max(),
+        #                              y0=data.count_unique_variants.mean(), y1=data.count_unique_variants.mean(),
+        #                              line=dict(color='red', width=1)))
+
         return [
             dcc.Graph(
                 figure=fig,
