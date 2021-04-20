@@ -301,6 +301,20 @@ class Dashboard:
                                                 className="six column"),
                                    ], className="row container-display"),
                                    html.Br(),
+                                   html.H4("Genome view"),
+                                   dcc.Markdown("""
+                                                     Bin size
+                                                     """),
+                                   dcc.Slider(
+                                       id='slider-bin-size',
+                                       min=5,
+                                       max=400,
+                                       step=5,
+                                       value=50,
+                                       dots=True,
+                                       marks={i: '{}'.format(i) for i in [10, 50, 100, 200, 300, 400]}
+                                   ),
+                                   html.Br(),
                                    html.H4("Co-occurrence heatmap"),
                                    dcc.Markdown("""
                                    Metric to assess paiwise co-occurrence
@@ -330,7 +344,7 @@ class Dashboard:
                                    html.H4("Top occurring variants"),
                                    html.Div(id='top-occurring-variants', children=dash_table.DataTable(id="top-occurring-variants-table")),
                                    html.Br(),
-                                   html.H4("Gene view"),
+                                   html.H4("Genome view"),
                                    html.Div(id='needle-plot'),
                                    html.Br(),
                                    html.H4("Co-occurrence heatmap"),
@@ -396,9 +410,10 @@ class Dashboard:
             Output('needle-plot', 'children'),
             Input('dropdown-gene', 'value'),
             Input('top-occurring-variants-table', "derived_virtual_data"),
-            Input('top-occurring-variants-table', "derived_virtual_selected_rows")
+            Input('top-occurring-variants-table', "derived_virtual_selected_rows"),
+            Input('slider-bin-size', 'value'),
         )
-        def update_needle_plot(gene_name, rows, selected_rows_indices):
+        def update_needle_plot(gene_name, rows, selected_rows_indices, bin_size):
             if gene_name is not None:
                 selected_rows = [rows[s] for s in selected_rows_indices] if selected_rows_indices else None
                 plot = html.Div(children=[
@@ -415,15 +430,8 @@ class Dashboard:
                     """.format(gene_name))
                     ])
             else:
-                plot = html.Div(children=[
-                    dcc.Graph(
-                        figure=self.figures.get_variants_abundance_plot(bin_size=100),
-                        config=PLOTLY_CONFIG
-                    ),
-                    dcc.Markdown("""
-                                    *Abundance of variants with a bin size of 50 bp*
-                                    """.format(gene_name))
-                ])
+                plot = html.Div(children=
+                                self.figures.get_variants_abundance_plot(bin_size=bin_size, plotly_config=PLOTLY_CONFIG))
             return plot
 
         @app.callback(

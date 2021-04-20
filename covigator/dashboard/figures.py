@@ -127,8 +127,7 @@ class Figures:
         gene = self.queries.get_gene(gene_name)
         gene_start = int(gene.data.get("start"))
         gene_end = int(gene.data.get("end"))
-        protein_features = gene.data.get("transcripts", [])[0].get("translations", [])[0].get("protein_features")
-        pfam_protein_features = [f for f in protein_features if f.get("dbname") == "Pfam"]
+        pfam_protein_features = self.queries.get_pfam_domains(gene)
 
         # reads variants
         variants = self.queries.get_non_synonymous_variants_by_gene(gene_name)
@@ -459,16 +458,39 @@ class Figures:
 
         return fig
 
-    def get_variants_abundance_plot(self, bin_size=50):
+    def get_variants_abundance_plot(self, bin_size=50, plotly_config=None):
 
         data = self.queries.get_variant_abundance_histogram(bin_size=bin_size)
-        genes = self.queries.get_genes_metadata()
+        genes = sorted(self.queries.get_genes_metadata(), key=lambda x: x.data.get("start"))
+        domains = []
+        for g in genes:
+            domains.extend([(g, d) for d in self.queries.get_pfam_domains(g)])
+
         storage_folder = os.getenv(ENV_COVIGATOR_STORAGE_FOLDER, "./data/covigator")
+
         conservation = pd.read_csv(os.path.join(storage_folder, "wuhCor1.mutDepletionSarbecovirusConsHMM.bed"),
+                                   skiprows=1, names=["chromosome", "start", "end", "conservation_sarbecovirus"], sep="\t")
+        bins = [i * bin_size for i in range(int(conservation.start.max() / bin_size) + 2)]
+        conservation['position_bin'] = pd.cut(conservation['start'], bins=bins, labels=bins[0:-1])
+        conservation = conservation[["position_bin", "conservation_sarbecovirus"]].groupby("position_bin").mean()
+        data = data.set_index("position_bin").join(conservation)
+
+        conservation = pd.read_csv(os.path.join(storage_folder, "wuhCor1.mutDepletionConsHMM.bed"),
                                    skiprows=1, names=["chromosome", "start", "end", "conservation"], sep="\t")
         bins = [i * bin_size for i in range(int(conservation.start.max() / bin_size) + 2)]
-        conservation['start_binned'] = pd.cut(conservation['start'], bins=bins, labels=bins[0:-1])
-        conservation = conservation[["start_binned", "conservation"]].groupby("start_binned").mean().reset_index()
+        conservation['position_bin'] = pd.cut(conservation['start'], bins=bins, labels=bins[0:-1])
+        conservation = conservation[["position_bin", "conservation"]].groupby("position_bin").mean()
+        data = data.join(conservation)
+
+        conservation = pd.read_csv(os.path.join(storage_folder, "wuhCor1.mutDepletionVertebrateCoVConsHMM.bed"),
+                                   skiprows=1, names=["chromosome", "start", "end", "conservation_vertebrates"], sep="\t")
+        bins = [i * bin_size for i in range(int(conservation.start.max() / bin_size) + 2)]
+        conservation['position_bin'] = pd.cut(conservation['start'], bins=bins, labels=bins[0:-1])
+        conservation = conservation[["position_bin", "conservation_vertebrates"]].groupby("position_bin").mean()
+        data = data.join(conservation)
+
+        data.reset_index(inplace=True)
+        data.fillna(0, inplace=True)
 
         layout = go.Layout(
             template="plotly_white",
@@ -479,55 +501,76 @@ class Figures:
                 ticksuffix=" bp",
                 ticks="outside",
                 visible=True,
-                anchor="y4",
+                anchor="y7",
                 showspikes=True,
                 spikemode='across',
                 spikethickness=2
             ),
             xaxis2=dict(
                 domain=[0, 1.0],
-                anchor='y4',
+                anchor='y7',
                 visible=False
             ),
             xaxis3=dict(
                 domain=[0, 1.0],
-                anchor='y4',
+                anchor='y7',
                 visible=False
             ),
             xaxis4=dict(
                 domain=[0, 1.0],
-                anchor='y4',
+                anchor='y7',
+                visible=False
+            ),
+            xaxis5=dict(
+                domain=[0, 1.0],
+                anchor='y7',
+                visible=False
+            ),
+            xaxis6=dict(
+                domain=[0, 1.0],
+                anchor='y7',
+                visible=False
+            ),
+            xaxis7=dict(
+                domain=[0, 1.0],
+                anchor='y7',
                 visible=False
             ),
             yaxis=dict(
-                title='All variants',
-                domain=[0.7, 1.0],
-                anchor='x4'
+                domain=[0.9, 1.0],
+                anchor='x7',
             ),
             yaxis2=dict(
-                title='Unique variants',
-                domain=[0.4, 0.7],
-                anchor='x4'
+                domain=[0.7, 0.9],
+                anchor='x7'
             ),
             yaxis3=dict(
-                title='Conservation',
-                domain=[0.1, 0.4],
-                anchor='x4'
+                domain=[0.5, 0.7],
+                anchor='x7'
             ),
             yaxis4=dict(
-                title='Genes',
-                domain=[0.0, 0.1],
-                anchor='x4',
-                visible=False
+                domain=[0.3, 0.5],
+                anchor='x7'
             ),
-            margin=go.layout.Margin(l=0, r=0, b=0, t=30),
-            showlegend=False,
-            title="Correlation between unique variants and conservation: {}".format(
-                np.corrcoef(conservation.conservation, data.count_unique_variants)[0][1])
+            yaxis5=dict(
+                domain=[0.1, 0.3],
+                anchor='x7'
+            ),
+            yaxis6=dict(
+                domain=[0.05, 0.1],
+                anchor='x7',
+                visible=False,
+            ),
+            yaxis7=dict(
+                domain=[0.0, 0.05],
+                anchor='x7',
+                visible=False,
+            ),
+            margin=go.layout.Margin(l=0, r=0, b=0, t=30)
         )
 
         gene_traces = []
-        for g, c in zip(genes, plotly.express.colors.qualitative.Plotly[0:len(genes)]):
+        for g, c in zip(genes, plotly.express.colors.sequential.Reds[1:len(genes)+1]):
             gene_start = int(g.data["start"])
             gene_end = int(g.data["end"])
             gene_name = g.data.get('name')
@@ -541,15 +584,57 @@ class Figures:
                 hovertext=gene_name,
                 hoveron="fills",
                 line=dict(width=0),
-                yaxis='y4',
+                yaxis='y6',
                 xaxis='x',
                 legendgroup='genes'
             ))
 
-        fig = go.Figure(data=[
-                                 go.Scatter(x=data.position_bin, y=data.count_variant_observations),
-                                 go.Scatter(x=data.position_bin, y=data.count_unique_variants, yaxis='y2'),
-                                 go.Scatter(x=conservation.start_binned, y=conservation.conservation, yaxis='y3')
+        domain_traces = []
+        for (g, d), c in zip(domains, plotly.express.colors.sequential.Blues[1:len(domains)+1]):
+            gene_start = int(g.data.get("start"))
+            domain_start = gene_start + int(d["start"])
+            domain_end = gene_start + int(d["end"])
+            domain_name = d.get('description')
+            domain_traces.append(go.Scatter(
+                mode='lines',
+                x=[domain_start, domain_end, domain_end, domain_start],
+                y=[0, 0, 1, 1],
+                name=domain_name,
+                fill="toself",
+                fillcolor=c,
+                hovertext=domain_name,
+                hoveron="fills",
+                line=dict(width=0),
+                yaxis='y7',
+                xaxis='x',
+                legendgroup='domains'
+            ))
 
-        ] + gene_traces, layout=layout)
-        return fig
+        fig = go.Figure(
+            data=[
+                     go.Scatter(x=data.position_bin, y=data.count_variant_observations, name="All variants"),
+                     go.Scatter(x=data.position_bin, y=data.count_unique_variants, yaxis='y2', name="Unique variants"),
+                     go.Scatter(x=data.position_bin, y=data.conservation, yaxis='y3', name="Conservation SARS-CoV-2"),
+                     go.Scatter(x=data.position_bin, y=data.conservation_sarbecovirus, yaxis='y4', name="Conservation SARS-like betacoronavirus"),
+                     go.Scatter(x=data.position_bin, y=data.conservation_vertebrates, yaxis='y5', name="Conservation vertebrates")
+                 ] + gene_traces + domain_traces, layout=layout)
+        return [
+            dcc.Graph(
+                figure=fig,
+                config=plotly_config
+            ),
+            dcc.Markdown("""
+                *Abundance of variants and ConsHMM conservation with a bin size of {} bp*
+                
+                *Correlation between unique variants and conservation within Sars-CoV-2, 
+                conservation among SARS-like betacoronavirus and conservation among vertebrates: {}, {}, {}*
+                
+                *Conservation data source: https://github.com/ernstlab/ConsHMM_CoV*
+                
+                *Arneson A, Ernst J. Systematic discovery of conservation states for single-nucleotide annotation of the 
+                human genome. Communications Biology, 248, 2019. doi: https://doi.org/10.1038/s42003-019-0488-1*
+                """.format(bin_size,
+                           round(np.corrcoef(data.conservation, data.count_unique_variants)[0][1], 5),
+                           round(np.corrcoef(data.conservation_sarbecovirus, data.count_unique_variants)[0][1], 5),
+                           round(np.corrcoef(data.conservation_vertebrates, data.count_unique_variants)[0][1], 5)
+                           ))]

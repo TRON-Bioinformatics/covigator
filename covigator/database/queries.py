@@ -85,6 +85,11 @@ class Queries:
     def get_genes_metadata(self):
         return self.session.query(Gene).all()
 
+    def get_pfam_domains(self, gene: Gene):
+        protein_features = gene.data.get("transcripts", [])[0].get("translations", [])[0].get("protein_features")
+        pfam_protein_features = [f for f in protein_features if f.get("dbname") == "Pfam"]
+        return pfam_protein_features
+
     def get_non_synonymous_variants_by_gene(self, gene_name) -> pd.DataFrame:
         subquery = self.session.query(VariantObservation.position, Variant.annotation, Variant.hgvs_p,
                                func.count(VariantObservation.position).label("count_occurrences"))\
