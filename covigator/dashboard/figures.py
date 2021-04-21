@@ -1,5 +1,7 @@
 import os
 import random
+from itertools import cycle
+
 import colorlover
 import dash_table
 import numpy as np
@@ -461,7 +463,7 @@ class Figures:
     def get_variants_abundance_plot(self, bin_size=50, plotly_config=None):
 
         data = self.queries.get_variant_abundance_histogram(bin_size=bin_size)
-        genes = sorted(self.queries.get_genes_metadata(), key=lambda x: x.data.get("start"))
+        genes = sorted(self.queries.get_genes_metadata(), key=lambda x: int(x.data.get("start")))
         domains = []
         for g in genes:
             domains.extend([(g, d) for d in self.queries.get_pfam_domains(g)])
@@ -569,11 +571,12 @@ class Figures:
                 anchor='x7',
                 visible=False,
             ),
-            margin=go.layout.Margin(l=0, r=0, b=0, t=30)
+            margin=go.layout.Margin(l=0, r=0, b=0, t=30),
+            legend={'traceorder': 'normal'}
         )
 
         gene_traces = []
-        for g, c in zip(genes, plotly.express.colors.sequential.Reds[1:len(genes)+1]):
+        for g, c in zip(genes, cycle(plotly.express.colors.sequential.Reds)):
             gene_start = int(g.data["start"])
             gene_end = int(g.data["end"])
             gene_name = g.data.get('name')
@@ -593,7 +596,7 @@ class Figures:
             ))
 
         domain_traces = []
-        for (g, d), c in zip(domains, plotly.express.colors.sequential.Greens[1:len(domains)+1]):
+        for (g, d), c in zip(domains, cycle(plotly.express.colors.sequential.Purples)):
             gene_start = int(g.data.get("start"))
             domain_start = gene_start + int(d["start"])
             domain_end = gene_start + int(d["end"])
@@ -666,6 +669,7 @@ class Figures:
                 SARS-CoV-2, among SARS-like betaCoV and among vertebrate CoV. Correlation between distribution of 
                 unique variants and conservation within Sars-CoV-2, among SARS-like betacoronavirus and among 
                 vertebrates CoV respectively: {}, {}, {}.*
+                *Genes and Pfam domains are represented in tones of red and purple respectively.*
                 
                 *Conservation data source: https://github.com/ernstlab/ConsHMM_CoV*
                 
