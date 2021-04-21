@@ -346,7 +346,7 @@ class Conservation(Base):
     """
     __tablename__ = CONSERVATION_TABLE_NAME
 
-    chromosome = Column(Integer, primary_key=True)
+    chromosome = Column(String, primary_key=True)
     start = Column(Integer, primary_key=True)
     end = Column(Integer, primary_key=True)
     conservation = Column(Float)

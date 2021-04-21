@@ -462,35 +462,20 @@ class Figures:
 
     def get_variants_abundance_plot(self, bin_size=50, plotly_config=None):
 
-        data = self.queries.get_variant_abundance_histogram(bin_size=bin_size)
+        # reads genes and domains across the whole genome
         genes = sorted(self.queries.get_genes_metadata(), key=lambda x: int(x.data.get("start")))
         domains = []
         for g in genes:
             domains.extend([(g, d) for d in self.queries.get_pfam_domains(g)])
 
-        storage_folder = os.getenv(ENV_COVIGATOR_STORAGE_FOLDER, "./data/covigator")
+        # reads variants abundance
+        variant_abundance = self.queries.get_variant_abundance_histogram(bin_size=bin_size)
 
-        conservation = pd.read_csv(os.path.join(storage_folder, "wuhCor1.mutDepletionSarbecovirusConsHMM.bed"),
-                                   skiprows=1, names=["chromosome", "start", "end", "conservation_sarbecovirus"], sep="\t")
-        bins = [i * bin_size for i in range(int(conservation.start.max() / bin_size) + 2)]
-        conservation['position_bin'] = pd.cut(conservation['start'], bins=bins, labels=bins[0:-1])
-        conservation = conservation[["position_bin", "conservation_sarbecovirus"]].groupby("position_bin").mean()
-        data = data.set_index("position_bin").join(conservation)
+        # reads conservation and bins it
+        conservation = self.queries.get_conservation_table(bin_size=bin_size)
 
-        conservation = pd.read_csv(os.path.join(storage_folder, "wuhCor1.mutDepletionConsHMM.bed"),
-                                   skiprows=1, names=["chromosome", "start", "end", "conservation"], sep="\t")
-        bins = [i * bin_size for i in range(int(conservation.start.max() / bin_size) + 2)]
-        conservation['position_bin'] = pd.cut(conservation['start'], bins=bins, labels=bins[0:-1])
-        conservation = conservation[["position_bin", "conservation"]].groupby("position_bin").mean()
-        data = data.join(conservation)
-
-        conservation = pd.read_csv(os.path.join(storage_folder, "wuhCor1.mutDepletionVertebrateCoVConsHMM.bed"),
-                                   skiprows=1, names=["chromosome", "start", "end", "conservation_vertebrates"], sep="\t")
-        bins = [i * bin_size for i in range(int(conservation.start.max() / bin_size) + 2)]
-        conservation['position_bin'] = pd.cut(conservation['start'], bins=bins, labels=bins[0:-1])
-        conservation = conservation[["position_bin", "conservation_vertebrates"]].groupby("position_bin").mean()
-        data = data.join(conservation)
-
+        # joins variant abundance and conservation
+        data = variant_abundance.set_index("position_bin").join(conservation.set_index("position_bin"))
         data.reset_index(inplace=True)
         data.fillna(0, inplace=True)
 

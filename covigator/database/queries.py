@@ -2,12 +2,11 @@ from datetime import date, datetime
 from typing import List
 
 import pandas as pd
-import numpy as np
 from sqlalchemy import and_, desc, asc, func
 from sqlalchemy.orm import Session, aliased
 
 from covigator.database.model import Log, DataSource, CovigatorModule, SampleEna, JobEna, JobStatus, VariantObservation, \
-    Gene, Variant, VariantCooccurrence
+    Gene, Variant, VariantCooccurrence, Conservation
 
 SYNONYMOUS_VARIANT = "synonymous_variant"
 
@@ -355,20 +354,20 @@ class Queries:
             sql_query = """
                     SELECT cast("position"/{bin_size} as int)*{bin_size} AS position_bin,
                            COUNT(*) as count_unique_variants
-                    FROM variant
+                    FROM {table_name}
                     GROUP BY position_bin
                     ORDER BY position_bin;
-                    """.format(bin_size=bin_size)
+                    """.format(bin_size=bin_size, table_name=Variant.__tablename__)
             binned_counts_variants = pd.read_sql_query(sql_query, self.session.bind)
 
             # counts variant observations over those bins
             sql_query = """
                     SELECT cast("position"/{bin_size} as int)*{bin_size} AS position_bin,
                            COUNT(*) as count_variant_observations
-                    FROM variant_observation
+                    FROM {table_name}
                     GROUP BY position_bin
                     ORDER BY position_bin;
-                    """.format(bin_size=bin_size)
+                    """.format(bin_size=bin_size, table_name=VariantObservation.__tablename__)
             binned_counts_variant_observations = pd.read_sql_query(sql_query, self.session.bind)
 
             histogram = all_bins.set_index("position_bin").join(binned_counts_variants.set_index("position_bin"))
@@ -377,3 +376,16 @@ class Queries:
             histogram.reset_index(inplace=True)
 
         return histogram
+
+    def get_conservation_table(self, bin_size=50) -> pd.DataFrame:
+        # counts variants over those bins
+        sql_query = """
+                SELECT cast("start"/{bin_size} as int)*{bin_size} AS position_bin,
+                       AVG("conservation") as conservation,
+                       AVG("conservation_sarbecovirus") as conservation_sarbecovirus,
+                       AVG("conservation_vertebrates") as conservation_vertebrates
+                FROM {table_name}
+                GROUP BY position_bin
+                ORDER BY position_bin;
+                """.format(bin_size=bin_size, table_name= Conservation.__tablename__)
+        return pd.read_sql_query(sql_query, self.session.bind)

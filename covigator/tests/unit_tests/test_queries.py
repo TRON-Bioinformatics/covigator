@@ -185,3 +185,21 @@ class QueriesTests(TestCase):
         self.assertEqual(histogram.shape[1], 3)
         self.assertEqual(histogram.count_unique_variants.sum(), num_variants)
         self.assertEqual(histogram.count_variant_observations.sum(), len(variant_observations))
+
+    def test_get_conservation_table(self):
+        conservation50 = self.queries.get_conservation_table(bin_size=50)
+        self.assertIsNotNone(conservation50)
+        self.assertEqual(conservation50.shape[1], 4)
+        self.assertGreater(conservation50.shape[0], 0)
+        self.assertEqual(conservation50[conservation50.conservation.isna()].shape[0], 0)
+        self.assertEqual(conservation50[conservation50.conservation_sarbecovirus.isna()].shape[0], 0)
+        self.assertEqual(conservation50[conservation50.conservation_vertebrates.isna()].shape[0], 0)
+
+        conservation10 = self.queries.get_conservation_table(bin_size=10)
+        self.assertGreater(conservation10.shape[0], conservation50.shape[0])
+        self.assertEqual(conservation10.shape[1], conservation50.shape[1])
+
+        conservation5 = self.queries.get_conservation_table(bin_size=5)
+        self.assertGreater(conservation5.shape[0], conservation50.shape[0])
+        self.assertGreater(conservation5.shape[0], conservation10.shape[0])
+        self.assertEqual(conservation5.shape[1], conservation50.shape[1])
