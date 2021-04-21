@@ -136,9 +136,13 @@ class Figures:
         pfam_protein_features = self.queries.get_pfam_domains(gene)
 
         # reads variants
-        variants = self.queries.get_non_synonymous_variants_by_gene(gene_name)
+        variants = self.queries.get_non_synonymous_variants_by_gene(start=gene_start, end=gene_end)
+
+        # reads conservation and bins it
+        conservation = self.queries.get_conservation_table(start=gene_start, end=gene_end)
 
         fig = dcc.Markdown("""**No variants for the current selection**""")
+
         if variants.shape[0] > 0:
             # reads total number of samples and calculates frequencies
             count_samples = self.queries.count_ena_samples()
@@ -201,16 +205,16 @@ class Figures:
                 y=[0.4, 0.4, 0.6, 0.6],
                 name=gene_name,
                 fill="toself",
-                fillcolor="grey",
+                fillcolor=plotly.express.colors.sequential.Reds[0],
                 hovertext=gene_name,
                 hoveron="fills",
                 line=dict(width=0),
-                yaxis='y2',
+                yaxis='y5',
                 xaxis='x',
                 legendgroup='gene'
             )
             domain_traces = []
-            for d, c in zip(pfam_protein_features, plotly.express.colors.qualitative.Plotly[0:len(pfam_protein_features)]):
+            for d, c in zip(pfam_protein_features, cycle(plotly.express.colors.sequential.Purples)):
                 domain_start = gene_start + int(d["start"])
                 domain_end = gene_start + int(d["end"])
                 domain_name = d.get('description')
@@ -224,28 +228,45 @@ class Figures:
                     hovertext=domain_name,
                     hoveron="fills",
                     line=dict(width=0),
-                    yaxis='y2',
+                    yaxis='y5',
                     xaxis='x',
                     legendgroup='domains'
                 ))
 
-            data = variants_traces + [gene_trace] + domain_traces
+            conservation_traces = [
+                go.Scatter(x=conservation.position_bin, y=conservation.conservation, yaxis='y2', xaxis='x',
+                           text="Conservation SARS-CoV-2", textposition="top right", showlegend=False,
+                           fill='tozeroy', line_color="grey", line_width=1),
+                go.Scatter(x=conservation.position_bin, y=conservation.conservation_sarbecovirus, yaxis='y3', xaxis='x',
+                           text="Conservation SARS-like betacoronavirus", textposition="top right",
+                           showlegend=False, fill='tozeroy', line_color="grey", line_width=1),
+                go.Scatter(x=conservation.position_bin, y=conservation.conservation_vertebrates, yaxis='y4', xaxis='x',
+                           text="Conservation vertebrates", textposition="top right", showlegend=False,
+                           fill='tozeroy', line_color="grey", line_width=1)
+                ]
+
+            data = variants_traces + conservation_traces + [gene_trace] + domain_traces
             if selected_variants_trace is not None:
                 data.append(selected_variants_trace)
             layout = go.Layout(
                 template="plotly_white",
-                xaxis=dict(domain=[0, 1.0], tickformat=',d', hoverformat=',d', ticksuffix=" bp", ticks="outside",
-                           visible=True, anchor="y2", showspikes=True, spikemode='across', spikethickness=2),
-                xaxis2=dict(domain=[0, 1.0], anchor='y2', visible=False),
-                yaxis=dict(title='Allele frequency', type='log', domain=[0.1, 1.0], anchor='x2'),
-                yaxis2=dict(domain=[0.0, 0.1], visible=False, anchor='x2'),
+                xaxis=dict(domain=[0.0, 1.0], tickformat=',d', hoverformat=',d', ticksuffix=" bp", ticks="outside",
+                           visible=True, anchor="y5", showspikes=True, spikemode='across', spikethickness=2),
+                xaxis2=dict(domain=[0, 1.0], anchor='y5', visible=False),
+                xaxis3=dict(domain=[0, 1.0], anchor='y5', visible=False),
+                xaxis4=dict(domain=[0, 1.0], anchor='y5', visible=False),
+                xaxis5=dict(domain=[0, 1.0], anchor='y5', visible=False),
+                yaxis=dict(title='Allele frequency', type='log', domain=[0.4, 1.0], anchor='x5'),
+                yaxis2=dict(domain=[0.3, 0.4], visible=False, anchor='x5'),
+                yaxis3=dict(domain=[0.2, 0.3], visible=False, anchor='x5'),
+                yaxis4=dict(domain=[0.1, 0.2], visible=False, anchor='x5'),
+                yaxis5=dict(domain=[0.0, 0.1], visible=False, anchor='x5'),
                 margin=go.layout.Margin(l=0, r=0, b=0, t=20)
             )
             fig = go.Figure(data=data, layout=layout)
 
             # add vertical transparent rectangles with domains
-            for d, c in zip(pfam_protein_features,
-                            plotly.express.colors.qualitative.Plotly[0:len(pfam_protein_features)]):
+            for d, c in zip(pfam_protein_features, cycle(plotly.express.colors.sequential.Purples)):
                 fig.add_vrect(
                     x0=gene_start + int(d["start"]),
                     x1=gene_start + int(d["end"]),

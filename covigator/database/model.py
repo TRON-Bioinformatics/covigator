@@ -210,7 +210,7 @@ class Variant(Base):
     __tablename__ = VARIANT_TABLE_NAME
 
     chromosome = Column(String, primary_key=True)
-    position = Column(Integer, primary_key=True)
+    position = Column(Integer, primary_key=True, index=True)
     reference = Column(String, primary_key=True)
     alternate = Column(String, primary_key=True)
     overlaps_multiple_genes = Column(Boolean, default=False)
