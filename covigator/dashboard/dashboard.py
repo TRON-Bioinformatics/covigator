@@ -341,13 +341,11 @@ class Dashboard:
                                    ),
                                ], className="two columns"),
                                html.Div(children=[
-                                   html.H4("Top occurring variants"),
+                                   html.Br(),
                                    html.Div(id='top-occurring-variants', children=dash_table.DataTable(id="top-occurring-variants-table")),
                                    html.Br(),
-                                   html.H4("Genome view"),
                                    html.Div(id='needle-plot'),
                                    html.Br(),
-                                   html.H4("Co-occurrence heatmap"),
                                    html.Div(id='cooccurrence-heatmap'),
                                    html.Br(),
                                ], className="ten columns")

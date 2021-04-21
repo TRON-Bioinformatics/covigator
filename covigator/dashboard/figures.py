@@ -546,15 +546,18 @@ class Figures:
             ),
             yaxis3=dict(
                 domain=[0.45, 0.6],
-                anchor='x7'
+                anchor='x7',
+                visible=False,
             ),
             yaxis4=dict(
                 domain=[0.3, 0.45],
-                anchor='x7'
+                anchor='x7',
+                visible=False,
             ),
             yaxis5=dict(
                 domain=[0.15, 0.3],
-                anchor='x7'
+                anchor='x7',
+                visible=False,
             ),
             yaxis6=dict(
                 domain=[0.05, 0.1],
@@ -647,22 +650,22 @@ class Figures:
         fig.add_annotation(x=0.98, y=1.0, xref="x domain", yref="y5 domain", text="Conservation vertebrate CoV",
                            showarrow=False, yshift=10)
 
-        #fig.add_hline(y=data.count_unique_variants.mean(), line_width=1, line_dash="dash",
-        #              line_color="red", row=2)
-        #fig.add_shape(go.layout.Shape(type='line', yref='y2', xref='x7', x0=0, x1=data.position_bin.max(),
-        #                              y0=data.count_unique_variants.mean(), y1=data.count_unique_variants.mean(),
-        #                              line=dict(color='red', width=1)))
-
         return [
             dcc.Graph(
                 figure=fig,
                 config=plotly_config
             ),
             dcc.Markdown("""
-                *Abundance of variants and ConsHMM conservation with a bin size of {} bp*
+                ***Genome view*** *representing the abundance of variants and ConsHMM (Arneson, 2019) conservation using a bin size of {} bp.*
                 
-                *Correlation between unique variants and conservation within Sars-CoV-2, 
-                conservation among SARS-like betacoronavirus and conservation among vertebrates: {}, {}, {}*
+                *The first track shows the count of variants across the genome including repetitions. *
+                *The second track shows the count of unique variants across the genome, the horizontal line represents 
+                the average number of unique variants per bin and thus distinguishes regions with over and under the 
+                average number of unique variants.*
+                *The third, fourth and fifth tracks represent the conservation as reported by ConsHMM within 
+                SARS-CoV-2, among SARS-like betaCoV and among vertebrate CoV. Correlation between distribution of 
+                unique variants and conservation within Sars-CoV-2, among SARS-like betacoronavirus and among 
+                vertebrates CoV respectively: {}, {}, {}.*
                 
                 *Conservation data source: https://github.com/ernstlab/ConsHMM_CoV*
                 
