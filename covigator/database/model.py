@@ -23,6 +23,7 @@ JOB_GISAID_TABLE_NAME = get_table_versioned_name('job_gisaid')
 SAMPLE_TABLE_NAME = get_table_versioned_name('sample')
 SAMPLE_GISAID_TABLE_NAME = get_table_versioned_name('sample_gisaid')
 SAMPLE_ENA_TABLE_NAME = get_table_versioned_name('sample_ena')
+CONSERVATION_TABLE_NAME = get_table_versioned_name('conservation')
 JOB_STATUS_CONSTRAINT_NAME = get_table_versioned_name('job_status')
 DATA_SOURCE_CONSTRAINT_NAME = get_table_versioned_name('data_source')
 COVIGATOR_MODULE_CONSTRAINT_NAME = get_table_versioned_name('covigator_module')
@@ -337,3 +338,17 @@ class Log(Base):
     error_message = Column(String)
     processed = Column(Integer)
     data = Column(JSON)
+
+
+class Conservation(Base):
+    """
+    Table to hold conservation scores
+    """
+    __tablename__ = CONSERVATION_TABLE_NAME
+
+    chromosome = Column(Integer, primary_key=True)
+    start = Column(Integer, primary_key=True)
+    end = Column(Integer, primary_key=True)
+    conservation = Column(Float)
+    conservation_sarbecovirus = Column(Float)
+    conservation_vertebrates = Column(Float)
