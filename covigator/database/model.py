@@ -180,7 +180,7 @@ class JobGisaid(Base):
     """
     __tablename__ = JOB_GISAID_TABLE_NAME
 
-    run_accession = Column(ForeignKey("sample_gisaid.run_accession"), primary_key=True)
+    run_accession = Column(ForeignKey("{}.run_accession".format(SampleGisaid.__tablename__)), primary_key=True)
 
     # job status
     status = Column(Enum(JobStatus), default=JobStatus.PENDING)

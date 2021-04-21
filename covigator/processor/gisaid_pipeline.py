@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import operator
+import os
 import sys
 
 from Bio import SeqIO, pairwise2
@@ -10,7 +11,7 @@ from covigator import ENV_COVIGATOR_REF_GISAID, ENV_COVIGATOR_SEQ_GISAID
 
 class GisaidPipeline:
     
-    reference_file = os.getenv(ENV_COVIGATOR_REF_GISAID, "/projects/SARS-CoV-2/RefSeq_surface_glycoprotein.fasta")
+    reference_file = os.getenv(ENV_COVIGATOR_REF_GISAID, "/scratch/info/projects/SARS-CoV-2/index/MN908947.3.fa")
     gisaid_file = os.getenv(ENV_COVIGATOR_SEQ_GISAID, "/scratch/info/projects/SARS-CoV-2/gisaid/gisaid_cov2020_sequences_01APR2020_human_host_low_cov_excl.fasta")
 
     def get_sequence(self, sequence_id):

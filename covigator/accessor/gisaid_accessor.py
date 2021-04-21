@@ -1,13 +1,14 @@
 import csv
 from datetime import date, datetime
 import json
+import os
 
 import pycountry
 import pycountry_convert
 import requests
 from sqlalchemy.orm import Session
 
-from covigator import ENV_META_GISAID
+from covigator import ENV_COVIGATOR_META_GISAID
 
 from covigator.misc import backoff_retrier
 from covigator.database.model import SampleGisaid, JobGisaid, Sample, DataSource, Log, CovigatorModule
