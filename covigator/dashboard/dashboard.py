@@ -275,7 +275,8 @@ class Dashboard:
                                        step=10,
                                        value=10,
                                        dots=True,
-                                       marks={i: '{}'.format(i) for i in [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]}
+                                       marks={i: '{}'.format(i) for i in [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]},
+                                       tooltip=dict(always_visible=False, placement="right")
                                    ),
                                    html.Br(),
                                    dcc.Markdown("""
@@ -311,8 +312,9 @@ class Dashboard:
                                        max=400,
                                        step=5,
                                        value=50,
-                                       dots=True,
-                                       marks={i: '{}'.format(i) for i in [10, 50, 100, 200, 300, 400]}
+                                       dots=False,
+                                       marks={i: '{}'.format(i) for i in [10, 50, 100, 200, 300, 400]},
+                                       tooltip=dict(always_visible=False, placement="right")
                                    ),
                                    html.Br(),
                                    html.H4("Co-occurrence heatmap"),
@@ -337,7 +339,8 @@ class Dashboard:
                                        step=5,
                                        value=20,
                                        dots=True,
-                                       marks={i: '{}'.format(i) for i in [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]}
+                                       marks={i: '{}'.format(i) for i in [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]},
+                                       tooltip=dict(always_visible=False, placement="right")
                                    ),
                                ], className="two columns"),
                                html.Div(children=[
