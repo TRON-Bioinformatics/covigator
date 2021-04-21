@@ -18,10 +18,6 @@ from logzero import logger
 from covigator.database.queries import Queries
 from covigator.dashboard.figures import Figures
 
-PLOTLY_CONFIG = {
-    'displaylogo': False,
-    'displayModeBar': False
-}
 MONTH_PATTERN = "%Y-%m"
 MISSING_VALUE = "-"
 
@@ -417,22 +413,11 @@ class Dashboard:
         def update_needle_plot(gene_name, rows, selected_rows_indices, bin_size):
             if gene_name is not None:
                 selected_rows = [rows[s] for s in selected_rows_indices] if selected_rows_indices else None
-                plot = html.Div(children=[
-                    dcc.Graph(
-                        figure=self.figures.get_variants_plot(gene_name=gene_name, selected_variants=selected_rows),
-                        config=PLOTLY_CONFIG
-                    ),
-                    dcc.Markdown("""
-                    *Non synonymous variants occurring in at least two samples on gene {}.*
-                    *Other variants include frameshift indels, stop codon gain and lost and start lost variants.*
-                    *The variants are colored according to their frequency as rare variants (< 0.1 %), 
-                    low frequency variants (>= 0.1% and < 1%), 
-                    common variants (>= 1% and < 10%) and very common variants (>= 10%)*
-                    """.format(gene_name))
-                    ])
+                plot = html.Div(
+                    children=self.figures.get_variants_plot(gene_name=gene_name, selected_variants=selected_rows))
             else:
-                plot = html.Div(children=
-                                self.figures.get_variants_abundance_plot(bin_size=bin_size, plotly_config=PLOTLY_CONFIG))
+                plot = html.Div(
+                    children=self.figures.get_variants_abundance_plot(bin_size=bin_size))
             return plot
 
         @app.callback(
@@ -462,19 +447,8 @@ class Dashboard:
         def update_cooccurrence_heatmap(gene_name, rows, selected_rows_indices, metric, min_occurrences):
 
             selected_rows = [rows[s] for s in selected_rows_indices] if selected_rows_indices else None
-            plot = html.Div(children=[
-                dcc.Graph(
-                    figure=self.figures.get_cooccurrence_heatmap(
-                        gene_name=gene_name, selected_variants=selected_rows, metric=metric,
-                        min_occurrences=min_occurrences),
-                    config=PLOTLY_CONFIG
-                ),
-                dcc.Markdown("""
-                        *Variant pairs co-occurring in at least {} samples{}.*
-                        *Co-occurrence metric: {}*
-                        *Synonymous variants are excluded.*
-                        """.format(min_occurrences, metric, " on gene {}".format(gene_name) if gene_name else ""))
-            ])
+            plot = html.Div(children=self.figures.get_cooccurrence_heatmap(
+                gene_name=gene_name, selected_variants=selected_rows, metric=metric, min_occurrences=min_occurrences))
             return plot
 
     def get_application(self) -> dash.Dash:

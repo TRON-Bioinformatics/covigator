@@ -28,6 +28,10 @@ LOW_FREQUENCY_VARIANTS_THRESHOLD = 0.01
 LOW_FREQUENCY_VARIANTS_COLOR = plotly.express.colors.sequential.Reds[-5]
 RARE_VARIANTS_THRESHOLD = 0.001
 MONTH_PATTERN = re.compile('[0-9]{4}-[0-9]{2}')
+PLOTLY_CONFIG = {
+    'displaylogo': False,
+    'displayModeBar': False
+}
 
 
 class Figures:
@@ -230,34 +234,11 @@ class Figures:
                 data.append(selected_variants_trace)
             layout = go.Layout(
                 template="plotly_white",
-                xaxis=dict(
-                    domain=[0, 1.0],
-                    tickformat=',d',
-                    hoverformat=',d',
-                    ticksuffix=" bp",
-                    ticks="outside",
-                    visible=True,
-                    anchor="y2",
-                    showspikes=True,
-                    spikemode='across',
-                    spikethickness=2
-                ),
-                xaxis2=dict(
-                    domain=[0, 1.0],
-                    anchor='y2',
-                    visible=False
-                ),
-                yaxis=dict(
-                    title='Allele frequency',
-                    type='log',
-                    domain=[0.1, 1.0],
-                    anchor='x2'
-                ),
-                yaxis2=dict(
-                    domain=[0.0, 0.1],
-                    visible=False,
-                    anchor='x2'
-                ),
+                xaxis=dict(domain=[0, 1.0], tickformat=',d', hoverformat=',d', ticksuffix=" bp", ticks="outside",
+                           visible=True, anchor="y2", showspikes=True, spikemode='across', spikethickness=2),
+                xaxis2=dict(domain=[0, 1.0], anchor='y2', visible=False),
+                yaxis=dict(title='Allele frequency', type='log', domain=[0.1, 1.0], anchor='x2'),
+                yaxis2=dict(domain=[0.0, 0.1], visible=False, anchor='x2'),
                 margin=go.layout.Margin(l=0, r=0, b=0, t=20)
             )
             fig = go.Figure(data=data, layout=layout)
@@ -275,7 +256,14 @@ class Figures:
             fig.add_hline(y=0.01, line_width=1, line_dash="dash", line_color=COMMON_VARIANTS_COLOR)
             fig.add_hline(y=0.001, line_width=1, line_dash="dash", line_color=RARE_VARIANTS_COLOR)
 
-        return fig
+        return [dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
+                dcc.Markdown("""
+                    *Non synonymous variants occurring in at least two samples on gene {}.*
+                    *Other variants include frameshift indels, stop codon gain and lost and start lost variants.*
+                    *The variants are colored according to their frequency as rare variants (< 0.1 %), 
+                    low frequency variants (>= 0.1% and < 1%), 
+                    common variants (>= 1% and < 10%) and very common variants (>= 10%)*
+                    """.format(gene_name))]
 
     def get_top_occurring_variants_plot(self, top, gene_name, date_range_start, date_range_end):
         data = self.queries.get_top_occurring_variants(top, gene_name)
@@ -432,22 +420,10 @@ class Figures:
             layout = go.Layout(
                 template="plotly_white",
                 height=700,
-                yaxis=dict(
-                    visible=True,
-                    tickfont={"size": 10},
-                    showgrid=False,
-                    showspikes=True,
-                    spikemode='toaxis',
-                    spikethickness=2
-                ),
-                xaxis=dict(
-                    tickangle=-45,
-                    tickfont={"size": 10},
-                    showgrid=False,
-                    showspikes=True,
-                    spikemode='toaxis',
-                    spikethickness=2
-                ),
+                yaxis=dict(visible=True, tickfont={"size": 10}, showgrid=False, showspikes=True, spikemode='toaxis',
+                           spikethickness=2),
+                xaxis=dict(tickangle=-45, tickfont={"size": 10}, showgrid=False, showspikes=True, spikemode='toaxis',
+                           spikethickness=2),
                 margin=go.layout.Margin(l=0, r=0, b=0, t=0)
             )
             traces = [heatmap]
@@ -458,9 +434,19 @@ class Figures:
             # the y index is reversed in plotly heatmap
             fig.update_yaxes(autorange="reversed")
 
-        return fig
+        return [
+                dcc.Graph(
+                    figure=fig,
+                    config=PLOTLY_CONFIG
+                ),
+                dcc.Markdown("""
+                        *Variant pairs co-occurring in at least {} samples{}.*
+                        *Co-occurrence metric: {}*
+                        *Synonymous variants are excluded.*
+                        """.format(min_occurrences, metric, " on gene {}".format(gene_name) if gene_name else ""))
+            ]
 
-    def get_variants_abundance_plot(self, bin_size=50, plotly_config=None):
+    def get_variants_abundance_plot(self, bin_size=50):
 
         # reads genes and domains across the whole genome
         genes = sorted(self.queries.get_genes_metadata(), key=lambda x: int(x.data.get("start")))
@@ -481,81 +467,21 @@ class Figures:
 
         layout = go.Layout(
             template="plotly_white",
-            xaxis=dict(
-                domain=[0, 1.0],
-                tickformat=',d',
-                hoverformat=',d',
-                ticksuffix=" bp",
-                ticks="outside",
-                visible=True,
-                anchor="y7",
-                showspikes=True,
-                spikemode='across',
-                spikethickness=2
-            ),
-            xaxis2=dict(
-                domain=[0, 1.0],
-                anchor='y7',
-                visible=False
-            ),
-            xaxis3=dict(
-                domain=[0, 1.0],
-                anchor='y7',
-                visible=False
-            ),
-            xaxis4=dict(
-                domain=[0, 1.0],
-                anchor='y7',
-                visible=False
-            ),
-            xaxis5=dict(
-                domain=[0, 1.0],
-                anchor='y7',
-                visible=False
-            ),
-            xaxis6=dict(
-                domain=[0, 1.0],
-                anchor='y7',
-                visible=False
-            ),
-            xaxis7=dict(
-                domain=[0, 1.0],
-                anchor='y7',
-                visible=False
-            ),
-            yaxis=dict(
-                domain=[0.9, 1.0],
-                anchor='x7',
-            ),
-            yaxis2=dict(
-                domain=[0.6, 0.9],
-                anchor='x7'
-            ),
-            yaxis3=dict(
-                domain=[0.45, 0.6],
-                anchor='x7',
-                visible=False,
-            ),
-            yaxis4=dict(
-                domain=[0.3, 0.45],
-                anchor='x7',
-                visible=False,
-            ),
-            yaxis5=dict(
-                domain=[0.15, 0.3],
-                anchor='x7',
-                visible=False,
-            ),
-            yaxis6=dict(
-                domain=[0.05, 0.1],
-                anchor='x7',
-                visible=False,
-            ),
-            yaxis7=dict(
-                domain=[0.0, 0.05],
-                anchor='x7',
-                visible=False,
-            ),
+            xaxis=dict(domain=[0, 1.0], tickformat=',d', hoverformat=',d', ticksuffix=" bp", ticks="outside",
+                       visible=True, anchor="y7", showspikes=True, spikemode='across', spikethickness=2),
+            xaxis2=dict(domain=[0, 1.0], anchor='y7', visible=False),
+            xaxis3=dict(domain=[0, 1.0], anchor='y7', visible=False),
+            xaxis4=dict(domain=[0, 1.0], anchor='y7', visible=False),
+            xaxis5=dict(domain=[0, 1.0], anchor='y7', visible=False),
+            xaxis6=dict(domain=[0, 1.0], anchor='y7', visible=False),
+            xaxis7=dict(domain=[0, 1.0], anchor='y7', visible=False),
+            yaxis=dict(domain=[0.9, 1.0], anchor='x7'),
+            yaxis2=dict(domain=[0.6, 0.9], anchor='x7'),
+            yaxis3=dict(domain=[0.45, 0.6], anchor='x7', visible=False),
+            yaxis4=dict(domain=[0.3, 0.45], anchor='x7', visible=False),
+            yaxis5=dict(domain=[0.15, 0.3], anchor='x7', visible=False),
+            yaxis6=dict(domain=[0.05, 0.1], anchor='x7', visible=False),
+            yaxis7=dict(domain=[0.0, 0.05], anchor='x7', visible=False),
             margin=go.layout.Margin(l=0, r=0, b=0, t=30),
             legend={'traceorder': 'normal'}
         )
@@ -641,7 +567,7 @@ class Figures:
         return [
             dcc.Graph(
                 figure=fig,
-                config=plotly_config
+                config=PLOTLY_CONFIG
             ),
             dcc.Markdown("""
                 ***Genome view*** *representing the abundance of variants and ConsHMM (Arneson, 2019) conservation using a bin size of {} bp.*
