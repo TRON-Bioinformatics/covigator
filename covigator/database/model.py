@@ -71,6 +71,34 @@ class DataSource(enum.Enum):
     GISAID = 2
 
 
+class SampleGisaid(Base):
+    """
+    The table that holds all metadata for a GISAID sample
+    """
+    __tablename__ = SAMPLE_GISAID_TABLE_NAME
+
+    run_accession = Column(String, primary_key=True)
+    virus_name = Column(String)
+    first_created = Column(Date)
+    collection_date = Column(Date)
+    instrument_platform = Column(String)
+    instrument_model = Column(String)
+    assembly_method = Column(String)
+    # Host information
+    host_tax_id = Column(String)
+    host = Column(String)
+    host_body_site = Column(String)
+    # geographical data
+    lat = Column(Float)
+    lon = Column(Float)
+    country_raw = Column(String)
+    country = Column(String)
+    country_alpha_2 = Column(String)
+    country_alpha_3 = Column(String)
+    continent = Column(String)
+    continent_alpha_2 = Column(String)
+
+
 class SampleEna(Base):
     """
     The table that holds all metadata for a ENA sample
@@ -131,15 +159,6 @@ class SampleEna(Base):
         return self.fastq_md5.split(SEPARATOR) if self.fastq_md5 is not None else []
 
 
-class SampleGisaid(Base):
-    """
-    The table that holds all metadata for a GISAID sample
-    """
-    __tablename__ = SAMPLE_GISAID_TABLE_NAME
-
-    id = Column(String, primary_key=True)
-
-
 class Sample(Base):
     """
     This table holds all samples loaded into Covigator irrespective of the data source.
@@ -152,7 +171,7 @@ class Sample(Base):
     source = Column(Enum(DataSource, name=DataSource.__constraint_name__), primary_key=True)
     # NOTE: should have only one filled, either ena_id or gisaid_id and be coherent with the value of source
     ena_id = Column(ForeignKey("{}.run_accession".format(SampleEna.__tablename__)))
-    gisaid_id = Column(ForeignKey("{}.id".format(SampleGisaid.__tablename__)))
+    gisaid_id = Column(ForeignKey("{}.run_accession".format(SampleGisaid.__tablename__)))
 
 
 class JobGisaid(Base):
@@ -161,7 +180,25 @@ class JobGisaid(Base):
     """
     __tablename__ = JOB_GISAID_TABLE_NAME
 
-    id = Column(ForeignKey("{}.id".format(SampleGisaid.__tablename__)), primary_key=True)
+    run_accession = Column(ForeignKey("{}.run_accession".format(SampleGisaid.__tablename__)), primary_key=True)
+
+    # job status
+    status = Column(Enum(JobStatus), default=JobStatus.PENDING)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.now())
+    queued_at = Column(DateTime(timezone=True))
+    #downloaded_at = Column(DateTime(timezone=True))
+    analysed_at = Column(DateTime(timezone=True))
+    #cleaned_at = Column(DateTime(timezone=True))
+    loaded_at = Column(DateTime(timezone=True))
+    failed_at = Column(DateTime(timezone=True))
+    error_message = Column(String)
+
+    # TODO: Test DB size, sequence should be approx 30000bp, compress maybe
+    sequence = Column(String)
+    # local files storage
+    vcf_path = Column(String)
+
+
 
 
 class JobEna(Base):

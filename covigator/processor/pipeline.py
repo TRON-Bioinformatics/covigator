@@ -4,9 +4,9 @@ import subprocess
 import tempfile
 from logzero import logger
 
-from covigator import ENV_COVIGATOR_BIN_SAMTOOLS, ENV_COVIGATOR_BIN_BWA, ENV_COVIGATOR_BIN_BCFTOOLS, \
-    ENV_COVIGATOR_BIN_SNPEFF, ENV_COVIGATOR_BIN_BGZIP, ENV_COVIGATOR_BIN_TABIX, \
-    ENV_COVIGATOR_REF_FASTA, ENV_COVIGATOR_REF_BED
+from covigator import ENV_COVIGATOR_BIN_FASTP, ENV_COVIGATOR_BIN_SAMTOOLS, ENV_COVIGATOR_BIN_BWA, \
+    ENV_COVIGATOR_BIN_BCFTOOLS, ENV_COVIGATOR_BIN_SNPEFF, ENV_COVIGATOR_BIN_BGZIP, \
+    ENV_COVIGATOR_BIN_TABIX, ENV_COVIGATOR_REF_FASTA, ENV_COVIGATOR_REF_BED
 
 class CovigatorPipelineError(Exception):
     pass
@@ -15,6 +15,7 @@ class CovigatorPipelineError(Exception):
 class Pipeline:
 
     commands = {
+        "fastp": os.getenv(ENV_COVIGATOR_BIN_FASTP, "/code/fastp/fastp"),
         "samtools": os.getenv(ENV_COVIGATOR_BIN_SAMTOOLS, "/code/samtools/1.9/samtools"),
         "bwa": os.getenv(ENV_COVIGATOR_BIN_BWA, "/code/bwa/0.7.17/bwa"),
         "bcftools": os.getenv(ENV_COVIGATOR_BIN_BCFTOOLS, "/code/bcftools/1.9/bcftools"),
@@ -41,12 +42,19 @@ class Pipeline:
             vcf_file = os.path.join(tmpdir, "pileup.vcf")
             snpeff_vcf_file_gz = os.path.join(fq_path, "snpeff.vcf.gz")
 
+            filtered_fastq1 = os.path.join(tmp_dir, "filtered_R1.tmp.gz")
+            filtered_fastq2 = os.path.join(tmp_dir, "filtered_R2.tmp.gz")
+
             if fastq2:
+                cmd_fastp = "{} -i {} -I {} -o {} -O {}".format(self.commands["fastp"], fastq1, fastq2, filtered_fastq1, filtered_fastq2)
+
                 cmd_align = "{} mem {} {} {} | {} sort -o {} -".format(
-                    self.commands["bwa"], bwa_ref, fastq1, fastq2, self.commands["samtools"], bam_file)
+                    self.commands["bwa"], bwa_ref, filtered_fastq1, filtered_fastq2, self.commands["samtools"], bam_file)
             else:
+                cmd_fastp = "{} -i {} -o {}".format(self.commands["fastp"], fastq1, filtered_fastq1)
+
                 cmd_align = "{} mem {} {} | {} sort -o {} -".format(
-                    self.commands["bwa"], bwa_ref, fastq1, self.commands["samtools"], bam_file)
+                    self.commands["bwa"], bwa_ref, filtered_fastq1, self.commands["samtools"], bam_file)
 
             cmd_pileup = "{0} mpileup -E -d 0 -A -f {1} {2} | {0} call -mv --ploidy 1 -Ov -o {3}".format(
                 self.commands["bcftools"], bwa_ref, bam_file, vcf_file)
