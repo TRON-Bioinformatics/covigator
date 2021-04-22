@@ -400,8 +400,6 @@ class Figures:
         # reads conservation and bins it
         conservation = self.queries.get_conservation_table(start=gene.start, end=gene.end, bin_size=bin_size)
 
-        fig = dcc.Markdown("""**No variants for the current selection**""")
-
         if variants.shape[0] > 0:
             # reads total number of samples and calculates frequencies
             count_samples = self.queries.count_ena_samples()
@@ -496,29 +494,29 @@ class Figures:
             fig.add_hline(y=0.01, line_width=1, line_dash="dash", line_color=COMMON_VARIANTS_COLOR)
             fig.add_hline(y=0.001, line_width=1, line_dash="dash", line_color=RARE_VARIANTS_COLOR)
 
-        return [dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
-                dcc.Markdown("""
-                    ***Gene view*** *representing each variant with its frequency in the population and 
-                    ConsHMM (Arneson, 2019) conservation using a bin size of {} bp. Synonymous variants and variants 
-                    occurring in a single sample are excluded.*
-                
-                    *The scatter plot shows non synonymous variants occurring in at least two samples on gene {}. 
-                    The x-axis shows the genomic coordinates and the y-axis shows the allele frequency.*
-                    *The category of "other variants" includes frameshift indels, stop codon gain and lost and 
-                    start lost variants.*
-                    *The variants are colored according to their frequency as rare variants (< 0.1 %), 
-                    low frequency variants (>= 0.1% and < 1%), common variants (>= 1% and < 10%) and very common 
-                    variants (>= 10%)*
+            return [dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
+                    dcc.Markdown("""
+                        ***Gene view*** *representing each variant with its frequency in the population and 
+                        ConsHMM (Arneson, 2019) conservation using a bin size of {} bp. Synonymous variants and variants 
+                        occurring in a single sample are excluded.*
                     
-                    *The second, third and fourth tracks represent the conservation as reported by ConsHMM within 
-                    SARS-CoV-2, among SARS-like betaCoV and among vertebrate CoV.*
-                    *Genes and Pfam domains are represented in tones of red and purple respectively.*
-                    
-                    *Conservation data source: https://github.com/ernstlab/ConsHMM_CoV*
-                    
-                    *Arneson A, Ernst J. Systematic discovery of conservation states for single-nucleotide annotation of the 
-                    human genome. Communications Biology, 248, 2019. doi: https://doi.org/10.1038/s42003-019-0488-1*
-                    """.format(bin_size, gene_name))]
+                        *The scatter plot shows non synonymous variants occurring in at least two samples on gene {}. 
+                        The x-axis shows the genomic coordinates and the y-axis shows the allele frequency.*
+                        *The category of "other variants" includes frameshift indels, stop codon gain and lost and 
+                        start lost variants.*
+                        *The variants are colored according to their frequency as rare variants (< 0.1 %), 
+                        low frequency variants (>= 0.1% and < 1%), common variants (>= 1% and < 10%) and very common 
+                        variants (>= 10%). The second, third and fourth tracks in grey represent the conservation as 
+                        reported by ConsHMM within SARS-CoV-2, among SARS-like betaCoV and among vertebrate CoV.*
+                        *Genes and Pfam domains are represented in tones of red and purple respectively.*
+                        
+                        *Conservation data source: https://github.com/ernstlab/ConsHMM_CoV*
+                        
+                        *Arneson A, Ernst J. Systematic discovery of conservation states for single-nucleotide annotation of the 
+                        human genome. Communications Biology, 248, 2019. doi: https://doi.org/10.1038/s42003-019-0488-1*
+                        """.format(bin_size, gene_name))]
+        else:
+            return dcc.Markdown("""**No variants for the current selection**""")
 
     def _get_conservation_traces(self, conservation, xaxis, yaxis1, yaxis2, yaxis3):
         return [

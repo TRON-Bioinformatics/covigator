@@ -373,25 +373,16 @@ class Queries:
 
     def get_conservation_table(self, bin_size=50, start=None, end=None) -> pd.DataFrame:
         # counts variants over those bins
-        if start is None or end is None:
-            sql_query = """
-                    SELECT cast("start"/{bin_size} as int)*{bin_size} AS position_bin,
-                           AVG("conservation") as conservation,
-                           AVG("conservation_sarbecovirus") as conservation_sarbecovirus,
-                           AVG("conservation_vertebrates") as conservation_vertebrates
-                    FROM {table_name}
-                    GROUP BY position_bin
-                    ORDER BY position_bin;
-                    """.format(bin_size=bin_size, table_name= Conservation.__tablename__)
-        else:
-            sql_query = """
-                    SELECT cast("start"/{bin_size} as int)*{bin_size} AS position_bin,
-                           AVG("conservation") as conservation,
-                           AVG("conservation_sarbecovirus") as conservation_sarbecovirus,
-                           AVG("conservation_vertebrates") as conservation_vertebrates
-                    FROM {table_name}
-                    WHERE start >= {start} and start <= {end} 
-                    GROUP BY position_bin
-                    ORDER BY position_bin;
-                    """.format(bin_size=bin_size, table_name=Conservation.__tablename__, start=start, end=end)
+        sql_query = """
+                SELECT cast("start"/{bin_size} as int)*{bin_size} AS position_bin,
+                       AVG("conservation") as conservation,
+                       AVG("conservation_sarbecovirus") as conservation_sarbecovirus,
+                       AVG("conservation_vertebrates") as conservation_vertebrates
+                FROM {table_name}
+                {where}
+                GROUP BY position_bin
+                ORDER BY position_bin;
+                """.format(bin_size=bin_size, table_name= Conservation.__tablename__,
+                           where="WHERE start >= {start} and start <= {end}".format(start=start, end=end)
+                           if start is not None and end is not None else "")
         return pd.read_sql_query(sql_query, self.session.bind)
