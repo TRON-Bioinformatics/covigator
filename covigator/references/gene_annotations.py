@@ -30,6 +30,6 @@ class GeneAnnotationsLoader:
         with open(file_name) as fd:
             data = json.load(fd)
         for g in data["genes"]:
-            self.session.add(Gene(identifier=g["id"], name=g["name"], data=g))
+            self.session.add(Gene(identifier=g["id"], name=g["name"], start=int(g["start"]), end=int(g["end"]), data=g))
         self.session.commit()
         logger.info("Loaded into the database {} genes".format(len(data["genes"])))

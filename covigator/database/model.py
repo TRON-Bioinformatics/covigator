@@ -41,7 +41,14 @@ class Gene(Base):
 
     identifier = Column(String, primary_key=True)
     name = Column(String)
+    start = Column(Integer, index=True)
+    end = Column(Integer)
     data = Column(JSON)
+
+    def get_pfam_domains(self):
+        protein_features = self.data.get("transcripts", [])[0].get("translations", [])[0].get("protein_features")
+        pfam_protein_features = [f for f in protein_features if f.get("dbname") == "Pfam"]
+        return sorted(pfam_protein_features, key=lambda d: int(d.get("start")))
 
 
 class JobStatus(enum.Enum):

@@ -4,7 +4,7 @@ from unittest import TestCase, skip
 from faker import Faker
 import numpy as np
 from covigator.database.database import Database
-from covigator.database.model import JobStatus, DataSource, Sample
+from covigator.database.model import JobStatus, DataSource, Sample, Gene
 from covigator.database.queries import Queries
 from covigator.tests.unit_tests.mocked import get_mocked_ena_sample, get_mocked_log, get_mocked_variant, \
     get_mocked_variant_cooccurrence, get_mocked_variant_observation
@@ -203,3 +203,28 @@ class QueriesTests(TestCase):
         self.assertGreater(conservation5.shape[0], conservation50.shape[0])
         self.assertGreater(conservation5.shape[0], conservation10.shape[0])
         self.assertEqual(conservation5.shape[1], conservation50.shape[1])
+
+        conservation5_smaller = self.queries.get_conservation_table(bin_size=5, start=10000, end=20000)
+        self.assertGreater(conservation5.shape[0], conservation5_smaller.shape[0])
+        self.assertEqual(conservation5.shape[1], conservation50.shape[1])
+
+    def test_get_genes_metadata(self):
+        genes = self.queries.get_genes_metadata()
+        self.assertIsNotNone(genes)
+        self.assertGreater(len(genes), 0)
+        for g in genes:
+            self.assertIsInstance(g, Gene)
+
+    def test_get_genes(self):
+        genes = self.queries.get_genes()
+        self.assertIsNotNone(genes)
+        self.assertGreater(len(genes), 0)
+        for g in genes:
+            self.assertIsInstance(g, str)
+
+    def test_get_gene(self):
+        gene = self.queries.get_gene("S")
+        self.assertIsNotNone(gene)
+        self.assertIsInstance(gene, Gene)
+        gene = self.queries.get_gene("NOEXISTO")
+        self.assertIsNone(gene)

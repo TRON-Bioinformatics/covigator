@@ -414,7 +414,8 @@ class Dashboard:
             if gene_name is not None:
                 selected_rows = [rows[s] for s in selected_rows_indices] if selected_rows_indices else None
                 plot = html.Div(
-                    children=self.figures.get_variants_plot(gene_name=gene_name, selected_variants=selected_rows))
+                    children=self.figures.get_variants_plot(
+                        gene_name=gene_name, selected_variants=selected_rows, bin_size=bin_size))
             else:
                 plot = html.Div(
                     children=self.figures.get_variants_abundance_plot(bin_size=bin_size))

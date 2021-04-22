@@ -5,16 +5,20 @@ from itertools import cycle
 import colorlover
 import dash_table
 import numpy as np
-import pandas as pd
 import plotly
 import plotly.express as px
 import plotly.graph_objects as go
 import dash_core_components as dcc
 import re
 
-from covigator import ENV_COVIGATOR_STORAGE_FOLDER
+from covigator.database.model import Gene
 from covigator.database.queries import Queries
 
+VARIANT_TOOLTIP = '<b>%{text}</b><br>' + 'Allele frequency: %{y:.5f}<br>' + 'Genomic Position: %{x}'
+
+GENE_COLORS = cycle(plotly.express.colors.sequential.Reds)
+
+DOMAIN_COLORS = cycle(reversed(plotly.express.colors.sequential.Purples))
 
 OTHER_VARIANT_SYMBOL = "x"
 INSERTION_SYMBOL = "triangle-up"
@@ -106,185 +110,6 @@ class Figures:
                 'color': 'white'
             }
         ]
-
-    def _get_variants_scatter(self, variants, name, symbol):
-        return go.Scatter(
-            x=variants.position,
-            y=variants.af,
-            name=name,
-            mode='markers',
-            # opacity=0.5,
-            marker=dict(
-                symbol=symbol,
-                color=variants.af.transform(self._get_color_by_af),
-                showscale=False
-            ),
-            xaxis='x',
-            showlegend=True,
-            text=variants[["hgvs_p", "annotation"]].apply(lambda x: "{} ({})".format(x[0], x[1]), axis=1),
-            hovertemplate='<b>%{text}</b><br>' +
-                          'Allele frequency: %{y:.5f}<br>' +
-                          'Genomic Position: %{x}'
-        )
-
-    def get_variants_plot(self, gene_name, selected_variants):
-
-        # reads gene annotations
-        gene = self.queries.get_gene(gene_name)
-        gene_start = int(gene.data.get("start"))
-        gene_end = int(gene.data.get("end"))
-        pfam_protein_features = self.queries.get_pfam_domains(gene)
-
-        # reads variants
-        variants = self.queries.get_non_synonymous_variants_by_gene(start=gene_start, end=gene_end)
-
-        # reads conservation and bins it
-        conservation = self.queries.get_conservation_table(start=gene_start, end=gene_end)
-
-        fig = dcc.Markdown("""**No variants for the current selection**""")
-
-        if variants.shape[0] > 0:
-            # reads total number of samples and calculates frequencies
-            count_samples = self.queries.count_ena_samples()
-            variants["af"] = variants.count_occurrences / count_samples
-            variants["log_af"] = variants.af.transform(lambda x: np.log(x + 1))
-            variants["log_count"] = variants.count_occurrences.transform(lambda x: np.log(x))
-            # TODO: do something in the data ingestion about multiple annotations on the same variant
-            variants.annotation = variants.annotation.transform(lambda a: a.split("&")[0])
-
-            variants_traces = []
-            missense_variants = variants[variants.annotation == "missense_variant"]
-            if missense_variants.shape[0] > 0:
-                variants_traces.append(self._get_variants_scatter(
-                    missense_variants, name="missense variants", symbol=MISSENSE_VARIANT_SYMBOL))
-
-            deletion_variants = variants[variants.annotation.isin(
-                ["disruptive_inframe_deletion", "conservative_inframe_deletion"])]
-            if deletion_variants.shape[0] > 0:
-                variants_traces.append(self._get_variants_scatter(
-                    deletion_variants, name="inframe deletions", symbol=DELETION_SYMBOL))
-
-            insertion_variants = variants[variants.annotation.isin(
-                ["disruptive_inframe_insertion", "conservative_inframe_insertion"])]
-            if insertion_variants.shape[0] > 0:
-                variants_traces.append(self._get_variants_scatter(
-                    insertion_variants, name="inframe insertions", symbol=INSERTION_SYMBOL))
-
-            other_variants = variants[~variants.annotation.isin([
-                "missense_variant", "disruptive_inframe_deletion", "conservative_inframe_deletion",
-                "disruptive_inframe_insertion", "conservative_inframe_insertion"])]
-            if other_variants.shape[0] > 0:
-                variants_traces.append(self._get_variants_scatter(
-                    other_variants, name="other variants", symbol=OTHER_VARIANT_SYMBOL))
-
-            selected_variants_trace = None
-            if selected_variants:
-                selected_variants_trace = go.Scatter(
-                    x=[int(v.get("dna_mutation").split(":")[0]) for v in selected_variants],
-                    y=[v.get("frequency") for v in selected_variants],
-                    name="selected variants",
-                    mode='markers',
-                    # opacity=0.5,
-                    marker=dict(
-                        symbol="circle",
-                        color="blue",
-                        size=10,
-                        showscale=False
-                    ),
-                    xaxis='x',
-                    showlegend=True,
-                    text=["{} ({})".format(v.get("hgvs_p"), v.get("annotation")) for v in selected_variants],
-                    hovertemplate='<b>%{text}</b><br>' +
-                                  'Allele frequency: %{y:.5f}<br>' +
-                                  'Genomic Position: %{x}'
-                )
-
-            gene_trace = go.Scatter(
-                mode='lines',
-                x=[gene_start, gene_end, gene_end, gene_start],
-                y=[0.4, 0.4, 0.6, 0.6],
-                name=gene_name,
-                fill="toself",
-                fillcolor=plotly.express.colors.sequential.Reds[0],
-                hovertext=gene_name,
-                hoveron="fills",
-                line=dict(width=0),
-                yaxis='y5',
-                xaxis='x',
-                legendgroup='gene'
-            )
-            domain_traces = []
-            for d, c in zip(pfam_protein_features, cycle(plotly.express.colors.sequential.Purples)):
-                domain_start = gene_start + int(d["start"])
-                domain_end = gene_start + int(d["end"])
-                domain_name = d.get('description')
-                domain_traces.append(go.Scatter(
-                    mode='lines',
-                    x=[domain_start, domain_end, domain_end, domain_start],
-                    y=[0, 0, 1, 1],
-                    name=domain_name,
-                    fill="toself",
-                    fillcolor=c,
-                    hovertext=domain_name,
-                    hoveron="fills",
-                    line=dict(width=0),
-                    yaxis='y5',
-                    xaxis='x',
-                    legendgroup='domains'
-                ))
-
-            conservation_traces = [
-                go.Scatter(x=conservation.position_bin, y=conservation.conservation, yaxis='y2', xaxis='x',
-                           text="Conservation SARS-CoV-2", textposition="top right", showlegend=False,
-                           fill='tozeroy', line_color="grey", line_width=1),
-                go.Scatter(x=conservation.position_bin, y=conservation.conservation_sarbecovirus, yaxis='y3', xaxis='x',
-                           text="Conservation SARS-like betacoronavirus", textposition="top right",
-                           showlegend=False, fill='tozeroy', line_color="grey", line_width=1),
-                go.Scatter(x=conservation.position_bin, y=conservation.conservation_vertebrates, yaxis='y4', xaxis='x',
-                           text="Conservation vertebrates", textposition="top right", showlegend=False,
-                           fill='tozeroy', line_color="grey", line_width=1)
-                ]
-
-            data = variants_traces + conservation_traces + [gene_trace] + domain_traces
-            if selected_variants_trace is not None:
-                data.append(selected_variants_trace)
-            layout = go.Layout(
-                template="plotly_white",
-                xaxis=dict(domain=[0.0, 1.0], tickformat=',d', hoverformat=',d', ticksuffix=" bp", ticks="outside",
-                           visible=True, anchor="y5", showspikes=True, spikemode='across', spikethickness=2),
-                xaxis2=dict(domain=[0, 1.0], anchor='y5', visible=False),
-                xaxis3=dict(domain=[0, 1.0], anchor='y5', visible=False),
-                xaxis4=dict(domain=[0, 1.0], anchor='y5', visible=False),
-                xaxis5=dict(domain=[0, 1.0], anchor='y5', visible=False),
-                yaxis=dict(title='Allele frequency', type='log', domain=[0.4, 1.0], anchor='x5'),
-                yaxis2=dict(domain=[0.3, 0.4], visible=False, anchor='x5'),
-                yaxis3=dict(domain=[0.2, 0.3], visible=False, anchor='x5'),
-                yaxis4=dict(domain=[0.1, 0.2], visible=False, anchor='x5'),
-                yaxis5=dict(domain=[0.0, 0.1], visible=False, anchor='x5'),
-                margin=go.layout.Margin(l=0, r=0, b=0, t=20)
-            )
-            fig = go.Figure(data=data, layout=layout)
-
-            # add vertical transparent rectangles with domains
-            for d, c in zip(pfam_protein_features, cycle(plotly.express.colors.sequential.Purples)):
-                fig.add_vrect(
-                    x0=gene_start + int(d["start"]),
-                    x1=gene_start + int(d["end"]),
-                    line_width=0, fillcolor=c, opacity=0.1)
-
-            # add horizontal lines on the frequency boundaries
-            fig.add_hline(y=0.1, line_width=1, line_dash="dash", line_color=VERY_COMMON_VARIANTS_COLOR)
-            fig.add_hline(y=0.01, line_width=1, line_dash="dash", line_color=COMMON_VARIANTS_COLOR)
-            fig.add_hline(y=0.001, line_width=1, line_dash="dash", line_color=RARE_VARIANTS_COLOR)
-
-        return [dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
-                dcc.Markdown("""
-                    *Non synonymous variants occurring in at least two samples on gene {}.*
-                    *Other variants include frameshift indels, stop codon gain and lost and start lost variants.*
-                    *The variants are colored according to their frequency as rare variants (< 0.1 %), 
-                    low frequency variants (>= 0.1% and < 1%), 
-                    common variants (>= 1% and < 10%) and very common variants (>= 10%)*
-                    """.format(gene_name))]
 
     def get_top_occurring_variants_plot(self, top, gene_name, date_range_start, date_range_end):
         data = self.queries.get_top_occurring_variants(top, gene_name)
@@ -470,10 +295,10 @@ class Figures:
     def get_variants_abundance_plot(self, bin_size=50):
 
         # reads genes and domains across the whole genome
-        genes = sorted(self.queries.get_genes_metadata(), key=lambda x: int(x.data.get("start")))
+        genes = self.queries.get_genes_metadata()
         domains = []
         for g in genes:
-            domains.extend([(g, d) for d in self.queries.get_pfam_domains(g)])
+            domains.extend([(g, d) for d in g.get_pfam_domains()])
 
         # reads variants abundance
         variant_abundance = self.queries.get_variant_abundance_histogram(bin_size=bin_size)
@@ -490,12 +315,6 @@ class Figures:
             template="plotly_white",
             xaxis=dict(domain=[0, 1.0], tickformat=',d', hoverformat=',d', ticksuffix=" bp", ticks="outside",
                        visible=True, anchor="y7", showspikes=True, spikemode='across', spikethickness=2),
-            xaxis2=dict(domain=[0, 1.0], anchor='y7', visible=False),
-            xaxis3=dict(domain=[0, 1.0], anchor='y7', visible=False),
-            xaxis4=dict(domain=[0, 1.0], anchor='y7', visible=False),
-            xaxis5=dict(domain=[0, 1.0], anchor='y7', visible=False),
-            xaxis6=dict(domain=[0, 1.0], anchor='y7', visible=False),
-            xaxis7=dict(domain=[0, 1.0], anchor='y7', visible=False),
             yaxis=dict(domain=[0.9, 1.0], anchor='x7'),
             yaxis2=dict(domain=[0.6, 0.9], anchor='x7'),
             yaxis3=dict(domain=[0.45, 0.6], anchor='x7', visible=False),
@@ -507,50 +326,12 @@ class Figures:
             legend={'traceorder': 'normal'}
         )
 
-        gene_traces = []
-        for g, c in zip(genes, cycle(plotly.express.colors.sequential.Reds)):
-            gene_start = int(g.data["start"])
-            gene_end = int(g.data["end"])
-            gene_name = g.data.get('name')
-            gene_traces.append(go.Scatter(
-                mode='lines',
-                x=[gene_start, gene_end, gene_end, gene_start],
-                y=[0, 0, 1, 1],
-                name=gene_name,
-                fill="toself",
-                fillcolor=c,
-                hovertext=gene_name,
-                hoveron="fills",
-                line=dict(width=0),
-                yaxis='y6',
-                xaxis='x',
-                legendgroup='genes'
-            ))
-
-        domain_traces = []
-        for (g, d), c in zip(domains, cycle(plotly.express.colors.sequential.Purples)):
-            gene_start = int(g.data.get("start"))
-            domain_start = gene_start + int(d["start"])
-            domain_end = gene_start + int(d["end"])
-            domain_name = d.get('description')
-            domain_traces.append(go.Scatter(
-                mode='lines',
-                x=[domain_start, domain_end, domain_end, domain_start],
-                y=[0, 0, 1, 1],
-                name=domain_name,
-                fill="toself",
-                fillcolor=c,
-                hovertext=domain_name,
-                hoveron="fills",
-                line=dict(width=0),
-                yaxis='y7',
-                xaxis='x',
-                legendgroup='domains',
-                showlegend=False
-            ))
-
-        fig = go.Figure(
-            data=[
+        gene_traces = [self._get_gene_trace(g, color=c, yaxis='y6') for g, c in zip(genes, GENE_COLORS)]
+        domain_traces = [self._get_domain_trace(color=c, domain=d, gene=g, yaxis='y7')
+                         for (g, d), c in zip(domains, DOMAIN_COLORS)]
+        conservation_traces = self._get_conservation_traces(
+            conservation, xaxis='x', yaxis1='y3', yaxis2='y4', yaxis3='y5')
+        variant_counts_traces = [
                      go.Scatter(x=data.position_bin, y=data.count_variant_observations,
                                 name="All variants", text="All variants", showlegend=False,
                                 line_color=plotly.express.colors.sequential.Blues[-2], line_width=1),
@@ -561,17 +342,10 @@ class Figures:
                                 showlegend=False, line_color=plotly.express.colors.sequential.Blues[-3]),
                      go.Scatter(x=data.position_bin, y=data.count_unique_variants, yaxis='y2',
                                 name="Unique variants", text="Unique variants", showlegend=False, fill='tonexty',
-                                line_color=plotly.express.colors.sequential.Blues[-4], line_width=1),
-                     go.Scatter(x=data.position_bin, y=data.conservation, yaxis='y3',
-                                text="Conservation SARS-CoV-2", textposition="top right", showlegend=False,
-                                fill='tozeroy', line_color="grey", line_width=1),
-                     go.Scatter(x=data.position_bin, y=data.conservation_sarbecovirus, yaxis='y4',
-                                text="Conservation SARS-like betacoronavirus", textposition="top right",
-                                showlegend=False, fill='tozeroy', line_color="grey", line_width=1),
-                     go.Scatter(x=data.position_bin, y=data.conservation_vertebrates, yaxis='y5',
-                                text="Conservation vertebrates", textposition="top right", showlegend=False,
-                                fill='tozeroy', line_color="grey", line_width=1)
-                 ] + gene_traces + domain_traces, layout=layout)
+                                line_color=plotly.express.colors.sequential.Blues[-4], line_width=1)
+                 ]
+
+        fig = go.Figure(data=variant_counts_traces + conservation_traces + gene_traces + domain_traces, layout=layout)
 
         # add track names
         fig.add_annotation(x=0.98, y=1.1, xref="x domain", yref="y domain", text="All variants",
@@ -591,7 +365,8 @@ class Figures:
                 config=PLOTLY_CONFIG
             ),
             dcc.Markdown("""
-                ***Genome view*** *representing the abundance of variants and ConsHMM (Arneson, 2019) conservation using a bin size of {} bp.*
+                ***Genome view*** *representing the abundance of variants and ConsHMM (Arneson, 2019) conservation 
+                using a bin size of {} bp. Synonymous variants are included.*
                 
                 *The first track shows the count of variants across the genome including repetitions. *
                 *The second track shows the count of unique variants across the genome, the horizontal line represents 
@@ -612,3 +387,204 @@ class Figures:
                            round(np.corrcoef(data.conservation_sarbecovirus, data.count_unique_variants)[0][1], 5),
                            round(np.corrcoef(data.conservation_vertebrates, data.count_unique_variants)[0][1], 5)
                            ))]
+
+    def get_variants_plot(self, gene_name, selected_variants, bin_size):
+
+        # reads gene annotations
+        gene = self.queries.get_gene(gene_name)
+        pfam_protein_features = gene.get_pfam_domains()
+
+        # reads variants
+        variants = self.queries.get_non_synonymous_variants_by_region(start=gene.start, end=gene.end)
+
+        # reads conservation and bins it
+        conservation = self.queries.get_conservation_table(start=gene.start, end=gene.end, bin_size=bin_size)
+
+        fig = dcc.Markdown("""**No variants for the current selection**""")
+
+        if variants.shape[0] > 0:
+            # reads total number of samples and calculates frequencies
+            count_samples = self.queries.count_ena_samples()
+            variants["af"] = variants.count_occurrences / count_samples
+            variants["log_af"] = variants.af.transform(lambda x: np.log(x + 1))
+            variants["log_count"] = variants.count_occurrences.transform(lambda x: np.log(x))
+            # TODO: do something in the data ingestion about multiple annotations on the same variant
+            variants.annotation = variants.annotation.transform(lambda a: a.split("&")[0])
+
+            main_xaxis = 'x'
+
+            variants_traces = []
+            missense_variants = variants[variants.annotation == "missense_variant"]
+            if missense_variants.shape[0] > 0:
+                variants_traces.append(self._get_variants_scatter(
+                    missense_variants, name="missense variants", symbol=MISSENSE_VARIANT_SYMBOL, xaxis=main_xaxis))
+
+            deletion_variants = variants[variants.annotation.isin(
+                ["disruptive_inframe_deletion", "conservative_inframe_deletion"])]
+            if deletion_variants.shape[0] > 0:
+                variants_traces.append(self._get_variants_scatter(
+                    deletion_variants, name="inframe deletions", symbol=DELETION_SYMBOL, xaxis=main_xaxis))
+
+            insertion_variants = variants[variants.annotation.isin(
+                ["disruptive_inframe_insertion", "conservative_inframe_insertion"])]
+            if insertion_variants.shape[0] > 0:
+                variants_traces.append(self._get_variants_scatter(
+                    insertion_variants, name="inframe insertions", symbol=INSERTION_SYMBOL, xaxis=main_xaxis))
+
+            other_variants = variants[~variants.annotation.isin([
+                "missense_variant", "disruptive_inframe_deletion", "conservative_inframe_deletion",
+                "disruptive_inframe_insertion", "conservative_inframe_insertion"])]
+            if other_variants.shape[0] > 0:
+                variants_traces.append(self._get_variants_scatter(
+                    other_variants, name="other variants", symbol=OTHER_VARIANT_SYMBOL, xaxis=main_xaxis))
+
+            selected_variants_trace = None
+            if selected_variants:
+                selected_variants_trace = go.Scatter(
+                    x=[int(v.get("dna_mutation").split(":")[0]) for v in selected_variants],
+                    y=[v.get("frequency") for v in selected_variants],
+                    name="selected variants",
+                    mode='markers',
+                    marker=dict(
+                        symbol="circle",
+                        color="blue",
+                        size=10,
+                        showscale=False
+                    ),
+                    xaxis=main_xaxis,
+                    showlegend=True,
+                    text=["{} ({})".format(v.get("hgvs_p"), v.get("annotation")) for v in selected_variants],
+                    hovertemplate=VARIANT_TOOLTIP
+                )
+
+            gene_trace = self._get_gene_trace(
+                gene, color=plotly.express.colors.sequential.Reds[1], yaxis='y5', xaxis=main_xaxis)
+            domain_traces = [self._get_domain_trace(
+                color=c, gene=gene, domain=d, yaxis='y6', xaxis=main_xaxis, showlegend=True)
+                for d, c in zip(pfam_protein_features, DOMAIN_COLORS)]
+            conservation_traces = self._get_conservation_traces(
+                conservation, main_xaxis, yaxis1='y2', yaxis2='y3', yaxis3='y4')
+
+            data = variants_traces + conservation_traces + [gene_trace] + domain_traces
+            if selected_variants_trace is not None:
+                data.append(selected_variants_trace)
+
+            layout = go.Layout(
+                template="plotly_white",
+                xaxis=dict(tickformat=',d', hoverformat=',d', ticksuffix=" bp", ticks="outside",
+                           showspikes=True, spikemode='across', spikethickness=1, anchor='y6'),
+                yaxis=dict(title='Allele frequency', type='log', domain=[0.4, 1.0], anchor=main_xaxis),
+                yaxis2=dict(domain=[0.3, 0.4], visible=False, anchor=main_xaxis),
+                yaxis3=dict(domain=[0.2, 0.3], visible=False, anchor=main_xaxis),
+                yaxis4=dict(domain=[0.1, 0.2], visible=False, anchor=main_xaxis),
+                yaxis5=dict(domain=[0.05, 0.1], visible=False, anchor=main_xaxis),
+                yaxis6=dict(domain=[0.0, 0.05], visible=False, anchor=main_xaxis),
+                margin=go.layout.Margin(l=0, r=0, b=0, t=20)
+            )
+
+            fig = go.Figure(data=data, layout=layout)
+
+            fig.add_annotation(x=0.98, y=1.0, xref="x domain", yref="y2 domain", text="Conservation SARS-CoV-2",
+                               showarrow=False, yshift=10)
+            fig.add_annotation(x=0.98, y=1.0, xref="x domain", yref="y3 domain", text="Conservation SARS-like betaCoV",
+                               showarrow=False, yshift=10)
+            fig.add_annotation(x=0.98, y=1.0, xref="x domain", yref="y4 domain", text="Conservation vertebrate CoV",
+                               showarrow=False, yshift=10)
+
+            # add horizontal lines on the frequency boundaries
+            fig.add_hline(y=0.1, line_width=1, line_dash="dash", line_color=VERY_COMMON_VARIANTS_COLOR)
+            fig.add_hline(y=0.01, line_width=1, line_dash="dash", line_color=COMMON_VARIANTS_COLOR)
+            fig.add_hline(y=0.001, line_width=1, line_dash="dash", line_color=RARE_VARIANTS_COLOR)
+
+        return [dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
+                dcc.Markdown("""
+                    ***Gene view*** *representing each variant with its frequency in the population and 
+                    ConsHMM (Arneson, 2019) conservation using a bin size of {} bp. Synonymous variants and variants 
+                    occurring in a single sample are excluded.*
+                
+                    *The scatter plot shows non synonymous variants occurring in at least two samples on gene {}. 
+                    The x-axis shows the genomic coordinates and the y-axis shows the allele frequency.*
+                    *The category of "other variants" includes frameshift indels, stop codon gain and lost and 
+                    start lost variants.*
+                    *The variants are colored according to their frequency as rare variants (< 0.1 %), 
+                    low frequency variants (>= 0.1% and < 1%), common variants (>= 1% and < 10%) and very common 
+                    variants (>= 10%)*
+                    
+                    *The second, third and fourth tracks represent the conservation as reported by ConsHMM within 
+                    SARS-CoV-2, among SARS-like betaCoV and among vertebrate CoV.*
+                    *Genes and Pfam domains are represented in tones of red and purple respectively.*
+                    
+                    *Conservation data source: https://github.com/ernstlab/ConsHMM_CoV*
+                    
+                    *Arneson A, Ernst J. Systematic discovery of conservation states for single-nucleotide annotation of the 
+                    human genome. Communications Biology, 248, 2019. doi: https://doi.org/10.1038/s42003-019-0488-1*
+                    """.format(bin_size, gene_name))]
+
+    def _get_conservation_traces(self, conservation, xaxis, yaxis1, yaxis2, yaxis3):
+        return [
+            go.Scatter(x=conservation.position_bin, y=conservation.conservation, yaxis=yaxis1, xaxis=xaxis,
+                       text="Conservation SARS-CoV-2", textposition="top right", showlegend=False,
+                       fill='tozeroy', line_color="grey", line_width=1),
+            go.Scatter(x=conservation.position_bin, y=conservation.conservation_sarbecovirus, yaxis=yaxis2,
+                       xaxis=xaxis, text="Conservation SARS-like betacoronavirus", textposition="top right",
+                       showlegend=False, fill='tozeroy', line_color="grey", line_width=1),
+            go.Scatter(x=conservation.position_bin, y=conservation.conservation_vertebrates, yaxis=yaxis3,
+                       xaxis=xaxis, text="Conservation vertebrates", textposition="top right",
+                       showlegend=False, fill='tozeroy', line_color="grey", line_width=1)
+        ]
+
+    @staticmethod
+    def _get_domain_trace(color:str, domain: dict, gene: Gene, yaxis='y', xaxis='x', showlegend=False):
+        domain_start = gene.start + int(domain["start"])
+        domain_end = gene.start + int(domain["end"])
+        domain_name = domain.get('description')
+        return go.Scatter(
+            mode='lines',
+            x=[domain_start, domain_end, domain_end, domain_start],
+            y=[0, 0, 1, 1],
+            name=domain_name,
+            fill="toself",
+            fillcolor=color,
+            text="<b>{} {}</b>: {}-{}".format(gene.name, domain_name, domain_start, domain_end),
+            hoverinfo="text",
+            line=dict(width=0),
+            yaxis=yaxis,
+            xaxis=xaxis,
+            legendgroup='domains',
+            showlegend=showlegend
+        )
+
+    @staticmethod
+    def _get_gene_trace(gene: Gene, color, yaxis="y", xaxis='x'):
+        return go.Scatter(
+            mode='lines',
+            x=[gene.start, gene.end, gene.end, gene.start],
+            y=[0, 0, 1, 1],
+            name=gene.name,
+            fill="toself",
+            fillcolor=color,
+            text="<b>{}</b>: {}-{}".format(gene.name, gene.start, gene.end),
+            hoverinfo="text",
+            line=dict(width=0),
+            yaxis=yaxis,
+            xaxis=xaxis,
+            legendgroup='gene'
+        )
+
+    def _get_variants_scatter(self, variants, name, symbol, xaxis='x'):
+        return go.Scatter(
+            x=variants.position,
+            y=variants.af,
+            name=name,
+            mode='markers',
+            # opacity=0.5,
+            marker=dict(
+                symbol=symbol,
+                color=variants.af.transform(self._get_color_by_af),
+                showscale=False
+            ),
+            xaxis=xaxis,
+            showlegend=True,
+            text=variants[["hgvs_p", "annotation"]].apply(lambda x: "{} ({})".format(x[0], x[1]), axis=1),
+            hovertemplate=VARIANT_TOOLTIP
+        )

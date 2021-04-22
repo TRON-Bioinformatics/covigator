@@ -77,18 +77,12 @@ class Queries:
         return self.session.query(Gene).filter(Gene.name == gene_name).first()
 
     def get_genes(self):
-        return [g[0] for g in self.session.query(Gene.name).all()]
+        return [g[0] for g in self.session.query(Gene.name).order_by(Gene.start).all()]
 
     def get_genes_metadata(self):
-        return self.session.query(Gene).all()
+        return self.session.query(Gene).order_by(Gene.start).all()
 
-    def get_pfam_domains(self, gene: Gene):
-        protein_features = gene.data.get("transcripts", [])[0].get("translations", [])[0].get("protein_features")
-        pfam_protein_features = [f for f in protein_features if f.get("dbname") == "Pfam"]
-        return sorted(pfam_protein_features, key=lambda d: int(d.get("start")))
-
-    def get_non_synonymous_variants_by_gene(self, start, end) -> pd.DataFrame:
-        # TODO: make this a query by position
+    def get_non_synonymous_variants_by_region(self, start, end) -> pd.DataFrame:
         subquery = self.session.query(VariantObservation.position, Variant.annotation, Variant.hgvs_p,
                                func.count(VariantObservation.position).label("count_occurrences"))\
             .join(Variant)\
