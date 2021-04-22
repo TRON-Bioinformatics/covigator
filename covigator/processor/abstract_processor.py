@@ -11,10 +11,9 @@ from covigator.database.queries import Queries
 
 class AbstractProcessor:
 
-    BATCH_SIZE = 1000
-
-    def __init__(self, database: Database, dask_client: Client, data_source: DataSource):
+    def __init__(self, database: Database, dask_client: Client, data_source: DataSource, batch_size: int):
         self.data_source = data_source
+        self.batch_size = batch_size
         self.start_time = datetime.now()
         self.has_error = False
         self.error_message = None
@@ -44,7 +43,7 @@ class AbstractProcessor:
                 # sends the run for processing
                 futures.extend(self._process_run(run_accession=job.run_accession))
                 count += 1
-                if count % self.BATCH_SIZE == 0:
+                if count % self.batch_size == 0:
                     # process a batch
                     self.dask_client.gather(futures=futures)
                     futures = []
