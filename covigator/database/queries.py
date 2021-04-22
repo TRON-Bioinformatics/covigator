@@ -1,5 +1,5 @@
 from datetime import date, datetime
-from typing import List
+from typing import List, Union
 import pandas as pd
 from sqlalchemy import and_, desc, asc, func
 from sqlalchemy.orm import Session, aliased
@@ -17,7 +17,7 @@ class Queries:
         self.session = session
 
     def find_job_by_accession_and_status(
-            self, run_accession: str, status: JobStatus, data_source: DataSource) -> JobEna | JobGisaid:
+            self, run_accession: str, status: JobStatus, data_source: DataSource) -> Union[JobEna, JobGisaid]:
         if data_source == DataSource.ENA:
             return self.session.query(JobEna) \
                 .filter(and_(JobEna.run_accession == run_accession, JobEna.status == status)) \
@@ -29,7 +29,7 @@ class Queries:
         else:
             raise ValueError("Bad data source {}".format(data_source))
 
-    def find_job_by_accession(self, run_accession: str, data_source: DataSource) -> JobEna | JobGisaid:
+    def find_job_by_accession(self, run_accession: str, data_source: DataSource) -> Union[JobEna, JobGisaid]:
         if data_source == DataSource.ENA:
             return self.session.query(JobEna).filter(JobEna.run_accession == run_accession).first()
         elif data_source == DataSource.GISAID:
