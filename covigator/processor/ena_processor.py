@@ -19,42 +19,7 @@ class EnaProcessor(AbstractProcessor):
 
     def __init__(self, database: Database, dask_client: Client):
         logger.info("Initialising ENA processor")
-        super().__init__(database, dask_client)
-
-    def process(self):
-        logger.info("Starting ENA processor")
-        session = self.database.get_database_session()
-        count = 0
-        try:
-            futures = []
-            while True:
-                job = session.query(JobEna)\
-                    .filter(JobEna.status == JobStatus.PENDING)\
-                    .order_by(JobEna.created_at.desc())\
-                    .first()
-                if not job:
-                    logger.info("No more jobs to process after sending {} runs to process".format(count))
-                    break
-
-                # it has to update the status before doing anything so this processor does not read it again
-                job.status = JobStatus.QUEUED
-                job.queued_at = datetime.now()
-                session.commit()
-
-                # sends the run for processing
-                futures.extend(self._process_run(run_accession=job.run_accession))
-                count += 1
-            self.dask_client.gather(futures=futures)
-
-        except Exception as e:
-            logger.exception(e)
-            session.rollback()
-            self.error_message = self._get_traceback_from_exception(e)
-            self.has_error = True
-        finally:
-            self._write_execution_log(session, count, data_source=DataSource.ENA)
-            session.close()
-            logger.info("Finished ENA processor")
+        super().__init__(database, dask_client, DataSource.ENA)
 
     def _process_run(self, run_accession: str):
         # NOTE: here we set the priority of each step to ensure a depth first processing

@@ -37,6 +37,20 @@ class Queries:
         else:
             raise ValueError("Bad data source {}".format(data_source))
 
+    def find_first_pending_job(self, data_source: DataSource) -> Union[JobEna, JobGisaid]:
+        if data_source == DataSource.ENA:
+            return self.session.query(JobEna) \
+                .filter(JobEna.status == JobStatus.PENDING) \
+                .order_by(JobEna.created_at.desc()) \
+                .first()
+        elif data_source == DataSource.GISAID:
+            return self.session.query(JobGisaid) \
+                .filter(JobGisaid.status == JobStatus.PENDING) \
+                .order_by(JobGisaid.created_at.desc()) \
+                .first()
+        else:
+            raise ValueError("Bad data source {}".format(data_source))
+
     def find_ena_run_by_accession(self, run_accession: str) -> SampleEna:
         return self.session.query(SampleEna).filter(SampleEna.run_accession == run_accession).first()
 
