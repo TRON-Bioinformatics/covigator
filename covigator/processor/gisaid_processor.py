@@ -1,32 +1,25 @@
 from datetime import datetime
-
-from sqlalchemy import and_
-from sqlalchemy.orm import Session
-
-from covigator.misc import backoff_retrier
-from covigator.database.model import SampleGisaid, JobStatus, JobGisaid, Sample, DataSource, Log, CovigatorModule
+from covigator.database.model import JobStatus, JobGisaid, Sample, DataSource
 from covigator.database.database import Database, session_scope
 from logzero import logger
 from dask.distributed import Client
-import os
-from covigator.processor.downloader import Downloader
+
+from covigator.database.queries import Queries
+from covigator.processor.abstract_processor import AbstractProcessor
 from covigator.processor.gisaid_pipeline import GisaidPipeline
 from covigator.processor.vcf_loader import VcfLoader
 
 NUMBER_RETRIES_DOWNLOADER = 5
 
 
-class GisaidProcessor:
+class GisaidProcessor(AbstractProcessor):
 
     def __init__(self, database: Database, dask_client: Client):
-        self.start_time = datetime.now()
-        self.has_error = False
-        self.database = database
-        assert self.database is not None, "Empty database"
-        self.dask_client = dask_client
-        assert self.dask_client is not None, "Empty dask client"
+        logger.info("Initialising GISAID processor")
+        super().__init__(database, dask_client)
 
     def process(self):
+        logger.info("Starting GISAID processor")
         session = self.database.get_database_session()
         count = 0
         try:
@@ -53,9 +46,10 @@ class GisaidProcessor:
         except Exception as e:
             logger.exception(e)
             session.rollback()
+            self.error_message = self._get_traceback_from_exception(e)
             self.has_error = True
         finally:
-            self._write_execution_log(session, count)
+            self._write_execution_log(session, count, data_source=DataSource.GISAID)
             session.close()
 
     def _process_run(self, run_accession: str):
@@ -66,33 +60,33 @@ class GisaidProcessor:
             GisaidProcessor.load, future_process, priority=2)
         return [future_process, future_load]
 
-
     @staticmethod
     def run_pipeline(run_accession: str) -> str:
-        with session_scope() as session:
-            job = GisaidProcessor.find_job_by_accession_and_status(
-                run_accession=run_accession, session=session, status=JobStatus.DOWNLOADED)
-            if job is not None:
-                try:
+        try:
+            with session_scope() as session:
+                queries = Queries(session)
+                job = queries.find_job_by_accession_and_status(
+                    run_accession=run_accession, status=JobStatus.QUEUED, data_source=DataSource.GISAID)
+                if job is not None:
                     vcf = GisaidPipeline().run(run_accession=run_accession)
                     logger.info("Processed {}".format(job.run_accession))
                     job.status = JobStatus.PROCESSED
                     job.analysed_at = datetime.now()
                     job.vcf_path = vcf
-                except Exception as e:  # TODO: do we want a less wide exception capture?
-                    logger.info("Analysis error {} {}".format(run_accession, str(e)))
-                    job.status = JobStatus.FAILED_PROCESSING
-                    job.failed_at = datetime.now()
-                    job.error_message = str(e)
+        except Exception as e:
+            # captures any possible exception happening, but logs it in the DB
+            GisaidProcessor._log_error_in_job(
+                run_accession=run_accession, exception=e, status=JobStatus.FAILED_PROCESSING, data_source=DataSource.GISAID)
         return run_accession
 
     @staticmethod
     def load(run_accession: str):
-        with session_scope() as session:
-            job = GisaidProcessor.find_job_by_accession_and_status(
-                run_accession=run_accession, session=session, status=JobStatus.PROCESSED)
-            if job is not None:
-                try:
+        try:
+            with session_scope() as session:
+                queries = Queries(session)
+                job = queries.find_job_by_accession_and_status(
+                    run_accession=run_accession, status=JobStatus.PROCESSED, data_source=DataSource.GISAID)
+                if job is not None:
                     VcfLoader().load(
                         vcf_file=job.vcf_path,
                         sample=Sample(id=job.run_accession, source=DataSource.GISAID),
@@ -100,36 +94,8 @@ class GisaidProcessor:
                     logger.info("Loaded {}".format(job.run_accession))
                     job.status = JobStatus.LOADED
                     job.loaded_at = datetime.now()
-                except Exception as e:  # TODO: do we want a less wide exception capture?
-                    logger.info("Loading error {} {}".format(run_accession, str(e)))
-                    job.status = JobStatus.FAILED_LOAD
-                    job.failed_at = datetime.now()
-                    job.error_message = str(e)
+        except Exception as e:
+            # captures any possible exception happening, but logs it in the DB
+            GisaidProcessor._log_error_in_job(
+                run_accession=run_accession, exception=e, status=JobStatus.FAILED_LOAD, data_source=DataSource.GISAID)
         return run_accession
-
-    @staticmethod
-    def find_job_by_accession_and_status(run_accession: str, session: Session, status: JobStatus) -> JobGisaid:
-        job = session.query(JobGisaid) \
-            .filter(and_(JobGisaid.run_accession == run_accession, JobGisaid.status == status)) \
-            .first()
-        return job
-
-    @staticmethod
-    def find_gisaid_run_by_accession(run_accession: str, session: Session) -> SampleGisaid:
-        gisaid_run = session.query(SampleGisaid).filter(SampleGisaid.run_accession == run_accession).first()
-        return gisaid_run
-
-    def _write_execution_log(self, session: Session, count):
-        end_time = datetime.now()
-        session.add(Log(
-            start=self.start_time,
-            end=end_time,
-            source=DataSource.GISAID,
-            module=CovigatorModule.PROCESSOR,
-            has_error=self.has_error,
-            data={
-                "processed": count
-            }
-        ))
-        session.commit()
-

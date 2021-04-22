@@ -4,7 +4,7 @@ import pandas as pd
 from sqlalchemy import and_, desc, asc, func
 from sqlalchemy.orm import Session, aliased
 from covigator.database.model import Log, DataSource, CovigatorModule, SampleEna, JobEna, JobStatus, VariantObservation, \
-    Gene, Variant, VariantCooccurrence, Conservation
+    Gene, Variant, VariantCooccurrence, Conservation, JobGisaid
 
 SYNONYMOUS_VARIANT = "synonymous_variant"
 
@@ -16,13 +16,26 @@ class Queries:
     def __init__(self, session: Session):
         self.session = session
 
-    def find_job_by_accession_and_status(self, run_accession: str, status: JobStatus) -> JobEna:
-        return self.session.query(JobEna)\
-            .filter(and_(JobEna.run_accession == run_accession, JobEna.status == status)) \
-            .first()
+    def find_job_by_accession_and_status(
+            self, run_accession: str, status: JobStatus, data_source: DataSource) -> JobEna | JobGisaid:
+        if data_source == DataSource.ENA:
+            return self.session.query(JobEna) \
+                .filter(and_(JobEna.run_accession == run_accession, JobEna.status == status)) \
+                .first()
+        elif data_source == DataSource.GISAID:
+            return self.session.query(JobGisaid)\
+                .filter(and_(JobGisaid.run_accession == run_accession, JobGisaid.status == status)) \
+                .first()
+        else:
+            raise ValueError("Bad data source {}".format(data_source))
 
-    def find_job_by_accession(self, run_accession: str) -> JobEna:
-        return self.session.query(JobEna).filter(JobEna.run_accession == run_accession).first()
+    def find_job_by_accession(self, run_accession: str, data_source: DataSource) -> JobEna | JobGisaid:
+        if data_source == DataSource.ENA:
+            return self.session.query(JobEna).filter(JobEna.run_accession == run_accession).first()
+        elif data_source == DataSource.GISAID:
+            return self.session.query(JobGisaid).filter(JobGisaid.run_accession == run_accession).first()
+        else:
+            raise ValueError("Bad data source {}".format(data_source))
 
     def find_ena_run_by_accession(self, run_accession: str) -> SampleEna:
         return self.session.query(SampleEna).filter(SampleEna.run_accession == run_accession).first()
