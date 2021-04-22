@@ -17,9 +17,9 @@ class ProcessorTests(TestCase):
         self.database = Database(test=True)
         self.session = self.database.get_database_session()
         self.ena_processor = EnaProcessor(
-            database=self.database, dask_client=Client(n_workers=int(1), threads_per_worker=1))
+            database=self.database, dask_client=Client(n_workers=int(1), threads_per_worker=1), batch_size=10)
         self.gisaid_processor = GisaidProcessor(
-            database=self.database, dask_client=Client(n_workers=int(1), threads_per_worker=1))
+            database=self.database, dask_client=Client(n_workers=int(1), threads_per_worker=1), batch_size=10)
         self.faker = Faker()
 
     def test_no_ena_jobs(self):
