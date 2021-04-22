@@ -1,5 +1,5 @@
 import unittest
-from covigator.processor.pipeline import Pipeline, CovigatorPipelineError
+from covigator.processor.ena_pipeline import Pipeline, CovigatorPipelineError
 from covigator.processor.gisaid_pipeline import GisaidPipeline
 
 class PipelineTest(unittest.TestCase):

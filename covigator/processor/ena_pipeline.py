@@ -42,8 +42,8 @@ class Pipeline:
             vcf_file = os.path.join(tmpdir, "pileup.vcf")
             snpeff_vcf_file_gz = os.path.join(fq_path, "snpeff.vcf.gz")
 
-            filtered_fastq1 = os.path.join(tmp_dir, "filtered_R1.tmp.gz")
-            filtered_fastq2 = os.path.join(tmp_dir, "filtered_R2.tmp.gz")
+            filtered_fastq1 = os.path.join(tmpdir, "filtered_R1.tmp.gz")
+            filtered_fastq2 = os.path.join(tmpdir, "filtered_R2.tmp.gz")
 
             if fastq2:
                 cmd_fastp = "{} -i {} -I {} -o {} -O {}".format(self.commands["fastp"], fastq1, fastq2, filtered_fastq1, filtered_fastq2)

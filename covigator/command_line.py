@@ -5,7 +5,7 @@ import covigator
 from covigator.accessor.ena_accessor import EnaAccessor
 from covigator.accessor.gisaid_accessor import GisaidAccessor
 from covigator.database.database import Database
-from covigator.processor.pipeline import Pipeline
+from covigator.processor.ena_pipeline import Pipeline
 from covigator.processor.gisaid_pipeline import GisaidPipeline
 from covigator.processor.ena_processor import EnaProcessor
 from covigator.processor.gisaid_processor import GisaidProcessor
