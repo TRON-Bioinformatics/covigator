@@ -9,7 +9,7 @@ import os
 from covigator.processor.abstract_processor import AbstractProcessor
 from covigator.processor.cooccurrence_matrix import CooccurrenceMatrix
 from covigator.processor.downloader import Downloader
-from covigator.processor.pipeline import Pipeline
+from covigator.processor.ena_pipeline import Pipeline
 from covigator.processor.vcf_loader import VcfLoader
 
 NUMBER_RETRIES_DOWNLOADER = 5
