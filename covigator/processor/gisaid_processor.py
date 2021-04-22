@@ -14,9 +14,9 @@ NUMBER_RETRIES_DOWNLOADER = 5
 
 class GisaidProcessor(AbstractProcessor):
 
-    def __init__(self, database: Database, dask_client: Client):
+    def __init__(self, database: Database, dask_client: Client, batch_size: int):
         logger.info("Initialising GISAID processor")
-        super().__init__(database, dask_client, DataSource.GISAID)
+        super().__init__(database, dask_client, DataSource.GISAID, batch_size)
 
     def _process_run(self, run_accession: str):
         # NOTE: here we set the priority of each step to ensure a depth first processing

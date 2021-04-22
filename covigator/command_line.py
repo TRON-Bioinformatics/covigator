@@ -83,9 +83,9 @@ def processor():
         logzero.logfile(log_file, maxBytes=1e6, backupCount=3)
     client = Client(n_workers=int(args.num_cpus), threads_per_worker=1)
     if args.data_source == "ENA":
-        EnaProcessor(database=Database(), dask_client=client).process()
+        EnaProcessor(database=Database(), dask_client=client, batch_size=int(args.num_cpus)*2).process()
     elif args.data_source == "GISAID":
-        GisaidProcessor(database=Database(), dask_client=client).process()
+        GisaidProcessor(database=Database(), dask_client=client, batch_size=int(args.num_cpus)*2).process()
     else:
         logger.error("Unknown data source. Please choose either ENA or GISAID")
 
