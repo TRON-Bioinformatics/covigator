@@ -1,13 +1,10 @@
 from datetime import date, datetime
 from typing import List
-
 import pandas as pd
-import numpy as np
 from sqlalchemy import and_, desc, asc, func
 from sqlalchemy.orm import Session, aliased
-
 from covigator.database.model import Log, DataSource, CovigatorModule, SampleEna, JobEna, JobStatus, VariantObservation, \
-    Gene, Variant, VariantCooccurrence
+    Gene, Variant, VariantCooccurrence, Conservation
 
 SYNONYMOUS_VARIANT = "synonymous_variant"
 
@@ -80,13 +77,17 @@ class Queries:
         return self.session.query(Gene).filter(Gene.name == gene_name).first()
 
     def get_genes(self):
-        return [g[0] for g in self.session.query(Gene.name).all()]
+        return [g[0] for g in self.session.query(Gene.name).order_by(Gene.start).all()]
 
-    def get_non_synonymous_variants_by_gene(self, gene_name) -> pd.DataFrame:
+    def get_genes_metadata(self):
+        return self.session.query(Gene).order_by(Gene.start).all()
+
+    def get_non_synonymous_variants_by_region(self, start, end) -> pd.DataFrame:
         subquery = self.session.query(VariantObservation.position, Variant.annotation, Variant.hgvs_p,
                                func.count(VariantObservation.position).label("count_occurrences"))\
             .join(Variant)\
-            .filter(and_(Variant.gene_name == gene_name, Variant.annotation != SYNONYMOUS_VARIANT))\
+            .filter(and_(Variant.position >= start, Variant.position <= end,
+                         Variant.annotation != SYNONYMOUS_VARIANT))\
             .group_by(VariantObservation.position, Variant.annotation, Variant.hgvs_p).subquery()
         return pd.read_sql(
             self.session.query(subquery).filter(subquery.c.count_occurrences > 1).statement, self.session.bind)
@@ -333,3 +334,55 @@ class Queries:
             full_matrix_with_annotations["frequency"] = full_matrix_with_annotations["count"] / count_samples
 
         return full_matrix_with_annotations
+
+    def get_variant_abundance_histogram(self, bin_size=50) -> pd.DataFrame:
+
+        # queries for the maximum position
+        maximum_position = self.session.query(func.max(Variant.position)).first()[0]
+        histogram = None
+        if maximum_position is not None:
+            # builds all possible bins
+            all_bins = pd.DataFrame(data=[i*bin_size for i in range(int(maximum_position/bin_size) + 1)], columns=["position_bin"])
+
+            # counts variants over those bins
+            sql_query = """
+                    SELECT cast("position"/{bin_size} as int)*{bin_size} AS position_bin,
+                           COUNT(*) as count_unique_variants
+                    FROM {table_name}
+                    GROUP BY position_bin
+                    ORDER BY position_bin;
+                    """.format(bin_size=bin_size, table_name=Variant.__tablename__)
+            binned_counts_variants = pd.read_sql_query(sql_query, self.session.bind)
+
+            # counts variant observations over those bins
+            sql_query = """
+                    SELECT cast("position"/{bin_size} as int)*{bin_size} AS position_bin,
+                           COUNT(*) as count_variant_observations
+                    FROM {table_name}
+                    GROUP BY position_bin
+                    ORDER BY position_bin;
+                    """.format(bin_size=bin_size, table_name=VariantObservation.__tablename__)
+            binned_counts_variant_observations = pd.read_sql_query(sql_query, self.session.bind)
+
+            histogram = all_bins.set_index("position_bin").join(binned_counts_variants.set_index("position_bin"))
+            histogram = histogram.join(binned_counts_variant_observations.set_index("position_bin"))
+            histogram.fillna(0, inplace=True)
+            histogram.reset_index(inplace=True)
+
+        return histogram
+
+    def get_conservation_table(self, bin_size=50, start=None, end=None) -> pd.DataFrame:
+        # counts variants over those bins
+        sql_query = """
+                SELECT cast("start"/{bin_size} as int)*{bin_size} AS position_bin,
+                       AVG("conservation") as conservation,
+                       AVG("conservation_sarbecovirus") as conservation_sarbecovirus,
+                       AVG("conservation_vertebrates") as conservation_vertebrates
+                FROM {table_name}
+                {where}
+                GROUP BY position_bin
+                ORDER BY position_bin;
+                """.format(bin_size=bin_size, table_name= Conservation.__tablename__,
+                           where="WHERE start >= {start} and start <= {end}".format(start=start, end=end)
+                           if start is not None and end is not None else "")
+        return pd.read_sql_query(sql_query, self.session.bind)

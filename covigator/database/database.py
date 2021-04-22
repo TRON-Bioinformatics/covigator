@@ -10,7 +10,8 @@ from tenacity import wait_exponential, stop_after_attempt
 
 from covigator import ENV_COVIGATOR_DB_HOST, ENV_COVIGATOR_DB_NAME, ENV_COVIGATOR_DB_USER, ENV_COVIGATOR_DB_PASSWORD, \
     ENV_COVIGATOR_DB_PORT, ENV_COVIGATOR_DB_POOL_SIZE, ENV_COVIGATOR_DB_MAX_OVERFLOW
-from covigator.database.model import Base, Gene
+from covigator.database.model import Base, Gene, Conservation
+from covigator.references.conservation import ConservationLoader
 from covigator.references.gene_annotations import GeneAnnotationsLoader
 
 
@@ -47,6 +48,8 @@ class Database:
         # loads reference genome if not set
         if session.query(Gene).count() == 0:
             GeneAnnotationsLoader(session).load_data()
+        if session.query(Conservation).count() == 0:
+            ConservationLoader(session).load_data()
 
     def get_database_session(self) -> Session:
         return self.Session()

@@ -1,3 +1,4 @@
+import unittest
 from unittest import TestCase
 from covigator.database.model import SampleEna
 from covigator.processor.downloader import Downloader, CovigatorMD5CheckSumError
@@ -9,6 +10,7 @@ class DownloaderTest(TestCase):
     def setUp(self) -> None:
         self.downloader = Downloader()
 
+    @unittest.skip
     def test_download_ena_run_with_bad_md5(self):
         run_accession = "TEST12345"
         ena_run = SampleEna(

@@ -19,7 +19,6 @@ from covigator.database.queries import Queries
 from covigator.dashboard.figures import Figures
 
 MONTH_PATTERN = "%Y-%m"
-
 MISSING_VALUE = "-"
 
 
@@ -238,7 +237,6 @@ class Dashboard:
 
     def get_tab_variants(self):
 
-        #circos_plot = self.figures.get_circos_plot()
         genes = self.queries.get_genes()
         months = self.queries.get_sample_months(MONTH_PATTERN)
         today = datetime.now()
@@ -273,7 +271,8 @@ class Dashboard:
                                        step=10,
                                        value=10,
                                        dots=True,
-                                       marks={i: '{}'.format(i) for i in [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]}
+                                       marks={i: '{}'.format(i) for i in [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]},
+                                       tooltip=dict(always_visible=False, placement="right")
                                    ),
                                    html.Br(),
                                    dcc.Markdown("""
@@ -299,6 +298,21 @@ class Dashboard:
                                                 className="six column"),
                                    ], className="row container-display"),
                                    html.Br(),
+                                   html.H4("Genome view"),
+                                   dcc.Markdown("""
+                                                     Bin size
+                                                     """),
+                                   dcc.Slider(
+                                       id='slider-bin-size',
+                                       min=5,
+                                       max=400,
+                                       step=5,
+                                       value=50,
+                                       dots=False,
+                                       marks={i: '{}'.format(i) for i in [10, 50, 100, 200, 300, 400]},
+                                       tooltip=dict(always_visible=False, placement="right")
+                                   ),
+                                   html.Br(),
                                    html.H4("Co-occurrence heatmap"),
                                    dcc.Markdown("""
                                    Metric to assess paiwise co-occurrence
@@ -321,17 +335,16 @@ class Dashboard:
                                        step=5,
                                        value=20,
                                        dots=True,
-                                       marks={i: '{}'.format(i) for i in [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]}
+                                       marks={i: '{}'.format(i) for i in [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]},
+                                       tooltip=dict(always_visible=False, placement="right")
                                    ),
                                ], className="two columns"),
                                html.Div(children=[
-                                   html.H4("Top occurring variants"),
+                                   html.Br(),
                                    html.Div(id='top-occurring-variants', children=dash_table.DataTable(id="top-occurring-variants-table")),
                                    html.Br(),
-                                   html.H4("Gene view"),
                                    html.Div(id='needle-plot'),
                                    html.Br(),
-                                   html.H4("Co-occurrence heatmap"),
                                    html.Div(id='cooccurrence-heatmap'),
                                    html.Br(),
                                ], className="ten columns")
@@ -394,28 +407,18 @@ class Dashboard:
             Output('needle-plot', 'children'),
             Input('dropdown-gene', 'value'),
             Input('top-occurring-variants-table', "derived_virtual_data"),
-            Input('top-occurring-variants-table', "derived_virtual_selected_rows")
+            Input('top-occurring-variants-table', "derived_virtual_selected_rows"),
+            Input('slider-bin-size', 'value'),
         )
-        def update_needle_plot(gene_name, rows, selected_rows_indices):
-            plot = html.Div(children=None)
+        def update_needle_plot(gene_name, rows, selected_rows_indices, bin_size):
             if gene_name is not None:
                 selected_rows = [rows[s] for s in selected_rows_indices] if selected_rows_indices else None
-                plot = html.Div(children=[
-                    dcc.Graph(
-                        figure=self.figures.get_variants_plot(gene_name=gene_name, selected_variants=selected_rows),
-                        config={
-                            'displaylogo': False,
-                            'displayModeBar': False
-                        }
-                    ),
-                    dcc.Markdown("""
-                    *Non synonymous variants occurring in at least two samples on gene {}.*
-                    *Other variants include frameshift indels, stop codon gain and lost and start lost variants.*
-                    *The variants are colored according to their frequency as rare variants (< 0.1 %), 
-                    low frequency variants (>= 0.1% and < 1%), 
-                    common variants (>= 1% and < 10%) and very common variants (>= 10%)*
-                    """.format(gene_name))
-                    ])
+                plot = html.Div(
+                    children=self.figures.get_variants_plot(
+                        gene_name=gene_name, selected_variants=selected_rows, bin_size=bin_size))
+            else:
+                plot = html.Div(
+                    children=self.figures.get_variants_abundance_plot(bin_size=bin_size))
             return plot
 
         @app.callback(
@@ -445,22 +448,8 @@ class Dashboard:
         def update_cooccurrence_heatmap(gene_name, rows, selected_rows_indices, metric, min_occurrences):
 
             selected_rows = [rows[s] for s in selected_rows_indices] if selected_rows_indices else None
-            plot = html.Div(children=[
-                dcc.Graph(
-                    figure=self.figures.get_cooccurrence_heatmap(
-                        gene_name=gene_name, selected_variants=selected_rows, metric=metric,
-                        min_occurrences=min_occurrences),
-                    config={
-                        'displaylogo': False,
-                        'displayModeBar': False
-                    }
-                ),
-                dcc.Markdown("""
-                        *Variant pairs co-occurring in at least {} samples{}.*
-                        *Co-occurrence metric: {}*
-                        *Synonymous variants are excluded.*
-                        """.format(min_occurrences, metric, " on gene {}".format(gene_name) if gene_name else ""))
-            ])
+            plot = html.Div(children=self.figures.get_cooccurrence_heatmap(
+                gene_name=gene_name, selected_variants=selected_rows, metric=metric, min_occurrences=min_occurrences))
             return plot
 
     def get_application(self) -> dash.Dash:

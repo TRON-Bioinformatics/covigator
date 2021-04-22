@@ -4,10 +4,10 @@ from unittest import TestCase, skip
 from faker import Faker
 import numpy as np
 from covigator.database.database import Database
-from covigator.database.model import JobStatus, DataSource
+from covigator.database.model import JobStatus, DataSource, Sample, Gene
 from covigator.database.queries import Queries
 from covigator.tests.unit_tests.mocked import get_mocked_ena_sample, get_mocked_log, get_mocked_variant, \
-    get_mocked_variant_cooccurrence
+    get_mocked_variant_cooccurrence, get_mocked_variant_observation
 
 
 class QueriesTests(TestCase):
@@ -146,3 +146,85 @@ class QueriesTests(TestCase):
         self.assertIsNotNone(data)
         self.assertEqual(data.shape[1], 14)
         self.assertEqual(data[data["count"] > 0].shape[0], 5)
+
+    def test_get_variant_abundance_histogram(self):
+
+        # gets an empty histogram
+        histogram = self.queries.get_variant_abundance_histogram()
+        self.assertIsNone(histogram)
+
+        # mocks a 100 variants
+        num_variants = 100
+        variants = [get_mocked_variant(faker=self.faker, chromosome="chr_test") for _ in range(num_variants)]
+        self.session.add_all(variants)
+        self.session.commit()
+
+        # gets an histogram over 100 variants without variant observations
+        histogram = self.queries.get_variant_abundance_histogram()
+        self.assertIsNotNone(histogram)
+        self.assertGreater(histogram.shape[0], 0)
+        self.assertEqual(histogram.shape[1], 3)
+        self.assertEqual(histogram.count_unique_variants.sum(), num_variants)
+        self.assertEqual(histogram.count_variant_observations.sum(), 0)
+
+        # mock some variant observations
+        test_samples = [Sample(id=self.faker.unique.uuid4(), source=DataSource.ENA) for _ in range(5)]
+        self.session.add_all(test_samples)
+        self.session.commit()
+        variant_observations = []
+        for v in variants:
+            for i in range(self.faker.random_int(min=1, max=5)):
+                variant_observations.append(get_mocked_variant_observation(variant=v, sample=test_samples[i]))
+        self.session.add_all(variant_observations)
+        self.session.commit()
+
+        # gets an histogram over 100 variants
+        histogram = self.queries.get_variant_abundance_histogram()
+        self.assertIsNotNone(histogram)
+        self.assertGreater(histogram.shape[0], 0)
+        self.assertEqual(histogram.shape[1], 3)
+        self.assertEqual(histogram.count_unique_variants.sum(), num_variants)
+        self.assertEqual(histogram.count_variant_observations.sum(), len(variant_observations))
+
+    def test_get_conservation_table(self):
+        conservation50 = self.queries.get_conservation_table(bin_size=50)
+        self.assertIsNotNone(conservation50)
+        self.assertEqual(conservation50.shape[1], 4)
+        self.assertGreater(conservation50.shape[0], 0)
+        self.assertEqual(conservation50[conservation50.conservation.isna()].shape[0], 0)
+        self.assertEqual(conservation50[conservation50.conservation_sarbecovirus.isna()].shape[0], 0)
+        self.assertEqual(conservation50[conservation50.conservation_vertebrates.isna()].shape[0], 0)
+
+        conservation10 = self.queries.get_conservation_table(bin_size=10)
+        self.assertGreater(conservation10.shape[0], conservation50.shape[0])
+        self.assertEqual(conservation10.shape[1], conservation50.shape[1])
+
+        conservation5 = self.queries.get_conservation_table(bin_size=5)
+        self.assertGreater(conservation5.shape[0], conservation50.shape[0])
+        self.assertGreater(conservation5.shape[0], conservation10.shape[0])
+        self.assertEqual(conservation5.shape[1], conservation50.shape[1])
+
+        conservation5_smaller = self.queries.get_conservation_table(bin_size=5, start=10000, end=20000)
+        self.assertGreater(conservation5.shape[0], conservation5_smaller.shape[0])
+        self.assertEqual(conservation5.shape[1], conservation50.shape[1])
+
+    def test_get_genes_metadata(self):
+        genes = self.queries.get_genes_metadata()
+        self.assertIsNotNone(genes)
+        self.assertGreater(len(genes), 0)
+        for g in genes:
+            self.assertIsInstance(g, Gene)
+
+    def test_get_genes(self):
+        genes = self.queries.get_genes()
+        self.assertIsNotNone(genes)
+        self.assertGreater(len(genes), 0)
+        for g in genes:
+            self.assertIsInstance(g, str)
+
+    def test_get_gene(self):
+        gene = self.queries.get_gene("S")
+        self.assertIsNotNone(gene)
+        self.assertIsInstance(gene, Gene)
+        gene = self.queries.get_gene("NOEXISTO")
+        self.assertIsNone(gene)
