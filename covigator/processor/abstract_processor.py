@@ -27,6 +27,7 @@ class AbstractProcessor:
             source=data_source,
             module=CovigatorModule.PROCESSOR,
             has_error=self.has_error,
+            processed=count,
             data={
                 "processed": count
             }
