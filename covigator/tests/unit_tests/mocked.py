@@ -33,7 +33,7 @@ def get_mocked_variant_observation(sample: Sample, variant: Variant, faker=Faker
                 )
 
 
-def get_mocked_ena_sample(faker: Faker, job_status=JobStatus.COOCCURRENCE) -> Tuple[SampleEna, Sample, JobEna]:
+def get_mocked_ena_sample(faker: Faker, job_status=JobStatus.FINISHED) -> Tuple[SampleEna, Sample, JobEna]:
     """
     Returns a triple of SampleEna, Sample and Job with the same sample identifier
     """

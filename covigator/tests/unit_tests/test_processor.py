@@ -64,26 +64,3 @@ class ProcessorTests(TestCase):
         data = log.data
         self.assertEqual(data.get("processed"), 0)
         self.assertEqual(data.get("batches"), 0)
-
-    def test_dummy_processor(self):
-
-        for _ in range(50):
-            sample_ena, sample, job = get_mocked_ena_sample(faker=self.faker, job_status=JobStatus.PENDING)
-            self.session.add(sample_ena)
-            self.session.commit()
-            self.session.add_all([sample, job])
-            self.session.commit()
-
-        self.dummy_processor.process()
-        self.assertEqual(self.session.query(Log).count(), 1)
-        log = self.session.query(Log).first()
-        self.assertIsNotNone(log.start)
-        self.assertIsNotNone(log.end)
-        self.assertEqual(log.source, DataSource.ENA)
-        self.assertEqual(log.module, CovigatorModule.PROCESSOR)
-        self.assertEqual(log.processed, 50)
-        self.assertFalse(log.has_error)
-        data = log.data
-        self.assertEqual(data.get("processed"), 50)
-        self.assertEqual(data.get("batches"), 5)
-        self.assertEqual(self.session.query(JobEna).filter(JobEna.status == JobStatus.COOCCURRENCE).count(), 50)

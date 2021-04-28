@@ -59,10 +59,10 @@ class Database:
 
 
 @contextmanager
-def session_scope(database: Database = None, initialize=False) -> Session:
+def session_scope(database: Database = None, initialize=False, test=False) -> Session:
     """Provide a transactional scope around a series of operations."""
     if database is None:
-        database = Database(initialize=initialize)
+        database = Database(initialize=initialize, test=test)
     session = database.get_database_session()
     try:
         yield session

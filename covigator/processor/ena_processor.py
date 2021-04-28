@@ -36,7 +36,7 @@ class EnaProcessor(AbstractProcessor):
             EnaProcessor.run_job, future_process, JobStatus.PROCESSED, JobStatus.LOADED,
             JobStatus.FAILED_LOAD, DataSource.ENA, EnaProcessor.load, priority=2)
         future_cooccurrence = self.dask_client.submit(
-            EnaProcessor.run_job, future_load, JobStatus.LOADED, JobStatus.COOCCURRENCE,
+            EnaProcessor.run_job, future_load, JobStatus.LOADED, JobStatus.FINISHED,
             JobStatus.FAILED_COOCCURRENCE, DataSource.ENA, EnaProcessor.compute_cooccurrence, priority=2)
 
         return [future_download, future_process, future_delete, future_load, future_cooccurrence]

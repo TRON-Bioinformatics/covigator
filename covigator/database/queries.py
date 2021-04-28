@@ -11,7 +11,7 @@ SYNONYMOUS_VARIANT = "synonymous_variant"
 
 class Queries:
 
-    FINAL_JOB_STATE = JobStatus.COOCCURRENCE
+    FINAL_JOB_STATE = JobStatus.FINISHED
 
     def __init__(self, session: Session):
         self.session = session

@@ -25,7 +25,7 @@ class GisaidProcessor(AbstractProcessor):
             JobStatus.FAILED_PROCESSING, DataSource.GISAID, GisaidProcessor.run_pipeline,
             priority=1)
         future_load = self.dask_client.submit(
-            GisaidProcessor.run_job, future_process, JobStatus.PROCESSED, JobStatus.LOADED,
+            GisaidProcessor.run_job, future_process, JobStatus.PROCESSED, JobStatus.FINISHED,
             JobStatus.FAILED_LOAD, DataSource.GISAID, GisaidProcessor.load,
             priority=2)
         return [future_process, future_load]
