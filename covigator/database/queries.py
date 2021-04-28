@@ -11,7 +11,7 @@ SYNONYMOUS_VARIANT = "synonymous_variant"
 
 class Queries:
 
-    FINAL_JOB_STATE = JobStatus.COOCCURRENCE
+    FINAL_JOB_STATE = JobStatus.FINISHED
 
     def __init__(self, session: Session):
         self.session = session
@@ -51,7 +51,7 @@ class Queries:
         else:
             raise ValueError("Bad data source {}".format(data_source))
 
-    def find_ena_run_by_accession(self, run_accession: str) -> SampleEna:
+    def find_sample_ena_by_accession(self, run_accession: str) -> SampleEna:
         return self.session.query(SampleEna).filter(SampleEna.run_accession == run_accession).first()
 
     def get_accumulated_samples_by_country(self) -> pd.DataFrame:

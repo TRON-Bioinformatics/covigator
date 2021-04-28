@@ -1,11 +1,14 @@
 import abc
 import traceback
 from datetime import datetime
+from typing import Callable
+
+import typing as typing
 from dask.distributed import Client
 from sqlalchemy.orm import Session
 from logzero import logger
 from covigator.database.database import Database, session_scope
-from covigator.database.model import Log, DataSource, CovigatorModule, JobStatus
+from covigator.database.model import Log, DataSource, CovigatorModule, JobStatus, JobEna, JobGisaid
 from covigator.database.queries import Queries
 
 
@@ -27,6 +30,7 @@ class AbstractProcessor:
         session = self.database.get_database_session()
         queries = Queries(session)
         count = 0
+        batch_count = 0
         try:
             futures = []
             while True:
@@ -45,10 +49,14 @@ class AbstractProcessor:
                 count += 1
                 if count % self.batch_size == 0:
                     # process a batch
-                    self.dask_client.gather(futures=futures)
+                    batch_count += 1
+                    results = self.dask_client.gather(futures=futures)
+                    logger.info("Processed batch {} with {} samples".format(batch_count, len(results)))
                     futures = []
             # process the remaining batch
-            self.dask_client.gather(futures=futures)
+            if len(futures):
+                results = self.dask_client.gather(futures=futures)
+                logger.info("Processed remaining batch {} with {} samples".format(batch_count, len(results)))
 
         except Exception as e:
             logger.exception(e)
@@ -56,15 +64,46 @@ class AbstractProcessor:
             self.error_message = self._get_traceback_from_exception(e)
             self.has_error = True
         finally:
-            self._write_execution_log(session, count, data_source=self.data_source)
+            self._write_execution_log(session, count, batch_count, data_source=self.data_source)
             session.close()
             logger.info("Finished processor")
+
+    @staticmethod
+    def run_job(run_accession: str, start_status: JobStatus, end_status: JobStatus, error_status: JobStatus,
+                data_source: DataSource,
+                function: Callable[[typing.Union[JobEna, JobGisaid], Queries], None]) -> str or None:
+        """
+        Runs a function on a job, if anything goes wrong or does not fit in the DB it returns None in order to
+        stop the execution of subsequent jobs.
+        """
+        if run_accession is not None:
+            try:
+                with session_scope() as session:
+                    queries = Queries(session)
+                    job = queries.find_job_by_accession_and_status(
+                        run_accession=run_accession, status=start_status, data_source=data_source)
+                    if job is not None:
+                        function(job, queries)
+                        if end_status is not None:
+                            job.status = end_status
+                    else:
+                        logger.warning("Expected ENA job {} in status {}".format(run_accession, start_status))
+                        run_accession = None
+            except Exception as e:
+                # captures any possible exception happening, but logs it in the DB
+                if error_status is not None:
+                    AbstractProcessor._log_error_in_job(
+                        run_accession=run_accession, exception=e, status=error_status, data_source=data_source)
+                    run_accession = None
+                else:
+                    logger.warning("Error processing a job that does not stop the workflow!")
+        return run_accession
 
     @abc.abstractmethod
     def _process_run(self, run_accession: str):
         pass
 
-    def _write_execution_log(self, session: Session, count, data_source: DataSource):
+    def _write_execution_log(self, session: Session, count, batch_count, data_source: DataSource):
         end_time = datetime.now()
         session.add(Log(
             start=self.start_time,
@@ -74,7 +113,8 @@ class AbstractProcessor:
             has_error=self.has_error,
             processed=count,
             data={
-                "processed": count
+                "processed": count,
+                "batches": batch_count
             }
         ))
         session.commit()

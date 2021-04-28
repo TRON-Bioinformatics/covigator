@@ -26,7 +26,7 @@ class QueriesTests(TestCase):
                   [get_mocked_ena_sample(faker=self.faker, job_status=JobStatus.FAILED_LOAD) for _ in range(50)]
         for sample_ena, sample, job in samples:
             self.session.add_all([sample_ena, sample, job])
-            if job.status == JobStatus.COOCCURRENCE:
+            if job.status == JobStatus.FINISHED:
                 if first_sample_date is None:
                     first_sample_date = sample_ena.first_created
                 if sample_ena.first_created < first_sample_date:
@@ -46,7 +46,7 @@ class QueriesTests(TestCase):
                   [get_mocked_ena_sample(faker=self.faker, job_status=JobStatus.FAILED_LOAD) for _ in range(50)]
         for sample_ena, sample, job in samples:
             self.session.add_all([sample_ena, sample, job])
-            if job.status == JobStatus.COOCCURRENCE:
+            if job.status == JobStatus.FINISHED:
                 if most_recent_sample_date is None:
                     most_recent_sample_date = sample_ena.first_created
                 if sample_ena.first_created > most_recent_sample_date:
@@ -60,11 +60,14 @@ class QueriesTests(TestCase):
         self.assertIsNone(observed_date)
 
     def test_get_date_of_last_ena_check(self):
-        logs = [get_mocked_log(faker=self.faker) for _ in range(50)]
+        logs = [get_mocked_log(faker=self.faker, source=DataSource.ENA) for _ in range(25)] + \
+                [get_mocked_log(faker=self.faker, source=DataSource.GISAID) for _ in range(25)]
         self.session.add_all(logs)
         self.session.commit()
         observed_date = self.queries.get_date_of_last_check(data_source=DataSource.ENA)
         self.assertIsNotNone(observed_date)
+        observed_date_gisaid = self.queries.get_date_of_last_check(data_source=DataSource.GISAID)
+        self.assertIsNotNone(observed_date_gisaid)
 
     def test_get_date_of_last_ena_check_empty(self):
         observed_date = self.queries.get_date_of_last_check(data_source=DataSource.ENA)

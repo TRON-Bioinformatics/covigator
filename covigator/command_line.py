@@ -35,7 +35,7 @@ def ena_accessor():
     log_file = os.getenv(covigator.ENV_COVIGATOR_ACCESSOR_LOG_FILE)
     if log_file is not None:
         logzero.logfile(log_file, maxBytes=1e6, backupCount=3)
-    EnaAccessor(tax_id=tax_id, host_tax_id=host_tax_id, database=Database()).access()
+    EnaAccessor(tax_id=tax_id, host_tax_id=host_tax_id, database=Database(initialize=True)).access()
 
 
 def gisaid_accessor():
@@ -57,7 +57,7 @@ def gisaid_accessor():
     args = parser.parse_args()
     tax_id = args.tax_id
     host_tax_id = args.host_tax_id
-    GisaidAccessor(tax_id=tax_id, host_tax_id=host_tax_id, database=Database()).access()
+    GisaidAccessor(tax_id=tax_id, host_tax_id=host_tax_id, database=Database(initialize=True)).access()
 
 
 def processor():
@@ -83,9 +83,9 @@ def processor():
         logzero.logfile(log_file, maxBytes=1e6, backupCount=3)
     client = Client(n_workers=int(args.num_cpus), threads_per_worker=1)
     if args.data_source == "ENA":
-        EnaProcessor(database=Database(), dask_client=client, batch_size=int(args.num_cpus)*2).process()
+        EnaProcessor(database=Database(initialize=True), dask_client=client, batch_size=int(args.num_cpus)).process()
     elif args.data_source == "GISAID":
-        GisaidProcessor(database=Database(), dask_client=client, batch_size=int(args.num_cpus)*2).process()
+        GisaidProcessor(database=Database(initialize=True), dask_client=client, batch_size=int(args.num_cpus)).process()
     else:
         logger.error("Unknown data source. Please choose either ENA or GISAID")
 
