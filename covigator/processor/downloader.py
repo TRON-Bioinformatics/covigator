@@ -24,18 +24,18 @@ class Downloader:
         pathlib.Path(self.storage_folder).mkdir(parents=True, exist_ok=True)
         assert os.path.exists(self.storage_folder), "Storage folder does not exist"
 
-    def download(self, ena_run: SampleEna) -> str:
-        assert ena_run.run_accession is not None, "A run accession is required as it is part of the file path"
-        assert ena_run.fastq_ftp is not None, "Cannot download empty URLs"
-        assert ena_run.fastq_md5 is not None, "Cannot do MD5 checks without MD5"
-        fastqs = ena_run.get_fastqs_ftp()
-        md5s = ena_run.get_fastqs_md5()
+    def download(self, sample_ena: SampleEna) -> str:
+        assert sample_ena.run_accession is not None, "A run accession is required as it is part of the file path"
+        assert sample_ena.fastq_ftp is not None, "Cannot download empty URLs"
+        assert sample_ena.fastq_md5 is not None, "Cannot do MD5 checks without MD5"
+        fastqs = sample_ena.get_fastqs_ftp()
+        md5s = sample_ena.get_fastqs_md5()
         paths = []
         for url, md5 in zip(fastqs, md5s):
-            local_path = self._download_url(ena_run.run_accession, url)
+            local_path = self._download_url(sample_ena.run_accession, url)
             self._check_md5(local_path, md5)
             paths.append(local_path)
-        logger.info("Downloaded {}: {}".format(ena_run.run_accession, ena_run.fastq_ftp))
+        logger.info("Downloaded {}: {}".format(sample_ena.run_accession, sample_ena.fastq_ftp))
         return SEPARATOR.join(paths)
 
     def _download_url(self, run_accession, url):

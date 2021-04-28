@@ -60,11 +60,14 @@ class QueriesTests(TestCase):
         self.assertIsNone(observed_date)
 
     def test_get_date_of_last_ena_check(self):
-        logs = [get_mocked_log(faker=self.faker) for _ in range(50)]
+        logs = [get_mocked_log(faker=self.faker, source=DataSource.ENA) for _ in range(25)] + \
+                [get_mocked_log(faker=self.faker, source=DataSource.GISAID) for _ in range(25)]
         self.session.add_all(logs)
         self.session.commit()
         observed_date = self.queries.get_date_of_last_check(data_source=DataSource.ENA)
         self.assertIsNotNone(observed_date)
+        observed_date_gisaid = self.queries.get_date_of_last_check(data_source=DataSource.GISAID)
+        self.assertIsNotNone(observed_date_gisaid)
 
     def test_get_date_of_last_ena_check_empty(self):
         observed_date = self.queries.get_date_of_last_check(data_source=DataSource.ENA)

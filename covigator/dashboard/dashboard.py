@@ -39,7 +39,7 @@ class Dashboard:
             logger.exception(e)
             raise CovigatorDashBoardInitialisationError("The port needs to be a numeric value. " + str(e))
         # the connection to the database is created only once, but multiple sessions are used
-        self.database = get_database()
+        self.database = get_database(initialize=True)
         self.queries = None
         self.figures = None
 

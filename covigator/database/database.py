@@ -17,11 +17,12 @@ from covigator.references.gene_annotations import GeneAnnotationsLoader
 
 class Database:
 
-    def __init__(self, test=False, verbose=False):
+    def __init__(self, test=False, verbose=False, initialize=False):
         if test:
             # creates a SQLite in memory database for testing purposes
             db_uri = 'sqlite://'
             self.engine: Engine = create_engine(db_uri, echo=verbose)
+            initialize = True   # does not make sense not to initialize the DB in the test environment
         else:
             host = os.getenv(ENV_COVIGATOR_DB_HOST, "0.0.0.0")
             database = os.getenv(ENV_COVIGATOR_DB_NAME, "covigator")
@@ -35,7 +36,9 @@ class Database:
             self.engine: Engine = create_engine(db_uri, pool_size=pool_size, max_overflow=max_overflow, echo=verbose)
         self.engine.connect()
         self.Session = sessionmaker(bind=self.engine, autoflush=False)
-        self.create_database()
+        # avoids initialisation if we know it has already been done
+        if initialize:
+            self.create_database()
 
     def create_database(self):
         # this creates all tables in the database (when it exists nothing happens)
@@ -56,10 +59,10 @@ class Database:
 
 
 @contextmanager
-def session_scope(database: Database = None) -> Session:
+def session_scope(database: Database = None, initialize=False) -> Session:
     """Provide a transactional scope around a series of operations."""
     if database is None:
-        database = Database()
+        database = Database(initialize=initialize)
     session = database.get_database_session()
     try:
         yield session
@@ -73,9 +76,9 @@ def session_scope(database: Database = None) -> Session:
 
 
 @tenacity.retry(wait=wait_exponential(multiplier=2, min=1, max=10), stop=stop_after_attempt(5))
-def get_database() -> Database:
+def get_database(initialize=False) -> Database:
     try:
-        database = Database()
+        database = Database(initialize=initialize)
         session = database.get_database_session()
         stmt = text("SELECT 1")
         session.execute(stmt)
