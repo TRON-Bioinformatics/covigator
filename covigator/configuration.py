@@ -32,6 +32,7 @@ class Configuration:
     ENV_COVIGATOR_REF_GISAID = "COVIGATOR_REF_GISAID"
     ENV_COVIGATOR_SEQ_GISAID = "COVIGATOR_SEQ_GISAID"
     ENV_COVIGATOR_META_GISAID = "COVIGATOR_META_GISAID"
+    ENV_COVIGATOR_DASK_PORT = "COVIGATOR_DASK_PORT"
 
     ENV_COVIGATOR_TABLE_VERSION = "COVIGATOR_TABLE_VERSION"
 
@@ -56,6 +57,9 @@ class Configuration:
         except ValueError as e:
             raise CovigatorDashBoardInitialisationError("The port needs to be a numeric value. " + str(e))
 
+        # dask
+        self.dask_port = os.getenv(self.ENV_COVIGATOR_DASK_PORT, "50218")
+
         # logs
         self.logfile_dash = os.getenv(self.ENV_COVIGATOR_DASHBOARD_LOG_FILE)
         self.logfile_accesor = os.getenv(self.ENV_COVIGATOR_ACCESSOR_LOG_FILE)
@@ -76,7 +80,10 @@ class Configuration:
                                           "/scratch/info/projects/SARS-CoV-2/index/MN908947.3.fa")
 
 
-def initialise_logs(logfile):
+def initialise_logs(logfile, sample_id: str = None):
     if logfile is not None:
         logzero.logfile(logfile, maxBytes=1e6, backupCount=3)
     logzero.loglevel(logging.INFO)
+    if sample_id is not None:
+        logzero.formatter('%(color)s[%(levelname)1.1s %(asctime)s %(module)s:%(lineno)d ' + sample_id +
+                          ']%(end_color)s %(message)s')

@@ -83,7 +83,7 @@ def processor():
     args = parser.parse_args()
     config = Configuration()
     covigator.configuration.initialise_logs(config.logfile_processor)
-    with SLURMCluster() as cluster:
+    with SLURMCluster(dashboard_address=':{}'.format(config.dask_port)) as cluster:
         cluster.scale(int(args.num_jobs))
         with Client(cluster) as client:
             if args.data_source == "ENA":
