@@ -2,6 +2,7 @@ from argparse import ArgumentParser
 from dask.distributed import Client
 from dask_jobqueue import SLURMCluster
 import covigator
+import covigator.configuration
 from covigator.accessor.ena_accessor import EnaAccessor
 from covigator.accessor.gisaid_accessor import GisaidAccessor
 from covigator.configuration import Configuration
@@ -33,7 +34,7 @@ def ena_accessor():
     tax_id = args.tax_id
     host_tax_id = args.host_tax_id
     config = Configuration()
-    covigator.initialise_logs(config.logfile_accesor)
+    covigator.configuration.initialise_logs(config.logfile_accesor)
     EnaAccessor(tax_id=tax_id, host_tax_id=host_tax_id, database=Database(config=config, initialize=True)).access()
 
 
@@ -57,7 +58,7 @@ def gisaid_accessor():
     args = parser.parse_args()
 
     config = Configuration()
-    covigator.initialise_logs(config.logfile_accesor)
+    covigator.configuration.initialise_logs(config.logfile_accesor)
     GisaidAccessor(input_file=args.input_file, host_tax_id=args.host_tax_id,
                    database=Database(initialize=True, config=config)).access()
 
@@ -81,7 +82,7 @@ def processor():
 
     args = parser.parse_args()
     config = Configuration()
-    covigator.initialise_logs(config.logfile_processor)
+    covigator.configuration.initialise_logs(config.logfile_processor)
     with SLURMCluster() as cluster:
         cluster.scale(int(args.num_jobs))
         with Client(cluster) as client:

@@ -1,4 +1,6 @@
+import logging
 import os
+import logzero
 from covigator.exceptions import CovigatorDashBoardInitialisationError
 
 
@@ -72,3 +74,9 @@ class Configuration:
         # references
         self.reference_genome = os.getenv(self.ENV_COVIGATOR_REF_FASTA,
                                           "/scratch/info/projects/SARS-CoV-2/index/MN908947.3.fa")
+
+
+def initialise_logs(logfile):
+    if logfile is not None:
+        logzero.logfile(logfile, maxBytes=1e6, backupCount=3)
+    logzero.loglevel(logging.INFO)

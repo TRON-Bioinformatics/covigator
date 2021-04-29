@@ -9,6 +9,7 @@ from dask.distributed import Client
 from sqlalchemy.orm import Session
 from logzero import logger
 import covigator
+import covigator.configuration
 from covigator.configuration import Configuration
 from covigator.database.database import Database, session_scope
 from covigator.database.model import Log, DataSource, CovigatorModule, JobStatus, JobEna, JobGisaid
@@ -71,7 +72,7 @@ class AbstractProcessor:
         Runs a function on a job, if anything goes wrong or does not fit in the DB it returns None in order to
         stop the execution of subsequent jobs.
         """
-        covigator.initialise_logs(config.logfile_processor)
+        covigator.configuration.initialise_logs(config.logfile_processor)
         if run_accession is not None:
             try:
                 with session_scope(config=config) as session:
