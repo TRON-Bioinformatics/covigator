@@ -51,7 +51,7 @@ class AbstractProcessor:
                 futures.extend(self._process_run(run_accession=job.run_accession))
                 count += 1
             # waits for all to finish
-            results = self.dask_client.gather(futures=futures)
+            results = [f.result() for f in futures]
             logger.info("Processed {} samples".format(len(results)))
 
         except Exception as e:
