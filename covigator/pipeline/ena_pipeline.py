@@ -26,19 +26,12 @@ class Pipeline:
             vcf_file = os.path.join(tmpdir, "pileup.vcf")
             snpeff_vcf_file_gz = os.path.join(fq_path, "snpeff.vcf.gz")
 
-            filtered_fastq1 = os.path.join(tmpdir, "filtered_R1.tmp.gz")
-            filtered_fastq2 = os.path.join(tmpdir, "filtered_R2.tmp.gz")
-
             if fastq2:
-                cmd_fastp = "{} -i {} -I {} -o {} -O {}".format(self.config.fastp, fastq1, fastq2, filtered_fastq1, filtered_fastq2)
-
                 cmd_align = "{} mem {} {} {} | {} sort -o {} -".format(
-                    self.config.bwa, bwa_ref, filtered_fastq1, filtered_fastq2, self.config.samtools, bam_file)
+                    self.config.bwa, bwa_ref, fastq1, fastq2, self.config.samtools, bam_file)
             else:
-                cmd_fastp = "{} -i {} -o {}".format(self.config.fastp, fastq1, filtered_fastq1)
-
                 cmd_align = "{} mem {} {} | {} sort -o {} -".format(
-                    self.config.bwa, bwa_ref, filtered_fastq1, self.config.samtools, bam_file)
+                    self.config.bwa, bwa_ref, fastq1, self.config.samtools, bam_file)
 
             cmd_pileup = "{0} mpileup -E -d 0 -A -f {1} {2} | {0} call -mv --ploidy 1 -Ov -o {3}".format(
                 self.config.bcftools, bwa_ref, bam_file, vcf_file)
