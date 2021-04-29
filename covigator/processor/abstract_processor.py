@@ -72,7 +72,7 @@ class AbstractProcessor:
         Runs a function on a job, if anything goes wrong or does not fit in the DB it returns None in order to
         stop the execution of subsequent jobs.
         """
-        covigator.configuration.initialise_logs(config.logfile_processor)
+        covigator.configuration.initialise_logs(config.logfile_processor, sample_id=run_accession)
         if run_accession is not None:
             try:
                 with session_scope(config=config) as session:

@@ -80,7 +80,10 @@ class Configuration:
                                           "/scratch/info/projects/SARS-CoV-2/index/MN908947.3.fa")
 
 
-def initialise_logs(logfile):
+def initialise_logs(logfile, sample_id: str = None):
     if logfile is not None:
         logzero.logfile(logfile, maxBytes=1e6, backupCount=3)
     logzero.loglevel(logging.INFO)
+    if sample_id is not None:
+        logzero.formatter('%(color)s[%(levelname)1.1s %(asctime)s %(module)s:%(lineno)d ' + sample_id +
+                          ']%(end_color)s %(message)s')
