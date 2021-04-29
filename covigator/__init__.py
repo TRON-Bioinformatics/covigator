@@ -1,9 +1,8 @@
-import os
 import logzero
 import logging
 
 
-VERSION = "0.1.29"
+VERSION = "0.1.30"
 
 
 def initialise_logs(logfile):
