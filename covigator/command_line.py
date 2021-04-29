@@ -87,9 +87,11 @@ def processor():
         cluster.scale(int(args.num_jobs))
         with Client(cluster) as client:
             if args.data_source == "ENA":
-                EnaProcessor(database=Database(initialize=True), dask_client=client, config=config).process()
+                EnaProcessor(database=Database(initialize=True, config=config), dask_client=client, config=config)\
+                    .process()
             elif args.data_source == "GISAID":
-                GisaidProcessor(database=Database(initialize=True), dask_client=client, config=config).process()
+                GisaidProcessor(database=Database(initialize=True, config=config), dask_client=client, config=config)\
+                    .process()
             else:
                 logger.error("Unknown data source. Please choose either ENA or GISAID")
 
