@@ -17,9 +17,9 @@ NUMBER_RETRIES_DOWNLOADER = 5
 
 class EnaProcessor(AbstractProcessor):
 
-    def __init__(self, database: Database, dask_client: Client, batch_size: int):
+    def __init__(self, database: Database, dask_client: Client):
         logger.info("Initialising ENA processor")
-        super().__init__(database, dask_client, DataSource.ENA, batch_size)
+        super().__init__(database, dask_client, DataSource.ENA)
 
     def _process_run(self, run_accession: str):
         # NOTE: here we set the priority of each step to ensure a depth first processing

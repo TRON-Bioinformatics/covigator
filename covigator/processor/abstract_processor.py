@@ -14,9 +14,8 @@ from covigator.database.queries import Queries
 
 class AbstractProcessor:
 
-    def __init__(self, database: Database, dask_client: Client, data_source: DataSource, batch_size: int):
+    def __init__(self, database: Database, dask_client: Client, data_source: DataSource):
         self.data_source = data_source
-        self.batch_size = batch_size
         self.start_time = datetime.now()
         self.has_error = False
         self.error_message = None
@@ -30,7 +29,6 @@ class AbstractProcessor:
         session = self.database.get_database_session()
         queries = Queries(session)
         count = 0
-        batch_count = 0
         try:
             futures = []
             while True:
@@ -47,16 +45,9 @@ class AbstractProcessor:
                 # sends the run for processing
                 futures.extend(self._process_run(run_accession=job.run_accession))
                 count += 1
-                if count % self.batch_size == 0:
-                    # process a batch
-                    batch_count += 1
-                    results = self.dask_client.gather(futures=futures)
-                    logger.info("Processed batch {} with {} samples".format(batch_count, len(results)))
-                    futures = []
-            # process the remaining batch
-            if len(futures):
-                results = self.dask_client.gather(futures=futures)
-                logger.info("Processed remaining batch {} with {} samples".format(batch_count, len(results)))
+            # waits for all to finish
+            results = self.dask_client.gather(futures=futures)
+            logger.info("Processed {} samples".format(len(results)))
 
         except Exception as e:
             logger.exception(e)
@@ -64,7 +55,7 @@ class AbstractProcessor:
             self.error_message = self._get_traceback_from_exception(e)
             self.has_error = True
         finally:
-            self._write_execution_log(session, count, batch_count, data_source=self.data_source)
+            self._write_execution_log(session, count, data_source=self.data_source)
             session.close()
             logger.info("Finished processor")
 
@@ -103,7 +94,7 @@ class AbstractProcessor:
     def _process_run(self, run_accession: str):
         pass
 
-    def _write_execution_log(self, session: Session, count, batch_count, data_source: DataSource):
+    def _write_execution_log(self, session: Session, count, data_source: DataSource):
         end_time = datetime.now()
         session.add(Log(
             start=self.start_time,
@@ -113,8 +104,7 @@ class AbstractProcessor:
             has_error=self.has_error,
             processed=count,
             data={
-                "processed": count,
-                "batches": batch_count
+                "processed": count
             }
         ))
         session.commit()
