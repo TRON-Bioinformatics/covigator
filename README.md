@@ -55,7 +55,8 @@ The only configuration required by the accessor is the database configuration. T
 
 The processor is in charge of orchestrating the load of samples into the database. 
 The processor is intended to run periodically.
-Whenever the accessor finds a new sample not present in the database it stores all the required sample metadata and it creates a new job. 
+Whenever the accessor finds a new sample not present in the database it stores all the required sample metadata and it 
+creates a new job. 
 This job is the starting point for the processor which orchestrates the flow of the job through its life cycle.
 
 The happy path of a job is the following:
@@ -63,30 +64,35 @@ The happy path of a job is the following:
 - `QUEUED`: the job has already been read by the processor and the subsequent actions are scheduled
 - `DOWNLOADED`: intermediate state between the downloader and the pipeline
 - `PROCESSED`: intermediate state between the pipeline and the clean up
-- `LOADED`: final state once the pipeline results have been loaded into the database
+- `LOADED`: variants have been loaded into the database
+- `FINISHED`: cooccurrence has been loaded into the database
   
 The failure states are the following and are self descriptive
 - `FAILED_DOWNLOAD`
 - `FAILED_PROCESSING`
 - `FAILED_LOAD`
+- `FAILED_COOCCURRENCE`
 
 There is a cleanup task that happens after processing in parallel to the load process, 
 but this is not a state of the job and failures in the cleanup although logged in the database do not stop a job from 
-reaching the final state `LOADED`.
+reaching the final state.
 
 A timestamp is stored for every change of state. The failure states also stores an error message.
 
 ![Covigator system design](docs/resources/processor_state_diagram.png "Covigator system design")
 
-The above workflow is orchestrated using dask library for parallelization. 
+The above workflow is orchestrated using dask library and a Slurm cluster behind the scenes. Although dask supports
+multiple queue implementations, covigator only does support Slurm.
+
 The different processes have different priorities to ensure that the graph of tasks is processed in a depth first order.
-This is relevant when processing a large amount of jobs to avoid that all jobs are first downloaded, thus requiring that all raw files are stored in the file system simultaneously.
+This is relevant when processing a large amount of jobs to avoid that all jobs are first downloaded, thus requiring that 
+all raw files are stored in the file system simultaneously.
 The tasks managed in this workflow are not computationally intensive and each uses a single CPU and a low amount of memory.
-The computationally intensive tasks are send by the pipeline to a cluster.
 
 ### Input data
 
-- The number of available CPUs for the processor. This corresponds to the number of samples that will be processed simultaneously.
+- `--source` The data source to process. Possible values: ENA, GISAID. Required: true
+- `--num-jobs` The number of dask jobs to spin, this corresponds to the number of whole nodes requested to the cluster. Default: 1
 
 ### Configuration
 
@@ -97,9 +103,53 @@ The configuration is done through environment variables.
 
 - `COVIGATOR_STORAGE_FOLDER`: the folder where files will be stored by the downloaded (default value `./data/covigator`)
 
+The dask cluster requires to be configured in a jobqueue.yaml file as described here https://docs.dask.org/en/latest/configuration.html.
+It is specially important to configure dask so processes are not spilled to disk in order to avoid causing troubles in 
+the cluster shared disk. This file can be read from `~/.config/dask`, from `/etc/dask` or from the environment variable 
+DASK_ROOT_CONFIG.
+
+```
+jobqueue:
+
+   slurm:
+     name: dask-worker
+
+     # Dask worker options
+     cores: 96                    # Total number of cores per job
+     memory: "100 GB"             # Total amount of memory per job
+     processes: 24                # Number of Python processes per job
+
+     interface: null              # Network interface to use like eth0 or ib0
+     death-timeout: 60            # Number of seconds to wait if a worker can not find a scheduler
+     local-directory: null        # Location of fast local storage like /scratch or $TMPDIR
+     extra: []
+
+     # SLURM resource manager options
+     shebang: "#!/usr/bin/env bash"
+     queue: "CoViD-19"
+     project: null
+     walltime: '00:30:00'
+     env-extra: []
+     job-cpu: null
+     job-mem: null
+     job-extra: ["-A priesgof"]
+     log-directory: null
+    
+     # Scheduler options
+     scheduler-options: {}
+
+distributed:
+  worker:
+    memory:
+      target: false  # don't spill to disk
+      spill: false  # don't spill to disk
+      pause: 0.80  # pause execution at 80% memory use
+      terminate: 0.95  # restart the worker at 95% use
+```
+
 ### Usage
 
-`covigator-processor --num-cpus 32`
+`covigator-processor --num-jobs 1 --source ENA`
 
 ### Processes within the workflow
 
@@ -152,6 +202,12 @@ Reads the outcoming VCF files of the pipeline and load them into the database.
 It stores variants in two tables:
 - Unique variants, the variant as an abstract concept with the annotations not sample specific, (eg: variant effect, non synonymous)
 - Variant observations, specific observation of a variant in a given sample with the sample specific annotations (eg: depth of coverage)
+
+#### Cooccurrence
+
+Computes the cooccurrence matrix incrementally for every new sample.
+Increases the count of every pairwise combination of variants within the new sample.
+It stores the cooccurrence matrix in one single table indexed by two variants. Only the lower diagonal is stored.
 
 
 ## Developer guide

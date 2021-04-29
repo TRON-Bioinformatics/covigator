@@ -1,6 +1,8 @@
 import os
 from argparse import ArgumentParser
 from dask.distributed import Client
+from dask_jobqueue import SLURMCluster
+
 import covigator
 from covigator.accessor.ena_accessor import EnaAccessor
 from covigator.accessor.gisaid_accessor import GisaidAccessor
@@ -70,24 +72,26 @@ def processor():
         required=True
     )
     parser.add_argument(
-        "--num-cpus",
-        dest="num_cpus",
-        help="number of CPUs to be used by the processor, this reflects the number of jobs that will be processed in "
-             "parallel",
-        required=True
+        "--num-jobs",
+        dest="num_jobs",
+        help="The number of dask jobs to spin, this corresponds to the number of whole nodes requested to the cluster. "
+             "The configuration of each job is in the correspoding jobqueue.yaml file",
+        default=1
     )
 
     args = parser.parse_args()
     log_file = os.getenv(covigator.ENV_COVIGATOR_PROCESSOR_LOG_FILE)
     if log_file is not None:
         logzero.logfile(log_file, maxBytes=1e6, backupCount=3)
-    client = Client(n_workers=int(args.num_cpus), threads_per_worker=1)
-    if args.data_source == "ENA":
-        EnaProcessor(database=Database(initialize=True), dask_client=client, batch_size=int(args.num_cpus)).process()
-    elif args.data_source == "GISAID":
-        GisaidProcessor(database=Database(initialize=True), dask_client=client, batch_size=int(args.num_cpus)).process()
-    else:
-        logger.error("Unknown data source. Please choose either ENA or GISAID")
+    with SLURMCluster() as cluster:
+        cluster.scale(int(args.num_jobs))
+        with Client(cluster) as client:
+            if args.data_source == "ENA":
+                EnaProcessor(database=Database(initialize=True), dask_client=client).process()
+            elif args.data_source == "GISAID":
+                GisaidProcessor(database=Database(initialize=True), dask_client=client).process()
+            else:
+                logger.error("Unknown data source. Please choose either ENA or GISAID")
 
 
 def pipeline():
