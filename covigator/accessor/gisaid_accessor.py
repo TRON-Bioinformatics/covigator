@@ -1,16 +1,10 @@
 import csv
 from datetime import date, datetime
-import json
 import os
-
 import pycountry
 import pycountry_convert
-import requests
 from sqlalchemy.orm import Session
-
 from covigator import ENV_COVIGATOR_META_GISAID
-
-from covigator.misc import backoff_retrier
 from covigator.database.model import SampleGisaid, JobGisaid, Sample, DataSource, Log, CovigatorModule
 from covigator.database.database import Database
 from logzero import logger
@@ -78,9 +72,6 @@ class GisaidAccessor:
         self.included = 0
         self.excluded = 0
 
-        # this ensures there is a retry mechanism in place with a limited number of retries
-        #self.get_with_retries = backoff_retrier.wrapper(requests.get, NUMBER_RETRIES)
-
     def access(self):
         session = self.database.get_database_session()
         # NOTE: holding in memory the whole list of existing ids is much faster than querying every time
@@ -88,7 +79,6 @@ class GisaidAccessor:
         existing_sample_ids = [value for value, in session.query(SampleGisaid.run_accession).all()]
         try:
             list_runs = self._get_gisaid_runs()
-            #print(list_runs)
             logger.info("Read file of {} GISAID samples".format(len(list_runs)))
             self._process_runs(list_runs, existing_sample_ids, session)
 
