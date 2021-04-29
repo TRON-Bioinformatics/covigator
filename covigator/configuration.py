@@ -32,6 +32,7 @@ class Configuration:
     ENV_COVIGATOR_REF_GISAID = "COVIGATOR_REF_GISAID"
     ENV_COVIGATOR_SEQ_GISAID = "COVIGATOR_SEQ_GISAID"
     ENV_COVIGATOR_META_GISAID = "COVIGATOR_META_GISAID"
+    ENV_COVIGATOR_DASK_PORT = "COVIGATOR_DASK_PORT"
 
     ENV_COVIGATOR_TABLE_VERSION = "COVIGATOR_TABLE_VERSION"
 
@@ -55,6 +56,9 @@ class Configuration:
             self.dash_port = int(os.getenv(self.ENV_COVIGATOR_DASHBOARD_PORT, "8050"))
         except ValueError as e:
             raise CovigatorDashBoardInitialisationError("The port needs to be a numeric value. " + str(e))
+
+        # dask
+        self.dask_port = os.getenv(self.ENV_COVIGATOR_DASK_PORT, "50218")
 
         # logs
         self.logfile_dash = os.getenv(self.ENV_COVIGATOR_DASHBOARD_LOG_FILE)
