@@ -17,7 +17,7 @@ cache:
     - $VENV_CACHE_DIR
 
 before_script:
-  - apt-get update
+  - apt-get --allow-insecure-repositories update
   - apt-get --assume-yes install gcc gfortran build-essential wget libfreetype6-dev libpng-dev libopenblas-dev
   - python -V
   - pip install virtualenv
