@@ -85,5 +85,5 @@ def initialise_logs(logfile, sample_id: str = None):
         logzero.logfile(logfile, maxBytes=1e6, backupCount=3)
     logzero.loglevel(logging.INFO)
     if sample_id is not None:
-        logzero.formatter('%(color)s[%(levelname)1.1s %(asctime)s %(module)s:%(lineno)d ' + sample_id +
-                          ']%(end_color)s %(message)s')
+        logzero.formatter(logging.Formatter('%(color)s[%(levelname)1.1s %(asctime)s %(module)s:%(lineno)d ' + sample_id +
+                          ']%(end_color)s %(message)s'))
