@@ -5,6 +5,7 @@ import dash_html_components as html
 from dash.dependencies import Output, Input
 import dash_table
 import covigator
+import covigator.configuration
 from covigator.configuration import Configuration
 from covigator.database.model import DataSource
 from covigator.database.database import session_scope, get_database
@@ -19,7 +20,7 @@ MISSING_VALUE = "-"
 class Dashboard:
 
     def __init__(self, config: Configuration):
-        covigator.initialise_logs(config.logfile_dash)
+        covigator.configuration.initialise_logs(config.logfile_dash)
         self.config = config
         # the connection to the database is created only once, but multiple sessions are used
         self.database = get_database(config=config, initialize=True)
