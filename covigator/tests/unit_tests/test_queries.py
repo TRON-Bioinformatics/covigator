@@ -3,6 +3,8 @@ from itertools import combinations
 from unittest import TestCase, skip
 from faker import Faker
 import numpy as np
+
+from covigator.configuration import Configuration
 from covigator.database.database import Database
 from covigator.database.model import JobStatus, DataSource, Sample, Gene
 from covigator.database.queries import Queries
@@ -14,7 +16,7 @@ class QueriesTests(TestCase):
 
     def setUp(self) -> None:
         # intialise database
-        self.database = Database(test=True, verbose=True)
+        self.database = Database(test=True, verbose=True, config=Configuration())
         self.session = self.database.get_database_session()
         self.queries = Queries(session=self.session)
         self.faker = Faker()

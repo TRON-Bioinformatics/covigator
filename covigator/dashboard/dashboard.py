@@ -1,20 +1,14 @@
-import os
 from datetime import datetime, timedelta
-
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Output, Input
 import dash_table
-
 import covigator
-from covigator import ENV_COVIGATOR_DASHBOARD_HOST, ENV_COVIGATOR_DASHBOARD_PORT, ENV_COVIGATOR_DASHBOARD_LOG_FILE
-
+from covigator.configuration import Configuration
 from covigator.database.model import DataSource
 from covigator.database.database import session_scope, get_database
-import logzero
 from logzero import logger
-
 from covigator.database.queries import Queries
 from covigator.dashboard.figures import Figures
 
@@ -22,24 +16,13 @@ MONTH_PATTERN = "%Y-%m"
 MISSING_VALUE = "-"
 
 
-class CovigatorDashBoardInitialisationError(Exception):
-    pass
-
-
 class Dashboard:
 
-    def __init__(self):
-        log_file = os.getenv(ENV_COVIGATOR_DASHBOARD_LOG_FILE)
-        if log_file is not None:
-            logzero.logfile(log_file, maxBytes=1e6, backupCount=3)
-        self.host = os.getenv(ENV_COVIGATOR_DASHBOARD_HOST, "0.0.0.0")
-        try:
-            self.port = int(os.getenv(ENV_COVIGATOR_DASHBOARD_PORT, "8050"))
-        except ValueError as e:
-            logger.exception(e)
-            raise CovigatorDashBoardInitialisationError("The port needs to be a numeric value. " + str(e))
+    def __init__(self, config: Configuration):
+        covigator.initialise_logs(config.logfile_dash)
+        self.config = config
         # the connection to the database is created only once, but multiple sessions are used
-        self.database = get_database(initialize=True)
+        self.database = get_database(config=config, initialize=True)
         self.queries = None
         self.figures = None
 
@@ -375,7 +358,7 @@ class Dashboard:
             logger.info("Starting covigator dashboard")
             app = self.get_application()
             self.set_callbacks(app)
-            app.run_server(debug=debug, host=self.host, port=self.port)
+            app.run_server(debug=debug, host=self.config.dash_host, port=self.config.dash_port)
         except Exception as e:
             logger.exception(e)
             raise e

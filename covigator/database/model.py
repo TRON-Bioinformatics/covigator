@@ -6,27 +6,28 @@ from sqlalchemy import Column, String, Float, Enum, DateTime, Integer, Boolean, 
     ForeignKeyConstraint, BigInteger, JSON, Index
 import enum
 
-from covigator import ENV_COVIGATOR_TABLE_VERSION
+from covigator.configuration import Configuration
 
 
-def get_table_versioned_name(basename):
-    return "{}{}".format(basename, os.environ.get(ENV_COVIGATOR_TABLE_VERSION, ""))
+def get_table_versioned_name(basename, config: Configuration):
+    return "{}{}".format(basename, config.db_table_version)
 
 
-GENE_TABLE_NAME = get_table_versioned_name('gene')
-LOG_TABLE_NAME = get_table_versioned_name('log')
-VARIANT_COOCCURRENCE_TABLE_NAME = get_table_versioned_name('variant_cooccurrence')
-VARIANT_OBSERVATION_TABLE_NAME = get_table_versioned_name('variant_observation')
-VARIANT_TABLE_NAME = get_table_versioned_name('variant')
-JOB_ENA_TABLE_NAME = get_table_versioned_name('job_ena')
-JOB_GISAID_TABLE_NAME = get_table_versioned_name('job_gisaid')
-SAMPLE_TABLE_NAME = get_table_versioned_name('sample')
-SAMPLE_GISAID_TABLE_NAME = get_table_versioned_name('sample_gisaid')
-SAMPLE_ENA_TABLE_NAME = get_table_versioned_name('sample_ena')
-CONSERVATION_TABLE_NAME = get_table_versioned_name('conservation')
-JOB_STATUS_CONSTRAINT_NAME = get_table_versioned_name('job_status')
-DATA_SOURCE_CONSTRAINT_NAME = get_table_versioned_name('data_source')
-COVIGATOR_MODULE_CONSTRAINT_NAME = get_table_versioned_name('covigator_module')
+config = Configuration()
+GENE_TABLE_NAME = get_table_versioned_name('gene', config=config)
+LOG_TABLE_NAME = get_table_versioned_name('log', config=config)
+VARIANT_COOCCURRENCE_TABLE_NAME = get_table_versioned_name('variant_cooccurrence', config=config)
+VARIANT_OBSERVATION_TABLE_NAME = get_table_versioned_name('variant_observation', config=config)
+VARIANT_TABLE_NAME = get_table_versioned_name('variant', config=config)
+JOB_ENA_TABLE_NAME = get_table_versioned_name('job_ena', config=config)
+JOB_GISAID_TABLE_NAME = get_table_versioned_name('job_gisaid', config=config)
+SAMPLE_TABLE_NAME = get_table_versioned_name('sample', config=config)
+SAMPLE_GISAID_TABLE_NAME = get_table_versioned_name('sample_gisaid', config=config)
+SAMPLE_ENA_TABLE_NAME = get_table_versioned_name('sample_ena', config=config)
+CONSERVATION_TABLE_NAME = get_table_versioned_name('conservation', config=config)
+JOB_STATUS_CONSTRAINT_NAME = get_table_versioned_name('job_status', config=config)
+DATA_SOURCE_CONSTRAINT_NAME = get_table_versioned_name('data_source', config=config)
+COVIGATOR_MODULE_CONSTRAINT_NAME = get_table_versioned_name('covigator_module', config=config)
 SEPARATOR = ";"
 
 Base = declarative_base()

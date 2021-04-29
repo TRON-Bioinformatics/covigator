@@ -4,14 +4,12 @@ import os
 import pycountry
 import pycountry_convert
 from sqlalchemy.orm import Session
-from covigator import ENV_COVIGATOR_META_GISAID
 from covigator.database.model import SampleGisaid, JobGisaid, Sample, DataSource, Log, CovigatorModule
 from covigator.database.database import Database
 from logzero import logger
 
 
 class GisaidAccessor:
-    GISAID_METADATA_FILE = os.getenv(ENV_COVIGATOR_META_GISAID, "/scratch/info/projects/SARS-CoV-2/gisaid/gisaid_hcov-19_2020_10_02_11_ST_corrected_v2.tsv")
     
     GISAID_FIELDS = [
         # data on run
@@ -52,12 +50,10 @@ class GisaidAccessor:
         "Geneious Prime"
     ]
 
-    def __init__(self, tax_id: str, host_tax_id: str, database: Database, maximum=None):
+    def __init__(self, input_file: str, host_tax_id: str, database: Database, maximum=None):
         self.start_time = datetime.now()
+        self.input_file = input_file
         self.has_error = False
-        self.tax_id = tax_id
-        assert self.tax_id is not None and self.tax_id.strip() != "", "Empty tax id"
-        logger.info("Tax id {}".format(self.tax_id))
         self.host_tax_id = host_tax_id
         assert self.host_tax_id is not None and self.host_tax_id.strip() != "", "Empty host tax id"
         logger.info("Host tax id {}".format(self.host_tax_id))
@@ -109,7 +105,7 @@ class GisaidAccessor:
         # 'Clade': 'GH'
 
         results = []
-        with open(self.GISAID_METADATA_FILE) as infile:
+        with open(self.input_file) as infile:
             reader = csv.DictReader(infile, delimiter='\t')
             #{'run_accession': 'EPI_ISL_463264', 
             # 'virus_name': 'hCoV-19/Canada/BC_27280425/2020', 

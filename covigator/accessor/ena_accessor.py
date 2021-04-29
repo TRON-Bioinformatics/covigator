@@ -4,7 +4,6 @@ import pycountry
 import pycountry_convert
 import requests
 from sqlalchemy.orm import Session
-
 from covigator.misc import backoff_retrier
 from covigator.database.model import SampleEna, JobEna, Sample, DataSource, Log, CovigatorModule
 from covigator.database.database import Database

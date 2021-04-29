@@ -4,6 +4,7 @@ from unittest import TestCase
 from sqlalchemy import and_
 
 from covigator.accessor.gisaid_accessor import GisaidAccessor
+from covigator.configuration import Configuration
 from covigator.database.database import Database
 from covigator.database.model import SampleGisaid, Sample, JobGisaid, Log, DataSource, CovigatorModule
 from covigator.tests import SARS_COV_2_TAXID, HOMO_SAPIENS_TAXID
@@ -13,8 +14,8 @@ class FakeGisaidAccessor(GisaidAccessor):
 
     def __init__(self, results, database=None):
         # uses an in memory database or the one provided
-        super().__init__(tax_id=SARS_COV_2_TAXID, host_tax_id=HOMO_SAPIENS_TAXID,
-                         database=database if database else Database(test=True))
+        super().__init__(input_file=None, host_tax_id=HOMO_SAPIENS_TAXID,
+                         database=database if database else Database(test=True, config=Configuration()))
         self.results = results
 
     def _get_gisaid_runs(self):
@@ -49,7 +50,7 @@ class GisaidAccessorTests(TestCase):
         self.assertEqual(gisaid_accessor.excluded_samples_by_instrument_platform.get("none"), 1)
 
     def test_get_gisaid_runs(self):
-        gisaid_accessor = GisaidAccessor(tax_id=SARS_COV_2_TAXID, host_tax_id=HOMO_SAPIENS_TAXID,
-                         database=Database(test=True))
+        gisaid_accessor = GisaidAccessor(input_file=None, host_tax_id=HOMO_SAPIENS_TAXID,
+                         database=Database(test=True, config=Configuration()))
 
         gisaid_accessor.access()

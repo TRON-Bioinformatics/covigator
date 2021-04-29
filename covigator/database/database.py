@@ -1,39 +1,32 @@
-import os
 from contextlib import contextmanager
-
 import tenacity
 from logzero import logger
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker, Session
 from tenacity import wait_exponential, stop_after_attempt
-
-from covigator import ENV_COVIGATOR_DB_HOST, ENV_COVIGATOR_DB_NAME, ENV_COVIGATOR_DB_USER, ENV_COVIGATOR_DB_PASSWORD, \
-    ENV_COVIGATOR_DB_PORT, ENV_COVIGATOR_DB_POOL_SIZE, ENV_COVIGATOR_DB_MAX_OVERFLOW
+from covigator.configuration import Configuration
 from covigator.database.model import Base, Gene, Conservation
+from covigator.exceptions import CovigatorDatabaseConnectionException
 from covigator.references.conservation import ConservationLoader
 from covigator.references.gene_annotations import GeneAnnotationsLoader
 
 
 class Database:
 
-    def __init__(self, test=False, verbose=False, initialize=False):
+    def __init__(self, config: Configuration = None, test=False, verbose=False, initialize=False):
+        self.config = config
         if test:
             # creates a SQLite in memory database for testing purposes
             db_uri = 'sqlite://'
             self.engine: Engine = create_engine(db_uri, echo=verbose)
             initialize = True   # does not make sense not to initialize the DB in the test environment
         else:
-            host = os.getenv(ENV_COVIGATOR_DB_HOST, "0.0.0.0")
-            database = os.getenv(ENV_COVIGATOR_DB_NAME, "covigator")
-            user = os.getenv(ENV_COVIGATOR_DB_USER, "covigator")
-            password = os.getenv(ENV_COVIGATOR_DB_PASSWORD, "covigator")
-            port = os.getenv(ENV_COVIGATOR_DB_PORT, "5432")
-            db_uri = "postgresql+psycopg2://%s:%s@%s:%s/%s" % (user, password, host, port, database)
+            db_uri = "postgresql+psycopg2://%s:%s@%s:%s/%s" % (config.db_user, config.db_password, config.db_host,
+                                                               config.db_port, config.db_name)
             # these are the default SQLAlchemy values, this values may need to be increased for the dashboard
-            pool_size = int(os.getenv(ENV_COVIGATOR_DB_POOL_SIZE, 5))
-            max_overflow = int(os.getenv(ENV_COVIGATOR_DB_MAX_OVERFLOW, 10))
-            self.engine: Engine = create_engine(db_uri, pool_size=pool_size, max_overflow=max_overflow, echo=verbose)
+            self.engine: Engine = create_engine(db_uri, pool_size=config.db_pool_size,
+                                                max_overflow=config.db_max_overflow, echo=verbose)
         self.engine.connect()
         self.Session = sessionmaker(bind=self.engine, autoflush=False)
         # avoids initialisation if we know it has already been done
@@ -50,7 +43,7 @@ class Database:
         session = self.get_database_session()
         # loads reference genome if not set
         if session.query(Gene).count() == 0:
-            GeneAnnotationsLoader(session).load_data()
+            GeneAnnotationsLoader(session, config=self.config).load_data()
         if session.query(Conservation).count() == 0:
             ConservationLoader(session).load_data()
 
@@ -59,10 +52,15 @@ class Database:
 
 
 @contextmanager
-def session_scope(database: Database = None, initialize=False, test=False) -> Session:
-    """Provide a transactional scope around a series of operations."""
+def session_scope(config: Configuration = None, database: Database = None, initialize=False, test=False) -> Session:
+    """Provide a transactional scope around a series of operations.
+    Either config or database must be provided!
+    """
+    if database is None and config is None:
+        raise CovigatorDatabaseConnectionException(
+            "Must provide either a Configuration object or a database connection to obtain a session")
     if database is None:
-        database = Database(initialize=initialize, test=test)
+        database = Database(config=config, initialize=initialize, test=test)
     session = database.get_database_session()
     try:
         yield session
@@ -76,14 +74,14 @@ def session_scope(database: Database = None, initialize=False, test=False) -> Se
 
 
 @tenacity.retry(wait=wait_exponential(multiplier=2, min=1, max=10), stop=stop_after_attempt(5))
-def get_database(initialize=False) -> Database:
+def get_database(config: Configuration, initialize=False) -> Database:
     try:
-        database = Database(initialize=initialize)
+        database = Database(config=config, initialize=initialize)
         session = database.get_database_session()
         stmt = text("SELECT 1")
         session.execute(stmt)
         logger.info("Database connected!")
     except Exception as e:
         logger.error("Connection to database failed, retrying...")
-        raise e
+        raise CovigatorDatabaseConnectionException(e)
     return database

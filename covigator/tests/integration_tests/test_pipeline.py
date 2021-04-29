@@ -1,6 +1,8 @@
 import unittest
-from covigator.processor.ena_pipeline import Pipeline, CovigatorPipelineError
-from covigator.processor.gisaid_pipeline import GisaidPipeline
+
+from covigator.configuration import Configuration
+from covigator.pipeline.ena_pipeline import Pipeline
+from covigator.pipeline.gisaid_pipeline import GisaidPipeline
 
 class PipelineTest(unittest.TestCase):
 
@@ -8,7 +10,7 @@ class PipelineTest(unittest.TestCase):
         fastq1 = "SRR11140748_R1.fastq.gz"
         fastq2 = "SRR11140748_R2.fastq.gz"
         vcf_file = "expected_snpeff.vcf"
-        p = Pipeline()
+        p = Pipeline(config=Configuration())
     
         # TODO: Implement Unit Test here
         # Maybe do diff as assertion?    
@@ -17,13 +19,14 @@ class PipelineTest(unittest.TestCase):
             #vcf_file = p.run(fastq1=fastq1, fastq2=fastq2)
         self.assertEqual(open(p.run(fastq1=fastq1, fastq2=fastq2)).read(), open(vcf_file).read())
 
+
 class GisaidPipelineTest(unittest.TestCase):
     
     def test_pipeline_run(self):
         run_accession = "EPI_ISL_417140"
         vcf_file = "gisaid.vcf"
 
-        p = GisaidPipeline()
+        p = GisaidPipeline(config=Configuration())
 
         self.assertEqual(open(p.run(run_accession=run_accession)).read(), open(vcf_file).read())
 
