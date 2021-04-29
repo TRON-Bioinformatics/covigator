@@ -43,6 +43,7 @@ class CooccurrenceMatrix:
                         count=1
                     )
                     session.add(variant_cooccurrence)
+                    session.commit()
                 else:
                     # NOTE: it is important to increase the counter like this to avoid race conditions
                     # the increase happens in the database server and not in python
