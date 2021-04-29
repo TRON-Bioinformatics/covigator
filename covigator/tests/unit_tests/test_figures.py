@@ -1,4 +1,6 @@
 from unittest import TestCase
+
+from covigator.configuration import Configuration
 from covigator.dashboard.figures import Figures
 from covigator.database.database import Database
 from faker import Faker
@@ -10,7 +12,7 @@ class FiguresTests(TestCase):
 
     def setUp(self) -> None:
         # intialise database
-        self.database = Database(test=True)
+        self.database = Database(test=True, config=Configuration())
         self.session = self.database.get_database_session()
         self.figures = Figures(queries=Queries(session=self.session))
         self.faker = Faker()

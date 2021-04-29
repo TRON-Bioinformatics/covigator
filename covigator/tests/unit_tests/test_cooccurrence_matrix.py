@@ -2,9 +2,10 @@ from unittest import TestCase
 
 from faker import Faker
 
+from covigator.configuration import Configuration
 from covigator.database.database import Database
-from covigator.database.model import Variant, Sample, VariantObservation, DataSource, VariantCooccurrence
-from covigator.processor.cooccurrence_matrix import CooccurrenceMatrix
+from covigator.database.model import Sample, VariantCooccurrence
+from covigator.pipeline.cooccurrence_matrix import CooccurrenceMatrix
 from covigator.tests.unit_tests.mocked import get_mocked_ena_sample, get_mocked_variant, get_mocked_variant_observation
 
 
@@ -15,7 +16,8 @@ class CooccurrenceMatrixTests(TestCase):
     NUM_VARIANT_OBSERVATIONS_PER_SAMPLE = 5
 
     def setUp(self) -> None:
-        self.session = Database(test=True).get_database_session()
+        self.config = Configuration()
+        self.session = Database(test=True, config=self.config).get_database_session()
         faker = Faker()
         # mocks some unique variants
         self.mocked_variants = [get_mocked_variant(faker) for _ in range(self.NUM_UNIQUE_VARIANTS)]

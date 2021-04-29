@@ -1,13 +1,15 @@
 from unittest import TestCase
+
+from covigator.configuration import Configuration
 from covigator.database.model import SampleEna
-from covigator.processor.downloader import Downloader
+from covigator.pipeline.downloader import Downloader
 import os
 
 
 class DownloaderTest(TestCase):
 
     def setUp(self) -> None:
-        self.downloader = Downloader()
+        self.downloader = Downloader(config=Configuration())
 
     def test_download_ena_run(self):
         run_accession = "TEST12345"

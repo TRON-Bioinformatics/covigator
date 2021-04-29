@@ -4,7 +4,7 @@ from logzero import logger
 import time
 import random
 
-from covigator.processor.downloader import CovigatorMD5CheckSumError
+from covigator.pipeline.downloader import CovigatorMD5CheckSumError
 
 
 def wrapper(func, retries):

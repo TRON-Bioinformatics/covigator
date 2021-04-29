@@ -9,6 +9,7 @@ from dask.distributed import Client
 from sqlalchemy.orm import Session
 from logzero import logger
 import covigator
+from covigator.configuration import Configuration
 from covigator.database.database import Database, session_scope
 from covigator.database.model import Log, DataSource, CovigatorModule, JobStatus, JobEna, JobGisaid
 from covigator.database.queries import Queries
@@ -16,8 +17,9 @@ from covigator.database.queries import Queries
 
 class AbstractProcessor:
 
-    def __init__(self, database: Database, dask_client: Client, data_source: DataSource):
+    def __init__(self, database: Database, dask_client: Client, data_source: DataSource, config: Configuration):
         self.data_source = data_source
+        self.config = config
         self.start_time = datetime.now()
         self.has_error = False
         self.error_message = None
@@ -62,22 +64,22 @@ class AbstractProcessor:
             logger.info("Finished processor")
 
     @staticmethod
-    def run_job(run_accession: str, start_status: JobStatus, end_status: JobStatus, error_status: JobStatus,
-                data_source: DataSource,
-                function: Callable[[typing.Union[JobEna, JobGisaid], Queries], None]) -> str or None:
+    def run_job(config: Configuration, run_accession: str, start_status: JobStatus, end_status: JobStatus,
+                error_status: JobStatus, data_source: DataSource,
+                function: Callable[[typing.Union[JobEna, JobGisaid], Queries, Configuration], None]) -> str or None:
         """
         Runs a function on a job, if anything goes wrong or does not fit in the DB it returns None in order to
         stop the execution of subsequent jobs.
         """
-        covigator.initialise_logs()
+        covigator.initialise_logs(config.logfile_processor)
         if run_accession is not None:
             try:
-                with session_scope() as session:
+                with session_scope(config=config) as session:
                     queries = Queries(session)
                     job = queries.find_job_by_accession_and_status(
                         run_accession=run_accession, status=start_status, data_source=data_source)
                     if job is not None:
-                        function(job, queries)
+                        function(job, queries, config)
                         if end_status is not None:
                             job.status = end_status
                     else:
@@ -87,7 +89,7 @@ class AbstractProcessor:
                 # captures any possible exception happening, but logs it in the DB
                 if error_status is not None:
                     AbstractProcessor._log_error_in_job(
-                        run_accession=run_accession, exception=e, status=error_status, data_source=data_source)
+                        config=config, run_accession=run_accession, exception=e, status=error_status, data_source=data_source)
                     run_accession = None
                 else:
                     logger.warning("Error processing a job that does not stop the workflow!")
@@ -118,8 +120,8 @@ class AbstractProcessor:
             etype=type(e), value=e, tb=e.__traceback__))
 
     @staticmethod
-    def _log_error_in_job(run_accession: str, exception: Exception, status: JobStatus, data_source: DataSource):
-        with session_scope() as session:
+    def _log_error_in_job(config: Configuration, run_accession: str, exception: Exception, status: JobStatus, data_source: DataSource):
+        with session_scope(config=config) as session:
             logger.info("Error on job {} on state {}: {}".format(run_accession, status, str(exception)))
             job = Queries(session).find_job_by_accession(run_accession=run_accession, data_source=data_source)
             job.status = status

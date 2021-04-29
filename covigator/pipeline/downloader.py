@@ -5,7 +5,7 @@ from contextlib import closing
 import shutil
 import hashlib
 from logzero import logger
-from covigator import ENV_COVIGATOR_STORAGE_FOLDER
+from covigator.configuration import Configuration
 from covigator.database.model import SampleEna, SEPARATOR
 import re
 
@@ -19,8 +19,8 @@ class CovigatorMD5CheckSumError(Exception):
 
 class Downloader:
 
-    def __init__(self):
-        self.storage_folder = os.getenv(ENV_COVIGATOR_STORAGE_FOLDER, "./data/covigator")
+    def __init__(self, config: Configuration):
+        self.storage_folder = config.storage_folder
         pathlib.Path(self.storage_folder).mkdir(parents=True, exist_ok=True)
         assert os.path.exists(self.storage_folder), "Storage folder does not exist"
 

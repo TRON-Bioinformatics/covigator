@@ -3,7 +3,7 @@ import pkg_resources
 import covigator.tests
 from covigator.database.database import Database
 from covigator.database.model import Variant, VariantObservation, DataSource, Sample
-from covigator.processor.vcf_loader import VcfLoader
+from covigator.pipeline.vcf_loader import VcfLoader
 
 
 class VcfLoaderTests(TestCase):

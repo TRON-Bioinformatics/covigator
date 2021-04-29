@@ -1,18 +1,14 @@
 #!/usr/bin/env python
-
-import operator
-import os
-import sys
-
 from Bio import SeqIO, pairwise2
-from Bio.Align import AlignInfo
+from covigator.configuration import Configuration
 
-from covigator import ENV_COVIGATOR_REF_GISAID, ENV_COVIGATOR_SEQ_GISAID
 
 class GisaidPipeline:
-    
-    reference_file = os.getenv(ENV_COVIGATOR_REF_GISAID, "/scratch/info/projects/SARS-CoV-2/index/MN908947.3.fa")
-    gisaid_file = os.getenv(ENV_COVIGATOR_SEQ_GISAID, "/scratch/info/projects/SARS-CoV-2/gisaid/gisaid_cov2020_sequences_01APR2020_human_host_low_cov_excl.fasta")
+
+    gisaid_file = "/scratch/info/projects/SARS-CoV-2/gisaid/gisaid_cov2020_sequences_01APR2020_human_host_low_cov_excl.fasta"
+
+    def __init__(self, config: Configuration):
+        self.config = config
 
     def get_sequence(self, sequence_id):
         for record in SeqIO.parse(self.gisaid_file, "fasta"):
@@ -22,7 +18,7 @@ class GisaidPipeline:
 
     def run_alignment(self, sequence_id):
         sequence = self.get_sequence(sequence_id)
-        reference = SeqIO.read(self.reference_file, "fasta")
+        reference = SeqIO.read(self.config.reference_genome, "fasta")
         alignments = pairwise2.align.globalxx(sequence, reference.seq)
         aln = alignments[0]
         seq1 = aln[0]
@@ -53,9 +49,9 @@ class GisaidPipeline:
 
     def run(self, run_accession: str):
         print("Processing {}".format(run_accession))
-        alignment = run_alignment(run_accession)
-        mutations = call_mutations(alignment)
-        vcf_file = output_vcf(mutations)
+        alignment = self.run_alignment(run_accession)
+        mutations = self.call_mutations(alignment)
+        vcf_file = self.output_vcf(mutations)
 
         return vcf_file
 
