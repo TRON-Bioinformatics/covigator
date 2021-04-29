@@ -1,8 +1,6 @@
-import os
 from argparse import ArgumentParser
 from dask.distributed import Client
 from dask_jobqueue import SLURMCluster
-
 import covigator
 from covigator.accessor.ena_accessor import EnaAccessor
 from covigator.accessor.gisaid_accessor import GisaidAccessor
@@ -11,7 +9,6 @@ from covigator.processor.ena_pipeline import Pipeline
 from covigator.processor.gisaid_pipeline import GisaidPipeline
 from covigator.processor.ena_processor import EnaProcessor
 from covigator.processor.gisaid_processor import GisaidProcessor
-import logzero
 from logzero import logger
 
 
@@ -34,9 +31,7 @@ def ena_accessor():
     args = parser.parse_args()
     tax_id = args.tax_id
     host_tax_id = args.host_tax_id
-    log_file = os.getenv(covigator.ENV_COVIGATOR_ACCESSOR_LOG_FILE)
-    if log_file is not None:
-        logzero.logfile(log_file, maxBytes=1e6, backupCount=3)
+    covigator.initialise_logs()
     EnaAccessor(tax_id=tax_id, host_tax_id=host_tax_id, database=Database(initialize=True)).access()
 
 
@@ -59,6 +54,8 @@ def gisaid_accessor():
     args = parser.parse_args()
     tax_id = args.tax_id
     host_tax_id = args.host_tax_id
+
+    covigator.initialise_logs()
     GisaidAccessor(tax_id=tax_id, host_tax_id=host_tax_id, database=Database(initialize=True)).access()
 
 
@@ -80,9 +77,7 @@ def processor():
     )
 
     args = parser.parse_args()
-    log_file = os.getenv(covigator.ENV_COVIGATOR_PROCESSOR_LOG_FILE)
-    if log_file is not None:
-        logzero.logfile(log_file, maxBytes=1e6, backupCount=3)
+    initialise_logs()
     with SLURMCluster() as cluster:
         cluster.scale(int(args.num_jobs))
         with Client(cluster) as client:

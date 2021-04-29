@@ -1,4 +1,9 @@
-VERSION = "0.1.28"
+import os
+import logzero
+import logging
+
+
+VERSION = "0.1.29"
 
 # configuration environment variables
 ENV_COVIGATOR_STORAGE_FOLDER = "COVIGATOR_STORAGE_FOLDER"
@@ -34,3 +39,10 @@ ENV_COVIGATOR_SEQ_GISAID = "COVIGATOR_SEQ_GISAID"
 ENV_COVIGATOR_META_GISAID = "COVIGATOR_META_GISAID"
 
 ENV_COVIGATOR_TABLE_VERSION = "COVIGATOR_TABLE_VERSION"
+
+
+def initialise_logs():
+    logfile = os.getenv(ENV_COVIGATOR_ACCESSOR_LOG_FILE)
+    if logfile is not None:
+        logzero.logfile(logfile, maxBytes=1e6, backupCount=3)
+    logzero.loglevel(logging.INFO)
