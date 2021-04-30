@@ -1,5 +1,6 @@
 import os
 import abc
+import time
 import traceback
 from datetime import datetime
 from typing import Callable
@@ -51,8 +52,12 @@ class AbstractProcessor:
                 futures.extend(self._process_run(run_accession=job.run_accession))
                 count += 1
             # waits for all to finish
-            results = [f.result() for f in futures]
-            logger.info("Processed {} samples".format(len(results)))
+            # Dask does not behave properly when this is called
+            # results = [f.result() for f in futures]
+            # logger.info("Processed {} samples".format(len(results)))
+            # wait 10 seconds while processes are running
+            while queries.count_reamining_jobs_to_process(data_source=self.data_source) > 0:
+                time.sleep(10)
 
         except Exception as e:
             logger.exception(e)

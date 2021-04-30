@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import List, Union
 import pandas as pd
-from sqlalchemy import and_, desc, asc, func
+from sqlalchemy import and_, desc, asc, func, or_
 from sqlalchemy.orm import Session, aliased
 from covigator.database.model import Log, DataSource, CovigatorModule, SampleEna, JobEna, JobStatus, VariantObservation, \
     Gene, Variant, VariantCooccurrence, Conservation, JobGisaid
@@ -48,6 +48,22 @@ class Queries:
                 .filter(JobGisaid.status == JobStatus.PENDING) \
                 .order_by(JobGisaid.created_at.desc()) \
                 .first()
+        else:
+            raise ValueError("Bad data source {}".format(data_source))
+
+    def count_reamining_jobs_to_process(self, data_source: DataSource) -> int:
+        if data_source == DataSource.ENA:
+            return self.session.query(JobEna) \
+                .filter(or_(JobEna.status == JobStatus.QUEUED, JobEna.status == JobStatus.FAILED_LOAD,
+                            JobEna.status == JobStatus.FAILED_PROCESSING, JobEna.status == JobStatus.FAILED_DOWNLOAD,
+                            JobEna.status == JobStatus.FAILED_COOCCURRENCE)) \
+                .count()
+        elif data_source == DataSource.GISAID:
+            return self.session.query(JobGisaid) \
+                .filter(or_(JobEna.status == JobStatus.QUEUED, JobEna.status == JobStatus.FAILED_LOAD,
+                            JobEna.status == JobStatus.FAILED_PROCESSING, JobEna.status == JobStatus.FAILED_DOWNLOAD,
+                            JobEna.status == JobStatus.FAILED_COOCCURRENCE)) \
+                .count()
         else:
             raise ValueError("Bad data source {}".format(data_source))
 

@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime
 
 from covigator.configuration import Configuration
@@ -25,23 +26,45 @@ class EnaProcessor(AbstractProcessor):
 
     def _process_run(self, run_accession: str):
         # NOTE: here we set the priority of each step to ensure a depth first processing
-        future_download = self.dask_client.submit(
-            EnaProcessor.run_job, self.config, run_accession, JobStatus.QUEUED, JobStatus.DOWNLOADED,
-            JobStatus.FAILED_DOWNLOAD, DataSource.ENA, EnaProcessor.download, priority=-1)
-        future_process = self.dask_client.submit(
-            EnaProcessor.run_job, self.config, future_download, JobStatus.DOWNLOADED, JobStatus.PROCESSED,
-            JobStatus.FAILED_PROCESSING, DataSource.ENA, EnaProcessor.run_pipeline, priority=1)
-        future_delete = self.dask_client.submit(
-            EnaProcessor.run_job, self.config, future_process, JobStatus.PROCESSED, None,
-            None, DataSource.ENA, EnaProcessor.delete, priority=3)
-        future_load = self.dask_client.submit(
-            EnaProcessor.run_job, self.config, future_process, JobStatus.PROCESSED, JobStatus.LOADED,
-            JobStatus.FAILED_LOAD, DataSource.ENA, EnaProcessor.load, priority=2)
+        future_download = self.dask_client.submit(EnaProcessor.download_job, self.config, run_accession, priority=-1)
+        future_process = self.dask_client.submit(EnaProcessor.pipeline_job, self.config, future_download, priority=1)
+        future_delete = self.dask_client.submit(EnaProcessor.cleanup_job, self.config, future_process, priority=3)
+        future_load = self.dask_client.submit(EnaProcessor.load_job, self.config, future_process, priority=2)
         future_cooccurrence = self.dask_client.submit(
-            EnaProcessor.run_job, self.config, future_load, JobStatus.LOADED, JobStatus.FINISHED,
-            JobStatus.FAILED_COOCCURRENCE, DataSource.ENA, EnaProcessor.compute_cooccurrence, priority=2)
+            EnaProcessor.cooccurrence_job, self.config, future_load, priority=2)
 
         return [future_download, future_process, future_delete, future_load, future_cooccurrence]
+
+    @staticmethod
+    def cooccurrence_job(config: Configuration, run_accession):
+        EnaProcessor.run_job(
+            config, run_accession, start_status=JobStatus.LOADED, end_status=JobStatus.FINISHED,
+            error_status=JobStatus.FAILED_COOCCURRENCE, data_source=DataSource.ENA,
+            function=EnaProcessor.compute_cooccurrence)
+
+    @staticmethod
+    def load_job(config: Configuration, run_accession):
+        EnaProcessor.run_job(
+            config, run_accession, start_status=JobStatus.PROCESSED, end_status=JobStatus.LOADED,
+            error_status=JobStatus.FAILED_LOAD, data_source=DataSource.ENA, function=EnaProcessor.load)
+
+    @staticmethod
+    def download_job(config: Configuration, run_accession):
+        EnaProcessor.run_job(
+            config, run_accession, start_status=JobStatus.QUEUED, end_status=JobStatus.DOWNLOADED,
+            error_status=JobStatus.FAILED_DOWNLOAD, data_source=DataSource.ENA, function=EnaProcessor.download)
+
+    @staticmethod
+    def pipeline_job(config: Configuration, run_accession):
+        EnaProcessor.run_job(
+            config, run_accession, start_status=JobStatus.DOWNLOADED, end_status=JobStatus.PROCESSED,
+            error_status=JobStatus.FAILED_PROCESSING, data_source=DataSource.ENA, function=EnaProcessor.run_pipeline)
+
+    @staticmethod
+    def cleanup_job(config: Configuration, run_accession):
+        EnaProcessor.run_job(
+            config, run_accession, start_status=JobStatus.PROCESSED, end_status=None, error_status=None,
+            data_source=DataSource.ENA, function=EnaProcessor.delete)
 
     @staticmethod
     def download(job: JobEna, queries: Queries, config: Configuration):
