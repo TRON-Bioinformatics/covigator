@@ -40,32 +40,32 @@ class EnaProcessor(AbstractProcessor):
 
     @staticmethod
     def cooccurrence_job(config: Configuration, run_accession):
-        EnaProcessor.run_job(
+        return EnaProcessor.run_job(
             config, run_accession, start_status=JobStatus.LOADED, end_status=JobStatus.FINISHED,
             error_status=JobStatus.FAILED_COOCCURRENCE, data_source=DataSource.ENA,
             function=EnaProcessor.compute_cooccurrence)
 
     @staticmethod
     def load_job(config: Configuration, run_accession):
-        EnaProcessor.run_job(
+        return EnaProcessor.run_job(
             config, run_accession, start_status=JobStatus.PROCESSED, end_status=JobStatus.LOADED,
             error_status=JobStatus.FAILED_LOAD, data_source=DataSource.ENA, function=EnaProcessor.load)
 
     @staticmethod
     def download_job(config: Configuration, run_accession):
-        EnaProcessor.run_job(
+        return EnaProcessor.run_job(
             config, run_accession, start_status=JobStatus.QUEUED, end_status=JobStatus.DOWNLOADED,
             error_status=JobStatus.FAILED_DOWNLOAD, data_source=DataSource.ENA, function=EnaProcessor.download)
 
     @staticmethod
     def pipeline_job(config: Configuration, run_accession):
-        EnaProcessor.run_job(
+        return EnaProcessor.run_job(
             config, run_accession, start_status=JobStatus.DOWNLOADED, end_status=JobStatus.PROCESSED,
             error_status=JobStatus.FAILED_PROCESSING, data_source=DataSource.ENA, function=EnaProcessor.run_pipeline)
 
     @staticmethod
     def cleanup_job(config: Configuration, run_accession):
-        EnaProcessor.run_job(
+        return EnaProcessor.run_job(
             config, run_accession, start_status=JobStatus.PROCESSED, end_status=None, error_status=None,
             data_source=DataSource.ENA, function=EnaProcessor.delete)
 
