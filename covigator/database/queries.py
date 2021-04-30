@@ -51,22 +51,6 @@ class Queries:
         else:
             raise ValueError("Bad data source {}".format(data_source))
 
-    def count_reamining_jobs_to_process(self, data_source: DataSource) -> int:
-        if data_source == DataSource.ENA:
-            return self.session.query(JobEna) \
-                .filter(or_(JobEna.status == JobStatus.QUEUED, JobEna.status == JobStatus.FAILED_LOAD,
-                            JobEna.status == JobStatus.FAILED_PROCESSING, JobEna.status == JobStatus.FAILED_DOWNLOAD,
-                            JobEna.status == JobStatus.FAILED_COOCCURRENCE)) \
-                .count()
-        elif data_source == DataSource.GISAID:
-            return self.session.query(JobGisaid) \
-                .filter(or_(JobEna.status == JobStatus.QUEUED, JobEna.status == JobStatus.FAILED_LOAD,
-                            JobEna.status == JobStatus.FAILED_PROCESSING, JobEna.status == JobStatus.FAILED_DOWNLOAD,
-                            JobEna.status == JobStatus.FAILED_COOCCURRENCE)) \
-                .count()
-        else:
-            raise ValueError("Bad data source {}".format(data_source))
-
     def find_sample_ena_by_accession(self, run_accession: str) -> SampleEna:
         return self.session.query(SampleEna).filter(SampleEna.run_accession == run_accession).first()
 

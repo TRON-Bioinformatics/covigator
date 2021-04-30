@@ -30,7 +30,7 @@ class GisaidProcessor(AbstractProcessor):
             GisaidProcessor.run_job, self.config, future_process, JobStatus.PROCESSED, JobStatus.FINISHED,
             JobStatus.FAILED_LOAD, DataSource.GISAID, GisaidProcessor.load,
             priority=2)
-        return [future_process, future_load]
+        return future_load
 
     @staticmethod
     def run_pipeline(job: JobGisaid, queries: Queries, config: Configuration):

@@ -49,16 +49,23 @@ class AbstractProcessor:
                 session.commit()
 
                 # sends the run for processing
-                futures.extend(self._process_run(run_accession=job.run_accession))
+                futures.append(self._process_run(run_accession=job.run_accession))
                 count += 1
             # waits for all to finish
-            # Dask does not behave properly when this is called
-            # results = [f.result() for f in futures]
-            # logger.info("Processed {} samples".format(len(results)))
-            # wait 10 seconds while processes are running
-            while queries.count_reamining_jobs_to_process(data_source=self.data_source) > 0:
-                time.sleep(10)
-
+            count_finished = 0
+            count_error = 0
+            for future in futures:
+                sample_id = future.result()
+                if sample_id is not None:
+                    count_finished += 1
+                    if count_finished % 50 == 0:
+                        logger.info("Finished {}/{} samples".format(count_finished, len(futures)))
+                else:
+                    count_error += 1
+                    if count_error % 50 == 0:
+                        logger.info("Error {}/{} samples".format(count_error, len(futures)))
+            logger.info("Processor finished! {} samples processed correctly and {} errors".format(
+                count_finished, count_error))
         except Exception as e:
             logger.exception(e)
             session.rollback()

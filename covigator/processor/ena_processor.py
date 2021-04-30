@@ -25,6 +25,9 @@ class EnaProcessor(AbstractProcessor):
         super().__init__(database, dask_client, DataSource.ENA, config)
 
     def _process_run(self, run_accession: str):
+        """
+        Launches all jobs and returns the futures for the final job only
+        """
         # NOTE: here we set the priority of each step to ensure a depth first processing
         future_download = self.dask_client.submit(EnaProcessor.download_job, self.config, run_accession, priority=-1)
         future_process = self.dask_client.submit(EnaProcessor.pipeline_job, self.config, future_download, priority=1)
@@ -33,7 +36,7 @@ class EnaProcessor(AbstractProcessor):
         future_cooccurrence = self.dask_client.submit(
             EnaProcessor.cooccurrence_job, self.config, future_load, priority=2)
 
-        return [future_download, future_process, future_delete, future_load, future_cooccurrence]
+        return future_cooccurrence
 
     @staticmethod
     def cooccurrence_job(config: Configuration, run_accession):
