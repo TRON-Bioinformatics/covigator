@@ -38,7 +38,7 @@ class Configuration:
 
     def __init__(self):
         # local storage
-        self.storage_folder = os.getenv(self.ENV_COVIGATOR_STORAGE_FOLDER, "./data/covigator")
+        self.storage_folder = os.getenv(self.ENV_COVIGATOR_STORAGE_FOLDER, "/data/covigator")
 
         # database
         self.db_host = os.getenv(self.ENV_COVIGATOR_DB_HOST, "0.0.0.0")

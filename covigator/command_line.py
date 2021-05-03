@@ -79,21 +79,41 @@ def processor():
              "The configuration of each job is in the correspoding jobqueue.yaml file",
         default=1
     )
+    parser.add_argument(
+        "--local",
+        dest="local",
+        help="if set it runs locally, no slurm cluster",
+        action='store_true',
+        default=False
+    )
+    parser.add_argument(
+        "--num-local-cpus",
+        dest="num_local_cpus",
+        help="number of CPUs to be used by the processor when running locally",
+        default=1
+    )
 
     args = parser.parse_args()
     config = Configuration()
     covigator.configuration.initialise_logs(config.logfile_processor)
-    with SLURMCluster(scheduler_options={"dashboard_address": ':{}'.format(config.dask_port)}) as cluster:
-        cluster.scale(jobs=int(args.num_jobs))
-        with Client(cluster) as client:
-            if args.data_source == "ENA":
-                EnaProcessor(database=Database(initialize=True, config=config), dask_client=client, config=config)\
-                    .process()
-            elif args.data_source == "GISAID":
-                GisaidProcessor(database=Database(initialize=True, config=config), dask_client=client, config=config)\
-                    .process()
-            else:
-                logger.error("Unknown data source. Please choose either ENA or GISAID")
+    if args.local:
+        _start_dask_processor(args, config, num_local_cpus=int(args.num_local_cpus))
+    else:
+        with SLURMCluster(scheduler_options={"dashboard_address": ':{}'.format(config.dask_port)}) as cluster:
+            cluster.scale(jobs=int(args.num_jobs))
+            _start_dask_processor(args, config, cluster=cluster)
+
+
+def _start_dask_processor(args, config, cluster=None, num_local_cpus=1):
+    with Client(cluster) if cluster is not None else Client(n_workers=num_local_cpus, threads_per_worker=1) as client:
+        if args.data_source == "ENA":
+            EnaProcessor(database=Database(initialize=True, config=config), dask_client=client, config=config) \
+                .process()
+        elif args.data_source == "GISAID":
+            GisaidProcessor(database=Database(initialize=True, config=config), dask_client=client, config=config) \
+                .process()
+        else:
+            logger.error("Unknown data source. Please choose either ENA or GISAID")
 
 
 def pipeline():

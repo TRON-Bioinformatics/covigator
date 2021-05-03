@@ -476,7 +476,7 @@ class Dashboard:
 
 
 def main(debug=False):
-    Dashboard().start_dashboard(debug=debug)
+    Dashboard(config=Configuration()).start_dashboard(debug=debug)
 
 
 if __name__ == '__main__':
