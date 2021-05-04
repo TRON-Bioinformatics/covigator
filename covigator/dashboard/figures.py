@@ -11,6 +11,8 @@ import plotly.graph_objects as go
 import dash_core_components as dcc
 import re
 
+from logzero import logger
+
 from covigator.database.model import Gene
 from covigator.database.queries import Queries
 
@@ -205,53 +207,27 @@ class Figures:
         fig = dcc.Markdown("""**No co-occurrent variants for the current selection**""")
         if data is not None and data.shape[0] > 0:
 
-            # NOTE: transpose matrix manually as plotly transpose does not work with labels
-            # the database return the upper diagonal, the lower is best for plots
-            data.position_one = data.variant_one.transform(lambda x: int(x.split(":")[0]))
-            data.reference_one = data.variant_one.transform(lambda x: x.split(":")[1].split(">")[0])
-            data.alternate_one = data.variant_one.transform(lambda x: x.split(":")[1].split(">")[1])
-            data.position_two = data.variant_two.transform(lambda x: int(x.split(":")[0]))
-            data.reference_two = data.variant_two.transform(lambda x: x.split(":")[1].split(">")[0])
-            data.alternate_two = data.variant_two.transform(lambda x: x.split(":")[1].split(">")[1])
-            data.sort_values(["position_two", "reference_two", "alternate_two",
-                              "position_one", "reference_two", "alternate_two"], inplace=True)
-
-            # shortens very long ids
-            def shorten_variant_id(variant_id):
-                max_variant_length = 15
-                if len(variant_id) <= max_variant_length:
-                    return variant_id
-                else:
-                    return variant_id[0:max_variant_length] + "..."
-
-            all_variants = [shorten_variant_id(v) for v in data.variant_one.dropna().unique()]
-
+            all_variants = data.variant_id_one.unique()
             values = np.array_split(data[metric], len(all_variants))
-            texts = np.array_split(
-                data[["hgvs_p_one", "hgvs_p_two"]].apply(
-                    lambda x: "{} - {}".format(x.hgvs_p_one, x.hgvs_p_two), axis=1),
-                len(all_variants))
-            hovertemplate = '<b>%{text}</b><br>' + 'Cooccurrence: %{z:.5f}<br>' + 'Variant one: %{x}<br>' + 'Variant two: %{y}'
+            #texts = np.array_split(data.hgvs_tooltip, len(all_variants))
+            #hovertemplate = '<b>%{text}</b><br>' + 'Cooccurrence: %{z:.5f}<br>' + 'Variant one: %{x}<br>' + 'Variant two: %{y}'
             heatmap = go.Heatmap(
                 z=values,
                 x=all_variants,
                 y=all_variants,
                 colorscale="Oryel",
                 hoverongaps=False,
-                text=texts,
-                hovertemplate=hovertemplate,
+                #text=texts,
+                #hovertemplate=hovertemplate,
             )
             if selected_variants:
                 selected_variant_ids = [v.get("dna_mutation") for v in selected_variants]
-                values_selected = np.array_split(data[["variant_one", "variant_two", metric]].apply(
-                    lambda x: x[metric] if x.variant_one in selected_variant_ids or
-                                            x.variant_two in selected_variant_ids else None, axis=1),
-                    len(all_variants))
-                texts_selected = np.array_split(data[["variant_one", "variant_two", "hgvs_p_one", "hgvs_p_two"]].apply(
-                    lambda x: "{} - {}".format(x.hgvs_p_one, x.hgvs_p_two)
-                    if x.variant_one in selected_variant_ids or x.variant_two in selected_variant_ids else None,
-                    axis=1),
-                    len(all_variants))
+                selected_data = data
+                selected_data[metric].where(
+                    (selected_data.variant_id_one.isin(selected_variant_ids)) |
+                    (selected_data.variant_id_two.isin(selected_variant_ids)), np.nan, inplace=True)
+                values_selected = np.array_split(selected_data[metric], len(all_variants))
+                texts_selected = np.array_split(selected_data.hgvs_tooltip, len(all_variants))
 
                 heatmap_selected = go.Heatmap(
                     z=values_selected,
@@ -280,6 +256,7 @@ class Figures:
             # the y index is reversed in plotly heatmap
             fig.update_yaxes(autorange="reversed")
 
+        logger.info("cuatro")
         return [
                 dcc.Graph(
                     figure=fig,

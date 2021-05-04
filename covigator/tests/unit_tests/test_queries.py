@@ -8,6 +8,7 @@ from covigator.configuration import Configuration
 from covigator.database.database import Database
 from covigator.database.model import JobStatus, DataSource, Sample, Gene
 from covigator.database.queries import Queries
+from covigator.tests.unit_tests.faked_objects import FakeConfiguration
 from covigator.tests.unit_tests.mocked import get_mocked_ena_sample, get_mocked_log, get_mocked_variant, \
     get_mocked_variant_cooccurrence, get_mocked_variant_observation
 
@@ -16,7 +17,7 @@ class QueriesTests(TestCase):
 
     def setUp(self) -> None:
         # intialise database
-        self.database = Database(test=True, verbose=True, config=Configuration())
+        self.database = Database(test=True, verbose=True, config=FakeConfiguration())
         self.session = self.database.get_database_session()
         self.queries = Queries(session=self.session)
         self.faker = Faker()
@@ -114,6 +115,9 @@ class QueriesTests(TestCase):
                               list(combinations(other_variants, 2))}
         combined_variants_to_sample = {"{}-{}".format(v1.hgvs_p, v2.hgvs_p): (v1, v2) for v1, v2 in
                                     list(zip(variants, other_variants))}
+
+        for variant in variants + other_variants:
+            cooccurrences.append(get_mocked_variant_cooccurrence(self.faker, variant, variant))
         for (variant_one, variant_two) in [variants_to_sample.get(k) for k in
                                            np.random.choice(list(variants_to_sample.keys()), 5, replace=False)]:
             cooccurrences.append(get_mocked_variant_cooccurrence(self.faker, variant_one, variant_two))
@@ -136,7 +140,8 @@ class QueriesTests(TestCase):
 
         data = self.queries.get_variants_cooccurrence_by_gene(gene_name="S", min_cooccurrence=1)
         self.assertIsNotNone(data)
-        num_unique_variants = len(set([c.position_one for c in cooccurrences] + [c.position_two for c in cooccurrences]))
+        num_unique_variants = len(set([c.variant_id_one for c in cooccurrences] +
+                                      [c.variant_id_two for c in cooccurrences]))
         self.assertEqual(data.shape[0], num_unique_variants * (num_unique_variants - 1) + num_unique_variants)
         self.assertEqual(data.shape[1], 14)
         self.assertEqual(data[data["count"] > 0].shape[0], 5)
@@ -149,8 +154,35 @@ class QueriesTests(TestCase):
 
         data = self.queries.get_variants_cooccurrence_by_gene(gene_name="N", min_cooccurrence=1)
         self.assertIsNotNone(data)
-        self.assertEqual(data.shape[1], 14)
+        self.assertEqual(data.shape[1], 8)
         self.assertEqual(data[data["count"] > 0].shape[0], 5)
+
+    def test_get_empty_cooccurrence_matrix(self):
+
+        chromosome = "fixed_chromosome"
+        gene_name = "S"
+        variants = [get_mocked_variant(faker=self.faker, chromosome=chromosome, gene_name=gene_name) for _ in range(5)]
+        self.session.add_all(variants)
+        self.session.commit()
+
+        variants_to_sample = {"{}-{}".format(v1.hgvs_p, v2.hgvs_p): (v1, v2) for v1, v2 in
+                              list(combinations(variants, 2))}
+        cooccurrences = []
+        for variant in variants:
+            cooccurrences.append(get_mocked_variant_cooccurrence(self.faker, variant, variant))
+        for (variant_one, variant_two) in [variants_to_sample.get(k) for k in
+                                           np.random.choice(list(variants_to_sample.keys()), 5, replace=False)]:
+            cooccurrences.append(get_mocked_variant_cooccurrence(self.faker, variant_one, variant_two))
+        self.session.add_all(cooccurrences)
+        self.session.commit()
+
+        empty_matrix = self.queries.get_empty_cooccurrence_matrix(gene_name="S", min_cooccurrence=1)
+        self.assertEqual(empty_matrix.shape[1], 2)
+        self.assertEqual(empty_matrix.shape[0], 25)
+
+        empty_matrix = self.queries.get_empty_cooccurrence_matrix(gene_name="X", min_cooccurrence=1)
+        self.assertEqual(empty_matrix.shape[1], 2)
+        self.assertEqual(empty_matrix.shape[0], 0)
 
     def test_get_variant_abundance_histogram(self):
 

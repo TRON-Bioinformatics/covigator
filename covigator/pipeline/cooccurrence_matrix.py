@@ -32,14 +32,8 @@ class CooccurrenceMatrix:
                 variant_cooccurrence = queries.get_variant_cooccurrence(variant_one, variant_two)
                 if variant_cooccurrence is None:
                     variant_cooccurrence = VariantCooccurrence(
-                        chromosome_one=variant_one.chromosome,
-                        position_one=variant_one.position,
-                        reference_one=variant_one.reference,
-                        alternate_one=variant_one.alternate,
-                        chromosome_two=variant_two.chromosome,
-                        position_two=variant_two.position,
-                        reference_two=variant_two.reference,
-                        alternate_two=variant_two.alternate,
+                        variant_id_one=variant_one.variant_id,
+                        variant_id_two=variant_two.variant_id,
                         count=1
                     )
                     session.add(variant_cooccurrence)

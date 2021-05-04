@@ -6,7 +6,7 @@ from Bio.Alphabet.IUPAC import IUPACData
 
 
 def get_mocked_variant(faker: Faker, chromosome=None, gene_name=None) -> Variant:
-    return Variant(
+    variant = Variant(
         chromosome=chromosome if chromosome else faker.bothify(text="chr##"),
         position=faker.random_int(min=1, max=30000),
         reference=faker.random_choices(list(IUPACData.unambiguous_dna_letters), length=1)[0],
@@ -20,12 +20,15 @@ def get_mocked_variant(faker: Faker, chromosome=None, gene_name=None) -> Variant
         ),
         annotation=faker.random_choices(["non_synonymous", "inframe_deletion", "inframe_insertion"], length=1)[0]
     )
+    variant.variant_id = variant.get_variant_id()
+    return variant
 
 
 def get_mocked_variant_observation(sample: Sample, variant: Variant, faker=Faker()):
     return VariantObservation(
                     sample=sample.id if sample else faker.unique.uuid4(),
                     source=sample.source if sample else faker.random_choices((DataSource.ENA, DataSource.GISAID)),
+                    variant_id=variant.variant_id,
                     chromosome=variant.chromosome,
                     position=variant.position,
                     reference=variant.reference,
@@ -75,26 +78,14 @@ def get_mocked_log(faker: Faker, source: DataSource = None, module: CovigatorMod
 def get_mocked_variant_cooccurrence(faker: Faker, variant_one: Variant, variant_two: Variant) -> VariantCooccurrence:
     if variant_one.position <= variant_two.position:
         cooccurrence = VariantCooccurrence(
-            chromosome_one=variant_one.chromosome,
-            position_one=variant_one.position,
-            reference_one=variant_one.reference,
-            alternate_one=variant_one.alternate,
-            chromosome_two=variant_two.chromosome,
-            position_two=variant_two.position,
-            reference_two=variant_two.reference,
-            alternate_two=variant_two.alternate,
+            variant_id_one=variant_one.variant_id,
+            variant_id_two=variant_two.variant_id,
             count=faker.random_int(min=1, max=10)
         )
     else:
         cooccurrence = VariantCooccurrence(
-            chromosome_two=variant_one.chromosome,
-            position_two=variant_one.position,
-            reference_two=variant_one.reference,
-            alternate_two=variant_one.alternate,
-            chromosome_one=variant_two.chromosome,
-            position_one=variant_two.position,
-            reference_one=variant_two.reference,
-            alternate_one=variant_two.alternate,
+            variant_id_two=variant_one.variant_id,
+            variant_id_one=variant_two.variant_id,
             count=faker.random_int(min=1, max=10)
         )
     return cooccurrence

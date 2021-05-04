@@ -74,9 +74,9 @@ def session_scope(config: Configuration = None, database: Database = None, initi
 
 
 @tenacity.retry(wait=wait_exponential(multiplier=2, min=1, max=10), stop=stop_after_attempt(5))
-def get_database(config: Configuration, initialize=False) -> Database:
+def get_database(config: Configuration, initialize=False, verbose=False) -> Database:
     try:
-        database = Database(config=config, initialize=initialize)
+        database = Database(config=config, initialize=initialize, verbose=verbose)
         session = database.get_database_session()
         stmt = text("SELECT 1")
         session.execute(stmt)
