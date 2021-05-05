@@ -5,6 +5,7 @@ from covigator.dashboard.figures import Figures
 from covigator.database.database import Database
 from faker import Faker
 from covigator.database.queries import Queries
+from covigator.tests.unit_tests.faked_objects import FakeConfiguration
 from covigator.tests.unit_tests.mocked import get_mocked_ena_sample
 
 
@@ -12,7 +13,7 @@ class FiguresTests(TestCase):
 
     def setUp(self) -> None:
         # intialise database
-        self.database = Database(test=True, config=Configuration())
+        self.database = Database(test=True, config=FakeConfiguration())
         self.session = self.database.get_database_session()
         self.figures = Figures(queries=Queries(session=self.session))
         self.faker = Faker()

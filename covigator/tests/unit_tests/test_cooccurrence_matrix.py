@@ -6,6 +6,7 @@ from covigator.configuration import Configuration
 from covigator.database.database import Database
 from covigator.database.model import Sample, VariantCooccurrence
 from covigator.pipeline.cooccurrence_matrix import CooccurrenceMatrix
+from covigator.tests.unit_tests.faked_objects import FakeConfiguration
 from covigator.tests.unit_tests.mocked import get_mocked_ena_sample, get_mocked_variant, get_mocked_variant_observation
 
 
@@ -16,7 +17,7 @@ class CooccurrenceMatrixTests(TestCase):
     NUM_VARIANT_OBSERVATIONS_PER_SAMPLE = 5
 
     def setUp(self) -> None:
-        self.config = Configuration()
+        self.config = FakeConfiguration()
         self.session = Database(test=True, config=self.config).get_database_session()
         faker = Faker()
         # mocks some unique variants
@@ -92,9 +93,9 @@ class CooccurrenceMatrixTests(TestCase):
         variant_cooccurrences = self.session.query(VariantCooccurrence).all()
         found_cooccurrent_variant = False
         for vo in variant_cooccurrences:
-            self.assertLessEqual(vo.chromosome_one, vo.chromosome_two)
-            if vo.chromosome_one == vo.chromosome_two:
-                self.assertLessEqual(vo.position_one, vo.position_two)
+            position_one = int(vo.variant_id_one.split(":")[0])
+            position_two = int(vo.variant_id_two.split(":")[0])
+            self.assertLessEqual(position_one, position_two)
             self.assertLessEqual(vo.count, self.NUM_SAMPLES)
             self.assertGreater(vo.count, 0)
             if vo.count > 1:

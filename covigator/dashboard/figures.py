@@ -209,16 +209,16 @@ class Figures:
 
             all_variants = data.variant_id_one.unique()
             values = np.array_split(data[metric], len(all_variants))
-            #texts = np.array_split(data.hgvs_tooltip, len(all_variants))
-            #hovertemplate = '<b>%{text}</b><br>' + 'Cooccurrence: %{z:.5f}<br>' + 'Variant one: %{x}<br>' + 'Variant two: %{y}'
+            texts = np.array_split(data.hgvs_tooltip, len(all_variants))
+            hovertemplate = '<b>%{text}</b><br>' + 'Cooccurrence: %{z:.5f}<br>' + 'Variant one: %{x}<br>' + 'Variant two: %{y}'
             heatmap = go.Heatmap(
                 z=values,
                 x=all_variants,
                 y=all_variants,
                 colorscale="Oryel",
                 hoverongaps=False,
-                #text=texts,
-                #hovertemplate=hovertemplate,
+                text=texts,
+                hovertemplate=hovertemplate,
             )
             if selected_variants:
                 selected_variant_ids = [v.get("dna_mutation") for v in selected_variants]

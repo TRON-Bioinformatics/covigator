@@ -259,7 +259,7 @@ class Queries:
             .group_by(VariantObservation.variant_id, func.date_trunc('month', SampleEna.first_created))
         return pd.read_sql(query.statement, self.session.bind)
 
-    def get_variants_cooccurrence_by_gene(self, gene_name, min_cooccurrence=5) -> pd.DataFrame:
+    def get_variants_cooccurrence_by_gene(self, gene_name, min_cooccurrence=5, test=False) -> pd.DataFrame:
         """
         Returns the full cooccurrence matrix of all non synonymous variants in a gene with at least
         min_occurrences occurrences.
@@ -270,14 +270,25 @@ class Queries:
         # query for cooccurrence matrix
         variant_one = aliased(Variant)
         variant_two = aliased(Variant)
-        query = self.session.query(VariantCooccurrence,
-                                   func.div(VariantCooccurrence.count, count_samples).label("frequency"),
-                                   variant_one.position,
-                                   variant_one.reference,
-                                   variant_one.alternate,
-                                   variant_one.hgvs_p,
-                                   (variant_one.hgvs_p + " - " + variant_two.hgvs_p).label("hgvs_tooltip")) \
-            .filter(VariantCooccurrence.count >= min_cooccurrence)\
+        if not test:
+            query = self.session.query(VariantCooccurrence,
+                                       func.div(VariantCooccurrence.count, count_samples).label("frequency"),
+                                       variant_one.position,
+                                       variant_one.reference,
+                                       variant_one.alternate,
+                                       variant_one.hgvs_p,
+                                       (variant_one.hgvs_p + " - " + variant_two.hgvs_p).label("hgvs_tooltip"))
+        else:
+            # this is needed for testing environment with SQLite
+            query = self.session.query(VariantCooccurrence,
+                                       VariantCooccurrence.count.label("frequency"),
+                                       variant_one.position,
+                                       variant_one.reference,
+                                       variant_one.alternate,
+                                       variant_one.hgvs_p,
+                                       (variant_one.hgvs_p + " - " + variant_two.hgvs_p).label("hgvs_tooltip"))
+
+        query = query.filter(VariantCooccurrence.count >= min_cooccurrence)\
             .join(variant_one, and_(VariantCooccurrence.variant_id_one == variant_one.variant_id)) \
             .join(variant_two, and_(VariantCooccurrence.variant_id_two == variant_two.variant_id))
 

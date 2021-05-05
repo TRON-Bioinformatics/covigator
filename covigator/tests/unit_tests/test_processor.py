@@ -7,13 +7,14 @@ from covigator.database.model import Log, DataSource, CovigatorModule
 from covigator.processor.ena_processor import EnaProcessor
 from faker import Faker
 from covigator.processor.gisaid_processor import GisaidProcessor
+from covigator.tests.unit_tests.faked_objects import FakeConfiguration
 
 
 class ProcessorTests(TestCase):
 
     def setUp(self) -> None:
         # intialise database
-        config = Configuration()
+        config = FakeConfiguration()
         self.database = Database(test=True, config=config)
         self.session = self.database.get_database_session()
         self.ena_processor = EnaProcessor(

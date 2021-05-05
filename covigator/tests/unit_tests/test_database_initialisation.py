@@ -3,22 +3,26 @@ from covigator.database.database import Database
 from covigator.database.model import Gene, get_table_versioned_name, Variant, Conservation
 import pandas as pd
 from covigator.configuration import Configuration
+from covigator.tests.unit_tests.faked_objects import FakeConfiguration
 
 
 class DatabaseInitialisationTests(TestCase):
 
+    def setUp(self) -> None:
+        self.config = FakeConfiguration()
+
     def test_genes_table_initialisation(self):
-        database = Database(test=True, config=Configuration())
+        database = Database(test=True, config=self.config)
         session = database.get_database_session()
         self.assertGreater(session.query(Gene).count(), 0)
 
     def test_genes_table_initialisation_not_twice(self):
-        database = Database(test=True, config=Configuration())
+        database = Database(test=True, config=self.config)
         session = database.get_database_session()
         count_genes = session.query(Gene).count()
 
         # creates another connection
-        database2 = Database(test=True, config=Configuration())
+        database2 = Database(test=True, config=self.config)
         session2 = database2.get_database_session()
 
         count_genes_2 = session2.query(Gene).count()
@@ -32,7 +36,7 @@ class DatabaseInitialisationTests(TestCase):
         self.assertEqual("variant_v2", get_table_versioned_name(Variant.__table__.name, config=config))
 
     def test_conservation_loader(self):
-        database = Database(test=True, config=Configuration())
+        database = Database(test=True, config=self.config)
         session = database.get_database_session()
         self.assertGreater(session.query(Conservation).count(), 0)
         conservation_values = pd.read_sql(session.query(Conservation).statement, session.bind)
