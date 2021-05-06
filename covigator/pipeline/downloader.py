@@ -47,17 +47,14 @@ class Downloader:
         local_filename = url.split('/')[-1]
         local_folder = os.path.join(self.storage_folder, run_accession)
         local_full_path = os.path.join(local_folder, local_filename)
-        pathlib.Path(local_folder).mkdir(parents=True, exist_ok=True)
+        # avoids downloading the same files over and over
+        if not os.path.exists(local_full_path):
+            pathlib.Path(local_folder).mkdir(parents=True, exist_ok=True)
 
-        # TODO: will this work for very large files?
-        with closing(request.urlopen(url)) as r:
-            with open(local_full_path, 'wb') as f:
-                shutil.copyfileobj(r, f)
-
-        # NOTE: requests library does not support FTP protocol
-        #with requests.get(url, stream=True) as r:
-        #    with open(local_full_path, 'wb') as f:
-        #        shutil.copyfileobj(r.raw, f)
+            # TODO: will this work for very large files?
+            with closing(request.urlopen(url)) as r:
+                with open(local_full_path, 'wb') as f:
+                    shutil.copyfileobj(r, f)
 
         return local_full_path
 

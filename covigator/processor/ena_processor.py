@@ -31,7 +31,7 @@ class EnaProcessor(AbstractProcessor):
         # NOTE: here we set the priority of each step to ensure a depth first processing
         future_download = self.dask_client.submit(EnaProcessor.download_job, self.config, run_accession, priority=-1)
         future_process = self.dask_client.submit(EnaProcessor.pipeline_job, self.config, future_download, priority=1)
-        future_delete = self.dask_client.submit(EnaProcessor.cleanup_job, self.config, future_process, priority=3)
+        #future_delete = self.dask_client.submit(EnaProcessor.cleanup_job, self.config, future_process, priority=3)
         future_load = self.dask_client.submit(EnaProcessor.load_job, self.config, future_process, priority=2)
         future_cooccurrence = self.dask_client.submit(
             EnaProcessor.cooccurrence_job, self.config, future_load, priority=2)

@@ -1,8 +1,12 @@
 from datetime import date, datetime
 from typing import List, Union
 import pandas as pd
-from sqlalchemy import and_, desc, asc, func, or_
+from logzero import logger
+from sqlalchemy import and_, desc, asc, func, or_, String, text, DateTime
+from sqlalchemy.engine.default import DefaultDialect
 from sqlalchemy.orm import Session, aliased
+from sqlalchemy.sql.sqltypes import NullType
+
 from covigator.database.model import Log, DataSource, CovigatorModule, SampleEna, JobEna, JobStatus, VariantObservation, \
     Gene, Variant, VariantCooccurrence, Conservation, JobGisaid
 
@@ -122,19 +126,13 @@ class Queries:
     def get_variants_by_sample(self, sample_id) -> List[VariantObservation]:
         return self.session.query(VariantObservation) \
             .filter(VariantObservation.sample == sample_id) \
-            .order_by(VariantObservation.chromosome, VariantObservation.position) \
+            .order_by(VariantObservation.position, VariantObservation.reference, VariantObservation.alternate) \
             .all()
 
     def get_variant_cooccurrence(self, variant_one: Variant, variant_two: Variant) -> VariantCooccurrence:
         return self.session.query(VariantCooccurrence) \
-            .filter(and_(VariantCooccurrence.chromosome_one == variant_one.chromosome,
-                         VariantCooccurrence.position_one == variant_one.position,
-                         VariantCooccurrence.reference_one == variant_one.reference,
-                         VariantCooccurrence.alternate_one == variant_one.alternate,
-                         VariantCooccurrence.chromosome_two == variant_two.chromosome,
-                         VariantCooccurrence.position_two == variant_two.position,
-                         VariantCooccurrence.reference_two == variant_two.reference,
-                         VariantCooccurrence.alternate_two == variant_two.alternate)) \
+            .filter(and_(VariantCooccurrence.variant_id_one == variant_one.variant_id,
+                         VariantCooccurrence.variant_id_two == variant_two.variant_id)) \
             .first()
 
     def count_ena_samples(self) -> int:
@@ -207,16 +205,14 @@ class Queries:
         """
         # query for top occurring variants
         query = self.session.query(
-            VariantObservation.position, VariantObservation.reference, VariantObservation.alternate,
-            Variant.hgvs_p, Variant.gene_name, Variant.annotation, func.count().label('total'))\
-            .join(Variant)
+            VariantObservation.variant_id, Variant.hgvs_p, Variant.gene_name, Variant.annotation,
+            func.count().label('total')).join(Variant)
         if gene_name is not None:
             query = query.filter(and_(Variant.gene_name == gene_name, Variant.annotation != SYNONYMOUS_VARIANT))
         else:
             query = query.filter(Variant.annotation != SYNONYMOUS_VARIANT)
         query = query.group_by(
-            VariantObservation.position, VariantObservation.reference,
-            VariantObservation.alternate, Variant.hgvs_p, Variant.gene_name, Variant.annotation)
+            VariantObservation.variant_id, Variant.hgvs_p, Variant.gene_name, Variant.annotation)
         query = query.order_by(desc('total')).limit(top)
         top_occurring_variants = pd.read_sql(query.statement, self.session.bind)
 
@@ -224,14 +220,13 @@ class Queries:
             variant_counts_by_month = []
             # NOTE: one query per variant for the counts per month, will this be efficient?
             for _, variant in top_occurring_variants.iterrows():
-                variant_counts_by_month.append(self.get_variant_counts_by_month(
-                    variant.position, variant.reference, variant.alternate))
+                variant_counts_by_month.append(self.get_variant_counts_by_month(variant.variant_id))
             top_occurring_variants_by_month = pd.concat(variant_counts_by_month)
 
             # join both tables with total counts and counts per month
-            top_occurring_variants = top_occurring_variants.set_index(["position", "reference", "alternate"])\
+            top_occurring_variants = top_occurring_variants.set_index(["variant_id"])\
                 .join(
-                top_occurring_variants_by_month.set_index(["position", "reference", "alternate"]))\
+                top_occurring_variants_by_month.set_index(["variant_id"]))\
                 .reset_index()
 
             # format the month column appropriately
@@ -239,11 +234,7 @@ class Queries:
                 lambda d: "{}-{:02d}".format(d.year, int(d.month)))
 
             # formats the DNA mutation
-            top_occurring_variants['dna_mutation'] = top_occurring_variants.apply(
-                lambda row: "{}:{}>{}".format(row["position"], row["reference"], row["alternate"]), axis=1)
-            del top_occurring_variants["position"]
-            del top_occurring_variants["reference"]
-            del top_occurring_variants["alternate"]
+            top_occurring_variants.rename(columns={'variant_id': 'dna_mutation'}, inplace=True)
 
             # replace the total count by the frequency
             count_samples = self.count_ena_samples()
@@ -258,41 +249,48 @@ class Queries:
 
         return top_occurring_variants
 
-    def get_variant_counts_by_month(self, position, reference, alternate) -> pd.DataFrame:
+    def get_variant_counts_by_month(self, variant_id) -> pd.DataFrame:
         query = self.session.query(
-            VariantObservation.position, VariantObservation.reference,
-            VariantObservation.alternate, func.date_trunc('month', SampleEna.first_created).label("month"),
+            VariantObservation.variant_id, func.date_trunc('month', SampleEna.first_created).label("month"),
             func.count().label("count"))\
             .join(Variant)\
             .join(SampleEna, VariantObservation.sample == SampleEna.run_accession)\
-            .filter(and_(VariantObservation.position == position,
-                         VariantObservation.reference == reference, VariantObservation.alternate == alternate,
-                         Variant.annotation != SYNONYMOUS_VARIANT))\
-            .group_by(VariantObservation.position, VariantObservation.reference,
-                      VariantObservation.alternate, func.date_trunc('month', SampleEna.first_created))
+            .filter(and_(VariantObservation.variant_id == variant_id, Variant.annotation != SYNONYMOUS_VARIANT))\
+            .group_by(VariantObservation.variant_id, func.date_trunc('month', SampleEna.first_created))
         return pd.read_sql(query.statement, self.session.bind)
 
-    def get_variants_cooccurrence_by_gene(self, gene_name, min_cooccurrence=5) -> pd.DataFrame:
+    def get_variants_cooccurrence_by_gene(self, gene_name, min_cooccurrence=5, test=False) -> pd.DataFrame:
         """
         Returns the full cooccurrence matrix of all non synonymous variants in a gene with at least
         min_occurrences occurrences.
         """
+        # query for total samples required to calculate frequencies
+        count_samples = self.count_ena_samples()
+
+        # query for cooccurrence matrix
         variant_one = aliased(Variant)
         variant_two = aliased(Variant)
-        query = self.session.query(VariantCooccurrence,
-                                   variant_one.hgvs_p.label("hgvs_p_one"),
-                                   variant_one.annotation.label("annotation_one"),
-                                   variant_two.hgvs_p.label("hgvs_p_two"),
-                                   variant_two.annotation.label("annotation_two")) \
-            .filter(VariantCooccurrence.count >= min_cooccurrence)\
-            .join(variant_one, and_(VariantCooccurrence.chromosome_one == variant_one.chromosome,
-                                    VariantCooccurrence.position_one == variant_one.position,
-                                    VariantCooccurrence.reference_one == variant_one.reference,
-                                    VariantCooccurrence.alternate_one == variant_one.alternate)) \
-            .join(variant_two, and_(VariantCooccurrence.chromosome_two == variant_two.chromosome,
-                                    VariantCooccurrence.position_two == variant_two.position,
-                                    VariantCooccurrence.reference_two == variant_two.reference,
-                                    VariantCooccurrence.alternate_two == variant_two.alternate))
+        if not test:
+            query = self.session.query(VariantCooccurrence,
+                                       func.div(VariantCooccurrence.count, count_samples).label("frequency"),
+                                       variant_one.position,
+                                       variant_one.reference,
+                                       variant_one.alternate,
+                                       variant_one.hgvs_p,
+                                       (variant_one.hgvs_p + " - " + variant_two.hgvs_p).label("hgvs_tooltip"))
+        else:
+            # this is needed for testing environment with SQLite
+            query = self.session.query(VariantCooccurrence,
+                                       VariantCooccurrence.count.label("frequency"),
+                                       variant_one.position,
+                                       variant_one.reference,
+                                       variant_one.alternate,
+                                       variant_one.hgvs_p,
+                                       (variant_one.hgvs_p + " - " + variant_two.hgvs_p).label("hgvs_tooltip"))
+
+        query = query.filter(VariantCooccurrence.count >= min_cooccurrence)\
+            .join(variant_one, and_(VariantCooccurrence.variant_id_one == variant_one.variant_id)) \
+            .join(variant_two, and_(VariantCooccurrence.variant_id_two == variant_two.variant_id))
 
         if gene_name is not None:
             query = query.filter(and_(variant_one.gene_name == gene_name,
@@ -303,64 +301,52 @@ class Queries:
             query = query.filter(and_(variant_one.annotation != SYNONYMOUS_VARIANT,
                                       variant_two.annotation != SYNONYMOUS_VARIANT))
 
+        self._print_query(query=query)
         data = pd.read_sql(query.statement, self.session.bind)
 
-        count_samples = self.count_ena_samples()
-
-        def get_variant_id(x):
-            return "{position}:{reference}>{alternate}".format(position=x[0], reference=x[1], alternate=x[2])
-
-        full_matrix_with_annotations = None
+        full_matrix = None
         if data.shape[0] > 0:
-            # build a single column identifying each variant
-            data["variant_one"] = data[['position_one', 'reference_one', 'alternate_one']].apply(get_variant_id, axis=1)
-            data["variant_two"] = data[['position_two', 'reference_two', 'alternate_two']].apply(get_variant_id, axis=1)
-
-            # save annotations to a different dataframe
-            annotations = data[["variant_one", "variant_two", "hgvs_p_one", "annotation_one", "hgvs_p_two",
-                                "annotation_two", "position_one", "position_two", "reference_one", "reference_two",
-                                "alternate_one", "alternate_two"]]
-
-            # delete other columns
-            del data["chromosome_one"]
-            del data["chromosome_two"]
-            del data["hgvs_p_one"]
-            del data["annotation_one"]
-            del data["hgvs_p_two"]
-            del data["annotation_two"]
+            # these are views of the original data
+            annotations = data.loc[data.variant_id_one == data.variant_id_two,
+                                   ["variant_id_one", "position", "reference", "alternate", "hgvs_p"]]
+            tooltip = data.loc[:, ["variant_id_one", "variant_id_two", "hgvs_tooltip"]]
+            sparse_matrix = data.loc[:, ["variant_id_one", "variant_id_two", "count", "frequency"]]
 
             # from the sparse matrix builds in memory the complete matrix
-            # TODO: would plotly improve its heatmap implementation so we don't need this memory misuse??
-            all_variants = pd.concat([data[["variant_one", "position_one", "reference_one", "alternate_one"]],
-                                      data[["variant_two", "position_two", "reference_two", "alternate_two"]].rename(
-                                          columns={'variant_two': 'variant_one',
-                                                   'position_two': 'position_one',
-                                                   'reference_two': 'reference_one',
-                                                   'alternate_two': 'alternate_one'})], axis=0)
-            all_variants = all_variants.sort_values(
-                by=["position_one", "reference_one", "alternate_one"]).variant_one.unique()
-            empty_table = pd.DataFrame(
-                index=pd.MultiIndex.from_product([all_variants, all_variants], names=["variant_one", "variant_two"]))
-            empty_table["count"] = 0
+            all_variants = data.variant_id_one.unique()
+            empty_full_matrix = pd.DataFrame(index=pd.MultiIndex.from_product(
+                [all_variants, all_variants], names=["variant_id_one", "variant_id_two"])).reset_index()
+            full_matrix = pd.merge(
+                left=empty_full_matrix, right=sparse_matrix, on=["variant_id_one", "variant_id_two"], how='left')
 
-            # delete other columns that were used to sort
-            del data["position_one"]
-            del data["reference_one"]
-            del data["alternate_one"]
-            del data["position_two"]
-            del data["reference_two"]
-            del data["alternate_two"]
+            # add annotation on variant one
+            full_matrix = pd.merge(left=full_matrix, right=annotations, on="variant_id_one", how='left')\
+                .rename(columns={"position": "position_one",
+                                 "reference": "reference_one",
+                                 "alternate": "alternate_one",
+                                 "hgvs_p": "hgvs_p_one"})
 
-            # adds values into empty table
-            full_matrix = empty_table + data.set_index(["variant_one", "variant_two"])
-            #full_matrix.fillna(0, inplace=True)
-            full_matrix_with_annotations = full_matrix.join(annotations.set_index(["variant_one", "variant_two"]))
-            full_matrix_with_annotations.reset_index(inplace=True)
+            # add annotations on variant two
+            full_matrix = pd.merge(left=full_matrix, right=annotations,
+                                   left_on="variant_id_two", right_on="variant_id_one", how='left') \
+                .rename(columns={"variant_id_one_x": "variant_id_one",
+                                 "position": "position_two",
+                                 "reference": "reference_two",
+                                 "alternate": "alternate_two",
+                                 "hgvs_p": "hgvs_p_two"})
 
-            # calculate pair cooccurrence frequency
-            full_matrix_with_annotations["frequency"] = full_matrix_with_annotations["count"] / count_samples
+            # add tooltip
+            full_matrix = pd.merge(left=full_matrix, right=tooltip, on=["variant_id_one", "variant_id_two"], how='left')
 
-        return full_matrix_with_annotations
+            # NOTE: transpose matrix manually as plotly transpose does not work with labels
+            # the database return the upper diagonal, the lower is best for plots
+            full_matrix.sort_values(["position_two", "reference_two", "alternate_two",
+                                     "position_one", "reference_one", "alternate_one"], inplace=True)
+
+            full_matrix = full_matrix.loc[:, ["variant_id_one", "variant_id_two", "count", "frequency", "hgvs_tooltip"]]
+
+        logger.info("tres")
+        return full_matrix
 
     def get_variant_abundance_histogram(self, bin_size=50) -> pd.DataFrame:
 
@@ -413,3 +399,35 @@ class Queries:
                            where="WHERE start >= {start} and start <= {end}".format(start=start, end=end)
                            if start is not None and end is not None else "")
         return pd.read_sql_query(sql_query, self.session.bind)
+
+    def _print_query(self, query):
+        class StringLiteral(String):
+            """Teach SA how to literalize various things."""
+
+            def literal_processor(self, dialect):
+                super_processor = super(StringLiteral, self).literal_processor(dialect)
+
+                def process(value):
+                    if isinstance(value, int):
+                        return str(value)
+                    if not isinstance(value, str):
+                        value = str(value)
+                    result = super_processor(value)
+                    if isinstance(result, bytes):
+                        result = result.decode(dialect.encoding)
+                    return result
+
+                return process
+
+        class LiteralDialect(DefaultDialect):
+            colspecs = {
+                # prevent various encoding explosions
+                String: StringLiteral,
+                # teach SA about how to literalize a datetime
+                DateTime: StringLiteral,
+                # don't format py2 long integers to NULL
+                NullType: StringLiteral,
+            }
+        logger.info(query.statement.compile(
+            dialect=LiteralDialect(),
+            compile_kwargs={'literal_binds': True}).string)

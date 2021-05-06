@@ -23,7 +23,7 @@ class VcfLoader:
                 # this variant is not part of the rollback if something else fails
                 session.merge(covigator_variant)
             session.commit()
-            observed_variants.append(self._parse_variant_observation(variant, sample))
+            observed_variants.append(self._parse_variant_observation(variant, sample, covigator_variant))
 
         session.add_all(observed_variants)  # NOTE: commit will happen afterwards when the job status is updated
 
@@ -35,6 +35,7 @@ class VcfLoader:
                     # NOTE: because we only support haploid organisms we expect only one alternate,
                     # TODO: support subclonal variants at some point
                     alternate=variant.ALT[0])
+        parsed_variant.variant_id = parsed_variant.get_variant_id()
         ann = variant.INFO.get("ANN")
         if ann is not None:
             annotations = ann.split(",")
@@ -54,12 +55,13 @@ class VcfLoader:
                 parsed_variant.aa_pos_length=values[13].strip()
         return parsed_variant
 
-    def _parse_variant_observation(self, variant: Variant, sample: Sample) -> VariantObservation:
+    def _parse_variant_observation(self, variant: Variant, sample: Sample, covigator_variant: CovigatorVariant) -> VariantObservation:
 
         dp4 = variant.INFO.get("DP4")
         return VariantObservation(
             sample=sample.id,
             source=sample.source,
+            variant_id=covigator_variant.variant_id,
             chromosome=variant.CHROM,
             position=variant.POS,
             reference=variant.REF,

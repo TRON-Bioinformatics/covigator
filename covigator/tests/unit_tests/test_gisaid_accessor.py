@@ -8,6 +8,7 @@ from covigator.configuration import Configuration
 from covigator.database.database import Database
 from covigator.database.model import SampleGisaid, Sample, JobGisaid, Log, DataSource, CovigatorModule
 from covigator.tests import SARS_COV_2_TAXID, HOMO_SAPIENS_TAXID
+from covigator.tests.unit_tests.faked_objects import FakeConfiguration
 
 
 class FakeGisaidAccessor(GisaidAccessor):
@@ -15,7 +16,7 @@ class FakeGisaidAccessor(GisaidAccessor):
     def __init__(self, results, database=None):
         # uses an in memory database or the one provided
         super().__init__(input_file=None, host_tax_id=HOMO_SAPIENS_TAXID,
-                         database=database if database else Database(test=True, config=Configuration()))
+                         database=database if database else Database(test=True, config=FakeConfiguration()))
         self.results = results
 
     def _get_gisaid_runs(self):
@@ -23,6 +24,9 @@ class FakeGisaidAccessor(GisaidAccessor):
 
 
 class GisaidAccessorTests(TestCase):
+
+    def setUp(self) -> None:
+        self.config = FakeConfiguration()
 
     def test_filtering_by_instrument_platform(self):
         gisaid_accessor = FakeGisaidAccessor([
@@ -51,6 +55,6 @@ class GisaidAccessorTests(TestCase):
 
     def test_get_gisaid_runs(self):
         gisaid_accessor = GisaidAccessor(input_file=None, host_tax_id=HOMO_SAPIENS_TAXID,
-                         database=Database(test=True, config=Configuration()))
+                         database=Database(test=True, config=self.config))
 
         gisaid_accessor.access()

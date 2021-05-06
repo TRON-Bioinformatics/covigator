@@ -19,11 +19,11 @@ MISSING_VALUE = "-"
 
 class Dashboard:
 
-    def __init__(self, config: Configuration):
+    def __init__(self, config: Configuration, verbose=False):
         covigator.configuration.initialise_logs(config.logfile_dash)
         self.config = config
         # the connection to the database is created only once, but multiple sessions are used
-        self.database = get_database(config=config, initialize=True)
+        self.database = get_database(config=config, initialize=True, verbose=verbose)
         self.queries = None
         self.figures = None
 
@@ -476,7 +476,7 @@ class Dashboard:
 
 
 def main(debug=False):
-    Dashboard().start_dashboard(debug=debug)
+    Dashboard(config=Configuration()).start_dashboard(debug=debug)
 
 
 if __name__ == '__main__':

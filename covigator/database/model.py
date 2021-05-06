@@ -209,8 +209,6 @@ class JobGisaid(Base):
     vcf_path = Column(String)
 
 
-
-
 class JobEna(Base):
     """
     The table that holds an ENA job
@@ -255,10 +253,11 @@ class Variant(Base):
     """
     __tablename__ = VARIANT_TABLE_NAME
 
-    chromosome = Column(String, primary_key=True)
-    position = Column(Integer, primary_key=True, index=True)
-    reference = Column(String, primary_key=True)
-    alternate = Column(String, primary_key=True)
+    variant_id = Column(String, primary_key=True)
+    chromosome = Column(String)
+    position = Column(Integer, index=True)
+    reference = Column(String)
+    alternate = Column(String)
     overlaps_multiple_genes = Column(Boolean, default=False)
     """
     ##INFO=<ID=ANN,Number=.,Type=String,Description="Functional annotations: '
@@ -290,6 +289,9 @@ class Variant(Base):
     cds_pos_length = Column(String)
     aa_pos_length = Column(String)
 
+    def get_variant_id(self):
+        return "{}:{}>{}".format(self.position, self.reference, self.alternate)
+
 
 class VariantObservation(Base):
     """
@@ -297,12 +299,13 @@ class VariantObservation(Base):
     """
     __tablename__ = VARIANT_OBSERVATION_TABLE_NAME
 
-    sample = Column(String, primary_key=True)
     source = Column(Enum(DataSource, name=DataSource.__constraint_name__), primary_key=True)
-    chromosome = Column(String, primary_key=True)
-    position = Column(Integer, primary_key=True)
-    reference = Column(String, primary_key=True)
-    alternate = Column(String, primary_key=True)
+    sample = Column(String, primary_key=True)
+    variant_id = Column(String, primary_key=True)
+    chromosome = Column(String)
+    position = Column(Integer)
+    reference = Column(String)
+    alternate = Column(String)
     quality = Column(Float)
     filter = Column(String)
     """
@@ -332,31 +335,19 @@ class VariantObservation(Base):
     mapping_quality = Column(Integer)
     mapping_quality_zero_fraction = Column(Float)
     ForeignKeyConstraint([sample, source], [Sample.id, Sample.source])
-    ForeignKeyConstraint(
-        [chromosome, position, reference, alternate],
-        [Variant.chromosome, Variant.position, Variant.reference, Variant.alternate])
+    ForeignKeyConstraint([variant_id], [Variant.variant_id])
 
 
 class VariantCooccurrence(Base):
 
     __tablename__ = VARIANT_COOCCURRENCE_TABLE_NAME
 
-    chromosome_one = Column(String, primary_key=True)
-    position_one = Column(Integer, primary_key=True)
-    reference_one = Column(String, primary_key=True)
-    alternate_one = Column(String, primary_key=True)
-    chromosome_two = Column(String, primary_key=True)
-    position_two = Column(Integer, primary_key=True)
-    reference_two = Column(String, primary_key=True)
-    alternate_two = Column(String, primary_key=True)
+    variant_id_one = Column(String, primary_key=True)
+    variant_id_two = Column(String, primary_key=True)
     count = Column(Integer, default=0)
 
-    ForeignKeyConstraint(
-        [chromosome_one, position_one, reference_one, alternate_one],
-        [Variant.chromosome, Variant.position, Variant.reference, Variant.alternate])
-    ForeignKeyConstraint(
-        [chromosome_two, position_two, reference_two, alternate_two],
-        [Variant.chromosome, Variant.position, Variant.reference, Variant.alternate])
+    ForeignKeyConstraint([variant_id_one], [Variant.variant_id])
+    ForeignKeyConstraint([variant_id_two], [Variant.variant_id])
 
 
 class CovigatorModule(enum.Enum):
