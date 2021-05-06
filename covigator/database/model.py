@@ -88,25 +88,21 @@ class SampleGisaid(Base):
     __tablename__ = SAMPLE_GISAID_TABLE_NAME
 
     run_accession = Column(String, primary_key=True)
-    virus_name = Column(String)
-    first_created = Column(Date)
-    collection_date = Column(Date)
-    instrument_platform = Column(String)
-    instrument_model = Column(String)
-    assembly_method = Column(String)
+    date = Column(Date)
     # Host information
     host_tax_id = Column(String)
     host = Column(String)
-    host_body_site = Column(String)
     # geographical data
-    lat = Column(Float)
-    lon = Column(Float)
     country_raw = Column(String)
+    region = Column(String)
     country = Column(String)
     country_alpha_2 = Column(String)
     country_alpha_3 = Column(String)
     continent = Column(String)
     continent_alpha_2 = Column(String)
+    site = Column(String)
+    site2 = Column(String)
+    sequence = Column(JSON)
 
 
 class SampleEna(Base):
@@ -204,7 +200,6 @@ class JobGisaid(Base):
     error_message = Column(String)
 
     # TODO: Test DB size, sequence should be approx 30000bp, compress maybe
-    sequence = Column(String)
     # local files storage
     vcf_path = Column(String)
 

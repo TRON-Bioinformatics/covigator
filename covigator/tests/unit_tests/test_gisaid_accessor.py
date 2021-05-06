@@ -1,8 +1,10 @@
 from datetime import date
 from unittest import TestCase
 
+import pkg_resources
 from sqlalchemy import and_
 
+import covigator
 from covigator.accessor.gisaid_accessor import GisaidAccessor
 from covigator.configuration import Configuration
 from covigator.database.database import Database
@@ -19,7 +21,7 @@ class FakeGisaidAccessor(GisaidAccessor):
                          database=database if database else Database(test=True, config=FakeConfiguration()))
         self.results = results
 
-    def _get_gisaid_runs(self):
+    def _get_gisaid_samples(self):
         return self.results
 
 
@@ -27,34 +29,16 @@ class GisaidAccessorTests(TestCase):
 
     def setUp(self) -> None:
         self.config = FakeConfiguration()
+        self.input_fasta = pkg_resources.resource_filename(
+            covigator.tests.__name__, "resources/gisaid_allprot1208.fasta")
+        self.database = Database(test=True, config=self.config)
 
-    def test_filtering_by_instrument_platform(self):
-        gisaid_accessor = FakeGisaidAccessor([
-            {"run_accession": "EPI_ISL_417090",
-             "virus_name": "hCoV-19/USA/WA-S37/2020",
-             "instrument_platform": "illumina",
-             "host_tax_id": "9606"},
-            {"run_accession": "EPI_ISL_413513",
-             "virus_name": "hCoV-19/South Korea/KUMC03/2020",
-             "instrument_platform": "illumina",
-             "host_tax_id": "9606"},
-            {"run_accession": "EPI_ISL_413594",
-             "virus_name": "hCoV-19/Australia/NSW08/2020",
-             "instrument_platform": "ion torrent",
-             "host_tax_id": "9606"},
-             {"run_accession": "EPI_ISL_413594",
-             "virus_name": "hCoV-19/Australia/NSW08/2020",
-             "instrument_platform": "none",
-             "host_tax_id": "9606"}
-        ])
-        gisaid_accessor.access()
-        self.assertEqual(gisaid_accessor.included, 3)
-        self.assertEqual(gisaid_accessor.excluded, 1)
-        #self.assertEqual(gisaid_accessor.excluded_samples_by_instrument_platform.get("illumina"), 1)
-        self.assertEqual(gisaid_accessor.excluded_samples_by_instrument_platform.get("none"), 1)
-
-    def test_get_gisaid_runs(self):
-        gisaid_accessor = GisaidAccessor(input_file=None, host_tax_id=HOMO_SAPIENS_TAXID,
-                         database=Database(test=True, config=self.config))
-
-        gisaid_accessor.access()
+    def test_gisaid_accessor(self):
+        GisaidAccessor(input_file=self.input_fasta, database=self.database).access()
+        session = self.database.get_database_session()
+        count_samples_gisaid = session.query(SampleGisaid).count()
+        self.assertEqual(count_samples_gisaid, 2)
+        count_samples = session.query(Sample).count()
+        self.assertEqual(count_samples, 2)
+        count_jobs = session.query(JobGisaid).count()
+        self.assertEqual(count_jobs, 2)
