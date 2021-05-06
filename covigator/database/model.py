@@ -192,15 +192,10 @@ class JobGisaid(Base):
     status = Column(Enum(JobStatus), default=JobStatus.PENDING)
     created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.now())
     queued_at = Column(DateTime(timezone=True))
-    #downloaded_at = Column(DateTime(timezone=True))
     analysed_at = Column(DateTime(timezone=True))
-    #cleaned_at = Column(DateTime(timezone=True))
     loaded_at = Column(DateTime(timezone=True))
     failed_at = Column(DateTime(timezone=True))
     error_message = Column(String)
-
-    # TODO: Test DB size, sequence should be approx 30000bp, compress maybe
-    # local files storage
     vcf_path = Column(String)
 
 
