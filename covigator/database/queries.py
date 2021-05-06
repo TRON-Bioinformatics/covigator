@@ -302,59 +302,48 @@ class Queries:
                                       variant_two.annotation != SYNONYMOUS_VARIANT))
 
         self._print_query(query=query)
-        logger.info("uno")
         data = pd.read_sql(query.statement, self.session.bind)
-        logger.info("dos")
 
         full_matrix = None
         if data.shape[0] > 0:
-            # save annotations to a different dataframe
-            annotations = data[data.variant_id_one == data.variant_id_two][[
-                "variant_id_one", "position", "reference", "alternate", "hgvs_p"]]
-            annotations.set_index("variant_id_one", inplace=True)
-
-            tooltip = data[["variant_id_one", "variant_id_two", "hgvs_tooltip"]]\
-                .set_index(["variant_id_one", "variant_id_two"])
-
-            # delete other columns
-            sparse_matrix = data[["variant_id_one", "variant_id_two", "count", "frequency"]]
+            # these are views of the original data
+            annotations = data.loc[data.variant_id_one == data.variant_id_two,
+                                   ["variant_id_one", "position", "reference", "alternate", "hgvs_p"]]
+            tooltip = data.loc[:, ["variant_id_one", "variant_id_two", "hgvs_tooltip"]]
+            sparse_matrix = data.loc[:, ["variant_id_one", "variant_id_two", "count", "frequency"]]
 
             # from the sparse matrix builds in memory the complete matrix
-            # TODO: would plotly improve its heatmap implementation so we don't need this memory misuse??
             all_variants = data.variant_id_one.unique()
-            empty_table = pd.DataFrame(index=pd.MultiIndex.from_product(
+            empty_full_matrix = pd.DataFrame(index=pd.MultiIndex.from_product(
                 [all_variants, all_variants], names=["variant_id_one", "variant_id_two"])).reset_index()
-            empty_table["count"] = 0
-            empty_table["frequency"] = 0
+            full_matrix = pd.merge(
+                left=empty_full_matrix, right=sparse_matrix, on=["variant_id_one", "variant_id_two"], how='left')
 
-            # adds values into empty table
-            full_matrix = empty_table.set_index(["variant_id_one", "variant_id_two"]) + \
-                          sparse_matrix.set_index(["variant_id_one", "variant_id_two"])
-            full_matrix.reset_index(inplace=True)
-            full_matrix = full_matrix.set_index("variant_id_one").join(annotations)\
+            # add annotation on variant one
+            full_matrix = pd.merge(left=full_matrix, right=annotations, on="variant_id_one", how='left')\
                 .rename(columns={"position": "position_one",
                                  "reference": "reference_one",
                                  "alternate": "alternate_one",
                                  "hgvs_p": "hgvs_p_one"})
-            full_matrix.index.set_names(['variant_id_one'], inplace=True)
-            full_matrix.reset_index(inplace=True)
-            full_matrix = full_matrix.set_index("variant_id_two").join(annotations)\
-                .rename(columns={"position": "position_two",
+
+            # add annotations on variant two
+            full_matrix = pd.merge(left=full_matrix, right=annotations,
+                                   left_on="variant_id_two", right_on="variant_id_one", how='left') \
+                .rename(columns={"variant_id_one_x": "variant_id_one",
+                                 "position": "position_two",
                                  "reference": "reference_two",
                                  "alternate": "alternate_two",
                                  "hgvs_p": "hgvs_p_two"})
-            full_matrix.index.set_names(['variant_id_two'], inplace=True)
-            full_matrix.reset_index(inplace=True)
 
-            full_matrix = full_matrix.set_index(["variant_id_one", "variant_id_two"]).join(tooltip)
-            full_matrix.reset_index(inplace=True)
+            # add tooltip
+            full_matrix = pd.merge(left=full_matrix, right=tooltip, on=["variant_id_one", "variant_id_two"], how='left')
 
             # NOTE: transpose matrix manually as plotly transpose does not work with labels
             # the database return the upper diagonal, the lower is best for plots
             full_matrix.sort_values(["position_two", "reference_two", "alternate_two",
                                      "position_one", "reference_one", "alternate_one"], inplace=True)
 
-            full_matrix = full_matrix[["variant_id_one", "variant_id_two", "count", "frequency", "hgvs_tooltip"]]
+            full_matrix = full_matrix.loc[:, ["variant_id_one", "variant_id_two", "count", "frequency", "hgvs_tooltip"]]
 
         logger.info("tres")
         return full_matrix

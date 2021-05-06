@@ -208,8 +208,10 @@ class Figures:
         if data is not None and data.shape[0] > 0:
 
             all_variants = data.variant_id_one.unique()
+            logger.info("cuatro")
             values = np.array_split(data[metric], len(all_variants))
             texts = np.array_split(data.hgvs_tooltip, len(all_variants))
+            logger.info("cinco")
             hovertemplate = '<b>%{text}</b><br>' + 'Cooccurrence: %{z:.5f}<br>' + 'Variant one: %{x}<br>' + 'Variant two: %{y}'
             heatmap = go.Heatmap(
                 z=values,
@@ -256,7 +258,7 @@ class Figures:
             # the y index is reversed in plotly heatmap
             fig.update_yaxes(autorange="reversed")
 
-        logger.info("cuatro")
+        logger.info("seis")
         return [
                 dcc.Graph(
                     figure=fig,
