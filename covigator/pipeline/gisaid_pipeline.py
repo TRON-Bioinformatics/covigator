@@ -17,12 +17,16 @@ class GisaidPipeline:
         print("Processing {}".format(sample.run_accession))
         mutations = []
         for s in sample.sequence.values():
-            alignment = self._run_alignment(zlib.decompress(base64.b64decode(s)).decode('utf-8'))
+            alignment = self._run_alignment(self.decompress_sequence(s))
             mutations.extend(self._call_mutations(alignment))
         local_folder = os.path.join(self.config.storage_folder, sample.run_accession)
         output_vcf = os.path.join(local_folder, "gisaid.vcf")
         self._output_vcf(mutations, output_vcf)
         return output_vcf
+
+    @staticmethod
+    def decompress_sequence(s):
+        return zlib.decompress(base64.b64decode(s)).decode('utf-8')
 
     def _run_alignment(self, sequence):
         reference = SeqIO.read(self.config.reference_genome, "fasta")

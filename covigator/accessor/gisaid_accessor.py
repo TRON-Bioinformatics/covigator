@@ -80,8 +80,12 @@ class GisaidAccessor:
                 self._parse_dates(sample_gisaid)
                 results[sample_gisaid.run_accession] = sample_gisaid
             # stores the sequence in dictionary with the gene name
-            sample_gisaid.sequence[fields[0]] = base64.b64encode(zlib.compress(record.seq.encode('utf-8'))).decode()
+            sample_gisaid.sequence[fields[0]] = self.compress_sequence(record.seq)
         return list(results.values())
+
+    @staticmethod
+    def compress_sequence(sequence):
+        return base64.b64encode(zlib.compress(sequence.encode('utf-8'))).decode()
 
     def _process_runs(self, list_samples: List[SampleGisaid], session: Session):
 
