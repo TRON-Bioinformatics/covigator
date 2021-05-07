@@ -110,8 +110,8 @@ class Queries:
     def get_gene(self, gene_name: str):
         return self.session.query(Gene).filter(Gene.name == gene_name).first()
 
-    def get_genes(self):
-        return [g[0] for g in self.session.query(Gene.name).order_by(Gene.start).all()]
+    def get_genes(self) -> List[Gene]:
+        return self.session.query(Gene).order_by(Gene.start).all()
 
     def get_genes_metadata(self):
         return self.session.query(Gene).order_by(Gene.start).all()

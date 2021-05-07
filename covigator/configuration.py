@@ -29,9 +29,8 @@ class Configuration:
     ENV_COVIGATOR_BIN_TABIX = "COVIGATOR_BIN_TABIX"
     ENV_COVIGATOR_BIN_JAVA = "COVIGATOR_BIN_JAVA"
     ENV_COVIGATOR_REF_FASTA = "COVIGATOR_REF_FASTA"
-    ENV_COVIGATOR_REF_GISAID = "COVIGATOR_REF_GISAID"
-    ENV_COVIGATOR_SEQ_GISAID = "COVIGATOR_SEQ_GISAID"
-    ENV_COVIGATOR_META_GISAID = "COVIGATOR_META_GISAID"
+    ENV_COVIGATOR_REF_PEPTIDE_FASTA = "COVIGATOR_REF_PEPTIDE_FASTA"
+    ENV_COVIGATOR_GENE_ANNOTATIONS = "COVIGATOR_GENE_ANNOTATIONS"
     ENV_COVIGATOR_DASK_PORT = "COVIGATOR_DASK_PORT"
 
     ENV_COVIGATOR_TABLE_VERSION = "COVIGATOR_TABLE_VERSION"
@@ -76,8 +75,9 @@ class Configuration:
         self.java = os.getenv(self.ENV_COVIGATOR_BIN_JAVA, "java")
 
         # references
-        self.reference_genome = os.getenv(self.ENV_COVIGATOR_REF_FASTA,
-                                          "/scratch/info/projects/SARS-CoV-2/index/MN908947.3.fa")
+        self.reference_genome = os.getenv(self.ENV_COVIGATOR_REF_FASTA)
+        self.reference_proteome = os.getenv(self.ENV_COVIGATOR_REF_PEPTIDE_FASTA)
+        self.reference_gene_annotations = os.getenv(self.ENV_COVIGATOR_GENE_ANNOTATIONS)
 
 
 def initialise_logs(logfile, sample_id: str = None):
