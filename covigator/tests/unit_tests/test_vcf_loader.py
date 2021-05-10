@@ -1,16 +1,16 @@
 from unittest import TestCase
 import pkg_resources
 import covigator.tests
-from covigator.configuration import Configuration
 from covigator.database.database import Database
 from covigator.database.model import Variant, VariantObservation, Sample, DataSource
 from covigator.pipeline.vcf_loader import VcfLoader
+from covigator.tests.unit_tests.faked_objects import FakeConfiguration
 
 
 class VcfLoaderTests(TestCase):
 
     def setUp(self) -> None:
-        self.session = Database(test=True, config=Configuration()).get_database_session()
+        self.session = Database(test=True, config=FakeConfiguration()).get_database_session()
 
     def test_vcf_loader(self):
         vcf_file = pkg_resources.resource_filename(covigator.tests.__name__, "resources/snpeff.vcf")

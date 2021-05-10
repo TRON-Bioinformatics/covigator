@@ -1,10 +1,7 @@
-import random
 from itertools import combinations
-from unittest import TestCase, skip
+from unittest import TestCase
 from faker import Faker
 import numpy as np
-
-from covigator.configuration import Configuration
 from covigator.database.database import Database
 from covigator.database.model import JobStatus, DataSource, Sample, Gene
 from covigator.database.queries import Queries
