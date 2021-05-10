@@ -7,6 +7,7 @@ from typing import Callable
 
 import typing as typing
 from dask.distributed import Client
+from distributed.scheduler import KilledWorker
 from sqlalchemy.orm import Session
 from logzero import logger
 import covigator
@@ -55,13 +56,12 @@ class AbstractProcessor:
             count_finished = 0
             count_error = 0
             for future in futures:
-                sample_id = None
                 try:
                     sample_id = future.result()
-                except KeyError:
+                except KeyError or KilledWorker:
                     # some completed tasks cannot be fetched from the appropriate worker
                     # does this make our counts very inaccurate?
-                    pass
+                    continue
                 if sample_id is not None:
                     count_finished += 1
                     if count_finished % 50 == 0:
