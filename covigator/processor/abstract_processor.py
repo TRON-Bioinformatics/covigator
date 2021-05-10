@@ -55,7 +55,13 @@ class AbstractProcessor:
             count_finished = 0
             count_error = 0
             for future in futures:
-                sample_id = future.result()
+                sample_id = None
+                try:
+                    sample_id = future.result()
+                except KeyError:
+                    # some completed tasks cannot be fetched from the appropriate worker
+                    # does this make our counts very inaccurate?
+                    pass
                 if sample_id is not None:
                     count_finished += 1
                     if count_finished % 50 == 0:
