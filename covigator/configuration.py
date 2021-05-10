@@ -83,7 +83,7 @@ class Configuration:
 
 def initialise_logs(logfile, sample_id: str = None):
     if logfile is not None:
-        logzero.logfile(logfile, maxBytes=1e6, backupCount=3)
+        logzero.logfile(logfile)
     logzero.loglevel(logging.INFO)
     if sample_id is not None:
         logzero.formatter(logging.Formatter(
