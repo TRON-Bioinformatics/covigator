@@ -35,6 +35,7 @@ class Configuration:
     ENV_COVIGATOR_DASK_PORT = "COVIGATOR_DASK_PORT"
 
     ENV_COVIGATOR_TABLE_VERSION = "COVIGATOR_TABLE_VERSION"
+    ENV_COVIGATOR_GENE_ANNOTATIONS = "COVIGATOR_GENE_ANNOTATIONS"
 
     def __init__(self):
         # local storage
@@ -76,8 +77,8 @@ class Configuration:
         self.java = os.getenv(self.ENV_COVIGATOR_BIN_JAVA, "java")
 
         # references
-        self.reference_genome = os.getenv(self.ENV_COVIGATOR_REF_FASTA,
-                                          "/scratch/info/projects/SARS-CoV-2/index/MN908947.3.fa")
+        self.reference_genome = os.getenv(self.ENV_COVIGATOR_REF_FASTA)
+        self.reference_gene_annotations = os.getenv(self.ENV_COVIGATOR_GENE_ANNOTATIONS)
 
 
 def initialise_logs(logfile, sample_id: str = None):

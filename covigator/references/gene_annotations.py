@@ -1,7 +1,3 @@
-import pathlib
-import shutil
-from contextlib import closing
-from urllib import request
 import os
 import json
 from sqlalchemy.orm import Session
@@ -14,21 +10,15 @@ class GeneAnnotationsLoader:
 
     def __init__(self, session: Session, config: Configuration):
         self.config = config
-        pathlib.Path(self.config.storage_folder).mkdir(parents=True, exist_ok=True)
-        # TODO: this is hardcoded which fixes covigator to Sars-Cov-2, but the problem is that other infectious
-        #  organisms do not have their reference in JSON format, this is new and more complete than GFF
-        self.reference_file = "ftp://ftp.ensemblgenomes.org/pub/viruses/json/sars_cov_2/sars_cov_2.json"
         self.session = session
+        assert self.config.reference_gene_annotations is not None and os.path.exists(self.config.reference_gene_annotations), \
+            "Please configure the gene annotations in the variable {}".format(self.config.ENV_COVIGATOR_GENE_ANNOTATIONS)
 
     def load_data(self):
-        file_name = os.path.join(self.config.storage_folder, self.reference_file.split('/')[-1])
-        # download JSON
-        with closing(request.urlopen(self.reference_file)) as r:
-            with open(file_name, 'wb') as f:
-                shutil.copyfileobj(r, f)
         # reads the JSON
-        with open(file_name) as fd:
+        with open(self.config.reference_gene_annotations) as fd:
             data = json.load(fd)
+
         for g in data["genes"]:
             self.session.add(Gene(identifier=g["id"], name=g["name"], start=int(g["start"]), end=int(g["end"]), data=g))
         self.session.commit()
