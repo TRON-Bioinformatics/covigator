@@ -348,6 +348,8 @@ class Queries:
 
             # add tooltip
             full_matrix = pd.merge(left=full_matrix, right=tooltip, on=["variant_id_one", "variant_id_two"], how='left')
+            # correct tooltip in diagonal
+            full_matrix.loc[full_matrix.variant_id_one == full_matrix.variant_id_two, "hgvs_tooltip"] = full_matrix.hgvs_p_one
 
             # NOTE: transpose matrix manually as plotly transpose does not work with labels
             # the database return the upper diagonal, the lower is best for plots
