@@ -2,10 +2,10 @@ from datetime import date, datetime
 from typing import List, Union
 import pandas as pd
 from logzero import logger
-from sqlalchemy import and_, desc, asc, func, or_, String, text, DateTime
+from sqlalchemy import and_, desc, asc, func, or_, String, text, DateTime, cast
 from sqlalchemy.engine.default import DefaultDialect
 from sqlalchemy.orm import Session, aliased
-from sqlalchemy.sql.sqltypes import NullType
+from sqlalchemy.sql.sqltypes import NullType, Numeric, Float
 
 from covigator.database.model import Log, DataSource, CovigatorModule, SampleEna, JobEna, JobStatus, VariantObservation, \
     Gene, Variant, VariantCooccurrence, Conservation, JobGisaid
@@ -283,7 +283,6 @@ class Queries:
         variant_two = aliased(Variant)
         if not test:
             query = self.session.query(VariantCooccurrence,
-                                       func.div(VariantCooccurrence.count, count_samples).label("frequency"),
                                        variant_one.position,
                                        variant_one.reference,
                                        variant_one.alternate,
@@ -292,7 +291,6 @@ class Queries:
         else:
             # this is needed for testing environment with SQLite
             query = self.session.query(VariantCooccurrence,
-                                       VariantCooccurrence.count.label("frequency"),
                                        variant_one.position,
                                        variant_one.reference,
                                        variant_one.alternate,
@@ -321,7 +319,8 @@ class Queries:
             annotations = data.loc[data.variant_id_one == data.variant_id_two,
                                    ["variant_id_one", "position", "reference", "alternate", "hgvs_p"]]
             tooltip = data.loc[:, ["variant_id_one", "variant_id_two", "hgvs_tooltip"]]
-            sparse_matrix = data.loc[:, ["variant_id_one", "variant_id_two", "count", "frequency"]]
+            sparse_matrix = data.loc[:, ["variant_id_one", "variant_id_two", "count"]]
+            sparse_matrix["frequency"] = sparse_matrix["count"] / count_samples
 
             # from the sparse matrix builds in memory the complete matrix
             all_variants = data.variant_id_one.unique()
