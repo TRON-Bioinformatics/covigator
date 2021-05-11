@@ -1,4 +1,5 @@
 import os
+import time
 from pathlib import Path
 import subprocess
 import tempfile
@@ -46,10 +47,11 @@ class Pipeline:
 
     def _run_commands(self, commands, temporary_folder):
         for command in commands:
-            logger.info("Executing: {}".format(command))
+            start = time.time()
             p = subprocess.Popen(
                 command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=temporary_folder, shell=True)
             stdoutdata, stderrdata = p.communicate()
+            logger.info("Finished in {} secs command: '{}'".format(time.time() - start, command))
             if p.returncode != 0:
                 error_message = self._decode(stderrdata)
                 logger.error(error_message)

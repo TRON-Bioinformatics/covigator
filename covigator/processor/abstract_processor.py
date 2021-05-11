@@ -1,14 +1,10 @@
-import os
 import abc
-import sys
 import time
 import traceback
 from datetime import datetime
 from typing import Callable
-
 import typing as typing
 from dask.distributed import Client
-from distributed.scheduler import KilledWorker
 from sqlalchemy.orm import Session
 from logzero import logger
 import covigator
@@ -55,14 +51,15 @@ class AbstractProcessor:
                 count += 1
 
             # waits for all to finish
-            count_jobs = queries.count_jobs_in_queue(self.data_source)
-            times_checked = 0
-            while count_jobs > 0:
-                time.sleep(10)
-                times_checked += 1
-                count_jobs = queries.count_jobs_in_queue(self.data_source)
-                if times_checked % 30 == 0:
-                    logger.info("Remaining samples {}".format(count_jobs))
+            self.dask_client.gather(futures=futures)
+            #count_jobs = queries.count_jobs_in_queue(self.data_source)
+            #times_checked = 0
+            #while count_jobs > 0:
+            #    time.sleep(10)
+            #    times_checked += 1
+            #    count_jobs = queries.count_jobs_in_queue(self.data_source)
+            #    if times_checked % 30 == 0:
+            #        logger.info("Remaining samples {}".format(count_jobs))
 
             logger.info("Processor finished!")
 

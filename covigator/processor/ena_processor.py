@@ -15,7 +15,7 @@ from covigator.pipeline.downloader import Downloader
 from covigator.pipeline.ena_pipeline import Pipeline
 from covigator.pipeline.vcf_loader import VcfLoader
 
-NUMBER_RETRIES_DOWNLOADER = 5
+NUMBER_RETRIES_DOWNLOADER = 10
 
 
 class EnaProcessor(AbstractProcessor):
@@ -72,7 +72,8 @@ class EnaProcessor(AbstractProcessor):
     @staticmethod
     def download(job: JobEna, queries: Queries, config: Configuration):
         # ensures that the download is done with retries, even after MD5 check sum failure
-        download_with_retries = backoff_retrier.wrapper(Downloader(config=config).download, NUMBER_RETRIES_DOWNLOADER)
+        downloader = Downloader(config=config)
+        download_with_retries = backoff_retrier.wrapper(downloader.download, NUMBER_RETRIES_DOWNLOADER)
         sample_ena = queries.find_sample_ena_by_accession(job.run_accession)
         paths = download_with_retries(sample_ena=sample_ena)
         job.fastq_path = paths
