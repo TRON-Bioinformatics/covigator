@@ -260,6 +260,19 @@ class Dashboard:
                                    ),
                                    html.Br(),
                                    dcc.Markdown("""
+                                                     Metric to measure abundance of variants per month
+                                                     """),
+                                   dcc.Dropdown(
+                                       id='dropdown-top-variants-metric',
+                                       options=[
+                                           {'label': 'count', 'value': 'count'},
+                                           {'label': 'frequency', 'value': 'frequency_by_month'}],
+                                       value='count',
+                                       clearable=False,
+                                       multi=False
+                                   ),
+                                   html.Br(),
+                                   dcc.Markdown("""
                                              Select a start and end date
                                              """),
                                    html.Div(children=[
@@ -371,13 +384,14 @@ class Dashboard:
             Input('slider-top-variants', 'value'),
             Input('dropdown-gene', 'value'),
             Input('dropdown-date-range-start', 'value'),
-            Input('dropdown-date-range-end', 'value')
+            Input('dropdown-date-range-end', 'value'),
+            Input('dropdown-top-variants-metric', 'value')
         )
-        def update_top_occurring_variants(top_variants, gene_name, date_range_start, date_range_end):
+        def update_top_occurring_variants(top_variants, gene_name, date_range_start, date_range_end, metric):
             return html.Div(children=[
                     self.figures.get_top_occurring_variants_plot(
                         top=top_variants, gene_name=gene_name, date_range_start=date_range_start,
-                        date_range_end=date_range_end),
+                        date_range_end=date_range_end, metric=metric),
                     dcc.Markdown("""
                     *Top {} variants{} according to their frequency across all samples.
                     The counts per month are only shown between {} and {}*

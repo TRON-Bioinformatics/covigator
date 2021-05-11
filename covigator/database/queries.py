@@ -209,7 +209,7 @@ class Queries:
                 .order_by(desc(Log.start)).first()
         return result2[0] if result2 is not None else result2
 
-    def get_top_occurring_variants(self, top=10, gene_name=None) -> pd.DataFrame:
+    def get_top_occurring_variants(self, top=10, gene_name=None, metric="count") -> pd.DataFrame:
         """
         Returns the top occurring variants + the segregated counts of occurrences per month
         with columns: chromosome, position, reference, alternate, total, month, count
@@ -229,16 +229,23 @@ class Queries:
 
         if top_occurring_variants is not None and top_occurring_variants.shape[0] > 0:
             variant_counts_by_month = []
+
             # NOTE: one query per variant for the counts per month, will this be efficient?
             for _, variant in top_occurring_variants.iterrows():
                 variant_counts_by_month.append(self.get_variant_counts_by_month(variant.variant_id))
             top_occurring_variants_by_month = pd.concat(variant_counts_by_month)
 
+            # get total count of samples per month to calculate the frequency by month
+            sample_counts_by_month = self.get_sample_counts_by_month()
+            top_occurring_variants_by_month = pd.merge(
+                left=top_occurring_variants_by_month, right=sample_counts_by_month, how="left", on="month")
+            top_occurring_variants_by_month["frequency_by_month"] = \
+                (top_occurring_variants_by_month["count"] / top_occurring_variants_by_month["sample_count"]).\
+                transform(lambda x: round(x, 3))
+
             # join both tables with total counts and counts per month
-            top_occurring_variants = top_occurring_variants.set_index(["variant_id"])\
-                .join(
-                top_occurring_variants_by_month.set_index(["variant_id"]))\
-                .reset_index()
+            top_occurring_variants = pd.merge(
+                left=top_occurring_variants, right=top_occurring_variants_by_month, on="variant_id", how="left")
 
             # format the month column appropriately
             top_occurring_variants.month = top_occurring_variants.month.transform(
@@ -256,18 +263,27 @@ class Queries:
             # pivots the table over months
             top_occurring_variants = pd.pivot_table(
                 top_occurring_variants, index=['gene_name', 'dna_mutation', 'hgvs_p', 'annotation', "frequency"],
-                columns=["month"], values=["count"], fill_value=0).droplevel(0, axis=1).reset_index()
+                columns=["month"], values=[metric], fill_value=0).droplevel(0, axis=1).reset_index()
 
         return top_occurring_variants
 
     def get_variant_counts_by_month(self, variant_id) -> pd.DataFrame:
         query = self.session.query(
-            VariantObservation.variant_id, func.date_trunc('month', SampleEna.first_created).label("month"),
+            VariantObservation.variant_id,
+            func.date_trunc('month', SampleEna.first_created).label("month"),
             func.count().label("count"))\
-            .join(Variant)\
             .join(SampleEna, VariantObservation.sample == SampleEna.run_accession)\
-            .filter(and_(VariantObservation.variant_id == variant_id, Variant.annotation != SYNONYMOUS_VARIANT))\
+            .filter(VariantObservation.variant_id == variant_id)\
             .group_by(VariantObservation.variant_id, func.date_trunc('month', SampleEna.first_created))
+        return pd.read_sql(query.statement, self.session.bind)
+
+    def get_sample_counts_by_month(self) -> pd.DataFrame:
+        query = self.session.query(
+            func.date_trunc('month', SampleEna.first_created).label("month"),
+            func.count().label("sample_count"))\
+            .join(JobEna) \
+            .filter(JobEna.status == JobStatus.FINISHED) \
+            .group_by(func.date_trunc('month', SampleEna.first_created))
         return pd.read_sql(query.statement, self.session.bind)
 
     def get_variants_cooccurrence_by_gene(self, gene_name, min_cooccurrence=5, test=False) -> pd.DataFrame:

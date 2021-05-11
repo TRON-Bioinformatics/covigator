@@ -113,8 +113,8 @@ class Figures:
             }
         ]
 
-    def get_top_occurring_variants_plot(self, top, gene_name, date_range_start, date_range_end):
-        data = self.queries.get_top_occurring_variants(top, gene_name)
+    def get_top_occurring_variants_plot(self, top, gene_name, date_range_start, date_range_end, metric):
+        data = self.queries.get_top_occurring_variants(top, gene_name, metric)
         fig = dcc.Markdown("""**No variants for the current selection**""")
         if data is not None and data.shape[0] > 0:
 
