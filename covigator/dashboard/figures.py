@@ -212,7 +212,10 @@ class Figures:
             values = np.array_split(data[metric], len(all_variants))
             texts = np.array_split(data.hgvs_tooltip, len(all_variants))
             logger.info("cinco")
-            hovertemplate = '<b>%{text}</b><br>' + 'Cooccurrence: %{z:.5f}<br>' + 'Variant one: %{x}<br>' + 'Variant two: %{y}'
+            if metric == "count":
+                hovertemplate = '<b>%{text}</b><br>' + 'Cooccurrence: %{z}<br>' + 'Variant one: %{x}<br>' + 'Variant two: %{y}'
+            elif metric == "frequency":
+                hovertemplate = '<b>%{text}</b><br>' + 'Frequency: %{z:.3f}<br>' + 'Variant one: %{x}<br>' + 'Variant two: %{y}'
             heatmap = go.Heatmap(
                 z=values,
                 x=all_variants,
