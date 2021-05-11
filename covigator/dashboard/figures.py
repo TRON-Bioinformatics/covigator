@@ -270,9 +270,12 @@ class Figures:
                     config=PLOTLY_CONFIG
                 ),
                 dcc.Markdown("""
-                        *Variant pairs co-occurring in at least {} samples{}.*
-                        *Co-occurrence metric: {}*
+                        ***Co-occurrence matrix*** *showing variant pairs co-occurring in at least {} samples (this value is configurable).*
+                        *The metric in the co-occurrence matrix can be chosen among counts, frequencies or Jaccard index.*
+                        *The diagonal contains the total counts or just 1.0 in the case of frequencies and the Jaccard index.*
+                        *The upper diagonal is not shown for clarity.*
                         *Synonymous variants are excluded.*
+                        *Different genomic variants causing the same protein variant are not grouped.*
                         """.format(min_occurrences, metric, " on gene {}".format(gene_name) if gene_name else ""))
             ]
 
