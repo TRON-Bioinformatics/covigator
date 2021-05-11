@@ -81,8 +81,9 @@ class Queries:
             # merge countries with less than 10 samples into OTHER
             country_value_counts = samples.country.value_counts()
             other_countries = list(country_value_counts[country_value_counts < 10].index)
+            null_country_values = ["none", "not available"]
             samples["country_merged"] = samples.country.transform(
-                lambda c: "Other" if c in other_countries or c is None or c == "None" else c)
+                lambda c: "Other" if c in other_countries or c is None or c.lower() in null_country_values else c)
 
             # counts samples by country and data
             sample_counts = samples[["first_created", "run_accession", "country_merged"]] \
