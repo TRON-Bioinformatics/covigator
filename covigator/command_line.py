@@ -99,7 +99,9 @@ def processor():
     if args.local:
         _start_dask_processor(args, config, num_local_cpus=int(args.num_local_cpus))
     else:
-        with SLURMCluster(scheduler_options={"dashboard_address": ':{}'.format(config.dask_port)}) as cluster:
+        with SLURMCluster(
+                walltime='72:00:00',  # hard codes maximum time to 72 hours
+                scheduler_options={"dashboard_address": ':{}'.format(config.dask_port)}) as cluster:
             cluster.scale(jobs=int(args.num_jobs))
             _start_dask_processor(args, config, cluster=cluster)
 
