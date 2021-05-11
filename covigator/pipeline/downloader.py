@@ -52,9 +52,6 @@ class Downloader:
             pathlib.Path(local_folder).mkdir(parents=True, exist_ok=True)
 
             # TODO: will this work for very large files?
-            #with closing(request.urlopen(url)) as r:
-            #    with open(local_full_path, 'wb') as f:
-            #        shutil.copyfileobj(r, f)
             request.urlretrieve(url, local_full_path)
 
         return local_full_path

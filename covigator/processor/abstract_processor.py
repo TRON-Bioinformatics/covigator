@@ -52,14 +52,6 @@ class AbstractProcessor:
 
             # waits for all to finish
             self.dask_client.gather(futures=futures)
-            #count_jobs = queries.count_jobs_in_queue(self.data_source)
-            #times_checked = 0
-            #while count_jobs > 0:
-            #    time.sleep(10)
-            #    times_checked += 1
-            #    count_jobs = queries.count_jobs_in_queue(self.data_source)
-            #    if times_checked % 30 == 0:
-            #        logger.info("Remaining samples {}".format(count_jobs))
 
             logger.info("Processor finished!")
 
