@@ -304,7 +304,8 @@ class Dashboard:
                                    dcc.Dropdown(
                                        id='dropdown-heatmap-metric',
                                        options=[{'label': "count", 'value': "count"},
-                                                {'label': "frequency", 'value': "frequency"}],
+                                                {'label': "frequency", 'value': "frequency"},
+                                                {'label': "jaccard", 'value': "jaccard"}],
                                        value="count",
                                        clearable=False,
                                        multi=False

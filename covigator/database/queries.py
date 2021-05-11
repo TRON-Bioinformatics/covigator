@@ -319,8 +319,16 @@ class Queries:
             annotations = data.loc[data.variant_id_one == data.variant_id_two,
                                    ["variant_id_one", "position", "reference", "alternate", "hgvs_p"]]
             tooltip = data.loc[:, ["variant_id_one", "variant_id_two", "hgvs_tooltip"]]
+            diagonal = data.loc[data.variant_id_one == data.variant_id_two, ["variant_id_one", "variant_id_two", "count"]]
             sparse_matrix = data.loc[:, ["variant_id_one", "variant_id_two", "count"]]
             sparse_matrix["frequency"] = sparse_matrix["count"] / count_samples
+            sparse_matrix = pd.merge(left=sparse_matrix, right=diagonal, on="variant_id_one", how="left", suffixes=("", "_one"))
+            sparse_matrix = pd.merge(left=sparse_matrix, right=diagonal, on="variant_id_two", how="left", suffixes=("", "_two"))
+            sparse_matrix["count_union"] = sparse_matrix["count_one"] + sparse_matrix["count_two"] - sparse_matrix["count"]
+            sparse_matrix["jaccard"] = sparse_matrix["count"] / sparse_matrix["count_union"]
+            del sparse_matrix["count_union"]
+            del sparse_matrix["count_one"]
+            del sparse_matrix["count_two"]
 
             # from the sparse matrix builds in memory the complete matrix
             all_variants = data.variant_id_one.unique()
@@ -355,9 +363,8 @@ class Queries:
             full_matrix.sort_values(["position_two", "reference_two", "alternate_two",
                                      "position_one", "reference_one", "alternate_one"], inplace=True)
 
-            full_matrix = full_matrix.loc[:, ["variant_id_one", "variant_id_two", "count", "frequency", "hgvs_tooltip"]]
+            full_matrix = full_matrix.loc[:, ["variant_id_one", "variant_id_two", "count", "frequency", "jaccard", "hgvs_tooltip"]]
 
-        logger.info("tres")
         return full_matrix
 
     def get_variant_abundance_histogram(self, bin_size=50) -> pd.DataFrame:
