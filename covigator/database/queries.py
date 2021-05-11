@@ -55,6 +55,17 @@ class Queries:
         else:
             raise ValueError("Bad data source {}".format(data_source))
 
+    def count_jobs_in_queue(self, data_source):
+        if data_source == DataSource.ENA:
+            count = self.session.query(JobEna).filter(JobEna.status.in_((
+                JobStatus.QUEUED, JobStatus.DOWNLOADED, JobStatus.PROCESSED, JobStatus.LOADED))).count()
+        elif data_source == DataSource.GISAID:
+            count = self.session.query(JobGisaid).filter(JobGisaid.status.in_((
+                JobStatus.QUEUED, JobStatus.DOWNLOADED, JobStatus.PROCESSED, JobStatus.LOADED))).count()
+        else:
+            raise ValueError("Bad data source {}".format(data_source))
+        return count
+
     def find_sample_ena_by_accession(self, run_accession: str) -> SampleEna:
         return self.session.query(SampleEna).filter(SampleEna.run_accession == run_accession).first()
 

@@ -234,3 +234,14 @@ class QueriesTests(TestCase):
         self.assertIsInstance(gene, Gene)
         gene = self.queries.get_gene("NOEXISTO")
         self.assertIsNone(gene)
+
+    def test_count_jobs_in_queue(self):
+        samples = [get_mocked_ena_sample(faker=self.faker, job_status=JobStatus.QUEUED) for _ in range(50)] + \
+                  [get_mocked_ena_sample(faker=self.faker, job_status=JobStatus.FINISHED) for _ in range(50)]
+        for sample_ena, sample, job in samples:
+            self.session.add_all([sample_ena, sample, job])
+        self.session.commit()
+        count_jobs_in_queue = self.queries.count_jobs_in_queue(DataSource.ENA)
+        self.assertEqual(count_jobs_in_queue, 50)
+        count_jobs_in_queue = self.queries.count_jobs_in_queue(DataSource.GISAID)
+        self.assertEqual(count_jobs_in_queue, 0)

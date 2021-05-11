@@ -1,5 +1,6 @@
 import os
 import abc
+import sys
 import time
 import traceback
 from datetime import datetime
@@ -52,26 +53,19 @@ class AbstractProcessor:
                 # sends the run for processing
                 futures.append(self._process_run(run_accession=job.run_accession))
                 count += 1
+
             # waits for all to finish
-            count_finished = 0
-            count_error = 0
-            for future in futures:
-                try:
-                    sample_id = future.result()
-                except KeyError or KilledWorker:
-                    # some completed tasks cannot be fetched from the appropriate worker
-                    # does this make our counts very inaccurate?
-                    continue
-                if sample_id is not None:
-                    count_finished += 1
-                    if count_finished % 50 == 0:
-                        logger.info("Finished {}/{} samples".format(count_finished, len(futures)))
-                else:
-                    count_error += 1
-                    if count_error % 50 == 0:
-                        logger.info("Error {}/{} samples".format(count_error, len(futures)))
-            logger.info("Processor finished! {} samples processed correctly and {} errors".format(
-                count_finished, count_error))
+            count_jobs = queries.count_jobs_in_queue(self.data_source)
+            times_checked = 0
+            while count_jobs > 0:
+                time.sleep(10)
+                times_checked += 1
+                count_jobs = queries.count_jobs_in_queue(self.data_source)
+                if times_checked % 30 == 0:
+                    logger.info("Remaining samples {}".format(count_jobs))
+
+            logger.info("Processor finished!")
+
         except Exception as e:
             logger.exception(e)
             session.rollback()
