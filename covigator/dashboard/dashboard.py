@@ -282,8 +282,8 @@ class Dashboard:
                                    dcc.Dropdown(
                                        id='dropdown-top-variants-metric',
                                        options=[
-                                           {'label': 'count', 'value': 'count'},
-                                           {'label': 'frequency', 'value': 'frequency_by_month'}],
+                                           {'label': 'Count', 'value': 'count'},
+                                           {'label': 'Frequency', 'value': 'frequency_by_month'}],
                                        value='count',
                                        clearable=False,
                                        multi=False
