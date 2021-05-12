@@ -259,11 +259,10 @@ class Queries:
             count_samples = self.count_ena_samples()
             top_occurring_variants['frequency'] = top_occurring_variants.total.transform(
                 lambda t: round(float(t) / count_samples, 3))
-            del top_occurring_variants['total']
 
             # pivots the table over months
             top_occurring_variants = pd.pivot_table(
-                top_occurring_variants, index=['gene_name', 'dna_mutation', 'hgvs_p', 'annotation', "frequency"],
+                top_occurring_variants, index=['gene_name', 'dna_mutation', 'hgvs_p', 'annotation', "frequency", "total"],
                 columns=["month"], values=[metric], fill_value=0).droplevel(0, axis=1).reset_index()
 
         return top_occurring_variants

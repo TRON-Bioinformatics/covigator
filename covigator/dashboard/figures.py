@@ -126,6 +126,7 @@ class Figures:
 
             # set the styles of the cells
             styles_counts = self.discrete_background_color_bins(data, columns=included_month_colums)
+            styles_total_count = self.discrete_background_color_bins(data, columns=["total"], colors="Reds")
             styles_frequency = self._get_table_style_by_af()
             styles_striped = [{
                 'if': {'row_index': 'odd'},
@@ -133,7 +134,7 @@ class Figures:
             }]
 
             month_columns = [{'name': ["", i], 'id': i} for i in data.columns if i.startswith("20")]
-            month_columns[0]['name'][0] = 'Monthly count'
+            month_columns[0]['name'][0] = 'Monthly counts' if metric == "count" else 'Monthly frequencies'
 
             fig = dash_table.DataTable(
                     id="top-occurring-variants-table",
@@ -145,8 +146,9 @@ class Figures:
                         {"name": ["", "Protein mutation"], "id": "hgvs_p"},
                         {"name": ["", "Effect"], "id": "annotation"},
                         {"name": ["", "Frequency"], "id": "frequency"},
+                        {"name": ["", "Count"], "id": "total"},
                     ] + month_columns,
-                    style_data_conditional=styles_striped + styles_counts + styles_frequency,
+                    style_data_conditional=styles_striped + styles_counts + styles_frequency + styles_total_count,
                     style_cell_conditional=[
                         {
                             'if': {'column_id': c},
