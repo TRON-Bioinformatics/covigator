@@ -19,6 +19,20 @@ MISSING_VALUE = "-"
 
 class Dashboard:
 
+    tab_style = {
+        'borderBottom': '1px solid #d6d6d6',
+        'padding': '6px',
+        'fontWeight': 'bold'
+    }
+
+    tab_selected_style = {
+        'borderTop': '1px solid #d6d6d6',
+        'borderBottom': '1px solid #d6d6d6',
+        'backgroundColor': '#119DFF',
+        'color': 'white',
+        'padding': '6px'
+    }
+
     def __init__(self, config: Configuration, verbose=False):
         covigator.configuration.initialise_logs(config.logfile_dash)
         self.config = config
@@ -93,8 +107,9 @@ class Dashboard:
         date_of_last_check_ena = self.queries.get_date_of_last_check(data_source=DataSource.ENA)
         date_of_last_update_ena = self.queries.get_date_of_last_update(data_source=DataSource.ENA)
 
-        return dcc.Tab(label="About",
+        return dcc.Tab(label="About", style=self.tab_style, selected_style=self.tab_selected_style,
                             children=[
+                                html.Br(),
                                 self.get_header(),
                                 html.Div(
                                 [
@@ -214,7 +229,7 @@ class Dashboard:
 
     def get_tab_samples(self):
         figure = self.figures.get_accumulated_samples_by_country_plot()
-        return dcc.Tab(label="Samples",
+        return dcc.Tab(label="Samples", style=self.tab_style, selected_style=self.tab_selected_style,
                             children=[
                                 dcc.Graph(figure=figure)
                             ])
@@ -228,12 +243,13 @@ class Dashboard:
         oneyearago = today - timedelta(days=356)
         oneyearago_formatted = oneyearago.strftime(MONTH_PATTERN)
 
-        return dcc.Tab(label="Variants",
+        return dcc.Tab(label="Variants", style=self.tab_style, selected_style=self.tab_selected_style,
                        children=[html.Div(
                            id='needleplot-body', className="row container-display",
                            style={'overflow': 'scroll'}, # 'top': 0, 'bottom': 0, position: fixed
                            children=[
                                html.Div(children=[
+                                   html.Br(),
                                    dcc.Markdown("""
                                      Select a gene
                                      """),
@@ -364,7 +380,8 @@ class Dashboard:
             tab_variants = self.get_tab_variants()
 
             # assemble tabs in dcc.Tabs object
-            tabs = dcc.Tabs(children=[tab_overview, tab_samples, tab_variants])
+            tabs = dcc.Tabs(children=[tab_overview, tab_samples, tab_variants],
+                            style={'height': '44px'})
                             #style={'margin': '0 0 0 0', 'padding-top': '2px'})
 
             # create layout
