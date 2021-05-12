@@ -140,9 +140,9 @@ class QueriesTests(TestCase):
         num_unique_variants = len(set([v.variant_id for v in variants]))
         self.assertEqual(data.shape[0], num_unique_variants * num_unique_variants)
         self.assertEqual(data.shape[1], 6)
-        self.assertGreater(data[data["count"] > 0].shape[0], len(variants))
-        self.assertGreater(data[data["frequency"] > 0].shape[0], len(variants))
-        self.assertGreater(data[data["jaccard"] > 0].shape[0], len(variants))
+        self.assertGreaterEqual(data[data["count"] > 0].shape[0], len(variants))
+        self.assertGreaterEqual(data[data["frequency"] > 0].shape[0], len(variants))
+        self.assertGreaterEqual(data[data["jaccard"] > 0].shape[0], len(variants))
 
         data = self.queries.get_variants_cooccurrence_by_gene(gene_name="S", min_cooccurrence=11, test=True)
         self.assertIsNone(data)
@@ -153,9 +153,9 @@ class QueriesTests(TestCase):
         data = self.queries.get_variants_cooccurrence_by_gene(gene_name="N", min_cooccurrence=1, test=True)
         self.assertIsNotNone(data)
         self.assertEqual(data.shape[1], 6)
-        self.assertGreater(data[data["count"] > 0].shape[0], len(other_variants))
-        self.assertGreater(data[data["frequency"] > 0].shape[0], len(variants))
-        self.assertGreater(data[data["jaccard"] > 0].shape[0], len(variants))
+        self.assertGreaterEqual(data[data["count"] > 0].shape[0], len(other_variants))
+        self.assertGreaterEqual(data[data["frequency"] > 0].shape[0], len(variants))
+        self.assertGreaterEqual(data[data["jaccard"] > 0].shape[0], len(variants))
 
     def test_get_variant_abundance_histogram(self):
 
