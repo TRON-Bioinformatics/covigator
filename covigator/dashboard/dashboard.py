@@ -329,7 +329,7 @@ class Dashboard:
                                    ),
                                    html.Br(),
                                    dcc.Markdown("""
-                                   **Co-occurrence heatmap**
+                                   **Co-occurrence matrix**
                                    
                                    Metric to assess paiwise co-occurrence
                                    """),
@@ -339,7 +339,7 @@ class Dashboard:
                                                 {'label': "Frequency", 'value': "frequency"},
                                                 {'label': "Jaccard index", 'value': "jaccard"},
                                                 ],
-                                       value="count",
+                                       value="jaccard",
                                        clearable=False,
                                        multi=False
                                    ),
@@ -410,19 +410,9 @@ class Dashboard:
             Input('dropdown-top-variants-metric', 'value')
         )
         def update_top_occurring_variants(top_variants, gene_name, date_range_start, date_range_end, metric):
-            return html.Div(children=[
-                    self.figures.get_top_occurring_variants_plot(
-                        top=top_variants, gene_name=gene_name, date_range_start=date_range_start,
-                        date_range_end=date_range_end, metric=metric),
-                    dcc.Markdown("""
-                    *Top {} variants{} according to their frequency across all samples.
-                    The counts per month are only shown between {} and {}*
-                    """.format(
-                        top_variants,
-                        " in gene {}".format(gene_name) if gene_name else "",
-                        date_range_start,
-                        date_range_end))
-                    ])
+            return html.Div(children=self.figures.get_top_occurring_variants_plot(
+                top=top_variants, gene_name=gene_name, date_range_start=date_range_start,
+                date_range_end=date_range_end, metric=metric))
 
         @app.callback(
             Output('needle-plot', 'children'),

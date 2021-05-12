@@ -165,7 +165,16 @@ class Figures:
                     row_selectable='multi'
                 )
 
-        return fig
+        return [
+            fig,
+            dcc.Markdown("""
+                            **Top occurring variants** 
+                            *table shows the {} variants{} with the highest frequency across all samples.*
+                            *The counts and frequencies per month are only shown between {} and {}.*
+                            *Selections in this table will be highlighted in the genome view and in the co-occurrence matrix.*
+                            """.format(top, " in gene {}".format(gene_name) if gene_name else "",
+                                       date_range_start, date_range_end))
+        ]
 
     def discrete_background_color_bins(self, df, n_bins=5, columns='all', colors='Blues'):
         bounds = [i * (1.0 / n_bins) for i in range(n_bins + 1)]
