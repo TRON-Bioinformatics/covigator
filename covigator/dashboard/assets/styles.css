@@ -5,7 +5,10 @@
 
 body {
   background-color: #f2f2f2;
-  margin: 5%;
+  margin-top: 0%;
+  margin-left: 5%;
+  margin-right: 5%;
+  margin-bottom: 1%
 }
 
 .two.columns {

@@ -231,9 +231,9 @@ class Dashboard:
         return dcc.Tab(label="Variants",
                        children=[html.Div(
                            id='needleplot-body', className="row container-display",
+                           style={'overflow': 'scroll'}, # 'top': 0, 'bottom': 0, position: fixed
                            children=[
                                html.Div(children=[
-                                   html.H4("Filters"),
                                    dcc.Markdown("""
                                      Select a gene
                                      """),
@@ -244,8 +244,9 @@ class Dashboard:
                                        multi=False
                                    ),
                                    html.Br(),
-                                   html.H4("Top occurring variants"),
                                    dcc.Markdown("""
+                                            **Top occurring variants**
+                                             
                                              Number of top occurring variants
                                              """),
                                    dcc.Slider(
@@ -295,8 +296,9 @@ class Dashboard:
                                                 className="six column"),
                                    ], className="row container-display"),
                                    html.Br(),
-                                   html.H4("Genome view"),
                                    dcc.Markdown("""
+                                                    **Genome view**
+                                                     
                                                      Bin size
                                                      """),
                                    dcc.Slider(
@@ -310,8 +312,9 @@ class Dashboard:
                                        tooltip=dict(always_visible=False, placement="right")
                                    ),
                                    html.Br(),
-                                   html.H4("Co-occurrence heatmap"),
                                    dcc.Markdown("""
+                                   **Co-occurrence heatmap**
+                                   
                                    Metric to assess paiwise co-occurrence
                                    """),
                                    dcc.Dropdown(
@@ -345,7 +348,7 @@ class Dashboard:
                                    html.Br(),
                                    html.Div(id='cooccurrence-heatmap'),
                                    html.Br(),
-                               ], className="ten columns")
+                               ], className="ten columns", style={'overflow': 'scroll', "height": "900px"},)
                            ]),
                        ]
                        )
@@ -362,9 +365,10 @@ class Dashboard:
 
             # assemble tabs in dcc.Tabs object
             tabs = dcc.Tabs(children=[tab_overview, tab_samples, tab_variants])
+                            #style={'margin': '0 0 0 0', 'padding-top': '2px'})
 
             # create layout
-            layout = html.Div(children=[tabs, footer])
+            layout = html.Div(children=[tabs, footer]) #, style={'margin-top': '0px', 'padding-top': '0px'})
 
         return layout
 
