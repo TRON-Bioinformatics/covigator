@@ -213,7 +213,7 @@ class Figures:
             texts = np.array_split(data.hgvs_tooltip, len(all_variants))
             logger.info("cinco")
             if metric == "count":
-                hovertemplate = '<b>%{text}</b><br>' + 'Cooccurrence: %{z}<br>' + 'Variant one: %{x}<br>' + 'Variant two: %{y}'
+                hovertemplate = '<b>%{text}</b><br>' + 'Counts: %{z}<br>' + 'Variant one: %{x}<br>' + 'Variant two: %{y}'
             elif metric == "frequency":
                 hovertemplate = '<b>%{text}</b><br>' + 'Frequency: %{z:.3f}<br>' + 'Variant one: %{x}<br>' + 'Variant two: %{y}'
             elif metric == "jaccard":
