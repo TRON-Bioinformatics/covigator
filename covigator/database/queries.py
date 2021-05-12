@@ -272,8 +272,9 @@ class Queries:
             VariantObservation.variant_id,
             func.date_trunc('month', SampleEna.first_created).label("month"),
             func.count().label("count"))\
-            .join(SampleEna, VariantObservation.sample == SampleEna.run_accession)\
-            .filter(VariantObservation.variant_id == variant_id)\
+            .join(SampleEna, VariantObservation.sample == SampleEna.run_accession) \
+            .join(JobEna, VariantObservation.sample == JobEna.run_accession) \
+            .filter(and_(VariantObservation.variant_id == variant_id, JobEna.status == JobStatus.FINISHED))\
             .group_by(VariantObservation.variant_id, func.date_trunc('month', SampleEna.first_created))
         return pd.read_sql(query.statement, self.session.bind)
 
