@@ -219,10 +219,8 @@ class Figures:
         if data is not None and data.shape[0] > 0:
 
             all_variants = data.variant_id_one.unique()
-            logger.info("cuatro")
             values = np.array_split(data[metric], len(all_variants))
             texts = np.array_split(data.hgvs_tooltip, len(all_variants))
-            logger.info("cinco")
             if metric == "count":
                 hovertemplate = '<b>%{text}</b><br>' + 'Counts: %{z}<br>' + 'Variant one: %{x}<br>' + 'Variant two: %{y}'
             elif metric == "frequency":
@@ -584,3 +582,18 @@ class Figures:
             text=variants[["hgvs_p", "annotation"]].apply(lambda x: "{} ({})".format(x[0], x[1]), axis=1),
             hovertemplate=VARIANT_TOOLTIP
         )
+
+    def get_variants_clustering(self, gene_name):
+        mds_fit, mds_coords, clusters = self.queries.get_mds(gene_name=gene_name)
+        fig = go.Figure(data=go.Scatter(
+            x=mds_coords[:, 0],
+            y=mds_coords[:, 1],
+            mode='markers',
+            marker=dict(color=clusters)
+        ))
+        return [
+            dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
+            dcc.Markdown("""
+            ***Variant clustering*** *plots the variants after applying a Multi Dimensional Scaling on the
+            co-occurrence matrix. Only the first two dimensions are shown.*
+            """)]

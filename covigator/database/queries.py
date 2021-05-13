@@ -1,7 +1,10 @@
 from datetime import date, datetime
 from typing import List, Union
 import pandas as pd
+from scipy.spatial.distance import squareform
 from logzero import logger
+from sklearn import manifold
+from sklearn.cluster import DBSCAN
 from sqlalchemy import and_, desc, asc, func, or_, String, text, DateTime, cast
 from sqlalchemy.engine.default import DefaultDialect
 from sqlalchemy.orm import Session, aliased
@@ -383,6 +386,54 @@ class Queries:
             full_matrix = full_matrix.loc[:, ["variant_id_one", "variant_id_two", "count", "frequency", "jaccard", "hgvs_tooltip"]]
 
         return full_matrix
+
+    def get_mds(self, gene_name):
+        variant_one = aliased(Variant)
+        variant_two = aliased(Variant)
+        query = self.session.query(VariantCooccurrence)\
+            .join(variant_one, and_(VariantCooccurrence.variant_id_one == variant_one.variant_id)) \
+            .join(variant_two, and_(VariantCooccurrence.variant_id_two == variant_two.variant_id))
+
+        if gene_name is not None:
+            query = query.filter(and_(variant_one.gene_name == gene_name,
+                                      variant_one.annotation != SYNONYMOUS_VARIANT,
+                                      variant_two.gene_name == gene_name,
+                                      variant_two.annotation != SYNONYMOUS_VARIANT))
+        else:
+            query = query.filter(and_(variant_one.annotation != SYNONYMOUS_VARIANT,
+                                      variant_two.annotation != SYNONYMOUS_VARIANT))
+
+        sparse_matrix = pd.read_sql(query.statement, self.session.bind)
+        diagonal = sparse_matrix.loc[sparse_matrix.variant_id_one == sparse_matrix.variant_id_two,
+                                     ["variant_id_one", "variant_id_two", "count"]]
+        sparse_matrix = pd.merge(left=sparse_matrix, right=diagonal, on="variant_id_one", how="left",
+                                 suffixes=("", "_one"))
+        sparse_matrix = pd.merge(left=sparse_matrix, right=diagonal, on="variant_id_two", how="left",
+                                 suffixes=("", "_two"))
+        sparse_matrix["count_union"] = sparse_matrix["count_one"] + sparse_matrix["count_two"] - sparse_matrix["count"]
+        sparse_matrix["jaccard_dissimilarity"] = 1 - sparse_matrix["count"] / sparse_matrix["count_union"]
+
+        all_variants = sparse_matrix.variant_id_one.unique()
+        empty_full_matrix = pd.DataFrame(index=pd.MultiIndex.from_product(
+            [all_variants, all_variants], names=["variant_id_one", "variant_id_two"])).reset_index()
+        full_matrix = pd.merge(
+            # gets only the inferior matrix without the diagnonal
+            left=empty_full_matrix.loc[empty_full_matrix.variant_id_one < empty_full_matrix.variant_id_two, :],
+            right=sparse_matrix.loc[:, ["variant_id_one", "variant_id_two", "jaccard_dissimilarity"]],
+            on=["variant_id_one", "variant_id_two"], how='left')
+        full_matrix.fillna(1.0, inplace=True)
+        # TODO: sort this as described here https://stackoverflow.com/questions/13079563/how-does-condensed-distance-matrix-work-pdist
+        full_matrix.sort_values(by=["variant_id_one", "variant_id_two"], inplace=True)
+
+        # TODO_ replace this call by http://scikit-bio.org/docs/0.4.2/generated/generated/skbio.stats.distance.DissimilarityMatrix.html
+        # to maintain variant labels
+        distance_matrix = squareform(full_matrix.jaccard_dissimilarity)
+        mds_model = manifold.MDS(n_components=2, random_state=123, dissimilarity='precomputed')
+        mds_fit = mds_model.fit(distance_matrix)
+        mds_coords = mds_model.fit_transform(distance_matrix)
+        clusters = DBSCAN(eps=3, min_samples=2).fit_predict(distance_matrix)
+
+        return mds_fit, mds_coords, clusters
 
     def get_variant_abundance_histogram(self, bin_size=50) -> pd.DataFrame:
 

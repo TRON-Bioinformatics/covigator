@@ -365,6 +365,8 @@ class Dashboard:
                                    html.Br(),
                                    html.Div(id='cooccurrence-heatmap'),
                                    html.Br(),
+                                   html.Div(id='variants-mds'),
+                                   html.Br(),
                                ], className="ten columns", style={'overflow': 'scroll', "height": "900px"},)
                            ]),
                        ]
@@ -461,6 +463,15 @@ class Dashboard:
             selected_rows = [rows[s] for s in selected_rows_indices] if selected_rows_indices else None
             plot = html.Div(children=self.figures.get_cooccurrence_heatmap(
                 gene_name=gene_name, selected_variants=selected_rows, metric=metric, min_occurrences=min_occurrences))
+            return plot
+
+        @app.callback(
+            Output('variants-mds', 'children'),
+            Input('dropdown-gene', 'value'),
+        )
+        def update_variants_mds(gene_name):
+            # TODO pass selected variants
+            plot = html.Div(children=self.figures.get_variants_clustering(gene_name=gene_name))
             return plot
 
     def get_application(self) -> dash.Dash:
