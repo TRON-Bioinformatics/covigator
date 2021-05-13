@@ -584,13 +584,32 @@ class Figures:
         )
 
     def get_variants_clustering(self, gene_name):
-        mds_fit, mds_coords, clusters = self.queries.get_mds(gene_name=gene_name)
-        fig = go.Figure(data=go.Scatter(
-            x=mds_coords[:, 0],
-            y=mds_coords[:, 1],
-            mode='markers',
-            marker=dict(color=clusters)
-        ))
+        data = self.queries.get_mds(gene_name=gene_name)
+
+        traces = []
+        cluster_idx = 1
+        for c in data.cluster.unique():
+            traces.append(go.Scatter(
+                x=data[data.cluster == c].PC1,
+                y=data[data.cluster == c].PC2,
+                mode='markers',
+                showlegend=True,
+                name="Cluster {}".format(cluster_idx),
+                marker=dict(color=c)))
+            cluster_idx += 1
+
+        fig = go.Figure(
+            data=traces,
+            layout=go.Layout(
+                template="plotly_white",
+                height=700,
+                yaxis=dict(visible=True, tickfont={"size": 10}, showgrid=True, title="PC2"),  #showspikes=True, spikemode='toaxis',
+                           # spikethickness=2),
+                xaxis=dict(visible=True, tickfont={"size": 10}, showgrid=True, title="PC1"),   #, showspikes=True, spikemode='toaxis',
+                           # spikethickness=2),
+                margin=go.layout.Margin(l=0, r=0, b=0, t=0)
+            )
+        )
         return [
             dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
             dcc.Markdown("""

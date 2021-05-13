@@ -387,7 +387,7 @@ class Queries:
 
         return full_matrix
 
-    def get_mds(self, gene_name):
+    def get_mds(self, gene_name) -> pd.DataFrame:
         variant_one = aliased(Variant)
         variant_two = aliased(Variant)
         query = self.session.query(VariantCooccurrence)\
@@ -428,12 +428,17 @@ class Queries:
         # TODO_ replace this call by http://scikit-bio.org/docs/0.4.2/generated/generated/skbio.stats.distance.DissimilarityMatrix.html
         # to maintain variant labels
         distance_matrix = squareform(full_matrix.jaccard_dissimilarity)
-        mds_model = manifold.MDS(n_components=2, random_state=123, dissimilarity='precomputed')
-        mds_fit = mds_model.fit(distance_matrix)
+        mds_model = manifold.MDS(n_components=3, random_state=123, dissimilarity='precomputed')
         mds_coords = mds_model.fit_transform(distance_matrix)
-        clusters = DBSCAN(eps=3, min_samples=2).fit_predict(distance_matrix)
 
-        return mds_fit, mds_coords, clusters
+        # performs clustering
+        clusters = DBSCAN().fit_predict(distance_matrix)
+
+        # builds data into a dataframe
+        data = pd.DataFrame(mds_coords, columns=["PC1", "PC2", "PC3"])
+        data["cluster"] = clusters
+
+        return data
 
     def get_variant_abundance_histogram(self, bin_size=50) -> pd.DataFrame:
 
