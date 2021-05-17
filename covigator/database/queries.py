@@ -3,6 +3,7 @@ from typing import List, Union
 import pandas as pd
 from scipy.spatial.distance import squareform
 from logzero import logger
+from skbio.stats.distance import DissimilarityMatrix
 from sklearn import manifold
 from sklearn.cluster import DBSCAN
 from sqlalchemy import and_, desc, asc, func, or_, String, text, DateTime, cast
@@ -387,10 +388,11 @@ class Queries:
 
         return full_matrix
 
-    def get_mds(self, gene_name) -> pd.DataFrame:
+    def get_mds(self, gene_name, min_cooccurrence, epsilon) -> pd.DataFrame:
         variant_one = aliased(Variant)
         variant_two = aliased(Variant)
-        query = self.session.query(VariantCooccurrence)\
+        query = self.session.query(VariantCooccurrence) \
+            .filter(VariantCooccurrence.count >= min_cooccurrence) \
             .join(variant_one, and_(VariantCooccurrence.variant_id_one == variant_one.variant_id)) \
             .join(variant_two, and_(VariantCooccurrence.variant_id_two == variant_two.variant_id))
 
@@ -416,27 +418,37 @@ class Queries:
         all_variants = sparse_matrix.variant_id_one.unique()
         empty_full_matrix = pd.DataFrame(index=pd.MultiIndex.from_product(
             [all_variants, all_variants], names=["variant_id_one", "variant_id_two"])).reset_index()
-        full_matrix = pd.merge(
+        lower_diagonal_matrix = pd.merge(
             # gets only the inferior matrix without the diagnonal
             left=empty_full_matrix.loc[empty_full_matrix.variant_id_one < empty_full_matrix.variant_id_two, :],
             right=sparse_matrix.loc[:, ["variant_id_one", "variant_id_two", "jaccard_dissimilarity"]],
             on=["variant_id_one", "variant_id_two"], how='left')
-        full_matrix.fillna(1.0, inplace=True)
+        lower_diagonal_matrix.fillna(1.0, inplace=True)
         # TODO: sort this as described here https://stackoverflow.com/questions/13079563/how-does-condensed-distance-matrix-work-pdist
-        full_matrix.sort_values(by=["variant_id_one", "variant_id_two"], inplace=True)
+        lower_diagonal_matrix.sort_values(by=["variant_id_one", "variant_id_two"], inplace=True)
 
-        # TODO_ replace this call by http://scikit-bio.org/docs/0.4.2/generated/generated/skbio.stats.distance.DissimilarityMatrix.html
         # to maintain variant labels
-        distance_matrix = squareform(full_matrix.jaccard_dissimilarity)
-        mds_model = manifold.MDS(n_components=3, random_state=123, dissimilarity='precomputed')
-        mds_coords = mds_model.fit_transform(distance_matrix)
+        logger.info("Building square distance matrix...")
+        distance_matrix = squareform(lower_diagonal_matrix.jaccard_dissimilarity)
+        ids = list([list(lower_diagonal_matrix.variant_id_one[0])[0]] + \
+              list(lower_diagonal_matrix.variant_id_two[0:len(lower_diagonal_matrix.variant_id_two.unique())]))
+        distance_matrix_with_ids = DissimilarityMatrix(data=distance_matrix, ids=ids)
+
+        logger.info("Starting MDS...")
+        mds_model = manifold.MDS(n_components=2, random_state=123, dissimilarity='precomputed',
+                                 # this two values make computation faster
+                                 n_init=1, max_iter=50)
+        mds_coords = mds_model.fit_transform(distance_matrix_with_ids.data)
 
         # performs clustering
-        clusters = DBSCAN().fit_predict(distance_matrix)
+        logger.info("Clustering...")
+        clusters = DBSCAN(eps=epsilon).fit_predict(distance_matrix_with_ids.data)
 
         # builds data into a dataframe
-        data = pd.DataFrame(mds_coords, columns=["PC1", "PC2", "PC3"])
+        logger.info("Building dataframe...")
+        data = pd.DataFrame(mds_coords, columns=["PC1", "PC2"])
         data["cluster"] = clusters
+        data["variant_id"] = distance_matrix_with_ids.ids
 
         return data
 

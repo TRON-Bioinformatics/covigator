@@ -356,6 +356,22 @@ class Dashboard:
                                        marks={i: '{}'.format(i) for i in [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]},
                                        tooltip=dict(always_visible=False, placement="right")
                                    ),
+                                   html.Br(),
+                                   dcc.Markdown("""
+                                           **Variants clustering**
+
+                                           Epsilon
+                                           """),
+                                   dcc.Slider(
+                                       id='slider-epsilon',
+                                       min=0.0,
+                                       max=1.0,
+                                       step=0.05,
+                                       value=0.5,
+                                       dots=True,
+                                       marks={i: '{}'.format(i) for i in [.0, .1, .2, .3, .4, .5, .6, .7, .8, .9, 1.0]},
+                                       tooltip=dict(always_visible=False, placement="right")
+                                   ),
                                ], className="two columns"),
                                html.Div(children=[
                                    html.Br(),
@@ -468,10 +484,15 @@ class Dashboard:
         @app.callback(
             Output('variants-mds', 'children'),
             Input('dropdown-gene', 'value'),
+            Input('top-occurring-variants-table', "derived_virtual_data"),
+            Input('top-occurring-variants-table', "derived_virtual_selected_rows"),
+            Input('slider-min-cooccurrences', 'value'),
+            Input('slider-epsilon', 'value')
         )
-        def update_variants_mds(gene_name):
-            # TODO pass selected variants
-            plot = html.Div(children=self.figures.get_variants_clustering(gene_name=gene_name))
+        def update_variants_mds(gene_name, rows, selected_rows_indices, min_cooccurrence, epsilon):
+            selected_rows = [rows[s] for s in selected_rows_indices] if selected_rows_indices else None
+            plot = html.Div(children=self.figures.get_variants_clustering(
+                gene_name=gene_name, selected_variants=selected_rows, min_cooccurrence=min_cooccurrence, epsilon=epsilon))
             return plot
 
     def get_application(self) -> dash.Dash:

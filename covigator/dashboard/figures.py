@@ -272,7 +272,6 @@ class Figures:
             # the y index is reversed in plotly heatmap
             fig.update_yaxes(autorange="reversed")
 
-        logger.info("seis")
         return [
                 dcc.Graph(
                     figure=fig,
@@ -583,36 +582,50 @@ class Figures:
             hovertemplate=VARIANT_TOOLTIP
         )
 
-    def get_variants_clustering(self, gene_name):
-        data = self.queries.get_mds(gene_name=gene_name)
+    def get_variants_clustering(self, gene_name, selected_variants, min_cooccurrence, epsilon):
+        data = self.queries.get_mds(gene_name=gene_name, min_cooccurrence=min_cooccurrence, epsilon=epsilon)
 
         traces = []
-        cluster_idx = 1
-        for c in data.cluster.unique():
+        shapes = []
+        for cluster, color in zip(data.cluster.unique(), cycle(plotly.express.colors.qualitative.Alphabet)):
             traces.append(go.Scatter(
-                x=data[data.cluster == c].PC1,
-                y=data[data.cluster == c].PC2,
+                x=data[data.cluster == cluster].PC1,
+                y=data[data.cluster == cluster].PC2,
                 mode='markers',
                 showlegend=True,
-                name="Cluster {}".format(cluster_idx),
-                marker=dict(color=c)))
-            cluster_idx += 1
+                name="Cluster {}".format(cluster) if cluster != -1 else "Unclustered",
+                text=data[data.cluster == cluster].variant_id,
+                hovertemplate='%{text}',
+                marker=dict(color=color, symbol="circle", size=7, opacity=0.8) if cluster != -1 else dict(
+                    color="grey", symbol="cross-thin-open", size=4, opacity=0.6)))
+            #if cluster != -1:
+            #    shapes.append(go.layout.Shape(
+            #        type="circle",
+            #        xref="x", yref="y",
+            #        x0=min(data[data.cluster == cluster].PC1), y0=min(data[data.cluster == cluster].PC2),
+            #        x1=max(data[data.cluster == cluster].PC1), y1=max(data[data.cluster == cluster].PC2),
+            #        opacity=0.2,
+            #        fillcolor=color,
+            #        line_color=color,
+            #    ))
 
         fig = go.Figure(
             data=traces,
             layout=go.Layout(
                 template="plotly_white",
                 height=700,
-                yaxis=dict(visible=True, tickfont={"size": 10}, showgrid=True, title="PC2"),  #showspikes=True, spikemode='toaxis',
-                           # spikethickness=2),
-                xaxis=dict(visible=True, tickfont={"size": 10}, showgrid=True, title="PC1"),   #, showspikes=True, spikemode='toaxis',
-                           # spikethickness=2),
-                margin=go.layout.Margin(l=0, r=0, b=0, t=0)
+                yaxis=dict(visible=True, tickfont={"size": 10}, showgrid=True, title="PC2"),
+                xaxis=dict(visible=True, tickfont={"size": 10}, showgrid=True, title="PC1"),
+                margin=go.layout.Margin(l=0, r=0, b=0, t=0),
+                shapes=shapes
             )
         )
         return [
             dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
             dcc.Markdown("""
             ***Variant clustering*** *plots the variants after applying a Multi Dimensional Scaling on the
-            co-occurrence matrix. Only the first two dimensions are shown.*
+            co-occurrence matrix. Only the first two dimensions are shown. Clustering is performed on the 
+            co-occurrence matrix using DBSCAN*
+            
+            *Ester et al. (1996). A Density-Based Algorithm for Discovering Clusters in Large Spatial Databases with Noise. www.aaai.org*
             """)]
