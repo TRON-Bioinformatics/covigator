@@ -388,7 +388,7 @@ class Queries:
 
         return full_matrix
 
-    def get_mds(self, gene_name, min_cooccurrence, epsilon, min_samples) -> pd.DataFrame:
+    def get_mds(self, gene_name, min_cooccurrence, epsilon, min_samples, dimensionality_reduction="mds") -> pd.DataFrame:
         variant_one = aliased(Variant)
         variant_two = aliased(Variant)
         query = self.session.query(VariantCooccurrence) \
@@ -434,11 +434,16 @@ class Queries:
               list(lower_diagonal_matrix.variant_id_two[0:len(lower_diagonal_matrix.variant_id_two.unique())]))
         distance_matrix_with_ids = DissimilarityMatrix(data=distance_matrix, ids=ids)
 
-        logger.info("Starting MDS...")
-        mds_model = manifold.MDS(n_components=2, random_state=123, dissimilarity='precomputed',
-                                 # this two values make computation faster
-                                 n_init=1, max_iter=50)
-        mds_coords = mds_model.fit_transform(distance_matrix_with_ids.data)
+        logger.info("Starting dimensionality reduction...")
+        if dimensionality_reduction == "mds":
+            dimensionality_reduction_model = manifold.MDS(
+                n_components=2, random_state=123, dissimilarity='precomputed', n_init=1, max_iter=50) # this two values make computation faster
+        elif dimensionality_reduction == "tsne":
+            dimensionality_reduction_model = manifold.TSNE(
+                n_components=2, random_state=123, metric='precomputed', n_iter=250)
+        else:
+            raise ValueError("Non supported dimensionality reduction {}".format(dimensionality_reduction))
+        coords = dimensionality_reduction_model.fit_transform(distance_matrix_with_ids.data)
 
         # performs clustering
         logger.info("Clustering...")
@@ -446,7 +451,7 @@ class Queries:
 
         # builds data into a dataframe
         logger.info("Building dataframe...")
-        data = pd.DataFrame(mds_coords, columns=["PC1", "PC2"])
+        data = pd.DataFrame(coords, columns=["PC1", "PC2"])
         data["cluster"] = clusters
         data["variant_id"] = distance_matrix_with_ids.ids
 

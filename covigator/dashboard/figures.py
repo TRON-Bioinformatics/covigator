@@ -582,9 +582,11 @@ class Figures:
             hovertemplate=VARIANT_TOOLTIP
         )
 
-    def get_variants_clustering(self, gene_name, selected_variants, min_cooccurrence, epsilon, min_samples):
+    def get_variants_clustering(self, gene_name, selected_variants, min_cooccurrence, epsilon, min_samples,
+                                dimensionality_reduction):
         data = self.queries.get_mds(
-            gene_name=gene_name, min_cooccurrence=min_cooccurrence, epsilon=epsilon, min_samples=min_samples)
+            gene_name=gene_name, min_cooccurrence=min_cooccurrence, epsilon=epsilon, min_samples=min_samples,
+            dimensionality_reduction=dimensionality_reduction)
 
         traces = []
         shapes = []

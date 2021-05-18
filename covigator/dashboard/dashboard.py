@@ -387,6 +387,18 @@ class Dashboard:
                                        marks={i: str(i) for i in range(2, 10)},
                                        tooltip=dict(always_visible=False, placement="right")
                                    ),
+                                   dcc.Markdown("""
+                                           Dimensionality reduction technique
+                                                   """),
+                                   dcc.Dropdown(
+                                       id='dropdown-dimensionality-reduction',
+                                       options=[{'label': "MDS", 'value': "mds"},
+                                                {'label': "t-SNE", 'value': "tsne"}
+                                                ],
+                                       value="mds",
+                                       clearable=False,
+                                       multi=False
+                                   ),
                                ], className="two columns"),
                                html.Div(children=[
                                    html.Br(),
@@ -504,12 +516,14 @@ class Dashboard:
             Input('slider-min-cooccurrences', 'value'),
             Input('slider-epsilon', 'value'),
             Input('slider-min-samples', 'value'),
+            Input('dropdown-dimensionality-reduction', 'value'),
         )
-        def update_variants_mds(gene_name, rows, selected_rows_indices, min_cooccurrence, epsilon, min_samples):
+        def update_variants_mds(gene_name, rows, selected_rows_indices, min_cooccurrence, epsilon, min_samples,
+                                dimensionality_reduction):
             selected_rows = [rows[s] for s in selected_rows_indices] if selected_rows_indices else None
             plot = html.Div(children=self.figures.get_variants_clustering(
                 gene_name=gene_name, selected_variants=selected_rows, min_cooccurrence=min_cooccurrence,
-                epsilon=epsilon, min_samples=min_samples))
+                epsilon=epsilon, min_samples=min_samples, dimensionality_reduction=dimensionality_reduction))
             return plot
 
     def get_application(self) -> dash.Dash:
