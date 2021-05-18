@@ -351,7 +351,7 @@ class Dashboard:
                                        min=1,
                                        max=100,
                                        step=5,
-                                       value=20,
+                                       value=10,
                                        dots=True,
                                        marks={i: '{}'.format(i) for i in [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]},
                                        tooltip=dict(always_visible=False, placement="right")
@@ -360,7 +360,8 @@ class Dashboard:
                                    dcc.Markdown("""
                                            **Variants clustering**
 
-                                           Epsilon
+                                           Epsilon. The maximum distance between two samples for one to be considered 
+                                           as in the neighborhood of the other. 
                                            """),
                                    dcc.Slider(
                                        id='slider-epsilon',
@@ -369,7 +370,21 @@ class Dashboard:
                                        step=0.05,
                                        value=0.5,
                                        dots=True,
-                                       marks={i: '{}'.format(i) for i in [.0, .1, .2, .3, .4, .5, .6, .7, .8, .9, 1.0]},
+                                       marks={i: str(i) for i in [.0, .1, .2, .3, .4, .5, .6, .7, .8, .9, 1.0]},
+                                       tooltip=dict(always_visible=False, placement="right")
+                                   ),
+                                   dcc.Markdown("""
+                                   The number of samples (or total weight) in a neighborhood for a point to be 
+                                   considered as a core point. This includes the point itself.
+                                           """),
+                                   dcc.Slider(
+                                       id='slider-min-samples',
+                                       min=2,
+                                       max=10,
+                                       step=1,
+                                       value=5,
+                                       dots=True,
+                                       marks={i: str(i) for i in range(2, 10)},
                                        tooltip=dict(always_visible=False, placement="right")
                                    ),
                                ], className="two columns"),
@@ -487,12 +502,14 @@ class Dashboard:
             Input('top-occurring-variants-table', "derived_virtual_data"),
             Input('top-occurring-variants-table', "derived_virtual_selected_rows"),
             Input('slider-min-cooccurrences', 'value'),
-            Input('slider-epsilon', 'value')
+            Input('slider-epsilon', 'value'),
+            Input('slider-min-samples', 'value'),
         )
-        def update_variants_mds(gene_name, rows, selected_rows_indices, min_cooccurrence, epsilon):
+        def update_variants_mds(gene_name, rows, selected_rows_indices, min_cooccurrence, epsilon, min_samples):
             selected_rows = [rows[s] for s in selected_rows_indices] if selected_rows_indices else None
             plot = html.Div(children=self.figures.get_variants_clustering(
-                gene_name=gene_name, selected_variants=selected_rows, min_cooccurrence=min_cooccurrence, epsilon=epsilon))
+                gene_name=gene_name, selected_variants=selected_rows, min_cooccurrence=min_cooccurrence,
+                epsilon=epsilon, min_samples=min_samples))
             return plot
 
     def get_application(self) -> dash.Dash:

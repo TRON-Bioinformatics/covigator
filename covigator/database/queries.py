@@ -388,7 +388,7 @@ class Queries:
 
         return full_matrix
 
-    def get_mds(self, gene_name, min_cooccurrence, epsilon) -> pd.DataFrame:
+    def get_mds(self, gene_name, min_cooccurrence, epsilon, min_samples) -> pd.DataFrame:
         variant_one = aliased(Variant)
         variant_two = aliased(Variant)
         query = self.session.query(VariantCooccurrence) \
@@ -442,7 +442,7 @@ class Queries:
 
         # performs clustering
         logger.info("Clustering...")
-        clusters = DBSCAN(eps=epsilon).fit_predict(distance_matrix_with_ids.data)
+        clusters = DBSCAN(eps=epsilon, min_samples=min_samples).fit_predict(distance_matrix_with_ids.data)
 
         # builds data into a dataframe
         logger.info("Building dataframe...")
