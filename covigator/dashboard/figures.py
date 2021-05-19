@@ -213,7 +213,7 @@ class Figures:
 
         return styles
 
-    def get_cooccurrence_heatmap(self, gene_name, selected_variants, metric="frequency", min_occurrences=5):
+    def get_cooccurrence_heatmap(self, gene_name, selected_variants, metric="jaccard", min_occurrences=5):
         data = self.queries.get_variants_cooccurrence_by_gene(gene_name=gene_name, min_cooccurrence=min_occurrences)
         fig = dcc.Markdown("""**No co-occurrent variants for the current selection**""")
         if data is not None and data.shape[0] > 0:
@@ -227,6 +227,8 @@ class Figures:
                 hovertemplate = '<b>%{text}</b><br>' + 'Frequency: %{z:.3f}<br>' + 'Variant one: %{x}<br>' + 'Variant two: %{y}'
             elif metric == "jaccard":
                 hovertemplate = '<b>%{text}</b><br>' + 'Jaccard index: %{z:.3f}<br>' + 'Variant one: %{x}<br>' + 'Variant two: %{y}'
+            elif metric == "kappa":
+                hovertemplate = '<b>%{text}</b><br>' + 'Kappa coefficient: %{z:.3f}<br>' + 'Variant one: %{x}<br>' + 'Variant two: %{y}'
             heatmap = go.Heatmap(
                 z=values,
                 x=all_variants,

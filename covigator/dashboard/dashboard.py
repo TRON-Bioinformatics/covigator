@@ -338,6 +338,7 @@ class Dashboard:
                                        options=[{'label': "Count", 'value': "count"},
                                                 {'label': "Frequency", 'value': "frequency"},
                                                 {'label': "Jaccard index", 'value': "jaccard"},
+                                                {'label': "Cohen's kappa coefficient", 'value': "kappa"},
                                                 ],
                                        value="jaccard",
                                        clearable=False,

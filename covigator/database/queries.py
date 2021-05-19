@@ -346,11 +346,20 @@ class Queries:
             sparse_matrix["frequency"] = sparse_matrix["count"] / count_samples
             sparse_matrix = pd.merge(left=sparse_matrix, right=diagonal, on="variant_id_one", how="left", suffixes=("", "_one"))
             sparse_matrix = pd.merge(left=sparse_matrix, right=diagonal, on="variant_id_two", how="left", suffixes=("", "_two"))
+
+            # calculate Jaccard index
             sparse_matrix["count_union"] = sparse_matrix["count_one"] + sparse_matrix["count_two"] - sparse_matrix["count"]
             sparse_matrix["jaccard"] = sparse_matrix["count"] / sparse_matrix["count_union"]
+
+            # calculate Cohen's kappa
+            sparse_matrix["chance_agreement"] = np.exp(-sparse_matrix["count"])
+            sparse_matrix["kappa"] = 1 - ((1 - sparse_matrix.jaccard) / (1 - sparse_matrix.chance_agreement))
+            sparse_matrix["kappa"] = sparse_matrix["kappa"].transform(lambda k: k if k > 0 else 0)
+
             del sparse_matrix["count_union"]
             del sparse_matrix["count_one"]
             del sparse_matrix["count_two"]
+            del sparse_matrix["chance_agreement"]
 
             # from the sparse matrix builds in memory the complete matrix
             all_variants = data.variant_id_one.unique()
@@ -385,7 +394,8 @@ class Queries:
             full_matrix.sort_values(["position_two", "reference_two", "alternate_two",
                                      "position_one", "reference_one", "alternate_one"], inplace=True)
 
-            full_matrix = full_matrix.loc[:, ["variant_id_one", "variant_id_two", "count", "frequency", "jaccard", "hgvs_tooltip"]]
+            full_matrix = full_matrix.loc[:, ["variant_id_one", "variant_id_two", "count", "frequency", "jaccard",
+                                              "kappa", "hgvs_tooltip"]]
 
         return full_matrix
 
@@ -416,32 +426,45 @@ class Queries:
             left=sparse_matrix, right=diagonal, on="variant_id_one", how="left", suffixes=("", "_one"))
         sparse_matrix_with_diagonal = pd.merge(
             left=sparse_matrix_with_diagonal, right=diagonal, on="variant_id_two", how="left", suffixes=("", "_two"))
+
+        # calculate Jaccard index
         sparse_matrix_with_diagonal["count_union"] = sparse_matrix_with_diagonal["count_one"] + \
                                                      sparse_matrix_with_diagonal["count_two"] - \
                                                      sparse_matrix_with_diagonal["count"]
-        sparse_matrix_with_diagonal["jaccard_dissimilarity"] = 1 - sparse_matrix_with_diagonal["count"] / \
-                                                               sparse_matrix_with_diagonal["count_union"]
+        sparse_matrix_with_diagonal["jaccard_similarity"] = sparse_matrix_with_diagonal["count"] / \
+                                                               sparse_matrix_with_diagonal.count_union
+        sparse_matrix_with_diagonal["jaccard_dissimilarity"] = 1 - sparse_matrix_with_diagonal.jaccard_similarity
 
+        # calculate Cohen's kappa
+        sparse_matrix_with_diagonal["chance_agreement"] = np.exp(-sparse_matrix_with_diagonal["count"])
+        sparse_matrix_with_diagonal["kappa"] = 1 - ((1 - sparse_matrix_with_diagonal.jaccard_similarity) / (
+                1 - sparse_matrix_with_diagonal.chance_agreement))
+        sparse_matrix_with_diagonal["kappa"] = sparse_matrix_with_diagonal["kappa"].transform(lambda k: k if k > 0 else 0)
+        sparse_matrix_with_diagonal["kappa_dissimilarity"] = 1 - sparse_matrix_with_diagonal.kappa
+
+        dissimilarity_metric = "kappa_dissimilarity"
+
+        # build upper diagonal matrix
         all_variants = sparse_matrix_with_diagonal.variant_id_one.unique()
         empty_full_matrix = pd.DataFrame(index=pd.MultiIndex.from_product(
             [all_variants, all_variants], names=["variant_id_one", "variant_id_two"])).reset_index()
         upper_diagonal_matrix = pd.merge(
             # gets only the inferior matrix without the diagnonal
             left=empty_full_matrix.loc[empty_full_matrix.variant_id_one < empty_full_matrix.variant_id_two, :],
-            right=sparse_matrix_with_diagonal.loc[:, ["variant_id_one", "variant_id_two", "jaccard_dissimilarity"]],
+            right=sparse_matrix_with_diagonal.loc[:, ["variant_id_one", "variant_id_two", dissimilarity_metric]],
             on=["variant_id_one", "variant_id_two"], how='left')
         upper_diagonal_matrix.fillna(1.0, inplace=True)
         upper_diagonal_matrix.sort_values(by=["variant_id_one", "variant_id_two"], inplace=True)
 
         logger.info("Building square distance matrix...")
-        distance_matrix = squareform(upper_diagonal_matrix.jaccard_dissimilarity)
+        distance_matrix = squareform(upper_diagonal_matrix[dissimilarity_metric])
         # this ensures the order of variants ids is coherent with the non redundant form of the distance matrix
         ids = np.array([list(upper_diagonal_matrix.variant_id_one[0])[0]] + \
               list(upper_diagonal_matrix.variant_id_two[0:len(upper_diagonal_matrix.variant_id_two.unique())]))
         distance_matrix_with_ids = DissimilarityMatrix(data=distance_matrix, ids=ids)
 
         logger.info("Clustering...")
-        clusters = OPTICS(min_samples=min_samples, max_eps=0.8).fit_predict(distance_matrix_with_ids.data)
+        clusters = OPTICS(min_samples=min_samples, max_eps=1.4).fit_predict(distance_matrix_with_ids.data)
 
         logger.info("Dimensionality reduction...")
         dimensionality_reduction_model = MDS(
