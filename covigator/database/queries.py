@@ -1,18 +1,16 @@
 from datetime import date, datetime
 from typing import List, Union
-
 import numpy as np
 import pandas as pd
 from scipy.spatial.distance import squareform
 from logzero import logger
 from skbio.stats.distance import DissimilarityMatrix
-from sklearn import manifold
-from sklearn.cluster import DBSCAN, OPTICS
-from sklearn.decomposition import TruncatedSVD
-from sqlalchemy import and_, desc, asc, func, or_, String, text, DateTime, cast
+from sklearn.cluster import OPTICS
+from sklearn.manifold import MDS
+from sqlalchemy import and_, desc, asc, func, String, DateTime
 from sqlalchemy.engine.default import DefaultDialect
 from sqlalchemy.orm import Session, aliased
-from sqlalchemy.sql.sqltypes import NullType, Numeric, Float
+from sqlalchemy.sql.sqltypes import NullType
 
 from covigator.database.model import Log, DataSource, CovigatorModule, SampleEna, JobEna, JobStatus, VariantObservation, \
     Gene, Variant, VariantCooccurrence, Conservation, JobGisaid
@@ -446,7 +444,7 @@ class Queries:
         clusters = OPTICS(min_samples=min_samples, max_eps=0.8).fit_predict(distance_matrix_with_ids.data)
 
         logger.info("Dimensionality reduction...")
-        dimensionality_reduction_model = manifold.MDS(
+        dimensionality_reduction_model = MDS(
             n_components=2, random_state=123, dissimilarity='precomputed', n_init=1, max_iter=10)  # this two values make computation faster
         coords = dimensionality_reduction_model.fit_transform(distance_matrix_with_ids.data)
 
