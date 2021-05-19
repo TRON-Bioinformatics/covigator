@@ -395,7 +395,9 @@ class Queries:
 
         variant_one = aliased(Variant)
         variant_two = aliased(Variant)
-        query = self.session.query(VariantCooccurrence) \
+        query = self.session.query(VariantCooccurrence,
+                                   variant_one.hgvs_p.label("hgvs_p_one"),
+                                   variant_two.hgvs_p.label("hgvs_p_two")) \
             .filter(VariantCooccurrence.count >= min_cooccurrence) \
             .join(variant_one, and_(VariantCooccurrence.variant_id_one == variant_one.variant_id)) \
             .join(variant_two, and_(VariantCooccurrence.variant_id_two == variant_two.variant_id))
@@ -412,20 +414,23 @@ class Queries:
         sparse_matrix = pd.read_sql(query.statement, self.session.bind)
         diagonal = sparse_matrix.loc[sparse_matrix.variant_id_one == sparse_matrix.variant_id_two,
                                      ["variant_id_one", "variant_id_two", "count"]]
-        sparse_matrix = pd.merge(left=sparse_matrix, right=diagonal, on="variant_id_one", how="left",
-                                 suffixes=("", "_one"))
-        sparse_matrix = pd.merge(left=sparse_matrix, right=diagonal, on="variant_id_two", how="left",
-                                 suffixes=("", "_two"))
-        sparse_matrix["count_union"] = sparse_matrix["count_one"] + sparse_matrix["count_two"] - sparse_matrix["count"]
-        sparse_matrix["jaccard_dissimilarity"] = 1 - sparse_matrix["count"] / sparse_matrix["count_union"]
+        sparse_matrix_with_diagonal = pd.merge(
+            left=sparse_matrix, right=diagonal, on="variant_id_one", how="left", suffixes=("", "_one"))
+        sparse_matrix_with_diagonal = pd.merge(
+            left=sparse_matrix_with_diagonal, right=diagonal, on="variant_id_two", how="left", suffixes=("", "_two"))
+        sparse_matrix_with_diagonal["count_union"] = sparse_matrix_with_diagonal["count_one"] + \
+                                                     sparse_matrix_with_diagonal["count_two"] - \
+                                                     sparse_matrix_with_diagonal["count"]
+        sparse_matrix_with_diagonal["jaccard_dissimilarity"] = 1 - sparse_matrix_with_diagonal["count"] / \
+                                                               sparse_matrix_with_diagonal["count_union"]
 
-        all_variants = sparse_matrix.variant_id_one.unique()
+        all_variants = sparse_matrix_with_diagonal.variant_id_one.unique()
         empty_full_matrix = pd.DataFrame(index=pd.MultiIndex.from_product(
             [all_variants, all_variants], names=["variant_id_one", "variant_id_two"])).reset_index()
         upper_diagonal_matrix = pd.merge(
             # gets only the inferior matrix without the diagnonal
             left=empty_full_matrix.loc[empty_full_matrix.variant_id_one < empty_full_matrix.variant_id_two, :],
-            right=sparse_matrix.loc[:, ["variant_id_one", "variant_id_two", "jaccard_dissimilarity"]],
+            right=sparse_matrix_with_diagonal.loc[:, ["variant_id_one", "variant_id_two", "jaccard_dissimilarity"]],
             on=["variant_id_one", "variant_id_two"], how='left')
         upper_diagonal_matrix.fillna(1.0, inplace=True)
         upper_diagonal_matrix.sort_values(by=["variant_id_one", "variant_id_two"], inplace=True)
@@ -450,6 +455,15 @@ class Queries:
         data = pd.DataFrame(coords, columns=["PC1", "PC2"])
         data["cluster"] = clusters
         data["variant_id"] = distance_matrix_with_ids.ids
+
+        logger.info("Annotate with HGVS.p ...")
+        annotations = pd.concat([
+            sparse_matrix.loc[:, ["variant_id_one", "hgvs_p_one"]].rename(
+                columns={"variant_id_one": "variant_id", "hgvs_p_one": "hgvs_p"}),
+            sparse_matrix.loc[:, ["variant_id_two", "hgvs_p_two"]].rename(
+                columns={"variant_id_two": "variant_id", "hgvs_p_two": "hgvs_p"})])
+        data = pd.merge(left=data, right=annotations, on="variant_id", how="left")
+        data["tooltip"] = data[["variant_id", "hgvs_p"]].apply(lambda x: "<b>{}</b><br>{}".format(x[1], x[0]), axis=1)
 
         return data
 

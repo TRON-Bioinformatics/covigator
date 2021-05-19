@@ -597,7 +597,7 @@ class Figures:
                 mode='markers',
                 showlegend=True,
                 name="Cluster {}".format(cluster) if cluster != -1 else "Unclustered",
-                text=data[data.cluster == cluster].variant_id,
+                text=data[data.cluster == cluster].tooltip,
                 hovertemplate='%{text}',
                 marker=dict(color=color, symbol="circle", size=7, opacity=0.8) if cluster != -1 else dict(
                     color="grey", symbol="cross-thin-open", size=4, opacity=0.6)))
