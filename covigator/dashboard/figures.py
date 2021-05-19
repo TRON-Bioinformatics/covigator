@@ -582,11 +582,9 @@ class Figures:
             hovertemplate=VARIANT_TOOLTIP
         )
 
-    def get_variants_clustering(self, gene_name, selected_variants, min_cooccurrence, epsilon, min_samples,
-                                dimensionality_reduction):
+    def get_variants_clustering(self, gene_name, selected_variants, min_cooccurrence, epsilon, min_samples):
         data = self.queries.get_mds(
-            gene_name=gene_name, min_cooccurrence=min_cooccurrence, epsilon=epsilon, min_samples=min_samples,
-            dimensionality_reduction=dimensionality_reduction)
+            gene_name=gene_name, min_cooccurrence=min_cooccurrence, epsilon=epsilon, min_samples=min_samples)
 
         traces = []
         shapes = []
@@ -628,7 +626,7 @@ class Figures:
             dcc.Markdown("""
             ***Variant clustering*** *plots the variants after applying a Multi Dimensional Scaling on the
             co-occurrence matrix. Only the first two dimensions are shown. Clustering is performed on the 
-            co-occurrence matrix using DBSCAN*
+            co-occurrence matrix using DBSCAN.*
             
             *Ester et al. (1996). A Density-Based Algorithm for Discovering Clusters in Large Spatial Databases with Noise. www.aaai.org*
             """)]

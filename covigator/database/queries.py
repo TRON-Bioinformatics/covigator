@@ -1,11 +1,14 @@
 from datetime import date, datetime
 from typing import List, Union
+
+import numpy as np
 import pandas as pd
 from scipy.spatial.distance import squareform
 from logzero import logger
 from skbio.stats.distance import DissimilarityMatrix
 from sklearn import manifold
 from sklearn.cluster import DBSCAN
+from sklearn.decomposition import TruncatedSVD
 from sqlalchemy import and_, desc, asc, func, or_, String, text, DateTime, cast
 from sqlalchemy.engine.default import DefaultDialect
 from sqlalchemy.orm import Session, aliased
@@ -418,38 +421,31 @@ class Queries:
         all_variants = sparse_matrix.variant_id_one.unique()
         empty_full_matrix = pd.DataFrame(index=pd.MultiIndex.from_product(
             [all_variants, all_variants], names=["variant_id_one", "variant_id_two"])).reset_index()
-        lower_diagonal_matrix = pd.merge(
+        upper_diagonal_matrix = pd.merge(
             # gets only the inferior matrix without the diagnonal
             left=empty_full_matrix.loc[empty_full_matrix.variant_id_one < empty_full_matrix.variant_id_two, :],
             right=sparse_matrix.loc[:, ["variant_id_one", "variant_id_two", "jaccard_dissimilarity"]],
             on=["variant_id_one", "variant_id_two"], how='left')
-        lower_diagonal_matrix.fillna(1.0, inplace=True)
+        upper_diagonal_matrix.fillna(1.0, inplace=True)
         # TODO: sort this as described here https://stackoverflow.com/questions/13079563/how-does-condensed-distance-matrix-work-pdist
-        lower_diagonal_matrix.sort_values(by=["variant_id_one", "variant_id_two"], inplace=True)
+        upper_diagonal_matrix.sort_values(by=["variant_id_one", "variant_id_two"], inplace=True)
 
-        # to maintain variant labels
         logger.info("Building square distance matrix...")
-        distance_matrix = squareform(lower_diagonal_matrix.jaccard_dissimilarity)
-        ids = list([list(lower_diagonal_matrix.variant_id_one[0])[0]] + \
-              list(lower_diagonal_matrix.variant_id_two[0:len(lower_diagonal_matrix.variant_id_two.unique())]))
+        distance_matrix = squareform(upper_diagonal_matrix.jaccard_dissimilarity)
+        # this ensures the order of variants ids is coherent with the non redundant form of the distance matrix
+        ids = np.array([list(upper_diagonal_matrix.variant_id_one[0])[0]] + \
+              list(upper_diagonal_matrix.variant_id_two[0:len(upper_diagonal_matrix.variant_id_two.unique())]))
         distance_matrix_with_ids = DissimilarityMatrix(data=distance_matrix, ids=ids)
 
-        logger.info("Starting dimensionality reduction...")
-        if dimensionality_reduction == "mds":
-            dimensionality_reduction_model = manifold.MDS(
-                n_components=2, random_state=123, dissimilarity='precomputed', n_init=1, max_iter=50) # this two values make computation faster
-        elif dimensionality_reduction == "tsne":
-            dimensionality_reduction_model = manifold.TSNE(
-                n_components=2, random_state=123, metric='precomputed', n_iter=250)
-        else:
-            raise ValueError("Non supported dimensionality reduction {}".format(dimensionality_reduction))
-        coords = dimensionality_reduction_model.fit_transform(distance_matrix_with_ids.data)
-
-        # performs clustering
         logger.info("Clustering...")
         clusters = DBSCAN(eps=epsilon, min_samples=min_samples).fit_predict(distance_matrix_with_ids.data)
 
-        # builds data into a dataframe
+        logger.info("Dimensionality reduction...")
+        dimensionality_reduction_model = manifold.MDS(
+            n_components=2, random_state=123, dissimilarity='precomputed', n_init=1,
+            max_iter=50)  # this two values make computation faster
+        coords = dimensionality_reduction_model.fit_transform(distance_matrix_with_ids.data)
+
         logger.info("Building dataframe...")
         data = pd.DataFrame(coords, columns=["PC1", "PC2"])
         data["cluster"] = clusters
