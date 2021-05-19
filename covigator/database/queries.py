@@ -7,7 +7,7 @@ from scipy.spatial.distance import squareform
 from logzero import logger
 from skbio.stats.distance import DissimilarityMatrix
 from sklearn import manifold
-from sklearn.cluster import DBSCAN
+from sklearn.cluster import DBSCAN, OPTICS
 from sklearn.decomposition import TruncatedSVD
 from sqlalchemy import and_, desc, asc, func, or_, String, text, DateTime, cast
 from sqlalchemy.engine.default import DefaultDialect
@@ -391,7 +391,7 @@ class Queries:
 
         return full_matrix
 
-    def get_mds(self, gene_name, min_cooccurrence, epsilon, min_samples) -> pd.DataFrame:
+    def get_mds(self, gene_name, min_cooccurrence, min_samples) -> pd.DataFrame:
 
         variant_one = aliased(Variant)
         variant_two = aliased(Variant)
@@ -443,12 +443,11 @@ class Queries:
         distance_matrix_with_ids = DissimilarityMatrix(data=distance_matrix, ids=ids)
 
         logger.info("Clustering...")
-        clusters = DBSCAN(eps=epsilon, min_samples=min_samples).fit_predict(distance_matrix_with_ids.data)
+        clusters = OPTICS(min_samples=min_samples, max_eps=0.8).fit_predict(distance_matrix_with_ids.data)
 
         logger.info("Dimensionality reduction...")
         dimensionality_reduction_model = manifold.MDS(
-            n_components=2, random_state=123, dissimilarity='precomputed', n_init=1,
-            max_iter=50)  # this two values make computation faster
+            n_components=2, random_state=123, dissimilarity='precomputed', n_init=1, max_iter=10)  # this two values make computation faster
         coords = dimensionality_reduction_model.fit_transform(distance_matrix_with_ids.data)
 
         logger.info("Building clustering dataframe...")

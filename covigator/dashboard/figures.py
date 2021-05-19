@@ -582,9 +582,9 @@ class Figures:
             hovertemplate=VARIANT_TOOLTIP
         )
 
-    def get_variants_clustering(self, gene_name, selected_variants, min_cooccurrence, epsilon, min_samples):
+    def get_variants_clustering(self, gene_name, selected_variants, min_cooccurrence, min_samples):
         data = self.queries.get_mds(
-            gene_name=gene_name, min_cooccurrence=min_cooccurrence, epsilon=epsilon, min_samples=min_samples)
+            gene_name=gene_name, min_cooccurrence=min_cooccurrence, min_samples=min_samples)
 
         traces = []
         shapes = []
@@ -628,8 +628,15 @@ class Figures:
             dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
             dcc.Markdown("""
             ***Variant clustering*** *plots the variants after applying a Multi Dimensional Scaling on the
-            co-occurrence matrix. Only the first two dimensions are shown. Clustering is performed on the 
-            co-occurrence matrix using DBSCAN.*
+            co-occurrence matrix with the Jaccard index. 
+            The co-occurrence matrix is built taking into account only variants with at least {} pairwise 
+            co-occurrences and if a gene is provided only variants within that gene. 
+            Only the first two dimensions are plotted. 
+            Clustering is performed on the same co-occurrence matrix using OPTICS. 
+            The mimimum number of neighbours to call
+            a cluster is {}.
+            Variants selected in the top occurrent variants table are highlighted with a greater size in the plot.
+            *
             
-            *Ester et al. (1996). A Density-Based Algorithm for Discovering Clusters in Large Spatial Databases with Noise. www.aaai.org*
-            """)]
+            *Ankerst et al. “OPTICS: ordering points to identify the clustering structure.” ACM SIGMOD Record 28, no. 2 (1999): 49-60.*
+            """.format(min_cooccurrence, min_samples))]

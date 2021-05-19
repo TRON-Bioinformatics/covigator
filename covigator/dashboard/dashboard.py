@@ -358,22 +358,8 @@ class Dashboard:
                                    ),
                                    html.Br(),
                                    dcc.Markdown("""
-                                           **Variants clustering**
+                                   **Variants clustering**
 
-                                           Epsilon. The maximum distance between two samples for one to be considered 
-                                           as in the neighborhood of the other. 
-                                           """),
-                                   dcc.Slider(
-                                       id='slider-epsilon',
-                                       min=0.0,
-                                       max=1.0,
-                                       step=0.05,
-                                       value=0.5,
-                                       dots=True,
-                                       marks={i: str(i) for i in [.0, .1, .2, .3, .4, .5, .6, .7, .8, .9, 1.0]},
-                                       tooltip=dict(always_visible=False, placement="right")
-                                   ),
-                                   dcc.Markdown("""
                                    The number of samples (or total weight) in a neighborhood for a point to be 
                                    considered as a core point. This includes the point itself.
                                            """),
@@ -502,14 +488,13 @@ class Dashboard:
             Input('top-occurring-variants-table', "derived_virtual_data"),
             Input('top-occurring-variants-table', "derived_virtual_selected_rows"),
             Input('slider-min-cooccurrences', 'value'),
-            Input('slider-epsilon', 'value'),
             Input('slider-min-samples', 'value')
         )
-        def update_variants_mds(gene_name, rows, selected_rows_indices, min_cooccurrence, epsilon, min_samples):
+        def update_variants_mds(gene_name, rows, selected_rows_indices, min_cooccurrence, min_samples):
             selected_rows = [rows[s] for s in selected_rows_indices] if selected_rows_indices else None
             plot = html.Div(children=self.figures.get_variants_clustering(
                 gene_name=gene_name, selected_variants=selected_rows, min_cooccurrence=min_cooccurrence,
-                epsilon=epsilon, min_samples=min_samples))
+                min_samples=min_samples))
             return plot
 
     def get_application(self) -> dash.Dash:
