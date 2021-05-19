@@ -463,7 +463,25 @@ class Queries:
             sparse_matrix.loc[:, ["variant_id_two", "hgvs_p_two"]].rename(
                 columns={"variant_id_two": "variant_id", "hgvs_p_two": "hgvs_p"})])
         data = pd.merge(left=data, right=annotations, on="variant_id", how="left")
-        data["tooltip"] = data[["variant_id", "hgvs_p"]].apply(lambda x: "<b>{}</b><br>{}".format(x[1], x[0]), axis=1)
+        data["tooltip"] = data[["variant_id", "hgvs_p"]].apply(
+            lambda x: "<b>{}</b><br>Variant: {}".format(x[1], x[0]), axis=1)
+
+        logger.info("Annotate with cluster mean Jaccard index...")
+        data["cluster_jaccard_mean"] = 1.0
+        data["cluster_members"] = 0
+        for c in data.cluster.unique():
+            variants_in_cluster = data[data.cluster == c].variant_id.unique()
+            data.cluster_jaccard_mean = np.where(data.cluster == c, sparse_matrix_with_diagonal[
+                (sparse_matrix.variant_id_one.isin(variants_in_cluster)) &
+                (sparse_matrix.variant_id_two.isin(variants_in_cluster)) &
+                (sparse_matrix.variant_id_one != sparse_matrix.variant_id_two)
+            ].jaccard_dissimilarity.mean(), data.cluster_jaccard_mean)
+            data.cluster_members = np.where(data.cluster == c, variants_in_cluster.size, data.cluster_members)
+
+        logger.info("Compose tooltip...")
+        data["tooltip"] = data[["variant_id", "hgvs_p", "cluster_jaccard_mean", "cluster_members"]].apply(
+            lambda x: "<b>{}</b><br>Variant: {}<br>Jaccard mean in cluster:{}<br>Members in cluster: {}".format(
+                x[1], x[0], round(1 - x[2], 3), x[3]), axis=1)
 
         return data
 
