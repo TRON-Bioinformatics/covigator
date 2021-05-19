@@ -391,7 +391,8 @@ class Queries:
 
         return full_matrix
 
-    def get_mds(self, gene_name, min_cooccurrence, epsilon, min_samples, dimensionality_reduction="mds") -> pd.DataFrame:
+    def get_mds(self, gene_name, min_cooccurrence, epsilon, min_samples) -> pd.DataFrame:
+
         variant_one = aliased(Variant)
         variant_two = aliased(Variant)
         query = self.session.query(VariantCooccurrence) \
@@ -427,7 +428,6 @@ class Queries:
             right=sparse_matrix.loc[:, ["variant_id_one", "variant_id_two", "jaccard_dissimilarity"]],
             on=["variant_id_one", "variant_id_two"], how='left')
         upper_diagonal_matrix.fillna(1.0, inplace=True)
-        # TODO: sort this as described here https://stackoverflow.com/questions/13079563/how-does-condensed-distance-matrix-work-pdist
         upper_diagonal_matrix.sort_values(by=["variant_id_one", "variant_id_two"], inplace=True)
 
         logger.info("Building square distance matrix...")
@@ -446,7 +446,7 @@ class Queries:
             max_iter=50)  # this two values make computation faster
         coords = dimensionality_reduction_model.fit_transform(distance_matrix_with_ids.data)
 
-        logger.info("Building dataframe...")
+        logger.info("Building clustering dataframe...")
         data = pd.DataFrame(coords, columns=["PC1", "PC2"])
         data["cluster"] = clusters
         data["variant_id"] = distance_matrix_with_ids.ids

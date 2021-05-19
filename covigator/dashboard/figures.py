@@ -588,6 +588,8 @@ class Figures:
 
         traces = []
         shapes = []
+        selected_variants = [v.get("dna_mutation") for v in (selected_variants if selected_variants else [])]
+        selected_data = data[data.variant_id.isin(selected_variants if selected_variants else [])]
         for cluster, color in zip(data.cluster.unique(), cycle(plotly.express.colors.qualitative.Alphabet)):
             traces.append(go.Scatter(
                 x=data[data.cluster == cluster].PC1,
@@ -599,16 +601,17 @@ class Figures:
                 hovertemplate='%{text}',
                 marker=dict(color=color, symbol="circle", size=7, opacity=0.8) if cluster != -1 else dict(
                     color="grey", symbol="cross-thin-open", size=4, opacity=0.6)))
-            #if cluster != -1:
-            #    shapes.append(go.layout.Shape(
-            #        type="circle",
-            #        xref="x", yref="y",
-            #        x0=min(data[data.cluster == cluster].PC1), y0=min(data[data.cluster == cluster].PC2),
-            #        x1=max(data[data.cluster == cluster].PC1), y1=max(data[data.cluster == cluster].PC2),
-            #        opacity=0.2,
-            #        fillcolor=color,
-            #        line_color=color,
-            #    ))
+            if selected_data[selected_data.cluster == cluster].shape[0] > 0:
+                traces.append(go.Scatter(
+                    x=selected_data[selected_data.cluster == cluster].PC1,
+                    y=selected_data[selected_data.cluster == cluster].PC2,
+                    mode='markers',
+                    showlegend=True,
+                    name="Selected variants",
+                    text=selected_data[selected_data.cluster == cluster].variant_id,
+                    hovertemplate='%{text}',
+                    marker=dict(color=color, symbol="circle", size=13, opacity=1.0) if cluster != -1 else dict(
+                        color="grey", symbol="cross-thin-open", size=10, opacity=1.0)))
 
         fig = go.Figure(
             data=traces,
