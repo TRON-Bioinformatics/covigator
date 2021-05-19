@@ -281,8 +281,10 @@ class Figures:
                 ),
                 dcc.Markdown("""
                         ***Co-occurrence matrix*** *showing variant pairs co-occurring in at least {} samples (this value is configurable).*
-                        *The metric in the co-occurrence matrix can be chosen among counts, frequencies or Jaccard index.*
-                        *The diagonal contains the total counts or just 1.0 in the case of frequencies and the Jaccard index.*
+                        *The metric in the co-occurrence matrix can be chosen among counts, frequencies, Jaccard index or 
+                        Cohen's kappa coefficient. The Cohen's kappa coefficient introduces a correction to the Jaccard index for
+                        variants with low occurrence.*
+                        *The diagonal contains the total counts or just 1.0 in the other metrics.*
                         *The upper diagonal is not shown for clarity.*
                         *Synonymous variants are excluded.*
                         *Different genomic variants causing the same protein variant are not grouped.*
@@ -630,7 +632,7 @@ class Figures:
             dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
             dcc.Markdown("""
             ***Variant clustering*** *plots the variants after applying a Multi Dimensional Scaling on the
-            co-occurrence matrix with the Jaccard index. 
+            co-occurrence matrix with the Jaccard index corrected with the Cohen's kappa coefficient. 
             The co-occurrence matrix is built taking into account only variants with at least {} pairwise 
             co-occurrences and if a gene is provided only variants within that gene. 
             Only the first two dimensions are plotted. 
