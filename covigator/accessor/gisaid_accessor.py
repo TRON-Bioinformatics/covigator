@@ -13,9 +13,10 @@ import zlib
 
 class GisaidAccessor:
 
-    def __init__(self, input_file: str, database: Database):
+    def __init__(self, input_fasta: str, input_metadata: str, database: Database):
         self.start_time = datetime.now()
-        self.input_file = input_file
+        self.input_fasta = input_fasta
+        self.input_metadata = input_metadata
         self.has_error = False
 
         self.database = database
@@ -44,16 +45,32 @@ class GisaidAccessor:
             self._log_results()
 
     def _get_gisaid_samples(self, existing_sample_ids) -> List[SampleGisaid]:
+        meta_dict = {}
+        with open(self.input_metadata) as metadata:
+            for line in metadata:
+                elements = line.rstrip().split("\t")
+                virus_name = elements[0]
+                virus_type = elements[1]
+                accession_id = elements[2]
+                collection_date = elements[3]
+                location = elements[4]
+                host = elements[7]
+                meta_dict[accession_id] = (virus_type, accession_id, collection_date, location, host)
+
 
         results = {}
-        for record in SeqIO.parse(self.input_file, "fasta"):
+        for record in SeqIO.parse(self.input_fasta, "fasta"):
             fields = record.description.split("|")
             identifier = fields[3]
+            if not identifier in meta_dict:
+                continue
+            metadata = meta_dict[identifier]
+            location_list = metadata[3].split("/")
             if identifier in existing_sample_ids:
                 # we skip samples already in the database
                 self.excluded_existing += 1
                 continue
-            host = fields[6].lower().strip()
+            host = metadata[4].lower().strip()
             if host != "human":
                 self.excluded_by_host += 1
                 continue
@@ -62,20 +79,21 @@ class GisaidAccessor:
             else:
                 sample_gisaid = SampleGisaid(
                     run_accession=identifier,
-                    date=fields[2],
+                    date=metadata[2],
                     host_tax_id=None,
                     host=host,
-                    country_raw=fields[10],
-                    region=fields[9],
+                    country_raw=location_list[1],
+                    region=location_list[2],
                     country=None,
                     country_alpha_2=None,
                     country_alpha_3=None,
-                    continent=None,
+                    continent=location_list[0],
                     continent_alpha_2=None,
-                    site=fields[7],
-                    site2=fields[8],
+                    site=None,
+                    site2=None,
                     sequence={}
                 )
+
                 self._parse_country(sample_gisaid)
                 self._parse_dates(sample_gisaid)
                 results[sample_gisaid.run_accession] = sample_gisaid
