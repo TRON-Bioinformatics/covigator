@@ -66,6 +66,21 @@ class GisaidAccessor:
                 continue
             metadata = meta_dict[identifier]
             location_list = metadata[3].split("/")
+            continent = "None"
+            try:
+                continent = location_list[0].strip()
+            except:
+                pass
+            country_raw = "None"
+            try:
+                country_raw = location_list[1].strip()
+            except:
+                pass
+            region = "None"
+            try:
+                region = location_list[2].strip()
+            except:
+                pass
             if identifier in existing_sample_ids:
                 # we skip samples already in the database
                 self.excluded_existing += 1
@@ -82,8 +97,8 @@ class GisaidAccessor:
                     date=metadata[2],
                     host_tax_id=None,
                     host=host,
-                    country_raw=location_list[1],
-                    region=location_list[2],
+                    country_raw=country_raw,
+                    region=region,
                     country=None,
                     country_alpha_2=None,
                     country_alpha_3=None,

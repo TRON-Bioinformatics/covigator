@@ -42,9 +42,15 @@ def gisaid_accessor():
     parser = ArgumentParser(
         description="Covigator {} GISAID accessor".format(covigator.VERSION))
     parser.add_argument(
-        "--input-file",
-        dest="input_file",
+        "--input-fasta",
+        dest="input_fasta",
         help="the FASTA input file from GISAID",
+        required=True
+    )
+    parser.add_argument(
+        "--input-metadata",
+        dest="input_metadata",
+        help="GISAID metadata file",
         required=True
     )
 
@@ -52,7 +58,7 @@ def gisaid_accessor():
 
     config = Configuration()
     covigator.configuration.initialise_logs(config.logfile_accesor)
-    GisaidAccessor(input_file=args.input_file, database=Database(initialize=True, config=config)).access()
+    GisaidAccessor(input_fasta=args.input_fasta, input_metadata=args.input_metadata, database=Database(initialize=True, config=config)).access()
 
 
 def processor():
