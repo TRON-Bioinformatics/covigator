@@ -32,7 +32,7 @@ class GisaidAccessor:
         # it assumes there will be no repetitions
         existing_sample_ids = [value for value, in session.query(SampleGisaid.run_accession).all()]
         try:
-            samples = self._get_gisaid_samples(existing_sample_ids)
+            samples = self._get_gisaid_samples(existing_sample_ids, session)
             logger.info("Read file of {} GISAID samples".format(len(samples)))
             self._process_runs(samples, session)
         except Exception as e:
@@ -44,8 +44,9 @@ class GisaidAccessor:
             session.close()
             self._log_results()
 
-    def _get_gisaid_samples(self, existing_sample_ids) -> List[SampleGisaid]:
+    def _get_gisaid_samples(self, existing_sample_ids, session) -> List[SampleGisaid]:
         meta_dict = {}
+        logger.info("Reading metadata file...")
         with open(self.input_metadata) as metadata:
             for line in metadata:
                 elements = line.rstrip().split("\t")
@@ -56,15 +57,34 @@ class GisaidAccessor:
                 location = elements[4]
                 host = elements[7]
                 meta_dict[accession_id] = (virus_type, accession_id, collection_date, location, host)
-
-
+                #logger.info("METADATA: {}".format(accession_id))
+        logger.info("Metadata loaded.")
+        logger.info("Reading FASTA...")
         results = {}
+        identifier_tmp = None
+        sample_gisaid = None
         for record in SeqIO.parse(self.input_fasta, "fasta"):
             fields = record.description.split("|")
             identifier = fields[3]
-            if not identifier in meta_dict:
+            
+            if identifier != identifier_tmp and identifier_tmp and sample_gisaid:
+                logger.info(identifier, identifier_tmp)
+                #logger.info("FASTA: {}".format(identifier))
+                sample = self._build_sample(sample_gisaid)
+                session.add(sample_gisaid)
+                session.commit()
+                session.add(sample)
+                session.commit()
+                session.add(JobGisaid(run_accession=sample_gisaid.run_accession))
+                session.commit()
+                logger.info("Added {} to DB".format(sample_gisaid.run_accession))
+                sample_gisaid = None
+            metadata = None
+            try:
+                metadata = meta_dict[identifier]
+            except:
                 continue
-            metadata = meta_dict[identifier]
+            
             location_list = metadata[3].split("/")
             continent = "None"
             try:
@@ -89,9 +109,8 @@ class GisaidAccessor:
             if host != "human":
                 self.excluded_by_host += 1
                 continue
-            if identifier in results:
-                sample_gisaid = results.get(identifier)
-            else:
+            
+            if not sample_gisaid:
                 sample_gisaid = SampleGisaid(
                     run_accession=identifier,
                     date=metadata[2],
@@ -111,9 +130,11 @@ class GisaidAccessor:
 
                 self._parse_country(sample_gisaid)
                 self._parse_dates(sample_gisaid)
-                results[sample_gisaid.run_accession] = sample_gisaid
+                #results[sample_gisaid.run_accession] = sample_gisaid
             # stores the sequence in dictionary with the gene name
             sample_gisaid.sequence[fields[0]] = self.compress_sequence(record.seq)
+            identifier_tmp = identifier
+            
         return list(results.values())
 
     @staticmethod
@@ -128,17 +149,21 @@ class GisaidAccessor:
         for sample_gisaid in list_samples:
             # NOTE: this parse operation is costly
             sample = self._build_sample(sample_gisaid)
-            self.included += 1
-            included_samples_gisaid.append(sample_gisaid)
-            included_samples.append(sample)
-            included_jobs.append(JobGisaid(run_accession=sample_gisaid.run_accession))
-        if len(included_samples) > 0:
-            session.add_all(included_samples_gisaid)
+            #self.included += 1
+            #included_samples_gisaid.append(sample_gisaid)
+            #included_samples.append(sample)
+            #included_jobs.append(JobGisaid(run_accession=sample_gisaid.run_accession))
+            session.add(sample_gisaid)
+            session.add(sample)
+            session.add(JobGisaid(run_accession=sample_gisaid.run_accession))
+            logger.info("Added {} to DB".format(sample_gisaid.run_accession))
+        #if len(included_samples) > 0:
+        #    session.add_all(included_samples_gisaid)
+        #    session.commit()
+        #    session.add_all(included_samples)
+        #    session.add_all(included_jobs)
             session.commit()
-            session.add_all(included_samples)
-            session.add_all(included_jobs)
-            session.commit()
-            logger.info("Added {} new GISAID samples".format(len(included_samples)))
+        #    logger.info("Added {} new GISAID samples".format(len(included_samples)))
         logger.info("Processed {} GISAID samples".format(len(list_samples)))
 
     def _build_sample(self, sample_gisaid):
