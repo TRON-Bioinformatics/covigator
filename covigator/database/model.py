@@ -71,6 +71,7 @@ class JobStatus(enum.Enum):
     FAILED_COOCCURRENCE = 10
     FINISHED = 11
     HOLD = 12
+    EXCLUDED = 13
 
 
 class DataSource(enum.Enum):
@@ -234,6 +235,7 @@ class JobEna(Base):
     # local files storage
     fastq_path = Column(String)     # the local path where FASTQ files are stored in semi colon separated list
     vcf_path = Column(String)
+    qc = Column(JSON)
 
     def get_fastq_paths(self):
         return self.fastq_path.split(SEPARATOR) if self.fastq_path is not None else []

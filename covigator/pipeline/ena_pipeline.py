@@ -18,34 +18,38 @@ class Pipeline:
         sample_data_folder = Path(fastq1).parent
 
         logger.info("Sample data folder: {}".format(sample_data_folder))
-        snpeff_vcf_file_gz = os.path.join(
+        output_vcf = os.path.join(
             self.config.storage_folder, run_accession,
             "{name}.lofreq.normalized.annotated.vcf.gz".format(name=run_accession))
+        output_qc = os.path.join(
+            self.config.storage_folder, run_accession,
+            "{name}.fastp_stats.json".format(name=run_accession))
 
-        command = "{nextflow} run {workflow} " \
-                  "{tronflow_bwa} " \
-                  "{tronflow_bam_preprocessing} "\
-                  "{tronflow_variant_normalization} " \
-                  "--fastq1 {fastq1} {fastq2} --output {output_folder} --name {name} " \
-                  "-profile conda -offline -work-dir {work_folder} -with-trace {trace_file}".format(
-            nextflow=self.config.nextflow,
-            fastq1=fastq1,
-            fastq2="--fastq2 " + fastq2 if fastq2 else "",
-            output_folder=self.config.storage_folder,
-            name=run_accession,
-            work_folder=self.config.temp_folder,
-            workflow=self.config.workflow,
-            tronflow_bwa="--tronflow_bwa {}".format(self.config.tronflow_bwa) if self.config.tronflow_bwa else "",
-            tronflow_bam_preprocessing="--tronflow_bam_preprocessing {}".format(
-                self.config.tronflow_bam_preprocessing) if self.config.tronflow_bam_preprocessing else "",
-            tronflow_variant_normalization="--tronflow_variant_normalization {}".format(
-                self.config.tronflow_variant_normalization) if self.config.tronflow_variant_normalization else "",
-            trace_file=os.path.join(sample_data_folder, "nextflow_traces.txt")
-        )
+        if not os.path.exists(output_vcf) or not os.path.exists(output_qc) or self.config.force_pipeline:
 
-        self._run_command(command, sample_data_folder)
+            command = "{nextflow} run {workflow} " \
+                      "{tronflow_bwa} " \
+                      "{tronflow_bam_preprocessing} "\
+                      "{tronflow_variant_normalization} " \
+                      "--fastq1 {fastq1} {fastq2} --output {output_folder} --name {name} " \
+                      "-profile conda -offline -work-dir {work_folder} -with-trace {trace_file}".format(
+                nextflow=self.config.nextflow,
+                fastq1=fastq1,
+                fastq2="--fastq2 " + fastq2 if fastq2 else "",
+                output_folder=self.config.storage_folder,
+                name=run_accession,
+                work_folder=self.config.temp_folder,
+                workflow=self.config.workflow,
+                tronflow_bwa="--tronflow_bwa {}".format(self.config.tronflow_bwa) if self.config.tronflow_bwa else "",
+                tronflow_bam_preprocessing="--tronflow_bam_preprocessing {}".format(
+                    self.config.tronflow_bam_preprocessing) if self.config.tronflow_bam_preprocessing else "",
+                tronflow_variant_normalization="--tronflow_variant_normalization {}".format(
+                    self.config.tronflow_variant_normalization) if self.config.tronflow_variant_normalization else "",
+                trace_file=os.path.join(sample_data_folder, "nextflow_traces.txt")
+            )
+            self._run_command(command, sample_data_folder)
 
-        return snpeff_vcf_file_gz
+        return output_vcf, output_qc
 
     def _run_command(self, command, temporary_folder):
             start = time.time()
