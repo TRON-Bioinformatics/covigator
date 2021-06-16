@@ -70,6 +70,7 @@ class JobStatus(enum.Enum):
     COOCCURRENCE = 9
     FAILED_COOCCURRENCE = 10
     FINISHED = 11
+    HOLD = 12
 
 
 class DataSource(enum.Enum):
