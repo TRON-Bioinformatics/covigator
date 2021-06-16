@@ -52,20 +52,8 @@ class AbstractProcessor:
                 futures.append(self._process_run(run_accession=job.run_accession))
                 count += 1
             # waits for all to finish
-            count_finished = 0
-            count_error = 0
-            for future in futures:
-                sample_id = future.result()
-                if sample_id is not None:
-                    count_finished += 1
-                    if count_finished % 50 == 0:
-                        logger.info("Finished {}/{} samples".format(count_finished, len(futures)))
-                else:
-                    count_error += 1
-                    if count_error % 50 == 0:
-                        logger.info("Error {}/{} samples".format(count_error, len(futures)))
-            logger.info("Processor finished! {} samples processed correctly and {} errors".format(
-                count_finished, count_error))
+            self.dask_client.gather(futures=futures)
+            logger.info("Processor finished!")
         except Exception as e:
             logger.exception(e)
             session.rollback()
