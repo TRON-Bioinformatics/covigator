@@ -32,7 +32,7 @@ class Pipeline:
                       "{tronflow_bam_preprocessing} "\
                       "{tronflow_variant_normalization} " \
                       "--fastq1 {fastq1} {fastq2} --output {output_folder} --name {name} " \
-                      "--cpus {cpus} --memory {memory}" \
+                      "--cpus {cpus} --memory {memory} " \
                       "-profile conda -offline -work-dir {work_folder} -with-trace {trace_file}".format(
                 nextflow=self.config.nextflow,
                 fastq1=fastq1,
