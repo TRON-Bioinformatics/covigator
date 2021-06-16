@@ -26,6 +26,7 @@ class Configuration:
     ENV_COVIGATOR_PROCESSOR_LOG_FILE = "COVIGATOR_PROCESSOR_LOG_FILE"
     ENV_COVIGATOR_ACCESSOR_LOG_FILE = "COVIGATOR_ACCESSOR_LOG_FILE"
     # pipeline
+    ENV_COVIGATOR_NEXTFLOW = "COVIGATOR_NEXTFLOW"
     ENV_COVIGATOR_WORKFLOW = "COVIGATOR_WORKFLOW"
     ENV_COVIGATOR_WORKFLOW_VERSION = "COVIGATOR_WORKFLOW_VERSION"
     # references
@@ -67,6 +68,7 @@ class Configuration:
         self.reference_genome = os.getenv(self.ENV_COVIGATOR_REF_FASTA)
         self.reference_gene_annotations = os.getenv(self.ENV_COVIGATOR_GENE_ANNOTATIONS)
 
+        self.nextflow = os.getenv(self.ENV_COVIGATOR_NEXTFLOW, "nextflow")
         self.workflow = os.getenv(self.ENV_COVIGATOR_WORKFLOW, "tron-bioinformatics/covigator-ngs-pipeline")
         self.workflow_version = os.getenv(self.ENV_COVIGATOR_WORKFLOW_VERSION, "v0.3.0")
         self.temp_folder = os.getenv(self.ENV_COVIGATOR_TEMP_FOLDER, "/data/covigator-tmp")

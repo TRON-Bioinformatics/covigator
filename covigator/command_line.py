@@ -127,7 +127,7 @@ def pipeline():
                         help="Second FASTQ to process for paired end sequencing, otherwise leave empty")
 
     args = parser.parse_args()
-    vcf_file = Pipeline(config=Configuration()).run(fastq1=args.fastq1, fastq2=args.fastq2)
+    vcf_file = Pipeline(config=Configuration()).run(run_accession="test", fastq1=args.fastq1, fastq2=args.fastq2)
     logger.info("Output VCF file: {}".format(vcf_file))
 
 
