@@ -166,31 +166,43 @@ service of any external data provider.
 
 #### Pipeline
 
-The pipeline runs BWA mem, samtools pileup and SnpEff.
+The pipeline for NGS data is implemented in a separate Nextflow workflow here 
+https://github.com/TRON-Bioinformatics/covigator-ngs-pipeline.
 
-##### Configuration
-
-- `COVIGATOR_BIN_SAMTOOLS`: the path to the samtools binary
-- `COVIGATOR_BIN_BWA`: the path to the bwa binary
-- `COVIGATOR_BIN_BCFTOOLS`: the path to the bcftools binary
-- `COVIGATOR_BIN_SNPEFF`: the path to the snpeff binary
-- `COVIGATOR_BIN_BGZIP`: the path to the bgzip binary
-- `COVIGATOR_BIN_TABIX`: the path to the tabix binary
-- `COVIGATOR_REF_FASTA`: the path to the reference fasta
-
-##### Usage
-
-For paired end data:
+The integration of Nextflow within the processor requires to set the Java home for Nextflow and the Nextflow binary file.
 ```
-covigator-pipeline --fastq1 /path/to/fastq_1.fastq.gz --fastq2 /path/to/fastq_2.fastq.gz
+export NXF_JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+export COVIGATOR_NEXTFLOW=/bin/nextflow
+export COVIGATOR_TEMP_FOLDER=/covigator/data/temp
 ```
 
-For single end data:
+Clone the Nextflow workflow and its dependencies as follows:
 ```
-covigator-pipeline --fastq1 /path/to/fastq_1.fastq.gz
+cd /covigator/dependencies
+git clone --branch v0.3.1 https://github.com/TRON-Bioinformatics/covigator-ngs-pipeline.git
+git clone --branch v1.4.0 https://github.com/TRON-Bioinformatics/tronflow-bwa.git
+git clone --branch v1.5.0 https://github.com/TRON-Bioinformatics/tronflow-bam-preprocessing.git
+git clone --branch v1.1.0 https://github.com/TRON-Bioinformatics/tronflow-variant-normalization.git
 ```
 
-this will create an annotated VCF file in the same folder where the first FASTQ is located.
+And then point the right environment variables to these pipelines:
+```
+export COVIGATOR_WORKFLOW=/covigator/dependencies/covigator-ngs-pipeline/main.nf
+export COVIGATOR_TRONFLOW_BWA=/covigator/dependencies/tronflow-bwa/main.nf
+export COVIGATOR_TRONFLOW_BAM_PREPROCESSING=/covigator/dependencies/tronflow-bam-preprocessing/main.nf
+export COVIGATOR_TRONFLOW_VARIANT_NORMALIZATION=/covigator/dependencies/tronflow-variant-normalization/main.nf
+```
+
+But before running the covigator processor you will need to make sure that the adequate conda environments are already 
+created, otherwise concurrent creations of the same environment will cause an error.
+
+For each of the workflows move into its folder and run the tests dataset making sure that the work folder is 
+COVIGATOR_TEMP_FOLDER.
+```
+cd /covigator/dependencies/tronflow-bwa/
+nextflow run main.nf -profile conda,test -work-dir $COVIGATOR_TEMP_FOLDER
+```
+
 
 #### Clean up
 

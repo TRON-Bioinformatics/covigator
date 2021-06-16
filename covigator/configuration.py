@@ -28,7 +28,10 @@ class Configuration:
     # pipeline
     ENV_COVIGATOR_NEXTFLOW = "COVIGATOR_NEXTFLOW"
     ENV_COVIGATOR_WORKFLOW = "COVIGATOR_WORKFLOW"
-    ENV_COVIGATOR_WORKFLOW_VERSION = "COVIGATOR_WORKFLOW_VERSION"
+    ENV_COVIGATOR_TRONFLOW_BWA = "COVIGATOR_TRONFLOW_BWA"
+    ENV_COVIGATOR_TRONFLOW_BAM_PREPROCESSING = "COVIGATOR_TRONFLOW_BAM_PREPROCESSING"
+    ENV_COVIGATOR_TRONFLOW_VARIANT_NORMALIZATION = "COVIGATOR_TRONFLOW_VARIANT_NORMALIZATION"
+
     # references
     ENV_COVIGATOR_REF_FASTA = "COVIGATOR_REF_FASTA"
     ENV_COVIGATOR_GENE_ANNOTATIONS = "COVIGATOR_GENE_ANNOTATIONS"
@@ -69,8 +72,11 @@ class Configuration:
         self.reference_gene_annotations = os.getenv(self.ENV_COVIGATOR_GENE_ANNOTATIONS)
 
         self.nextflow = os.getenv(self.ENV_COVIGATOR_NEXTFLOW, "nextflow")
-        self.workflow = os.getenv(self.ENV_COVIGATOR_WORKFLOW, "tron-bioinformatics/covigator-ngs-pipeline")
-        self.workflow_version = os.getenv(self.ENV_COVIGATOR_WORKFLOW_VERSION, "v0.3.0")
+        self.workflow = os.getenv(self.ENV_COVIGATOR_WORKFLOW, "tron-bioinformatics/covigator-ngs-pipeline -r v0.3.0")
+        # NOTE: the defaults are already set in the workflow config
+        self.tronflow_bwa = os.getenv(self.ENV_COVIGATOR_TRONFLOW_BWA)
+        self.tronflow_bam_preprocessing = os.getenv(self.ENV_COVIGATOR_TRONFLOW_BAM_PREPROCESSING)
+        self.tronflow_variant_normalization = os.getenv(self.ENV_COVIGATOR_TRONFLOW_VARIANT_NORMALIZATION)
         self.temp_folder = os.getenv(self.ENV_COVIGATOR_TEMP_FOLDER, "/data/covigator-tmp")
 
 
