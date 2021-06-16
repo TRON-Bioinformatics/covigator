@@ -1,5 +1,8 @@
+import sqlalchemy
 from cyvcf2 import VCF, Variant
 import os
+
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from covigator.database.model import Variant as CovigatorVariant, VariantObservation, Sample, \
     SubclonalVariantObservation
@@ -24,7 +27,11 @@ class VcfLoader:
                     # NOTE: merge checks for existence adds or updates it if required
                     # this variant is not part of the rollback if something else fails
                     session.merge(covigator_variant)
-                session.commit()
+                    try:
+                        session.commit()
+                    except IntegrityError:
+                        # do nothing the variant was just added by another process between merge and commit
+                        pass
                 if variant.FILTER is None:
                     # only stores clonal high quality variants in this table
                     observed_variants.append(
