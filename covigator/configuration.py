@@ -6,8 +6,10 @@ from covigator.exceptions import CovigatorDashBoardInitialisationError
 
 class Configuration:
 
-    # configuration environment variables
+    # file system storage
     ENV_COVIGATOR_STORAGE_FOLDER = "COVIGATOR_STORAGE_FOLDER"
+    ENV_COVIGATOR_TEMP_FOLDER = "COVIGATOR_TEMP_FOLDER"
+    # database
     ENV_COVIGATOR_DB_PORT = "COVIGATOR_DB_PORT"
     ENV_COVIGATOR_DB_PASSWORD = "COVIGATOR_DB_PASSWORD"
     ENV_COVIGATOR_DB_USER = "COVIGATOR_DB_USER"
@@ -15,27 +17,27 @@ class Configuration:
     ENV_COVIGATOR_DB_HOST = "COVIGATOR_DB_HOST"
     ENV_COVIGATOR_DB_POOL_SIZE = "COVIGATOR_DB_POOL_SIZE"
     ENV_COVIGATOR_DB_MAX_OVERFLOW = "COVIGATOR_DB_MAX_OVERFLOW"
+    ENV_COVIGATOR_TABLE_VERSION = "COVIGATOR_TABLE_VERSION"
+    # dashboard
     ENV_COVIGATOR_DASHBOARD_HOST = "COVIGATOR_DASHBOARD_HOST"
     ENV_COVIGATOR_DASHBOARD_PORT = "COVIGATOR_DASHBOARD_PORT"
+    # logs
     ENV_COVIGATOR_DASHBOARD_LOG_FILE = "COVIGATOR_DASHBOARD_LOG_FILE"
     ENV_COVIGATOR_PROCESSOR_LOG_FILE = "COVIGATOR_PROCESSOR_LOG_FILE"
     ENV_COVIGATOR_ACCESSOR_LOG_FILE = "COVIGATOR_ACCESSOR_LOG_FILE"
-    ENV_COVIGATOR_BIN_FASTP = "COVIGATOR_BIN_FASTP"
-    ENV_COVIGATOR_BIN_SAMTOOLS = "COVIGATOR_BIN_SAMTOOLS"
-    ENV_COVIGATOR_BIN_BWA = "COVIGATOR_BIN_BWA"
-    ENV_COVIGATOR_BIN_BCFTOOLS = "COVIGATOR_BIN_BCFTOOLS"
-    ENV_COVIGATOR_BIN_SNPEFF = "COVIGATOR_BIN_SNPEFF"
-    ENV_COVIGATOR_BIN_BGZIP = "COVIGATOR_BIN_BGZIP"
-    ENV_COVIGATOR_BIN_TABIX = "COVIGATOR_BIN_TABIX"
-    ENV_COVIGATOR_BIN_JAVA = "COVIGATOR_BIN_JAVA"
-    ENV_COVIGATOR_REF_FASTA = "COVIGATOR_REF_FASTA"
-    ENV_COVIGATOR_REF_GISAID = "COVIGATOR_REF_GISAID"
-    ENV_COVIGATOR_SEQ_GISAID = "COVIGATOR_SEQ_GISAID"
-    ENV_COVIGATOR_META_GISAID = "COVIGATOR_META_GISAID"
-    ENV_COVIGATOR_DASK_PORT = "COVIGATOR_DASK_PORT"
+    # pipeline
+    ENV_COVIGATOR_NEXTFLOW = "COVIGATOR_NEXTFLOW"
+    ENV_COVIGATOR_WORKFLOW = "COVIGATOR_WORKFLOW"
+    ENV_COVIGATOR_TRONFLOW_BWA = "COVIGATOR_TRONFLOW_BWA"
+    ENV_COVIGATOR_TRONFLOW_BAM_PREPROCESSING = "COVIGATOR_TRONFLOW_BAM_PREPROCESSING"
+    ENV_COVIGATOR_TRONFLOW_VARIANT_NORMALIZATION = "COVIGATOR_TRONFLOW_VARIANT_NORMALIZATION"
+    ENV_COVIGATOR_FORCE_PIPELINE = "COVIGATOR_FORCE_PIPELINE"
 
-    ENV_COVIGATOR_TABLE_VERSION = "COVIGATOR_TABLE_VERSION"
+    # references
+    ENV_COVIGATOR_REF_FASTA = "COVIGATOR_REF_FASTA"
     ENV_COVIGATOR_GENE_ANNOTATIONS = "COVIGATOR_GENE_ANNOTATIONS"
+    # dask
+    ENV_COVIGATOR_DASK_PORT = "COVIGATOR_DASK_PORT"
 
     def __init__(self):
         # local storage
@@ -50,6 +52,7 @@ class Configuration:
         self.db_pool_size = int(os.getenv(self.ENV_COVIGATOR_DB_POOL_SIZE, 5))
         self.db_max_overflow = int(os.getenv(self.ENV_COVIGATOR_DB_MAX_OVERFLOW, 10))
         self.db_table_version = os.environ.get(self.ENV_COVIGATOR_TABLE_VERSION, "")
+        self.force_pipeline = os.environ.get(self.ENV_COVIGATOR_FORCE_PIPELINE, False)
 
         # dashboard
         self.dash_host = os.getenv(self.ENV_COVIGATOR_DASHBOARD_HOST, "0.0.0.0")
@@ -66,19 +69,17 @@ class Configuration:
         self.logfile_accesor = os.getenv(self.ENV_COVIGATOR_ACCESSOR_LOG_FILE)
         self.logfile_processor = os.getenv(self.ENV_COVIGATOR_PROCESSOR_LOG_FILE)
 
-        # pipeline binaries
-        self.fastp = os.getenv(self.ENV_COVIGATOR_BIN_FASTP, "/code/fastp/fastp")
-        self.samtools = os.getenv(self.ENV_COVIGATOR_BIN_SAMTOOLS, "/code/samtools/1.9/samtools")
-        self.bwa = os.getenv(self.ENV_COVIGATOR_BIN_BWA, "/code/bwa/0.7.17/bwa")
-        self.bcftools = os.getenv(self.ENV_COVIGATOR_BIN_BCFTOOLS, "/code/bcftools/1.9/bcftools")
-        self.snpeff = os.getenv(self.ENV_COVIGATOR_BIN_SNPEFF, "/code/snpEFF_latest_core/snpEff/snpEff.jar")
-        self.bgzip = os.getenv(self.ENV_COVIGATOR_BIN_BGZIP, "bgzip")
-        self.tabix = os.getenv(self.ENV_COVIGATOR_BIN_TABIX, "tabix")
-        self.java = os.getenv(self.ENV_COVIGATOR_BIN_JAVA, "java")
-
         # references
         self.reference_genome = os.getenv(self.ENV_COVIGATOR_REF_FASTA)
         self.reference_gene_annotations = os.getenv(self.ENV_COVIGATOR_GENE_ANNOTATIONS)
+
+        self.nextflow = os.getenv(self.ENV_COVIGATOR_NEXTFLOW, "nextflow")
+        self.workflow = os.getenv(self.ENV_COVIGATOR_WORKFLOW, "tron-bioinformatics/covigator-ngs-pipeline -r v0.3.0")
+        # NOTE: the defaults are already set in the workflow config
+        self.tronflow_bwa = os.getenv(self.ENV_COVIGATOR_TRONFLOW_BWA)
+        self.tronflow_bam_preprocessing = os.getenv(self.ENV_COVIGATOR_TRONFLOW_BAM_PREPROCESSING)
+        self.tronflow_variant_normalization = os.getenv(self.ENV_COVIGATOR_TRONFLOW_VARIANT_NORMALIZATION)
+        self.temp_folder = os.getenv(self.ENV_COVIGATOR_TEMP_FOLDER, "/data/covigator-tmp")
 
 
 def initialise_logs(logfile, sample_id: str = None):

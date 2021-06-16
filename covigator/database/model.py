@@ -18,6 +18,7 @@ GENE_TABLE_NAME = get_table_versioned_name('gene', config=config)
 LOG_TABLE_NAME = get_table_versioned_name('log', config=config)
 VARIANT_COOCCURRENCE_TABLE_NAME = get_table_versioned_name('variant_cooccurrence', config=config)
 VARIANT_OBSERVATION_TABLE_NAME = get_table_versioned_name('variant_observation', config=config)
+SUBCLONAL_VARIANT_OBSERVATION_TABLE_NAME = get_table_versioned_name('subclonal_variant_observation', config=config)
 VARIANT_TABLE_NAME = get_table_versioned_name('variant', config=config)
 JOB_ENA_TABLE_NAME = get_table_versioned_name('job_ena', config=config)
 JOB_GISAID_TABLE_NAME = get_table_versioned_name('job_gisaid', config=config)
@@ -69,6 +70,8 @@ class JobStatus(enum.Enum):
     COOCCURRENCE = 9
     FAILED_COOCCURRENCE = 10
     FINISHED = 11
+    HOLD = 12
+    EXCLUDED = 13
 
 
 class DataSource(enum.Enum):
@@ -232,6 +235,7 @@ class JobEna(Base):
     # local files storage
     fastq_path = Column(String)     # the local path where FASTQ files are stored in semi colon separated list
     vcf_path = Column(String)
+    qc = Column(JSON)
 
     def get_fastq_paths(self):
         return self.fastq_path.split(SEPARATOR) if self.fastq_path is not None else []
@@ -309,31 +313,56 @@ class VariantObservation(Base):
     quality = Column(Float)
     filter = Column(String)
     """
+    ##INFO=<ID=DP,Number=1,Type=Integer,Description="Raw Depth">
+    ##INFO=<ID=AF,Number=1,Type=Float,Description="Allele Frequency">
+    ##INFO=<ID=SB,Number=1,Type=Integer,Description="Phred-scaled strand bias at this position">
+    ##INFO=<ID=DP4,Number=4,Type=Integer,Description="Counts for ref-forward bases, ref-reverse, alt-forward and alt-reverse bases">
     ##INFO=<ID=INDEL,Number=0,Type=Flag,Description="Indicates that the variant is an INDEL.">
-    ##INFO=<ID=IDV,Number=1,Type=Integer,Description="Maximum number of reads supporting an indel">
-    ##INFO=<ID=IMF,Number=1,Type=Float,Description="Maximum fraction of reads supporting an indel">
-    ##INFO=<ID=DP,Number=1,Type=Integer,Description="Raw read depth">
-    ##INFO=<ID=VDB,Number=1,Type=Float,Description="Variant Distance Bias for filtering splice-site artefacts in RNA-seq data (bigger is better)",Version="3">
-    ##INFO=<ID=RPB,Number=1,Type=Float,Description="Mann-Whitney U test of Read Position Bias (bigger is better)">
-    ##INFO=<ID=MQB,Number=1,Type=Float,Description="Mann-Whitney U test of Mapping Quality Bias (bigger is better)">
-    ##INFO=<ID=BQB,Number=1,Type=Float,Description="Mann-Whitney U test of Base Quality Bias (bigger is better)">
-    ##INFO=<ID=MQSB,Number=1,Type=Float,Description="Mann-Whitney U test of Mapping Quality vs Strand Bias (bigger is better)">
-    ##INFO=<ID=SGB,Number=1,Type=Float,Description="Segregation based metric.">
-    ##INFO=<ID=MQ0F,Number=1,Type=Float,Description="Fraction of MQ0 reads (smaller is better)">
-    ##INFO=<ID=ICB,Number=1,Type=Float,Description="Inbreeding Coefficient Binomial test (bigger is better)">
-    ##INFO=<ID=HOB,Number=1,Type=Float,Description="Bias in the number of HOMs number (smaller is better)">
-    ##INFO=<ID=AC,Number=A,Type=Integer,Description="Allele count in genotypes for each ALT allele, in the same order as listed">
-    ##INFO=<ID=AN,Number=1,Type=Integer,Description="Total number of alleles in called genotypes">
-    ##INFO=<ID=DP4,Number=4,Type=Integer,Description="Number of high-quality ref-forward , ref-reverse, alt-forward and alt-reverse bases">
-    ##INFO=<ID=MQ,Number=1,Type=Integer,Description="Average mapping quality">
+    ##INFO=<ID=CONSVAR,Number=0,Type=Flag,Description="Indicates that the variant is a consensus variant (as opposed to a low frequency variant).">
+    ##INFO=<ID=HRUN,Number=1,Type=Integer,Description="Homopolymer length to the right of report indel position">
     """
     dp = Column(Integer)
     dp4_ref_forward = Column(Integer)
     dp4_ref_reverse = Column(Integer)
     dp4_alt_forward = Column(Integer)
     dp4_alt_reverse = Column(Integer)
-    mapping_quality = Column(Integer)
-    mapping_quality_zero_fraction = Column(Float)
+    vaf = Column(Float)
+    strand_bias = Column(Integer)
+    ForeignKeyConstraint([sample, source], [Sample.id, Sample.source])
+    ForeignKeyConstraint([variant_id], [Variant.variant_id])
+
+
+class SubclonalVariantObservation(Base):
+    """
+    A variant observation in a particular sample. This contains all annotations of a specific observation of a variant.
+    """
+    __tablename__ = SUBCLONAL_VARIANT_OBSERVATION_TABLE_NAME
+
+    source = Column(Enum(DataSource, name=DataSource.__constraint_name__), primary_key=True)
+    sample = Column(String, primary_key=True)
+    variant_id = Column(String, primary_key=True)
+    chromosome = Column(String)
+    position = Column(Integer)
+    reference = Column(String)
+    alternate = Column(String)
+    quality = Column(Float)
+    filter = Column(String)
+    """
+    ##INFO=<ID=DP,Number=1,Type=Integer,Description="Raw Depth">
+    ##INFO=<ID=AF,Number=1,Type=Float,Description="Allele Frequency">
+    ##INFO=<ID=SB,Number=1,Type=Integer,Description="Phred-scaled strand bias at this position">
+    ##INFO=<ID=DP4,Number=4,Type=Integer,Description="Counts for ref-forward bases, ref-reverse, alt-forward and alt-reverse bases">
+    ##INFO=<ID=INDEL,Number=0,Type=Flag,Description="Indicates that the variant is an INDEL.">
+    ##INFO=<ID=CONSVAR,Number=0,Type=Flag,Description="Indicates that the variant is a consensus variant (as opposed to a low frequency variant).">
+    ##INFO=<ID=HRUN,Number=1,Type=Integer,Description="Homopolymer length to the right of report indel position">
+    """
+    dp = Column(Integer)
+    dp4_ref_forward = Column(Integer)
+    dp4_ref_reverse = Column(Integer)
+    dp4_alt_forward = Column(Integer)
+    dp4_alt_reverse = Column(Integer)
+    vaf = Column(Float)
+    strand_bias = Column(Integer)
     ForeignKeyConstraint([sample, source], [Sample.id, Sample.source])
     ForeignKeyConstraint([variant_id], [Variant.variant_id])
 

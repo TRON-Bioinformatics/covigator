@@ -1,3 +1,4 @@
+import json
 import uuid
 from datetime import datetime
 
@@ -82,9 +83,10 @@ class EnaProcessor(AbstractProcessor):
     @staticmethod
     def run_pipeline(job: JobEna, queries: Queries, config: Configuration):
         fastq1, fastq2 = job.get_fastq1_and_fastq2()
-        vcf = Pipeline(config=config).run(fastq1=fastq1, fastq2=fastq2)
+        vcf_path, qc_path = Pipeline(config=config).run(run_accession=job.run_accession, fastq1=fastq1, fastq2=fastq2)
         job.analysed_at = datetime.now()
-        job.vcf_path = vcf
+        job.vcf_path = vcf_path
+        job.qc = json.load(open(qc_path))
 
     @staticmethod
     def delete(job: JobEna, queries: Queries, config: Configuration):

@@ -6,20 +6,36 @@ CoVigator is a fully automatized SARS-CoV-2 analysis pipeline integrating the fo
 * Starting of different workflows depending of input data type (e.g. RNA-Seq, Assembly)
 
 The system architecture has the following components:
-- Accessor: queries external systems for new data and creates an entry in the local database with all necessary metadata
-- Processor: reads from the database samples to be processed and triggers a workflow with multiple steps
+- **Database**: all other modules need access to the database
+- **Accessor**: queries external systems for new data and creates an entry in the local database with all necessary metadata
+- **Processor**: reads from the database samples to be processed and triggers a workflow with multiple steps
     - Download: downloads the necessary FASTQ files
     - Pipeline: triggers a variant calling pipeline which outputs VCF files
     - Delete: deletes the FASTQ files
     - Load: loads the variants from VCF files into the database
-- Application Programming Interface (API): entry point to fetch data from the database
-- Front end: a web application reading data from the API and presenting the data through tables and visualizations
+    - Cooccurrence matrix: once the variants from a sample have been loaded the cooccurrence matrix is updated
+- **Dashboard**: a web application reading data from the database and presenting through tables and visualizations
 
-While the accessor and the processor are backend processes that are intended to run asynchronously and periodically, the API and the front end are accessible by end users.
+While accessor and processor are backend processes that are intended to run asynchronously and periodically, the dashboard is accessible by end users.
 
 Although the initial use case for Covigator is SARS-CoV-2 data, it is intended to be usable with other infectious organisms.
 
 ![Covigator system design](docs/resources/system_design.png "Covigator system design")
+
+## Database configuration
+
+Required database is Postgres 13.
+
+All Covigator modules require access to the database. This is configured through environment variables.
+
+- `COVIGATOR_DB_HOST`: the host of the database (default value 0.0.0.0)
+- `COVIGATOR_DB_NAME`: the database name inside Postgres (default value: covigator)
+- `COVIGATOR_DB_USER`: the database user (default value: covigator)
+- `COVIGATOR_DB_PASSWORD`: the database password (default value: covigator)
+- `COVIGATOR_DB_PORT`: the database port (default value: 5432)
+- `COVIGATOR_DB_POOL_SIZE`: the database pool size (default value: 5)
+- `COVIGATOR_DB_MAX_OVERFLOW`: the database max overflow (default value: 10)
+- `COVIGATOR_TABLE_VERSION`: this suffix is appended to all table names when provided
 
 ## Accessor
 
@@ -36,16 +52,6 @@ service of any external data provider.
 - The host organism taxonomic identifier (eg: for Homo sapiens the taxonomic identifier is 9606)
 
 The taxonomic identifiers for the different organisms is available through EMBL-EBI as described here https://ena-docs.readthedocs.io/en/latest/retrieval/programmatic-access/taxon-api.html or through NCBI here https://www.ncbi.nlm.nih.gov/taxonomy.
-
-### Configuration
-
-The only configuration required by the accessor is the database configuration. The configuration is done through environment variables.
-
-- `COVIGATOR_DB_HOST`: the host of the database (default value 0.0.0.0)
-- `COVIGATOR_DB_NAME`: the database name inside Postgres (default value: covigator)
-- `COVIGATOR_DB_USER`: the database user (default value: covigator)
-- `COVIGATOR_DB_PASSWORD`: the database password (default value: covigator)
-- `COVIGATOR_DB_PORT`: the database port (default value: 5432)
 
 ### Usage
 
@@ -95,13 +101,6 @@ The tasks managed in this workflow are not computationally intensive and each us
 - `--num-jobs` The number of dask jobs to spin, this corresponds to the number of whole nodes requested to the cluster. Default: 1
 
 ### Configuration
-
-The processor requires the database configuration. See above section in the accessor configuration for details. 
-
-Additionally, the downloader requires the path where downloaded files will be stored.
-The configuration is done through environment variables.
-
-- `COVIGATOR_STORAGE_FOLDER`: the folder where files will be stored by the downloaded (default value `./data/covigator`)
 
 The dask cluster requires to be configured in a jobqueue.yaml file as described here https://docs.dask.org/en/latest/configuration.html.
 It is specially important to configure dask so processes are not spilled to disk in order to avoid causing troubles in 
@@ -155,6 +154,12 @@ distributed:
 
 #### Downloader
 
+The downloader requires the path where downloaded files will be stored. 
+The configuration is done through environment variables.
+
+- `COVIGATOR_STORAGE_FOLDER`: the folder where files will be stored by the downloaded (default value `./data/covigator`)
+
+
 The downloader takes an ENA run, downloads all of its FASTQs, 
 stores them in a folder structures such as `$COVIGATOR_STORAGE_FOLDER/${run_accession}` 
 (eg: `/covigator/data/ERR12345/ERR12345.fastq.gz`) and then checks the MD5 checksum of the 
@@ -166,31 +171,43 @@ service of any external data provider.
 
 #### Pipeline
 
-The pipeline runs BWA mem, samtools pileup and SnpEff.
+The pipeline for NGS data is implemented in a separate Nextflow workflow here 
+https://github.com/TRON-Bioinformatics/covigator-ngs-pipeline.
 
-##### Configuration
-
-- `COVIGATOR_BIN_SAMTOOLS`: the path to the samtools binary
-- `COVIGATOR_BIN_BWA`: the path to the bwa binary
-- `COVIGATOR_BIN_BCFTOOLS`: the path to the bcftools binary
-- `COVIGATOR_BIN_SNPEFF`: the path to the snpeff binary
-- `COVIGATOR_BIN_BGZIP`: the path to the bgzip binary
-- `COVIGATOR_BIN_TABIX`: the path to the tabix binary
-- `COVIGATOR_REF_FASTA`: the path to the reference fasta
-
-##### Usage
-
-For paired end data:
+The integration of Nextflow within the processor requires to set the Java home for Nextflow and the Nextflow binary file.
 ```
-covigator-pipeline --fastq1 /path/to/fastq_1.fastq.gz --fastq2 /path/to/fastq_2.fastq.gz
+export NXF_JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+export COVIGATOR_NEXTFLOW=/bin/nextflow
+export COVIGATOR_TEMP_FOLDER=/covigator/data/temp
 ```
 
-For single end data:
+Clone the Nextflow workflow and its dependencies as follows:
 ```
-covigator-pipeline --fastq1 /path/to/fastq_1.fastq.gz
+cd /covigator/dependencies
+git clone --branch v0.3.1 https://github.com/TRON-Bioinformatics/covigator-ngs-pipeline.git
+git clone --branch v1.4.0 https://github.com/TRON-Bioinformatics/tronflow-bwa.git
+git clone --branch v1.5.0 https://github.com/TRON-Bioinformatics/tronflow-bam-preprocessing.git
+git clone --branch v1.1.0 https://github.com/TRON-Bioinformatics/tronflow-variant-normalization.git
 ```
 
-this will create an annotated VCF file in the same folder where the first FASTQ is located.
+And then point the right environment variables to these pipelines:
+```
+export COVIGATOR_WORKFLOW=/covigator/dependencies/covigator-ngs-pipeline/main.nf
+export COVIGATOR_TRONFLOW_BWA=/covigator/dependencies/tronflow-bwa/main.nf
+export COVIGATOR_TRONFLOW_BAM_PREPROCESSING=/covigator/dependencies/tronflow-bam-preprocessing/main.nf
+export COVIGATOR_TRONFLOW_VARIANT_NORMALIZATION=/covigator/dependencies/tronflow-variant-normalization/main.nf
+```
+
+But before running the covigator processor you will need to make sure that the adequate conda environments are already 
+created, otherwise concurrent creations of the same environment will cause an error.
+
+For each of the workflows move into its folder and run the tests dataset making sure that the work folder is 
+COVIGATOR_TEMP_FOLDER.
+```
+cd /covigator/dependencies/tronflow-bwa/
+nextflow run main.nf -profile conda,test -work-dir $COVIGATOR_TEMP_FOLDER
+```
+
 
 #### Clean up
 

@@ -34,7 +34,7 @@ def wrapper(func, retries):
                 results = func(*args, **kwargs)
                 success = True
             except (requests.exceptions.RequestException, requests.exceptions.ConnectionError, urllib.error.HTTPError,
-                    ConnectionResetError, CovigatorMD5CheckSumError) as ex:
+                    urllib.error.URLError, ConnectionResetError, CovigatorMD5CheckSumError) as ex:
                 logger.error(str(ex))
                 # retries a fixed number of times
                 if retries != -1 and retries_count >= retries:
