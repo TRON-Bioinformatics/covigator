@@ -32,6 +32,7 @@ class Pipeline:
                       "{tronflow_bam_preprocessing} "\
                       "{tronflow_variant_normalization} " \
                       "--fastq1 {fastq1} {fastq2} --output {output_folder} --name {name} " \
+                      "--cpus {cpus} --memory {memory}" \
                       "-profile conda -offline -work-dir {work_folder} -with-trace {trace_file}".format(
                 nextflow=self.config.nextflow,
                 fastq1=fastq1,
@@ -45,7 +46,9 @@ class Pipeline:
                     self.config.tronflow_bam_preprocessing) if self.config.tronflow_bam_preprocessing else "",
                 tronflow_variant_normalization="--tronflow_variant_normalization {}".format(
                     self.config.tronflow_variant_normalization) if self.config.tronflow_variant_normalization else "",
-                trace_file=os.path.join(sample_data_folder, "nextflow_traces.txt")
+                trace_file=os.path.join(sample_data_folder, "nextflow_traces.txt"),
+                cpus=self.config.workflow_cpus,
+                memory=self.config.workflow_memory
             )
             self._run_command(command, sample_data_folder)
 

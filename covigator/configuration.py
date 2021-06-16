@@ -32,6 +32,8 @@ class Configuration:
     ENV_COVIGATOR_TRONFLOW_BAM_PREPROCESSING = "COVIGATOR_TRONFLOW_BAM_PREPROCESSING"
     ENV_COVIGATOR_TRONFLOW_VARIANT_NORMALIZATION = "COVIGATOR_TRONFLOW_VARIANT_NORMALIZATION"
     ENV_COVIGATOR_FORCE_PIPELINE = "COVIGATOR_FORCE_PIPELINE"
+    ENV_COVIGATOR_WORKFLOW_CPUS = "COVIGATOR_WORKFLOW_CPUS"
+    ENV_COVIGATOR_WORKFLOW_MEMORY = "COVIGATOR_WORKFLOW_MEMORY"
 
     # references
     ENV_COVIGATOR_REF_FASTA = "COVIGATOR_REF_FASTA"
@@ -75,6 +77,8 @@ class Configuration:
 
         self.nextflow = os.getenv(self.ENV_COVIGATOR_NEXTFLOW, "nextflow")
         self.workflow = os.getenv(self.ENV_COVIGATOR_WORKFLOW, "tron-bioinformatics/covigator-ngs-pipeline -r v0.3.0")
+        self.workflow_cpus = os.getenv(self.ENV_COVIGATOR_WORKFLOW_CPUS, "1")
+        self.workflow_memory = os.getenv(self.ENV_COVIGATOR_WORKFLOW_MEMORY, "3g")
         # NOTE: the defaults are already set in the workflow config
         self.tronflow_bwa = os.getenv(self.ENV_COVIGATOR_TRONFLOW_BWA)
         self.tronflow_bam_preprocessing = os.getenv(self.ENV_COVIGATOR_TRONFLOW_BAM_PREPROCESSING)
