@@ -32,4 +32,4 @@
 ##INFO=<ID=LOF,Number=.,Type=String,Description="Predicted loss of function effects for this variant. Format: 'Gene_Name | Gene_ID | Number_of_transcripts_in_gene | Percent_of_transcripts_affected'">
 ##INFO=<ID=NMD,Number=.,Type=String,Description="Predicted nonsense mediated decay effects for this variant. Format: 'Gene_Name | Gene_ID | Number_of_transcripts_in_gene | Percent_of_transcripts_affected'">
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	/tmp/tmpwhdqpgei/aligned.out.bam
-MN908947.3	23403	.	A	G	225.0	.	DP=38;VDB=0.00122607;SGB=-0.693141;MQSB=1;MQ0F=0;AC=1;AN=1;MQ=60;ANN=G|missense_variant|MODERATE|S|gene-GU280_gp02|transcript|TRANSCRIPT_gene-GU280_gp02|protein_coding|1/1|c.1841A>G|p.Asp614Gly|1841/3822|1841/3822|614/1273||	GT:PL	1:255,0
+MN908947.3	23403	.	A	G	225.0	PASS	DP=38;VDB=0.00122607;SGB=-0.693141;MQSB=1;MQ0F=0;AC=1;AN=1;MQ=60;ANN=G|missense_variant|MODERATE|S|gene-GU280_gp02|transcript|TRANSCRIPT_gene-GU280_gp02|protein_coding|1/1|c.1841A>G|p.Asp614Gly|1841/3822|1841/3822|614/1273||	GT:PL	1:255,0
