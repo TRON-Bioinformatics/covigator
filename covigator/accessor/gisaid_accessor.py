@@ -3,12 +3,14 @@ from datetime import date, datetime
 import pycountry
 import pycountry_convert
 from sqlalchemy.orm import Session
-from typing import List
 from covigator.database.model import SampleGisaid, JobGisaid, Sample, DataSource, Log, CovigatorModule
 from covigator.database.database import Database
 from logzero import logger
 from Bio import SeqIO
-import zlib
+import time
+import lz4.frame
+
+BATCH_SIZE = 1000
 
 
 class GisaidAccessor:
@@ -25,6 +27,7 @@ class GisaidAccessor:
         self.excluded_by_host = 0
         self.excluded_existing = 0
         self.included = 0
+        self.cache_countries = {}
 
     def access(self):
         session = self.database.get_database_session()
@@ -32,9 +35,8 @@ class GisaidAccessor:
         # it assumes there will be no repetitions
         existing_sample_ids = [value for value, in session.query(SampleGisaid.run_accession).all()]
         try:
-            num_samples = self._get_gisaid_samples(existing_sample_ids, session)
+            num_samples = self.process(existing_sample_ids, session)
             logger.info("Read file of {} GISAID samples".format(num_samples))
-            #self._process_runs(samples, session)
         except Exception as e:
             logger.exception(e)
             session.rollback()
@@ -43,8 +45,9 @@ class GisaidAccessor:
             self._write_execution_log(session)
             session.close()
             self._log_results()
+            logger.info("Finished GISAID accessor")
 
-    def _get_gisaid_samples(self, existing_sample_ids, session) -> List[SampleGisaid]:
+    def process(self, existing_sample_ids, session) -> int:
         meta_dict = {}
         logger.info("Reading metadata file...")
         with open(self.input_metadata) as metadata:
@@ -57,32 +60,35 @@ class GisaidAccessor:
                 location = elements[4]
                 host = elements[7]
                 meta_dict[virus_name] = (virus_type, accession_id, collection_date, location, host)
-                #logger.info("METADATA: {}".format(accession_id))
         logger.info("Metadata (num_samples={}) loaded.".format(len(meta_dict)))
-        logger.info("Reading FASTA...")
 
         num_samples = 0
         gisaid_samples = set()
-
+        total_time = 0
+        logger.info("Reading FASTA...")
+        samples_gisaid = []
+        jobs_and_samples = []
         for record in SeqIO.parse(self.input_fasta, "fasta"):
+            start = time.time()
+
             fields = record.description.split("|")
             identifier = fields[0]
+
             if identifier in gisaid_samples:
                 continue
             gisaid_samples.add(identifier)
 
-            metadata = None
-            try:
-                metadata = meta_dict[identifier]
-            except:
+            if identifier in existing_sample_ids:
+                num_samples += 1
+                # we skip samples already in the database
+                self.excluded_existing += 1
+                continue
+
+            metadata = meta_dict.get(identifier)
+            if not metadata:
                 continue
             
             location_list = metadata[3].split("/")
-            continent = "None"
-            try:
-                continent = location_list[0].strip()
-            except:
-                pass
             country_raw = "None"
             try:
                 country_raw = location_list[1].strip()
@@ -93,17 +99,14 @@ class GisaidAccessor:
                 region = location_list[2].strip()
             except:
                 pass
-            if identifier in existing_sample_ids:
-                num_samples += 1
-                # we skip samples already in the database
-                self.excluded_existing += 1
-                continue
+
             host = metadata[4].lower().strip()
             if host != "human":
                 num_samples += 1
                 self.excluded_by_host += 1
                 continue
-            
+
+            compressed_sequence = self.compress_sequence(record.seq)
             sample_gisaid = SampleGisaid(
                 run_accession=identifier,
                 date=metadata[2],
@@ -118,56 +121,39 @@ class GisaidAccessor:
                 continent_alpha_2=None,
                 site=None,
                 site2=None,
-                sequence={"MN908947.3": self.compress_sequence(record.seq)}
+                sequence={"MN908947.3": compressed_sequence}
             )
 
             self._parse_country(sample_gisaid)
             self._parse_dates(sample_gisaid)
-
             sample = self._build_sample(sample_gisaid)
-            session.add(sample_gisaid)
-            session.commit()
-            session.add(sample)
-            session.commit()
-            session.add(JobGisaid(run_accession=sample_gisaid.run_accession))
-            session.commit()
-            logger.info("Added {} to DB".format(sample_gisaid.run_accession))
+            job = JobGisaid(run_accession=sample_gisaid.run_accession)
+            samples_gisaid.append(sample_gisaid)
+            jobs_and_samples.append(job)
+            jobs_and_samples.append(sample)
             num_samples += 1
-                #results[sample_gisaid.run_accession] = sample_gisaid
-            # stores the sequence in dictionary with the gene name
-            #sample_gisaid.sequence["MN908947.3"] = self.compress_sequence(record.seq)
-            #identifier_tmp = identifier
-            
+            end = time.time()
+            total_time += end - start
+
+            if len(samples_gisaid) == BATCH_SIZE:
+                session.add_all(samples_gisaid)
+                session.commit()
+                session.add_all(jobs_and_samples)
+                session.commit()
+                samples_gisaid = []
+                jobs_and_samples = []
+
+        if len(samples_gisaid) > 0:
+            session.add_all(samples_gisaid)
+            session.commit()
+            session.add_all(jobs_and_samples)
+            session.commit()
+        logger.info("It took {} secs/sample on average".format(float(total_time) / num_samples))
         return num_samples
 
     @staticmethod
     def compress_sequence(sequence):
-        return base64.b64encode(zlib.compress(sequence.encode('utf-8'))).decode()
-
-    def _process_runs(self, list_samples: List[SampleGisaid], session: Session):
-
-        included_samples = []
-        included_samples_gisaid = []
-        included_jobs = []
-        for sample_gisaid in list_samples:
-            # NOTE: this parse operation is costly
-            sample = self._build_sample(sample_gisaid)
-            #self.included += 1
-            #included_samples_gisaid.append(sample_gisaid)
-            #included_samples.append(sample)
-            #included_jobs.append(JobGisaid(run_accession=sample_gisaid.run_accession))
-            session.add(sample_gisaid)
-            session.add(sample)
-            session.add(JobGisaid(run_accession=sample_gisaid.run_accession))
-            logger.info("Added {} to DB".format(sample_gisaid.run_accession))
-        #if len(included_samples) > 0:
-        #    session.add_all(included_samples_gisaid)
-        #    session.commit()
-        #    session.add_all(included_samples)
-        #    session.add_all(included_jobs)
-            session.commit()
-        #    logger.info("Added {} new GISAID samples".format(len(included_samples)))
-        logger.info("Processed {} GISAID samples".format(len(list_samples)))
+        return base64.b64encode(lz4.frame.compress(sequence.encode('utf-8'))).decode()
 
     def _build_sample(self, sample_gisaid):
         return Sample(
@@ -177,17 +163,20 @@ class GisaidAccessor:
         )
 
     def _parse_country(self, gisaid_sample: SampleGisaid):
-        if gisaid_sample.country_raw is not None and gisaid_sample.country_raw.strip() == "":
-            gisaid_sample.country_raw = None
         try:
-            match = pycountry.countries.search_fuzzy(gisaid_sample.country_raw)[0]
+            if gisaid_sample.country_raw is not None and gisaid_sample.country_raw.strip() == "":
+                gisaid_sample.country_raw = None
+                raise LookupError   # if no input avoids trying to parse it
+            match = self.cache_countries.get(gisaid_sample.country_raw)
+            if match is None:
+                match = pycountry.countries.search_fuzzy(gisaid_sample.country_raw)[0]
+                self.cache_countries[gisaid_sample.country_raw] = match
             gisaid_sample.country = match.name
             gisaid_sample.country_alpha_2 = match.alpha_2
             gisaid_sample.country_alpha_3 = match.alpha_3
             gisaid_sample.continent_alpha_2 = pycountry_convert.country_alpha2_to_continent_code(gisaid_sample.country_alpha_2)
             gisaid_sample.continent = pycountry_convert.convert_continent_code_to_continent_name(gisaid_sample.continent_alpha_2)
         except (LookupError, AttributeError):
-            #logger.error("Error parsing country {}. Filling with NAs".format(gisaid_run.country))
             gisaid_sample.country = "Not available"
             gisaid_sample.country_alpha_2 = "None"    # don't use NA as that is the id of Namibia
             gisaid_sample.country_alpha_3 = "None"

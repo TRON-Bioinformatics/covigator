@@ -87,3 +87,6 @@ def initialise_logs(logfile, sample_id: str = None):
     if sample_id is not None:
         logzero.formatter(logging.Formatter(
             '[%(levelname)1.1s %(asctime)s %(module)s:%(lineno)d ' + sample_id + '] %(message)s'))
+    else:
+        logzero.formatter(logging.Formatter(
+            '[%(levelname)1.1s %(asctime)s %(module)s:%(lineno)d] %(message)s'))
