@@ -90,7 +90,8 @@ class AbstractProcessor:
                 # captures any possible exception happening, but logs it in the DB
                 if error_status is not None:
                     AbstractProcessor._log_error_in_job(
-                        config=config, run_accession=run_accession, exception=e, status=error_status, data_source=data_source)
+                        config=config, run_accession=run_accession, exception=e, status=error_status,
+                        data_source=data_source)
                     run_accession = None
                 else:
                     logger.warning("Error processing a job that does not stop the workflow!")
@@ -123,6 +124,7 @@ class AbstractProcessor:
     @staticmethod
     def _log_error_in_job(config: Configuration, run_accession: str, exception: Exception, status: JobStatus, data_source: DataSource):
         with session_scope(config=config) as session:
+            logger.exception(exception)
             logger.info("Error on job {} on state {}: {}".format(run_accession, status, str(exception)))
             job = Queries(session).find_job_by_accession(run_accession=run_accession, data_source=data_source)
             job.status = status

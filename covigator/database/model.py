@@ -190,7 +190,7 @@ class JobGisaid(Base):
     run_accession = Column(ForeignKey("{}.run_accession".format(SampleGisaid.__tablename__)), primary_key=True)
 
     # job status
-    status = Column(Enum(JobStatus), default=JobStatus.PENDING)
+    status = Column(Enum(JobStatus, name=JobStatus.__constraint_name__), default=JobStatus.PENDING)
     created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.now())
     queued_at = Column(DateTime(timezone=True))
     analysed_at = Column(DateTime(timezone=True))

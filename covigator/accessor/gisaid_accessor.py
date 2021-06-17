@@ -1,14 +1,12 @@
-import base64
 from datetime import date, datetime
-import pycountry
-import pycountry_convert
 from sqlalchemy.orm import Session
 from covigator.database.model import SampleGisaid, JobGisaid, Sample, DataSource, Log, CovigatorModule
 from covigator.database.database import Database
 from logzero import logger
 from Bio import SeqIO
 import time
-import lz4.frame
+from covigator.misc.compression import compress_sequence
+from covigator.misc.country_parser import CountryParser
 
 BATCH_SIZE = 1000
 
@@ -27,7 +25,7 @@ class GisaidAccessor:
         self.excluded_by_host = 0
         self.excluded_existing = 0
         self.included = 0
-        self.cache_countries = {}
+        self.country_parser = CountryParser()
 
     def access(self):
         session = self.database.get_database_session()
@@ -106,7 +104,6 @@ class GisaidAccessor:
                 self.excluded_by_host += 1
                 continue
 
-            compressed_sequence = self.compress_sequence(record.seq)
             sample_gisaid = SampleGisaid(
                 run_accession=identifier,
                 date=metadata[2],
@@ -117,11 +114,11 @@ class GisaidAccessor:
                 country=None,
                 country_alpha_2=None,
                 country_alpha_3=None,
-                continent=location_list[0],
+                continent=None,
                 continent_alpha_2=None,
                 site=None,
                 site2=None,
-                sequence={"MN908947.3": compressed_sequence}
+                sequence={"MN908947.3": compress_sequence(record.seq)}
             )
 
             self._parse_country(sample_gisaid)
@@ -151,10 +148,6 @@ class GisaidAccessor:
         logger.info("It took {} secs/sample on average".format(float(total_time) / num_samples))
         return num_samples
 
-    @staticmethod
-    def compress_sequence(sequence):
-        return base64.b64encode(lz4.frame.compress(sequence.encode('utf-8'))).decode()
-
     def _build_sample(self, sample_gisaid):
         return Sample(
             id=sample_gisaid.run_accession,
@@ -163,28 +156,15 @@ class GisaidAccessor:
         )
 
     def _parse_country(self, gisaid_sample: SampleGisaid):
-        try:
-            if gisaid_sample.country_raw is not None and gisaid_sample.country_raw.strip() == "":
-                gisaid_sample.country_raw = None
-                raise LookupError   # if no input avoids trying to parse it
-            match = self.cache_countries.get(gisaid_sample.country_raw)
-            if match is None:
-                match = pycountry.countries.search_fuzzy(gisaid_sample.country_raw)[0]
-                self.cache_countries[gisaid_sample.country_raw] = match
-            gisaid_sample.country = match.name
-            gisaid_sample.country_alpha_2 = match.alpha_2
-            gisaid_sample.country_alpha_3 = match.alpha_3
-            gisaid_sample.continent_alpha_2 = pycountry_convert.country_alpha2_to_continent_code(gisaid_sample.country_alpha_2)
-            gisaid_sample.continent = pycountry_convert.convert_continent_code_to_continent_name(gisaid_sample.continent_alpha_2)
-        except (LookupError, AttributeError):
-            gisaid_sample.country = "Not available"
-            gisaid_sample.country_alpha_2 = "None"    # don't use NA as that is the id of Namibia
-            gisaid_sample.country_alpha_3 = "None"
-            gisaid_sample.continent_alpha_2 = "None"
-            gisaid_sample.continent = "None"
+        parsed_country = self.country_parser.parse_country(gisaid_sample.country_raw)
+        gisaid_sample.country = parsed_country.country
+        gisaid_sample.country_alpha_2 = parsed_country.country_alpha_2
+        gisaid_sample.country_alpha_3 = parsed_country.country_alpha_3
+        gisaid_sample.continent_alpha_2 = parsed_country.continent_alpha_2
+        gisaid_sample.continent = parsed_country.continent
 
-    def _parse_dates(self, gisaid_run: SampleGisaid):
-        gisaid_run.date = self._parse_abstract(gisaid_run.date, date.fromisoformat)
+    def _parse_dates(self, gisaid_sample: SampleGisaid):
+        gisaid_sample.date = self._parse_abstract(gisaid_sample.date, date.fromisoformat)
 
     def _parse_abstract(self, value, type):
         try:

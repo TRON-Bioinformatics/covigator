@@ -1,42 +1,31 @@
 #!/usr/bin/env python
-import base64
 import os
 import pathlib
-import zlib
 from dataclasses import dataclass
-
-from Bio import pairwise2
 from Bio import Align
-from Bio.pairwise2 import format_alignment
+from Bio.Align import PairwiseAlignment
 from logzero import logger
-
+from typing import List
 from covigator.configuration import Configuration
-from covigator.database.model import SampleGisaid, Gene
+from covigator.database.model import SampleGisaid
 from covigator.database.queries import Queries
+from covigator.misc.compression import decompress_sequence
 
 CHROMOSOME = "MN908947.3"
 
 
 @dataclass
 class Variant:
-    gene_name: str
     position: int
     reference: str
     alternate: str
 
     def to_vcf_line(self):
-        return self.gene_name, str(self.position), ".", self.reference, self.alternate, "255", ".", ".", "."
+        # transform 0-based position to 1-based position
+        return CHROMOSOME, str(self.position + 1), ".", self.reference, self.alternate, "255", ".", ".", "."
 
 
 class GisaidPipeline:
-
-    MAPPING_GENES = {
-        "Spike": "S",
-        "M": "M",
-        "N": "N",
-        "E": "E",
-        "MN908947.3": "MN908947.3"
-    }
 
     def __init__(self, config: Configuration, queries: Queries):
         self.config = config
@@ -50,8 +39,8 @@ class GisaidPipeline:
             # the sequences corresponding to protein domains are not called right now
             if gene is not None:
                 alignment = self._run_alignment(
-                    sequence=self.decompress_sequence(s).strip("*"), reference=gene.sequence)
-                mutations.extend(self._call_mutations(gene=gene, alignment=alignment))
+                    sequence=decompress_sequence(s).strip("*"), reference=gene.sequence)
+                mutations.extend(self._call_mutations(alignment=alignment))
         local_folder = os.path.join(self.config.storage_folder, sample.run_accession)
         if not os.path.exists(local_folder):
             pathlib.Path(local_folder).mkdir(parents=True, exist_ok=True)
@@ -60,11 +49,7 @@ class GisaidPipeline:
         self._output_vcf(mutations, output_vcf)
         return output_vcf
 
-    @staticmethod
-    def decompress_sequence(s):
-        return zlib.decompress(base64.b64decode(s)).decode('utf-8')
-
-    def _run_alignment(self, sequence: str, reference: str):
+    def _run_alignment(self, sequence: str, reference: str) -> PairwiseAlignment:
         aligner = Align.PairwiseAligner()
         aligner.mode = 'global'
         aligner.match = 2
@@ -74,62 +59,46 @@ class GisaidPipeline:
         aligner.target_end_gap_score = 0.0
         aligner.query_end_gap_score = 0.0
         alignments = aligner.align(reference, sequence)
-        #alignments = None
-        #try:
-        #    alignments = pairwise2.align.globalms(sequence, reference, 2, -1, -3, -0.1, one_alignment_only=True)
-        #except:
-        #    print("Not working")
-        aln = alignments[0]
-        return aln
+        return alignments[0]
 
-    def _call_mutations(self, gene: Gene, alignment):
-        #CHROM  POS     ID      REF     ALT     QUAL    FILTER  INFO    FORMAT  /home/sorn/development/ngs_pipelines/covigator/covigator/processor/test_folder/Aligned.out.bam
+    def _call_mutations(self, alignment: PairwiseAlignment) -> List[Variant]:
+        #CHROM  POS     ID      REF     ALT     QUAL    FILTER  INFO    FORMAT
         #MN908947.3      9924    .       C       T       228     .       DP=139;VDB=0.784386;SGB=-0.693147;RPB=0.696296;MQB=1;MQSB=1;BQB=0.740741;MQ0F=0;AC=1;AN=1;DP4=2,0,123,12;MQ=60  GT:PL   1:255,0
-        mutations = []
         alternate = alignment.query
         reference = alignment.target
 
-        opened_insertion = None
-        opened_deletion = None
-        for i in range(len(reference)):
-            if alternate[i] != reference[i]:
-                if reference[i] == "-":
-                    # insertion
-                    if opened_insertion is None:
-                        # stores for later
-                        opened_insertion = Variant(
-                            gene_name=gene.name, position=i, reference="-", alternate=alternate[i])
-                    else:
-                        # extends
-                        opened_insertion.alternate = opened_insertion.alternate + alternate[i]
-                elif alternate[i] == "-":
-                    # deletion
-                    if opened_deletion is None:
-                        # stores for later
-                        opened_deletion = Variant(
-                            gene_name=gene.name, position=i, reference=reference[i], alternate="-")
-                    else:
-                        # extends
-                        opened_deletion.reference = opened_deletion.reference + reference[i]
-                else:
-                    # substitution
-                    mutations.append(Variant(
-                        gene_name=gene.name, position=i, reference=reference[i], alternate=alternate[i]))
-            else:
-                if opened_insertion is not None:
-                    mutations.append(opened_insertion)
-                    opened_insertion = None
-                if opened_deletion is not None:
-                    mutations.append(opened_deletion)
-                    opened_deletion = None
+        variants = []
+        prev_ref_end = None
+        prev_alt_end = None
+        for (ref_start, ref_end), (alt_start, alt_end) in zip(alignment.aligned[0], alignment.aligned[1]):
+            # calls indels
+            # NOTE: it does not call indels at beginning and end of sequence
+            if prev_ref_end is not None and prev_ref_end != ref_start:
+                # deletion
+                if ref_start - prev_ref_end <= 50:  # skips deletions longer than 50 bp
+                    variants.append(Variant(
+                        position=prev_ref_end,
+                        reference=reference[prev_ref_end:ref_start],
+                        alternate=reference[prev_ref_end]))
+            elif prev_ref_end is not None and  prev_alt_end != alt_start:
+                # insertion
+                if alt_start - prev_alt_end <= 50:  # skips insertions longer than 50 bp
+                    variants.append(Variant(
+                        position=prev_ref_end,
+                        reference=reference[prev_ref_end],
+                        alternate=reference[prev_ref_end] + alternate[prev_alt_end+1:alt_start]))
 
-        # stores also deletion at the very end
-        if opened_insertion is not None:
-            mutations.append(opened_insertion)
-        if opened_deletion is not None:
-            mutations.append(opened_deletion)
+            # calls SNVs
+            for pos, ref, alt in zip(
+                    range(ref_start, ref_end), reference[ref_start: ref_end], alternate[alt_start: alt_end]):
+                # contiguous SNVs are reported separately
+                if ref != alt:
+                    variants.append(Variant(position=pos, reference=ref, alternate=alt))
 
-        return mutations
+            prev_ref_end = ref_end
+            prev_alt_end = alt_end
+
+        return variants
     
     def _output_vcf(self, mutations, output_vcf):
         with open(output_vcf, "w") as vcf_out:
