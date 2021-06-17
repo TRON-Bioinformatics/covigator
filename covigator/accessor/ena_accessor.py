@@ -163,7 +163,8 @@ class EnaAccessor:
 
     def _parse_country(self, sample: SampleEna):
         parsed_country = self.country_parser.parse_country(
-            sample.country_raw.split(":")[0] if sample.country_raw else "")
+            sample.country.split(":")[0] if sample.country else "")
+        sample.country_raw = sample.country
         sample.country = parsed_country.country
         sample.country_alpha_2 = parsed_country.country_alpha_2
         sample.country_alpha_3 = parsed_country.country_alpha_3

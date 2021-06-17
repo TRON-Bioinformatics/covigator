@@ -145,7 +145,8 @@ class GisaidAccessor:
             session.commit()
             session.add_all(jobs_and_samples)
             session.commit()
-        logger.info("It took {} secs/sample on average".format(float(total_time) / num_samples))
+        if num_samples > 0:
+            logger.info("It took {} secs/sample on average".format(float(total_time) / num_samples))
         return num_samples
 
     def _build_sample(self, sample_gisaid):
