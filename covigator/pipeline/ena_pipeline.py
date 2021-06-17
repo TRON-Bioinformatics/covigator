@@ -1,7 +1,7 @@
 import os
+import time
 from pathlib import Path
 import subprocess
-import tempfile
 from logzero import logger
 from covigator.configuration import Configuration
 from covigator.exceptions import CovigatorPipelineError
@@ -14,44 +14,54 @@ class Pipeline:
         assert self.config.reference_genome is not None and os.path.exists(self.config.reference_genome), \
             "Please configure the reference genome in the variable {}".format(self.config.ENV_COVIGATOR_REF_FASTA)
 
-    def run(self, fastq1: str, fastq2: str = None):
+    def run(self, run_accession: str, fastq1: str, fastq2: str = None):
 
         logger.info("Processing {} and {}".format(fastq1, fastq2))
         sample_data_folder = Path(fastq1).parent
-        bwa_ref = self.config.reference_genome
 
         logger.info("Sample data folder: {}".format(sample_data_folder))
-        bam_file = os.path.join(sample_data_folder, "aligned.out.bam")
-        vcf_file = os.path.join(sample_data_folder, "pileup.vcf")
-        snpeff_vcf_file_gz = os.path.join(sample_data_folder, "snpeff.vcf.gz")
+        output_vcf = os.path.join(
+            self.config.storage_folder, run_accession,
+            "{name}.lofreq.normalized.annotated.vcf.gz".format(name=run_accession))
+        output_qc = os.path.join(
+            self.config.storage_folder, run_accession,
+            "{name}.fastp_stats.json".format(name=run_accession))
 
-        if fastq2:
-            cmd_align = "{} mem {} {} {} | {} sort -o {} -".format(
-                self.config.bwa, bwa_ref, fastq1, fastq2, self.config.samtools, bam_file)
-        else:
-            cmd_align = "{} mem {} {} | {} sort -o {} -".format(
-                self.config.bwa, bwa_ref, fastq1, self.config.samtools, bam_file)
+        if not os.path.exists(output_vcf) or not os.path.exists(output_qc) or self.config.force_pipeline:
 
-        cmd_pileup = "{0} mpileup -E -d 0 -A -f {1} {2} | {0} call -mv --ploidy 1 -Ov -o {3}".format(
-            self.config.bcftools, bwa_ref, bam_file, vcf_file)
+            command = "{nextflow} run {workflow} " \
+                      "{tronflow_bwa} " \
+                      "{tronflow_bam_preprocessing} "\
+                      "{tronflow_variant_normalization} " \
+                      "--fastq1 {fastq1} {fastq2} --output {output_folder} --name {name} " \
+                      "--cpus {cpus} --memory {memory} " \
+                      "-profile conda -offline -work-dir {work_folder} -with-trace {trace_file}".format(
+                nextflow=self.config.nextflow,
+                fastq1=fastq1,
+                fastq2="--fastq2 " + fastq2 if fastq2 else "",
+                output_folder=self.config.storage_folder,
+                name=run_accession,
+                work_folder=self.config.temp_folder,
+                workflow=self.config.workflow,
+                tronflow_bwa="--tronflow_bwa {}".format(self.config.tronflow_bwa) if self.config.tronflow_bwa else "",
+                tronflow_bam_preprocessing="--tronflow_bam_preprocessing {}".format(
+                    self.config.tronflow_bam_preprocessing) if self.config.tronflow_bam_preprocessing else "",
+                tronflow_variant_normalization="--tronflow_variant_normalization {}".format(
+                    self.config.tronflow_variant_normalization) if self.config.tronflow_variant_normalization else "",
+                trace_file=os.path.join(sample_data_folder, "nextflow_traces.txt"),
+                cpus=self.config.workflow_cpus,
+                memory=self.config.workflow_memory
+            )
+            self._run_command(command, sample_data_folder)
 
-        cmd_snpeff = "{java} -jar {snpeff} ann " \
-                     "-noStats -no-downstream -no-upstream -no-intergenic -no-intron -onlyProtein " \
-                     "SARS-COV2 {input_vcf} | {bgzip} -c > {annotated_vcf} && {tabix} -p vcf {annotated_vcf}"\
-            .format(java=self.config.java, snpeff=self.config.snpeff, input_vcf=vcf_file, bgzip=self.config.bgzip,
-                    annotated_vcf=snpeff_vcf_file_gz, tabix=self.config.tabix)
+        return output_vcf, output_qc
 
-        self._run_commands([cmd_align, cmd_pileup, cmd_snpeff], sample_data_folder)
-        self.delete_files([bam_file, vcf_file])
-
-        return snpeff_vcf_file_gz
-
-    def _run_commands(self, commands, temporary_folder):
-        for command in commands:
-            logger.info("Executing: {}".format(command))
+    def _run_command(self, command, temporary_folder):
+            start = time.time()
             p = subprocess.Popen(
                 command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=temporary_folder, shell=True)
             stdoutdata, stderrdata = p.communicate()
+            logger.info("Finished in {} secs command: '{}'".format(time.time() - start, command))
             if p.returncode != 0:
                 error_message = self._decode(stderrdata)
                 logger.error(error_message)
@@ -59,7 +69,3 @@ class Pipeline:
 
     def _decode(self, data):
         return data.decode("utf8")
-
-    def delete_files(self, files):
-        for f in files:
-            os.remove(f)

@@ -97,7 +97,9 @@ def processor():
     if args.local:
         _start_dask_processor(args, config, num_local_cpus=int(args.num_local_cpus))
     else:
-        with SLURMCluster(scheduler_options={"dashboard_address": ':{}'.format(config.dask_port)}) as cluster:
+        with SLURMCluster(
+                walltime='72:00:00',  # hard codes maximum time to 72 hours
+                scheduler_options={"dashboard_address": ':{}'.format(config.dask_port)}) as cluster:
             cluster.scale(jobs=int(args.num_jobs))
             _start_dask_processor(args, config, cluster=cluster)
 
@@ -123,8 +125,10 @@ def pipeline():
                         help="Second FASTQ to process for paired end sequencing, otherwise leave empty")
 
     args = parser.parse_args()
-    vcf_file = Pipeline(config=Configuration()).run(fastq1=args.fastq1, fastq2=args.fastq2)
+    vcf_file, qc_file = Pipeline(config=Configuration()).run(
+        run_accession="test", fastq1=args.fastq1, fastq2=args.fastq2)
     logger.info("Output VCF file: {}".format(vcf_file))
+    logger.info("Output QC file: {}".format(qc_file))
 
 
 def gisaid_pipeline():

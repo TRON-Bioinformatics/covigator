@@ -113,8 +113,8 @@ class Figures:
             }
         ]
 
-    def get_top_occurring_variants_plot(self, top, gene_name, date_range_start, date_range_end):
-        data = self.queries.get_top_occurring_variants(top, gene_name)
+    def get_top_occurring_variants_plot(self, top, gene_name, date_range_start, date_range_end, metric):
+        data = self.queries.get_top_occurring_variants(top, gene_name, metric)
         fig = dcc.Markdown("""**No variants for the current selection**""")
         if data is not None and data.shape[0] > 0:
 
@@ -126,6 +126,7 @@ class Figures:
 
             # set the styles of the cells
             styles_counts = self.discrete_background_color_bins(data, columns=included_month_colums)
+            styles_total_count = self.discrete_background_color_bins(data, columns=["total"], colors="Reds")
             styles_frequency = self._get_table_style_by_af()
             styles_striped = [{
                 'if': {'row_index': 'odd'},
@@ -133,7 +134,7 @@ class Figures:
             }]
 
             month_columns = [{'name': ["", i], 'id': i} for i in data.columns if i.startswith("20")]
-            month_columns[0]['name'][0] = 'Monthly count'
+            month_columns[0]['name'][0] = 'Monthly counts' if metric == "count" else 'Monthly frequencies'
 
             fig = dash_table.DataTable(
                     id="top-occurring-variants-table",
@@ -145,8 +146,9 @@ class Figures:
                         {"name": ["", "Protein mutation"], "id": "hgvs_p"},
                         {"name": ["", "Effect"], "id": "annotation"},
                         {"name": ["", "Frequency"], "id": "frequency"},
+                        {"name": ["", "Count"], "id": "total"},
                     ] + month_columns,
-                    style_data_conditional=styles_striped + styles_counts + styles_frequency,
+                    style_data_conditional=styles_striped + styles_counts + styles_frequency + styles_total_count,
                     style_cell_conditional=[
                         {
                             'if': {'column_id': c},
@@ -163,7 +165,16 @@ class Figures:
                     row_selectable='multi'
                 )
 
-        return fig
+        return [
+            fig,
+            dcc.Markdown("""
+                            **Top occurring variants** 
+                            *table shows the {} variants{} with the highest frequency across all samples.*
+                            *The counts and frequencies per month are only shown between {} and {}.*
+                            *Selections in this table will be highlighted in the genome view and in the co-occurrence matrix.*
+                            """.format(top, " in gene {}".format(gene_name) if gene_name else "",
+                                       date_range_start, date_range_end))
+        ]
 
     def discrete_background_color_bins(self, df, n_bins=5, columns='all', colors='Blues'):
         bounds = [i * (1.0 / n_bins) for i in range(n_bins + 1)]
@@ -202,17 +213,22 @@ class Figures:
 
         return styles
 
-    def get_cooccurrence_heatmap(self, gene_name, selected_variants, metric="frequency", min_occurrences=5):
+    def get_cooccurrence_heatmap(self, gene_name, selected_variants, metric="jaccard", min_occurrences=5):
         data = self.queries.get_variants_cooccurrence_by_gene(gene_name=gene_name, min_cooccurrence=min_occurrences)
         fig = dcc.Markdown("""**No co-occurrent variants for the current selection**""")
         if data is not None and data.shape[0] > 0:
 
             all_variants = data.variant_id_one.unique()
-            logger.info("cuatro")
             values = np.array_split(data[metric], len(all_variants))
             texts = np.array_split(data.hgvs_tooltip, len(all_variants))
-            logger.info("cinco")
-            hovertemplate = '<b>%{text}</b><br>' + 'Cooccurrence: %{z:.5f}<br>' + 'Variant one: %{x}<br>' + 'Variant two: %{y}'
+            if metric == "count":
+                hovertemplate = '<b>%{text}</b><br>' + 'Counts: %{z}<br>' + 'Variant one: %{x}<br>' + 'Variant two: %{y}'
+            elif metric == "frequency":
+                hovertemplate = '<b>%{text}</b><br>' + 'Frequency: %{z:.3f}<br>' + 'Variant one: %{x}<br>' + 'Variant two: %{y}'
+            elif metric == "jaccard":
+                hovertemplate = '<b>%{text}</b><br>' + 'Jaccard index: %{z:.3f}<br>' + 'Variant one: %{x}<br>' + 'Variant two: %{y}'
+            elif metric == "kappa":
+                hovertemplate = '<b>%{text}</b><br>' + 'Kappa coefficient: %{z:.3f}<br>' + 'Variant one: %{x}<br>' + 'Variant two: %{y}'
             heatmap = go.Heatmap(
                 z=values,
                 x=all_variants,
@@ -258,16 +274,20 @@ class Figures:
             # the y index is reversed in plotly heatmap
             fig.update_yaxes(autorange="reversed")
 
-        logger.info("seis")
         return [
                 dcc.Graph(
                     figure=fig,
                     config=PLOTLY_CONFIG
                 ),
                 dcc.Markdown("""
-                        *Variant pairs co-occurring in at least {} samples{}.*
-                        *Co-occurrence metric: {}*
+                        ***Co-occurrence matrix*** *showing variant pairs co-occurring in at least {} samples (this value is configurable).*
+                        *The metric in the co-occurrence matrix can be chosen among counts, frequencies, Jaccard index or 
+                        Cohen's kappa coefficient. The Cohen's kappa coefficient introduces a correction to the Jaccard index for
+                        variants with low occurrence.*
+                        *The diagonal contains the total counts or just 1.0 in the other metrics.*
+                        *The upper diagonal is not shown for clarity.*
                         *Synonymous variants are excluded.*
+                        *Different genomic variants causing the same protein variant are not grouped.*
                         """.format(min_occurrences, metric, " on gene {}".format(gene_name) if gene_name else ""))
             ]
 
@@ -565,3 +585,62 @@ class Figures:
             text=variants[["hgvs_p", "annotation"]].apply(lambda x: "{} ({})".format(x[0], x[1]), axis=1),
             hovertemplate=VARIANT_TOOLTIP
         )
+
+    def get_variants_clustering(self, gene_name, selected_variants, min_cooccurrence, min_samples):
+        data = self.queries.get_mds(
+            gene_name=gene_name, min_cooccurrence=min_cooccurrence, min_samples=min_samples)
+
+        traces = []
+        shapes = []
+        selected_variants = [v.get("dna_mutation") for v in (selected_variants if selected_variants else [])]
+        selected_data = data[data.variant_id.isin(selected_variants if selected_variants else [])]
+        for cluster, color in zip(data.cluster.unique(), cycle(plotly.express.colors.qualitative.Alphabet)):
+            traces.append(go.Scatter(
+                x=data[data.cluster == cluster].PC1,
+                y=data[data.cluster == cluster].PC2,
+                mode='markers',
+                showlegend=True,
+                name="Cluster {}".format(cluster) if cluster != -1 else "Unclustered",
+                text=data[data.cluster == cluster].tooltip,
+                hovertemplate='%{text}',
+                marker=dict(color=color, symbol="circle", size=7, opacity=0.8) if cluster != -1 else dict(
+                    color="grey", symbol="cross-thin-open", size=4, opacity=0.6)))
+            if selected_data[selected_data.cluster == cluster].shape[0] > 0:
+                traces.append(go.Scatter(
+                    x=selected_data[selected_data.cluster == cluster].PC1,
+                    y=selected_data[selected_data.cluster == cluster].PC2,
+                    mode='markers',
+                    showlegend=True,
+                    name="Selected variants",
+                    text=selected_data[selected_data.cluster == cluster].variant_id,
+                    hovertemplate='%{text}',
+                    marker=dict(color=color, symbol="circle", size=13, opacity=1.0) if cluster != -1 else dict(
+                        color="grey", symbol="cross-thin-open", size=10, opacity=1.0)))
+
+        fig = go.Figure(
+            data=traces,
+            layout=go.Layout(
+                template="plotly_white",
+                height=700,
+                yaxis=dict(visible=True, tickfont={"size": 10}, showgrid=True, title="PC2"),
+                xaxis=dict(visible=True, tickfont={"size": 10}, showgrid=True, title="PC1"),
+                margin=go.layout.Margin(l=0, r=0, b=0, t=0),
+                shapes=shapes
+            )
+        )
+        return [
+            dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
+            dcc.Markdown("""
+            ***Variant clustering*** *plots the variants after applying a Multi Dimensional Scaling on the
+            co-occurrence matrix with the Jaccard index corrected with the Cohen's kappa coefficient. 
+            The co-occurrence matrix is built taking into account only variants with at least {} pairwise 
+            co-occurrences and if a gene is provided only variants within that gene. 
+            Only the first two dimensions are plotted. 
+            Clustering is performed on the same co-occurrence matrix using OPTICS. 
+            The mimimum number of neighbours to call
+            a cluster is {}.
+            Variants selected in the top occurrent variants table are highlighted with a greater size in the plot.
+            *
+            
+            *Ankerst et al. “OPTICS: ordering points to identify the clustering structure.” ACM SIGMOD Record 28, no. 2 (1999): 49-60.*
+            """.format(min_cooccurrence, min_samples))]

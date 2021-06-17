@@ -19,6 +19,20 @@ MISSING_VALUE = "-"
 
 class Dashboard:
 
+    tab_style = {
+        'borderBottom': '1px solid #d6d6d6',
+        'padding': '6px',
+        'fontWeight': 'bold'
+    }
+
+    tab_selected_style = {
+        'borderTop': '1px solid #d6d6d6',
+        'borderBottom': '1px solid #d6d6d6',
+        'backgroundColor': '#119DFF',
+        'color': 'white',
+        'padding': '6px'
+    }
+
     def __init__(self, config: Configuration, verbose=False):
         covigator.configuration.initialise_logs(config.logfile_dash)
         self.config = config
@@ -93,8 +107,9 @@ class Dashboard:
         date_of_last_check_ena = self.queries.get_date_of_last_check(data_source=DataSource.ENA)
         date_of_last_update_ena = self.queries.get_date_of_last_update(data_source=DataSource.ENA)
 
-        return dcc.Tab(label="About",
+        return dcc.Tab(label="About", style=self.tab_style, selected_style=self.tab_selected_style,
                             children=[
+                                html.Br(),
                                 self.get_header(),
                                 html.Div(
                                 [
@@ -214,7 +229,7 @@ class Dashboard:
 
     def get_tab_samples(self):
         figure = self.figures.get_accumulated_samples_by_country_plot()
-        return dcc.Tab(label="Samples",
+        return dcc.Tab(label="Samples", style=self.tab_style, selected_style=self.tab_selected_style,
                             children=[
                                 dcc.Graph(figure=figure)
                             ])
@@ -228,12 +243,13 @@ class Dashboard:
         oneyearago = today - timedelta(days=356)
         oneyearago_formatted = oneyearago.strftime(MONTH_PATTERN)
 
-        return dcc.Tab(label="Variants",
+        return dcc.Tab(label="Variants", style=self.tab_style, selected_style=self.tab_selected_style,
                        children=[html.Div(
                            id='needleplot-body', className="row container-display",
+                           style={'overflow': 'scroll'}, # 'top': 0, 'bottom': 0, position: fixed
                            children=[
                                html.Div(children=[
-                                   html.H4("Filters"),
+                                   html.Br(),
                                    dcc.Markdown("""
                                      Select a gene
                                      """),
@@ -244,8 +260,9 @@ class Dashboard:
                                        multi=False
                                    ),
                                    html.Br(),
-                                   html.H4("Top occurring variants"),
                                    dcc.Markdown("""
+                                            **Top occurring variants**
+                                             
                                              Number of top occurring variants
                                              """),
                                    dcc.Slider(
@@ -257,6 +274,19 @@ class Dashboard:
                                        dots=True,
                                        marks={i: '{}'.format(i) for i in [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]},
                                        tooltip=dict(always_visible=False, placement="right")
+                                   ),
+                                   html.Br(),
+                                   dcc.Markdown("""
+                                                     Metric to measure abundance of variants per month
+                                                     """),
+                                   dcc.Dropdown(
+                                       id='dropdown-top-variants-metric',
+                                       options=[
+                                           {'label': 'Count', 'value': 'count'},
+                                           {'label': 'Frequency', 'value': 'frequency_by_month'}],
+                                       value='count',
+                                       clearable=False,
+                                       multi=False
                                    ),
                                    html.Br(),
                                    dcc.Markdown("""
@@ -282,8 +312,9 @@ class Dashboard:
                                                 className="six column"),
                                    ], className="row container-display"),
                                    html.Br(),
-                                   html.H4("Genome view"),
                                    dcc.Markdown("""
+                                                    **Genome view**
+                                                     
                                                      Bin size
                                                      """),
                                    dcc.Slider(
@@ -297,15 +328,19 @@ class Dashboard:
                                        tooltip=dict(always_visible=False, placement="right")
                                    ),
                                    html.Br(),
-                                   html.H4("Co-occurrence heatmap"),
                                    dcc.Markdown("""
+                                   **Co-occurrence matrix**
+                                   
                                    Metric to assess paiwise co-occurrence
                                    """),
                                    dcc.Dropdown(
                                        id='dropdown-heatmap-metric',
-                                       options=[{'label': "count", 'value': "count"},
-                                                {'label': "frequency", 'value': "frequency"}],
-                                       value="count",
+                                       options=[{'label': "Count", 'value': "count"},
+                                                {'label': "Frequency", 'value': "frequency"},
+                                                {'label': "Jaccard index", 'value': "jaccard"},
+                                                {'label': "Cohen's kappa coefficient", 'value': "kappa"},
+                                                ],
+                                       value="jaccard",
                                        clearable=False,
                                        multi=False
                                    ),
@@ -317,9 +352,26 @@ class Dashboard:
                                        min=1,
                                        max=100,
                                        step=5,
-                                       value=20,
+                                       value=10,
                                        dots=True,
                                        marks={i: '{}'.format(i) for i in [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]},
+                                       tooltip=dict(always_visible=False, placement="right")
+                                   ),
+                                   html.Br(),
+                                   dcc.Markdown("""
+                                   **Variants clustering**
+
+                                   The number of samples (or total weight) in a neighborhood for a point to be 
+                                   considered as a core point. This includes the point itself.
+                                           """),
+                                   dcc.Slider(
+                                       id='slider-min-samples',
+                                       min=2,
+                                       max=10,
+                                       step=1,
+                                       value=5,
+                                       dots=True,
+                                       marks={i: str(i) for i in range(2, 10)},
                                        tooltip=dict(always_visible=False, placement="right")
                                    ),
                                ], className="two columns"),
@@ -331,7 +383,9 @@ class Dashboard:
                                    html.Br(),
                                    html.Div(id='cooccurrence-heatmap'),
                                    html.Br(),
-                               ], className="ten columns")
+                                   html.Div(id='variants-mds'),
+                                   html.Br(),
+                               ], className="ten columns", style={'overflow': 'scroll', "height": "900px"},)
                            ]),
                        ]
                        )
@@ -347,10 +401,12 @@ class Dashboard:
             tab_variants = self.get_tab_variants()
 
             # assemble tabs in dcc.Tabs object
-            tabs = dcc.Tabs(children=[tab_overview, tab_samples, tab_variants])
+            tabs = dcc.Tabs(children=[tab_overview, tab_samples, tab_variants],
+                            style={'height': '44px'})
+                            #style={'margin': '0 0 0 0', 'padding-top': '2px'})
 
             # create layout
-            layout = html.Div(children=[tabs, footer])
+            layout = html.Div(children=[tabs, footer]) #, style={'margin-top': '0px', 'padding-top': '0px'})
 
         return layout
 
@@ -370,22 +426,13 @@ class Dashboard:
             Input('slider-top-variants', 'value'),
             Input('dropdown-gene', 'value'),
             Input('dropdown-date-range-start', 'value'),
-            Input('dropdown-date-range-end', 'value')
+            Input('dropdown-date-range-end', 'value'),
+            Input('dropdown-top-variants-metric', 'value')
         )
-        def update_top_occurring_variants(top_variants, gene_name, date_range_start, date_range_end):
-            return html.Div(children=[
-                    self.figures.get_top_occurring_variants_plot(
-                        top=top_variants, gene_name=gene_name, date_range_start=date_range_start,
-                        date_range_end=date_range_end),
-                    dcc.Markdown("""
-                    *Top {} variants{} according to their frequency across all samples.
-                    The counts per month are only shown between {} and {}*
-                    """.format(
-                        top_variants,
-                        " in gene {}".format(gene_name) if gene_name else "",
-                        date_range_start,
-                        date_range_end))
-                    ])
+        def update_top_occurring_variants(top_variants, gene_name, date_range_start, date_range_end, metric):
+            return html.Div(children=self.figures.get_top_occurring_variants_plot(
+                top=top_variants, gene_name=gene_name, date_range_start=date_range_start,
+                date_range_end=date_range_end, metric=metric))
 
         @app.callback(
             Output('needle-plot', 'children'),
@@ -434,6 +481,21 @@ class Dashboard:
             selected_rows = [rows[s] for s in selected_rows_indices] if selected_rows_indices else None
             plot = html.Div(children=self.figures.get_cooccurrence_heatmap(
                 gene_name=gene_name, selected_variants=selected_rows, metric=metric, min_occurrences=min_occurrences))
+            return plot
+
+        @app.callback(
+            Output('variants-mds', 'children'),
+            Input('dropdown-gene', 'value'),
+            Input('top-occurring-variants-table', "derived_virtual_data"),
+            Input('top-occurring-variants-table', "derived_virtual_selected_rows"),
+            Input('slider-min-cooccurrences', 'value'),
+            Input('slider-min-samples', 'value')
+        )
+        def update_variants_mds(gene_name, rows, selected_rows_indices, min_cooccurrence, min_samples):
+            selected_rows = [rows[s] for s in selected_rows_indices] if selected_rows_indices else None
+            plot = html.Div(children=self.figures.get_variants_clustering(
+                gene_name=gene_name, selected_variants=selected_rows, min_cooccurrence=min_cooccurrence,
+                min_samples=min_samples))
             return plot
 
     def get_application(self) -> dash.Dash:

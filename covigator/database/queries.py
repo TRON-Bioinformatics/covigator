@@ -1,8 +1,13 @@
 from datetime import date, datetime
 from typing import List, Union
+import numpy as np
 import pandas as pd
+from scipy.spatial.distance import squareform
 from logzero import logger
-from sqlalchemy import and_, desc, asc, func, or_, String, text, DateTime
+from skbio.stats.distance import DissimilarityMatrix
+from sklearn.cluster import OPTICS
+from sklearn.manifold import MDS
+from sqlalchemy import and_, desc, asc, func, String, DateTime
 from sqlalchemy.engine.default import DefaultDialect
 from sqlalchemy.orm import Session, aliased
 from sqlalchemy.sql.sqltypes import NullType
@@ -55,6 +60,17 @@ class Queries:
         else:
             raise ValueError("Bad data source {}".format(data_source))
 
+    def count_jobs_in_queue(self, data_source):
+        if data_source == DataSource.ENA:
+            count = self.session.query(JobEna).filter(JobEna.status.in_((
+                JobStatus.QUEUED, JobStatus.DOWNLOADED, JobStatus.PROCESSED, JobStatus.LOADED))).count()
+        elif data_source == DataSource.GISAID:
+            count = self.session.query(JobGisaid).filter(JobGisaid.status.in_((
+                JobStatus.QUEUED, JobStatus.DOWNLOADED, JobStatus.PROCESSED, JobStatus.LOADED))).count()
+        else:
+            raise ValueError("Bad data source {}".format(data_source))
+        return count
+
     def find_sample_ena_by_accession(self, run_accession: str) -> SampleEna:
         return self.session.query(SampleEna).filter(SampleEna.run_accession == run_accession).first()
 
@@ -73,8 +89,9 @@ class Queries:
             # merge countries with less than 10 samples into OTHER
             country_value_counts = samples.country.value_counts()
             other_countries = list(country_value_counts[country_value_counts < 10].index)
+            null_country_values = ["none", "not available"]
             samples["country_merged"] = samples.country.transform(
-                lambda c: "Other" if c in other_countries or c is None or c == "None" else c)
+                lambda c: "Other" if c in other_countries or c is None or c.lower() in null_country_values else c)
 
             # counts samples by country and data
             sample_counts = samples[["first_created", "run_accession", "country_merged"]] \
@@ -201,7 +218,7 @@ class Queries:
                 .order_by(desc(Log.start)).first()
         return result2[0] if result2 is not None else result2
 
-    def get_top_occurring_variants(self, top=10, gene_name=None) -> pd.DataFrame:
+    def get_top_occurring_variants(self, top=10, gene_name=None, metric="count") -> pd.DataFrame:
         """
         Returns the top occurring variants + the segregated counts of occurrences per month
         with columns: chromosome, position, reference, alternate, total, month, count
@@ -221,16 +238,23 @@ class Queries:
 
         if top_occurring_variants is not None and top_occurring_variants.shape[0] > 0:
             variant_counts_by_month = []
+
             # NOTE: one query per variant for the counts per month, will this be efficient?
             for _, variant in top_occurring_variants.iterrows():
                 variant_counts_by_month.append(self.get_variant_counts_by_month(variant.variant_id))
             top_occurring_variants_by_month = pd.concat(variant_counts_by_month)
 
+            # get total count of samples per month to calculate the frequency by month
+            sample_counts_by_month = self.get_sample_counts_by_month()
+            top_occurring_variants_by_month = pd.merge(
+                left=top_occurring_variants_by_month, right=sample_counts_by_month, how="left", on="month")
+            top_occurring_variants_by_month["frequency_by_month"] = \
+                (top_occurring_variants_by_month["count"] / top_occurring_variants_by_month["sample_count"]).\
+                transform(lambda x: round(x, 3))
+
             # join both tables with total counts and counts per month
-            top_occurring_variants = top_occurring_variants.set_index(["variant_id"])\
-                .join(
-                top_occurring_variants_by_month.set_index(["variant_id"]))\
-                .reset_index()
+            top_occurring_variants = pd.merge(
+                left=top_occurring_variants, right=top_occurring_variants_by_month, on="variant_id", how="left")
 
             # format the month column appropriately
             top_occurring_variants.month = top_occurring_variants.month.transform(
@@ -243,23 +267,32 @@ class Queries:
             count_samples = self.count_ena_samples()
             top_occurring_variants['frequency'] = top_occurring_variants.total.transform(
                 lambda t: round(float(t) / count_samples, 3))
-            del top_occurring_variants['total']
 
             # pivots the table over months
             top_occurring_variants = pd.pivot_table(
-                top_occurring_variants, index=['gene_name', 'dna_mutation', 'hgvs_p', 'annotation', "frequency"],
-                columns=["month"], values=["count"], fill_value=0).droplevel(0, axis=1).reset_index()
+                top_occurring_variants, index=['gene_name', 'dna_mutation', 'hgvs_p', 'annotation', "frequency", "total"],
+                columns=["month"], values=[metric], fill_value=0).droplevel(0, axis=1).reset_index()
 
         return top_occurring_variants
 
     def get_variant_counts_by_month(self, variant_id) -> pd.DataFrame:
         query = self.session.query(
-            VariantObservation.variant_id, func.date_trunc('month', SampleEna.first_created).label("month"),
+            VariantObservation.variant_id,
+            func.date_trunc('month', SampleEna.first_created).label("month"),
             func.count().label("count"))\
-            .join(Variant)\
-            .join(SampleEna, VariantObservation.sample == SampleEna.run_accession)\
-            .filter(and_(VariantObservation.variant_id == variant_id, Variant.annotation != SYNONYMOUS_VARIANT))\
+            .join(SampleEna, VariantObservation.sample == SampleEna.run_accession) \
+            .join(JobEna, VariantObservation.sample == JobEna.run_accession) \
+            .filter(and_(VariantObservation.variant_id == variant_id, JobEna.status == JobStatus.FINISHED))\
             .group_by(VariantObservation.variant_id, func.date_trunc('month', SampleEna.first_created))
+        return pd.read_sql(query.statement, self.session.bind)
+
+    def get_sample_counts_by_month(self) -> pd.DataFrame:
+        query = self.session.query(
+            func.date_trunc('month', SampleEna.first_created).label("month"),
+            func.count().label("sample_count"))\
+            .join(JobEna) \
+            .filter(JobEna.status == JobStatus.FINISHED) \
+            .group_by(func.date_trunc('month', SampleEna.first_created))
         return pd.read_sql(query.statement, self.session.bind)
 
     def get_variants_cooccurrence_by_gene(self, gene_name, min_cooccurrence=5, test=False) -> pd.DataFrame:
@@ -275,7 +308,6 @@ class Queries:
         variant_two = aliased(Variant)
         if not test:
             query = self.session.query(VariantCooccurrence,
-                                       func.div(VariantCooccurrence.count, count_samples).label("frequency"),
                                        variant_one.position,
                                        variant_one.reference,
                                        variant_one.alternate,
@@ -284,7 +316,6 @@ class Queries:
         else:
             # this is needed for testing environment with SQLite
             query = self.session.query(VariantCooccurrence,
-                                       VariantCooccurrence.count.label("frequency"),
                                        variant_one.position,
                                        variant_one.reference,
                                        variant_one.alternate,
@@ -313,7 +344,25 @@ class Queries:
             annotations = data.loc[data.variant_id_one == data.variant_id_two,
                                    ["variant_id_one", "position", "reference", "alternate", "hgvs_p"]]
             tooltip = data.loc[:, ["variant_id_one", "variant_id_two", "hgvs_tooltip"]]
-            sparse_matrix = data.loc[:, ["variant_id_one", "variant_id_two", "count", "frequency"]]
+            diagonal = data.loc[data.variant_id_one == data.variant_id_two, ["variant_id_one", "variant_id_two", "count"]]
+            sparse_matrix = data.loc[:, ["variant_id_one", "variant_id_two", "count"]]
+            sparse_matrix["frequency"] = sparse_matrix["count"] / count_samples
+            sparse_matrix = pd.merge(left=sparse_matrix, right=diagonal, on="variant_id_one", how="left", suffixes=("", "_one"))
+            sparse_matrix = pd.merge(left=sparse_matrix, right=diagonal, on="variant_id_two", how="left", suffixes=("", "_two"))
+
+            # calculate Jaccard index
+            sparse_matrix["count_union"] = sparse_matrix["count_one"] + sparse_matrix["count_two"] - sparse_matrix["count"]
+            sparse_matrix["jaccard"] = sparse_matrix["count"] / sparse_matrix["count_union"]
+
+            # calculate Cohen's kappa
+            sparse_matrix["chance_agreement"] = np.exp(-sparse_matrix["count"])
+            sparse_matrix["kappa"] = 1 - ((1 - sparse_matrix.jaccard) / (1 - sparse_matrix.chance_agreement))
+            sparse_matrix["kappa"] = sparse_matrix["kappa"].transform(lambda k: k if k > 0 else 0)
+
+            del sparse_matrix["count_union"]
+            del sparse_matrix["count_one"]
+            del sparse_matrix["count_two"]
+            del sparse_matrix["chance_agreement"]
 
             # from the sparse matrix builds in memory the complete matrix
             all_variants = data.variant_id_one.unique()
@@ -340,16 +389,124 @@ class Queries:
 
             # add tooltip
             full_matrix = pd.merge(left=full_matrix, right=tooltip, on=["variant_id_one", "variant_id_two"], how='left')
+            # correct tooltip in diagonal
+            full_matrix.loc[full_matrix.variant_id_one == full_matrix.variant_id_two, "hgvs_tooltip"] = full_matrix.hgvs_p_one
 
             # NOTE: transpose matrix manually as plotly transpose does not work with labels
             # the database return the upper diagonal, the lower is best for plots
             full_matrix.sort_values(["position_two", "reference_two", "alternate_two",
                                      "position_one", "reference_one", "alternate_one"], inplace=True)
 
-            full_matrix = full_matrix.loc[:, ["variant_id_one", "variant_id_two", "count", "frequency", "hgvs_tooltip"]]
+            full_matrix = full_matrix.loc[:, ["variant_id_one", "variant_id_two", "count", "frequency", "jaccard",
+                                              "kappa", "hgvs_tooltip"]]
 
-        logger.info("tres")
         return full_matrix
+
+    def get_mds(self, gene_name, min_cooccurrence, min_samples) -> pd.DataFrame:
+
+        variant_one = aliased(Variant)
+        variant_two = aliased(Variant)
+        query = self.session.query(VariantCooccurrence,
+                                   variant_one.hgvs_p.label("hgvs_p_one"),
+                                   variant_two.hgvs_p.label("hgvs_p_two")) \
+            .filter(VariantCooccurrence.count >= min_cooccurrence) \
+            .join(variant_one, and_(VariantCooccurrence.variant_id_one == variant_one.variant_id)) \
+            .join(variant_two, and_(VariantCooccurrence.variant_id_two == variant_two.variant_id))
+
+        if gene_name is not None:
+            query = query.filter(and_(variant_one.gene_name == gene_name,
+                                      variant_one.annotation != SYNONYMOUS_VARIANT,
+                                      variant_two.gene_name == gene_name,
+                                      variant_two.annotation != SYNONYMOUS_VARIANT))
+        else:
+            query = query.filter(and_(variant_one.annotation != SYNONYMOUS_VARIANT,
+                                      variant_two.annotation != SYNONYMOUS_VARIANT))
+
+        sparse_matrix = pd.read_sql(query.statement, self.session.bind)
+        diagonal = sparse_matrix.loc[sparse_matrix.variant_id_one == sparse_matrix.variant_id_two,
+                                     ["variant_id_one", "variant_id_two", "count"]]
+        sparse_matrix_with_diagonal = pd.merge(
+            left=sparse_matrix, right=diagonal, on="variant_id_one", how="left", suffixes=("", "_one"))
+        sparse_matrix_with_diagonal = pd.merge(
+            left=sparse_matrix_with_diagonal, right=diagonal, on="variant_id_two", how="left", suffixes=("", "_two"))
+
+        # calculate Jaccard index
+        sparse_matrix_with_diagonal["count_union"] = sparse_matrix_with_diagonal["count_one"] + \
+                                                     sparse_matrix_with_diagonal["count_two"] - \
+                                                     sparse_matrix_with_diagonal["count"]
+        sparse_matrix_with_diagonal["jaccard_similarity"] = sparse_matrix_with_diagonal["count"] / \
+                                                               sparse_matrix_with_diagonal.count_union
+        sparse_matrix_with_diagonal["jaccard_dissimilarity"] = 1 - sparse_matrix_with_diagonal.jaccard_similarity
+
+        # calculate Cohen's kappa
+        sparse_matrix_with_diagonal["chance_agreement"] = np.exp(-sparse_matrix_with_diagonal["count"])
+        sparse_matrix_with_diagonal["kappa"] = 1 - ((1 - sparse_matrix_with_diagonal.jaccard_similarity) / (
+                1 - sparse_matrix_with_diagonal.chance_agreement))
+        sparse_matrix_with_diagonal["kappa"] = sparse_matrix_with_diagonal["kappa"].transform(lambda k: k if k > 0 else 0)
+        sparse_matrix_with_diagonal["kappa_dissimilarity"] = 1 - sparse_matrix_with_diagonal.kappa
+
+        dissimilarity_metric = "kappa_dissimilarity"
+
+        # build upper diagonal matrix
+        all_variants = sparse_matrix_with_diagonal.variant_id_one.unique()
+        empty_full_matrix = pd.DataFrame(index=pd.MultiIndex.from_product(
+            [all_variants, all_variants], names=["variant_id_one", "variant_id_two"])).reset_index()
+        upper_diagonal_matrix = pd.merge(
+            # gets only the inferior matrix without the diagnonal
+            left=empty_full_matrix.loc[empty_full_matrix.variant_id_one < empty_full_matrix.variant_id_two, :],
+            right=sparse_matrix_with_diagonal.loc[:, ["variant_id_one", "variant_id_two", dissimilarity_metric]],
+            on=["variant_id_one", "variant_id_two"], how='left')
+        upper_diagonal_matrix.fillna(1.0, inplace=True)
+        upper_diagonal_matrix.sort_values(by=["variant_id_one", "variant_id_two"], inplace=True)
+
+        logger.info("Building square distance matrix...")
+        distance_matrix = squareform(upper_diagonal_matrix[dissimilarity_metric])
+        # this ensures the order of variants ids is coherent with the non redundant form of the distance matrix
+        ids = np.array([list(upper_diagonal_matrix.variant_id_one[0])[0]] + \
+              list(upper_diagonal_matrix.variant_id_two[0:len(upper_diagonal_matrix.variant_id_two.unique())]))
+        distance_matrix_with_ids = DissimilarityMatrix(data=distance_matrix, ids=ids)
+
+        logger.info("Clustering...")
+        clusters = OPTICS(min_samples=min_samples, max_eps=1.4).fit_predict(distance_matrix_with_ids.data)
+
+        logger.info("Dimensionality reduction...")
+        dimensionality_reduction_model = MDS(
+            n_components=2, random_state=123, dissimilarity='precomputed', n_init=1, max_iter=10)  # this two values make computation faster
+        coords = dimensionality_reduction_model.fit_transform(distance_matrix_with_ids.data)
+
+        logger.info("Building clustering dataframe...")
+        data = pd.DataFrame(coords, columns=["PC1", "PC2"])
+        data["cluster"] = clusters
+        data["variant_id"] = distance_matrix_with_ids.ids
+
+        logger.info("Annotate with HGVS.p ...")
+        annotations = pd.concat([
+            sparse_matrix.loc[:, ["variant_id_one", "hgvs_p_one"]].rename(
+                columns={"variant_id_one": "variant_id", "hgvs_p_one": "hgvs_p"}),
+            sparse_matrix.loc[:, ["variant_id_two", "hgvs_p_two"]].rename(
+                columns={"variant_id_two": "variant_id", "hgvs_p_two": "hgvs_p"})])
+        data = pd.merge(left=data, right=annotations, on="variant_id", how="left")
+        data["tooltip"] = data[["variant_id", "hgvs_p"]].apply(
+            lambda x: "<b>{}</b><br>Variant: {}".format(x[1], x[0]), axis=1)
+
+        logger.info("Annotate with cluster mean Jaccard index...")
+        data["cluster_jaccard_mean"] = 1.0
+        data["cluster_members"] = 0
+        for c in data.cluster.unique():
+            variants_in_cluster = data[data.cluster == c].variant_id.unique()
+            data.cluster_jaccard_mean = np.where(data.cluster == c, sparse_matrix_with_diagonal[
+                (sparse_matrix.variant_id_one.isin(variants_in_cluster)) &
+                (sparse_matrix.variant_id_two.isin(variants_in_cluster)) &
+                (sparse_matrix.variant_id_one != sparse_matrix.variant_id_two)
+            ].jaccard_dissimilarity.mean(), data.cluster_jaccard_mean)
+            data.cluster_members = np.where(data.cluster == c, variants_in_cluster.size, data.cluster_members)
+
+        logger.info("Compose tooltip...")
+        data["tooltip"] = data[["variant_id", "hgvs_p", "cluster_jaccard_mean", "cluster_members"]].apply(
+            lambda x: "<b>{}</b><br>Variant: {}<br>Jaccard mean in cluster:{}<br>Members in cluster: {}".format(
+                x[1], x[0], round(1 - x[2], 3), x[3]), axis=1)
+
+        return data
 
     def get_variant_abundance_histogram(self, bin_size=50) -> pd.DataFrame:
 

@@ -1,4 +1,4 @@
-image: python:3.7-buster
+image: python:3.8-buster
 
 # Change pip's cache directory to be inside the project directory since we can
 # only cache local items.
@@ -24,6 +24,7 @@ before_script:
   - pip install virtualenv
   - virtualenv venv
   - source venv/bin/activate
+  - pip install numpy
 
 stages:
   - validation

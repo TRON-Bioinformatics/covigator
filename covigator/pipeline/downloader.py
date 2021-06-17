@@ -32,13 +32,12 @@ class Downloader:
         md5s = sample_ena.get_fastqs_md5()
         paths = []
         for url, md5 in zip(fastqs, md5s):
-            local_path = self._download_url(sample_ena.run_accession, url)
-            self._check_md5(local_path, md5)
+            local_path = self._download_url(sample_ena.run_accession, url, md5)
             paths.append(local_path)
         logger.info("Downloaded {}: {}".format(sample_ena.run_accession, sample_ena.fastq_ftp))
         return SEPARATOR.join(paths)
 
-    def _download_url(self, run_accession, url):
+    def _download_url(self, run_accession, url, md5):
         """
         This method streams a file (probably large) from a URL and stores it in the local file system
         """
@@ -50,11 +49,8 @@ class Downloader:
         # avoids downloading the same files over and over
         if not os.path.exists(local_full_path):
             pathlib.Path(local_folder).mkdir(parents=True, exist_ok=True)
-
-            # TODO: will this work for very large files?
-            with closing(request.urlopen(url)) as r:
-                with open(local_full_path, 'wb') as f:
-                    shutil.copyfileobj(r, f)
+            request.urlretrieve(url, local_full_path)
+            self._check_md5(local_full_path, md5)
 
         return local_full_path
 

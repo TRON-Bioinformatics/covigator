@@ -1,10 +1,8 @@
-import os
 import abc
 import time
 import traceback
 from datetime import datetime
 from typing import Callable
-
 import typing as typing
 from dask.distributed import Client
 from sqlalchemy.orm import Session
@@ -51,6 +49,7 @@ class AbstractProcessor:
                 # sends the run for processing
                 futures.append(self._process_run(run_accession=job.run_accession))
                 count += 1
+
             # waits for all to finish
             self.dask_client.gather(futures=futures)
             logger.info("Processor finished!")

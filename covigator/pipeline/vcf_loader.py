@@ -1,7 +1,11 @@
+import sqlalchemy
 from cyvcf2 import VCF, Variant
 import os
+
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
-from covigator.database.model import Variant as CovigatorVariant, VariantObservation, Sample
+from covigator.database.model import Variant as CovigatorVariant, VariantObservation, Sample, \
+    SubclonalVariantObservation
 
 
 class VcfLoader:
@@ -14,18 +18,30 @@ class VcfLoader:
         assert session is not None, "Missing DB session"
 
         observed_variants = []
+        subclonal_observed_variants = []
         variant: Variant
         for variant in VCF(vcf_file):
-
-            covigator_variant = self._parse_variant(variant)
-            if covigator_variant:
-                # NOTE: merge checks for existence adds or updates it if required
-                # this variant is not part of the rollback if something else fails
-                session.merge(covigator_variant)
-            session.commit()
-            observed_variants.append(self._parse_variant_observation(variant, sample, covigator_variant))
-
-        session.add_all(observed_variants)  # NOTE: commit will happen afterwards when the job status is updated
+            if variant.FILTER is None or variant.FILTER in ["LOW_FREQUENCY", "SUBCLONAL"]:
+                covigator_variant = self._parse_variant(variant)
+                if covigator_variant:
+                    # NOTE: merge checks for existence adds or updates it if required
+                    # this variant is not part of the rollback if something else fails
+                    session.merge(covigator_variant)
+                    try:
+                        session.commit()
+                    except IntegrityError:
+                        # do nothing the variant was just added by another process between merge and commit
+                        pass
+                if variant.FILTER is None:
+                    # only stores clonal high quality variants in this table
+                    observed_variants.append(
+                        self._parse_variant_observation(variant, sample, covigator_variant, VariantObservation))
+                elif variant.FILTER in ["LOW_FREQUENCY", "SUBCLONAL"]:
+                    subclonal_observed_variants.append(
+                        self._parse_variant_observation(variant, sample, covigator_variant, SubclonalVariantObservation))
+        session.add_all(observed_variants)
+        session.add_all(subclonal_observed_variants)
+        # NOTE: commit will happen afterwards when the job status is updated
 
     def _parse_variant(self, variant: Variant) -> CovigatorVariant:
         parsed_variant = CovigatorVariant(
@@ -55,18 +71,17 @@ class VcfLoader:
                 parsed_variant.aa_pos_length=values[13].strip()
         return parsed_variant
 
-    def _parse_variant_observation(self, variant: Variant, sample: Sample, covigator_variant: CovigatorVariant) -> VariantObservation:
+    def _parse_variant_observation(self, variant: Variant, sample: Sample, covigator_variant: CovigatorVariant, klass):
 
         dp4 = variant.INFO.get("DP4")
-        return VariantObservation(
+        return klass(
             sample=sample.id,
             source=sample.source,
             variant_id=covigator_variant.variant_id,
             chromosome=variant.CHROM,
             position=variant.POS,
             reference=variant.REF,
-            # NOTE: because we only support haploid organisms we expect only one alternate,
-            # TODO: support sublconal variants at some point
+            # NOTE: because variants are normalized we only expect one alternate
             alternate=variant.ALT[0],
             quality=variant.QUAL,
             filter=variant.FILTER,
@@ -75,6 +90,6 @@ class VcfLoader:
             dp4_ref_reverse=dp4[1] if dp4 else None,
             dp4_alt_forward=dp4[2] if dp4 else None,
             dp4_alt_reverse=dp4[3] if dp4 else None,
-            mapping_quality=variant.INFO.get("MQ"),
-            mapping_quality_zero_fraction=variant.INFO.get("MQ0F")
+            vaf=variant.INFO.get("AF"),
+            strand_bias=variant.INFO.get("SB")
         )

@@ -1,3 +1,4 @@
+import json
 import uuid
 from datetime import datetime
 
@@ -15,7 +16,7 @@ from covigator.pipeline.downloader import Downloader
 from covigator.pipeline.ena_pipeline import Pipeline
 from covigator.pipeline.vcf_loader import VcfLoader
 
-NUMBER_RETRIES_DOWNLOADER = 5
+NUMBER_RETRIES_DOWNLOADER = 10
 
 
 class EnaProcessor(AbstractProcessor):
@@ -30,11 +31,11 @@ class EnaProcessor(AbstractProcessor):
         """
         # NOTE: here we set the priority of each step to ensure a depth first processing
         future_download = self.dask_client.submit(EnaProcessor.download_job, self.config, run_accession, priority=-1)
-        future_process = self.dask_client.submit(EnaProcessor.pipeline_job, self.config, future_download, priority=1)
+        future_process = self.dask_client.submit(EnaProcessor.pipeline_job, self.config, future_download, priority=2)
         #future_delete = self.dask_client.submit(EnaProcessor.cleanup_job, self.config, future_process, priority=3)
-        future_load = self.dask_client.submit(EnaProcessor.load_job, self.config, future_process, priority=2)
+        future_load = self.dask_client.submit(EnaProcessor.load_job, self.config, future_process, priority=3)
         future_cooccurrence = self.dask_client.submit(
-            EnaProcessor.cooccurrence_job, self.config, future_load, priority=2)
+            EnaProcessor.cooccurrence_job, self.config, future_load, priority=4)
 
         return future_cooccurrence
 
@@ -72,7 +73,8 @@ class EnaProcessor(AbstractProcessor):
     @staticmethod
     def download(job: JobEna, queries: Queries, config: Configuration):
         # ensures that the download is done with retries, even after MD5 check sum failure
-        download_with_retries = backoff_retrier.wrapper(Downloader(config=config).download, NUMBER_RETRIES_DOWNLOADER)
+        downloader = Downloader(config=config)
+        download_with_retries = backoff_retrier.wrapper(downloader.download, NUMBER_RETRIES_DOWNLOADER)
         sample_ena = queries.find_sample_ena_by_accession(job.run_accession)
         paths = download_with_retries(sample_ena=sample_ena)
         job.fastq_path = paths
@@ -81,9 +83,10 @@ class EnaProcessor(AbstractProcessor):
     @staticmethod
     def run_pipeline(job: JobEna, queries: Queries, config: Configuration):
         fastq1, fastq2 = job.get_fastq1_and_fastq2()
-        vcf = Pipeline(config=config).run(fastq1=fastq1, fastq2=fastq2)
+        vcf_path, qc_path = Pipeline(config=config).run(run_accession=job.run_accession, fastq1=fastq1, fastq2=fastq2)
         job.analysed_at = datetime.now()
-        job.vcf_path = vcf
+        job.vcf_path = vcf_path
+        job.qc = json.load(open(qc_path))
 
     @staticmethod
     def delete(job: JobEna, queries: Queries, config: Configuration):
