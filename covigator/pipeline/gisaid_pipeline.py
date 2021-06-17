@@ -22,7 +22,7 @@ class Variant:
 
     def to_vcf_line(self):
         # transform 0-based position to 1-based position
-        return CHROMOSOME, str(self.position + 1), ".", self.reference, self.alternate, "255", ".", ".", "."
+        return CHROMOSOME, str(self.position + 1), ".", self.reference, self.alternate, ".", "PASS", "."
 
 
 class GisaidPipeline:
@@ -76,23 +76,28 @@ class GisaidPipeline:
             if prev_ref_end is not None and prev_ref_end != ref_start:
                 # deletion
                 if ref_start - prev_ref_end <= 50:  # skips deletions longer than 50 bp
-                    variants.append(Variant(
-                        position=prev_ref_end,
-                        reference=reference[prev_ref_end:ref_start],
-                        alternate=reference[prev_ref_end]))
+                    ref = reference[prev_ref_end:ref_start]
+                    if 'N' not in ref:  # do not call deletions with Ns
+                        variants.append(Variant(
+                            position=prev_ref_end,
+                            reference=ref,
+                            alternate=reference[prev_ref_end]))
             elif prev_ref_end is not None and  prev_alt_end != alt_start:
                 # insertion
                 if alt_start - prev_alt_end <= 50:  # skips insertions longer than 50 bp
-                    variants.append(Variant(
-                        position=prev_ref_end,
-                        reference=reference[prev_ref_end],
-                        alternate=reference[prev_ref_end] + alternate[prev_alt_end+1:alt_start]))
+                    ref = reference[prev_ref_end]
+                    alt = alternate[prev_alt_end+1:alt_start]
+                    if ref != 'N' and 'N' not in alt:   # do not call insertions with Ns
+                        variants.append(Variant(
+                            position=prev_ref_end,
+                            reference=ref,
+                            alternate=ref + alt))
 
             # calls SNVs
             for pos, ref, alt in zip(
                     range(ref_start, ref_end), reference[ref_start: ref_end], alternate[alt_start: alt_end]):
                 # contiguous SNVs are reported separately
-                if ref != alt:
+                if ref != alt and ref != 'N' and alt != 'N':    # do not call SNVs on Ns
                     variants.append(Variant(position=pos, reference=ref, alternate=alt))
 
             prev_ref_end = ref_end
@@ -106,7 +111,7 @@ class GisaidPipeline:
                 "##fileformat=VCFv4.0",
                 "##FILTER=<ID=PASS,Description=\"All filters passed\">",
                 "##contig=<ID=MN908947.3>",
-                "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT"
+                "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO"
             )
             for row in header:
                 vcf_out.write(row + "\n")
