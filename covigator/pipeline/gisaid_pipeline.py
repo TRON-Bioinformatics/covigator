@@ -1,68 +1,119 @@
 #!/usr/bin/env python
-from Bio import SeqIO, pairwise2
+import os
+import pathlib
+from dataclasses import dataclass
+from Bio import Align
+from Bio.Align import PairwiseAlignment
+from logzero import logger
+from typing import List
 from covigator.configuration import Configuration
+from covigator.database.model import SampleGisaid
+from covigator.database.queries import Queries
+from covigator.misc.compression import decompress_sequence
+
+CHROMOSOME = "MN908947.3"
+
+
+@dataclass
+class Variant:
+    position: int
+    reference: str
+    alternate: str
+
+    def to_vcf_line(self):
+        # transform 0-based position to 1-based position
+        return CHROMOSOME, str(self.position + 1), ".", self.reference, self.alternate, ".", "PASS", "."
 
 
 class GisaidPipeline:
 
-    gisaid_file = "/scratch/info/projects/SARS-CoV-2/gisaid/gisaid_cov2020_sequences_01APR2020_human_host_low_cov_excl.fasta"
-
-    def __init__(self, config: Configuration):
+    def __init__(self, config: Configuration, queries: Queries):
         self.config = config
+        self.genes = {g.name: g for g in queries.get_genes()}
 
-    def get_sequence(self, sequence_id):
-        for record in SeqIO.parse(self.gisaid_file, "fasta"):
-            if sequence_id == record.id:
-                return record.seq
-        return None
-
-    def run_alignment(self, sequence_id):
-        sequence = self.get_sequence(sequence_id)
-        reference = SeqIO.read(self.config.reference_genome, "fasta")
-        alignments = pairwise2.align.globalxx(sequence, reference.seq)
-        aln = alignments[0]
-        seq1 = aln[0]
-        seq2 = aln[1]
-        print(aln)
-
-        return aln
-
-
-    def call_mutations(self, alignment):
-        #CHROM  POS     ID      REF     ALT     QUAL    FILTER  INFO    FORMAT  /home/sorn/development/ngs_pipelines/covigator/covigator/processor/test_folder/Aligned.out.bam
-        #MN908947.3      9924    .       C       T       228     .       DP=139;VDB=0.784386;SGB=-0.693147;RPB=0.696296;MQB=1;MQSB=1;BQB=0.740741;MQ0F=0;AC=1;AN=1;DP4=2,0,123,12;MQ=60  GT:PL   1:255,0
+    def run(self, sample: SampleGisaid):
+        logger.info("Processing {}".format(sample.run_accession))
         mutations = []
-        seq1 = alignment[0]
-        seq2 = alignment[1]
+        for g, s in sample.sequence.items():
+            gene = self.genes.get(g)
+            # the sequences corresponding to protein domains are not called right now
+            if gene is not None:
+                alignment = self._run_alignment(
+                    sequence=decompress_sequence(s).strip("*"), reference=gene.sequence)
+                mutations.extend(self._call_mutations(alignment=alignment))
+        local_folder = os.path.join(self.config.storage_folder, sample.run_accession)
+        if not os.path.exists(local_folder):
+            pathlib.Path(local_folder).mkdir(parents=True, exist_ok=True)
+        output_vcf = os.path.join(local_folder, "gisaid.vcf")
         
-        for i in range(len(seq2)):
-            if seq1[i] != seq2[i]:
-                mutations.append(("MN908947.3", str(i), ".", seq2[i], seq1[i], "255", ".", ".", "."))
+        self._output_vcf(mutations, output_vcf)
+        return output_vcf
 
-        return mutations
+    def _run_alignment(self, sequence: str, reference: str) -> PairwiseAlignment:
+        aligner = Align.PairwiseAligner()
+        aligner.mode = 'global'
+        aligner.match = 2
+        aligner.mismatch = -1
+        aligner.open_gap_score = -3
+        aligner.extend_gap_score = -0.1
+        aligner.target_end_gap_score = 0.0
+        aligner.query_end_gap_score = 0.0
+        alignments = aligner.align(reference, sequence)
+        return alignments[0]
+
+    def _call_mutations(self, alignment: PairwiseAlignment) -> List[Variant]:
+        #CHROM  POS     ID      REF     ALT     QUAL    FILTER  INFO    FORMAT
+        #MN908947.3      9924    .       C       T       228     .       DP=139;VDB=0.784386;SGB=-0.693147;RPB=0.696296;MQB=1;MQSB=1;BQB=0.740741;MQ0F=0;AC=1;AN=1;DP4=2,0,123,12;MQ=60  GT:PL   1:255,0
+        alternate = alignment.query
+        reference = alignment.target
+
+        variants = []
+        prev_ref_end = None
+        prev_alt_end = None
+        for (ref_start, ref_end), (alt_start, alt_end) in zip(alignment.aligned[0], alignment.aligned[1]):
+            # calls indels
+            # NOTE: it does not call indels at beginning and end of sequence
+            if prev_ref_end is not None and prev_ref_end != ref_start:
+                # deletion
+                if ref_start - prev_ref_end <= 50:  # skips deletions longer than 50 bp
+                    ref = reference[prev_ref_end:ref_start]
+                    if 'N' not in ref:  # do not call deletions with Ns
+                        variants.append(Variant(
+                            position=prev_ref_end,
+                            reference=ref,
+                            alternate=reference[prev_ref_end]))
+            elif prev_ref_end is not None and  prev_alt_end != alt_start:
+                # insertion
+                if alt_start - prev_alt_end <= 50:  # skips insertions longer than 50 bp
+                    ref = reference[prev_ref_end]
+                    alt = alternate[prev_alt_end+1:alt_start]
+                    if ref != 'N' and 'N' not in alt:   # do not call insertions with Ns
+                        variants.append(Variant(
+                            position=prev_ref_end,
+                            reference=ref,
+                            alternate=ref + alt))
+
+            # calls SNVs
+            for pos, ref, alt in zip(
+                    range(ref_start, ref_end), reference[ref_start: ref_end], alternate[alt_start: alt_end]):
+                # contiguous SNVs are reported separately
+                if ref != alt and ref != 'N' and alt != 'N':    # do not call SNVs on Ns
+                    variants.append(Variant(position=pos, reference=ref, alternate=alt))
+
+            prev_ref_end = ref_end
+            prev_alt_end = alt_end
+
+        return variants
     
-    def output_vcf(self, mutations):
-        with open("gisaid.vcf", "w") as vcf_out:
-            vcf_out.write("#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\n")
+    def _output_vcf(self, mutations, output_vcf):
+        with open(output_vcf, "w") as vcf_out:
+            header = (
+                "##fileformat=VCFv4.0",
+                "##FILTER=<ID=PASS,Description=\"All filters passed\">",
+                "##contig=<ID=MN908947.3>",
+                "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO"
+            )
+            for row in header:
+                vcf_out.write(row + "\n")
             for row in mutations:
-                vcf_out.write("\t".join(row) + "\n")
-
-    def run(self, run_accession: str):
-        print("Processing {}".format(run_accession))
-        alignment = self.run_alignment(run_accession)
-        mutations = self.call_mutations(alignment)
-        vcf_file = self.output_vcf(mutations)
-
-        return vcf_file
-
-
-if __name__ == "__main__":
-    # For now just read in the whole GISAID protein sequences
-    # in order to test this
-    # Populate DB later and only run for new sequences
-
-    gisaid_file = "/scratch/info/projects/SARS-CoV-2/gisaid/gisaid_cov2020_sequences_01APR2020_human_host_low_cov_excl.fasta"
-    sequence_id = "hCoV-19/USA/WA-S95/2020|EPI_ISL_417148|2020-02-28"
-    pipe = Pipeline()
-
-    vcf_file = pipe.run(sequence_id)
+                vcf_out.write("\t".join(row.to_vcf_line()) + "\n")

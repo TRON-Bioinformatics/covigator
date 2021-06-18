@@ -241,7 +241,7 @@ class QueriesTests(TestCase):
         self.assertIsNotNone(genes)
         self.assertGreater(len(genes), 0)
         for g in genes:
-            self.assertIsInstance(g, str)
+            self.assertIsInstance(g, Gene)
 
     def test_get_gene(self):
         gene = self.queries.get_gene("S")

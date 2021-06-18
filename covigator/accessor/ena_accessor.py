@@ -1,13 +1,11 @@
 from datetime import date, datetime
-
-import pycountry
-import pycountry_convert
 import requests
 from sqlalchemy.orm import Session
 from covigator.misc import backoff_retrier
 from covigator.database.model import SampleEna, JobEna, Sample, DataSource, Log, CovigatorModule
 from covigator.database.database import Database
 from logzero import logger
+from covigator.misc.country_parser import CountryParser
 
 NUMBER_RETRIES = 5
 
@@ -81,6 +79,7 @@ class EnaAccessor:
         self.excluded_existing = 0
         self.included = 0
         self.excluded = 0
+        self.country_parser = CountryParser()
 
         # this ensures there is a retry mechanism in place with a limited number of retries
         self.get_with_retries = backoff_retrier.wrapper(requests.get, NUMBER_RETRIES)
@@ -162,38 +161,29 @@ class EnaAccessor:
             ena_id=sample_ena.run_accession
         )
 
-    def _parse_country(self, ena_run):
-        ena_run.country_raw = ena_run.country
-        if ena_run.country_raw is not None and ena_run.country_raw.strip() == "":
-            ena_run.country_raw = None
-        try:
-            match = pycountry.countries.search_fuzzy(ena_run.country_raw.split(":")[0])[0]
-            ena_run.country = match.name
-            ena_run.country_alpha_2 = match.alpha_2
-            ena_run.country_alpha_3 = match.alpha_3
-            ena_run.continent_alpha_2 = pycountry_convert.country_alpha2_to_continent_code(ena_run.country_alpha_2)
-            ena_run.continent = pycountry_convert.convert_continent_code_to_continent_name(ena_run.continent_alpha_2)
-        except (LookupError, AttributeError):
-            #logger.error("Error parsing country {}. Filling with NAs".format(ena_run.country))
-            ena_run.country = "Not available"
-            ena_run.country_alpha_2 = "None"    # don't use NA as that is the id of Namibia
-            ena_run.country_alpha_3 = "None"
-            ena_run.continent_alpha_2 = "None"
-            ena_run.continent = "None"
+    def _parse_country(self, sample: SampleEna):
+        parsed_country = self.country_parser.parse_country(
+            sample.country.split(":")[0] if sample.country else "")
+        sample.country_raw = sample.country
+        sample.country = parsed_country.country
+        sample.country_alpha_2 = parsed_country.country_alpha_2
+        sample.country_alpha_3 = parsed_country.country_alpha_3
+        sample.continent_alpha_2 = parsed_country.continent_alpha_2
+        sample.continent = parsed_country.continent
 
     def _parse_dates(self, ena_run):
         ena_run.collection_date = self._parse_abstract(ena_run.collection_date, date.fromisoformat)
         ena_run.first_created = self._parse_abstract(ena_run.first_created, date.fromisoformat)
 
     def _parse_ena_run(self, run):
-        ena_run = SampleEna(**run)
-        self._parse_country(ena_run)
-        self._parse_dates(ena_run)
-        self._parse_numeric_fields(ena_run)
-        fastqs = ena_run.get_fastqs_ftp()
+        sample = SampleEna(**run)
+        self._parse_country(sample)
+        self._parse_dates(sample)
+        self._parse_numeric_fields(sample)
+        fastqs = sample.get_fastqs_ftp()
         # annotates with the number of FASTQ files, this is useful as we hold the FASTQs in a single string
-        ena_run.num_fastqs = 0 if fastqs is None or fastqs == [""] else len(fastqs)
-        return ena_run
+        sample.num_fastqs = 0 if fastqs is None or fastqs == [""] else len(fastqs)
+        return sample
 
     def _parse_numeric_fields(self, ena_run):
         ena_run.nominal_length = self._parse_abstract(ena_run.nominal_length, int)

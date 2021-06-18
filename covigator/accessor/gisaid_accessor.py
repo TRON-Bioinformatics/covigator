@@ -1,72 +1,31 @@
-import csv
 from datetime import date, datetime
-import os
-import pycountry
-import pycountry_convert
 from sqlalchemy.orm import Session
 from covigator.database.model import SampleGisaid, JobGisaid, Sample, DataSource, Log, CovigatorModule
 from covigator.database.database import Database
 from logzero import logger
+from Bio import SeqIO
+import time
+from covigator.misc.compression import compress_sequence
+from covigator.misc.country_parser import CountryParser
+
+BATCH_SIZE = 1000
 
 
 class GisaidAccessor:
-    
-    GISAID_FIELDS = [
-        # data on run
-        "virus_name",
-        "collection_date",
-        "instrument_platform",
-        "instrument_model",
-        "assembly_method",
-        # data on host
-        "host",
-        "host_body_site",
-        # geographical data
-        "lat",
-        "lon",
-        "country"
-    ]
 
-    INCLUDED_INSTRUMENT_PLATFORMS = [
-        "ILLUMINA",
-        "ION TORRENT",
-        "SANGER",
-        "MGISEQ",
-        "NANOPORE",
-        "BGISEQ",
-        "BIOELECTRONSEQ",
-        "PACBIO",
-        "THERMOFISHER",
-        "UNKNOWN"
-    ]
-
-    # Not normalized within GISAID data; too many; will not be used for now
-    INCLUDED_ASSEMBLY_METHODS = [
-        "ARTICv3",
-        "BBMap",
-        "CLC Genomics workbench",
-        "DNAStar",
-        "Seattle Flu Assembly Pipeline",
-        "Geneious Prime"
-    ]
-
-    def __init__(self, input_file: str, host_tax_id: str, database: Database, maximum=None):
+    def __init__(self, input_fasta: str, input_metadata: str, database: Database):
         self.start_time = datetime.now()
-        self.input_file = input_file
+        self.input_fasta = input_fasta
+        self.input_metadata = input_metadata
         self.has_error = False
-        self.host_tax_id = host_tax_id
-        assert self.host_tax_id is not None and self.host_tax_id.strip() != "", "Empty host tax id"
-        logger.info("Host tax id {}".format(self.host_tax_id))
+
         self.database = database
         assert self.database is not None, "Empty database"
-        self.maximum = maximum
 
-        self.excluded_samples_by_host_tax_id = {}
-        self.excluded_samples_by_instrument_platform = {}
-        self.excluded_samples_by_assembly_method = {}
+        self.excluded_by_host = 0
         self.excluded_existing = 0
         self.included = 0
-        self.excluded = 0
+        self.country_parser = CountryParser()
 
     def access(self):
         session = self.database.get_database_session()
@@ -74,10 +33,8 @@ class GisaidAccessor:
         # it assumes there will be no repetitions
         existing_sample_ids = [value for value, in session.query(SampleGisaid.run_accession).all()]
         try:
-            list_runs = self._get_gisaid_runs()
-            logger.info("Read file of {} GISAID samples".format(len(list_runs)))
-            self._process_runs(list_runs, existing_sample_ids, session)
-
+            num_samples = self.process(existing_sample_ids, session)
+            logger.info("Read file of {} GISAID samples".format(num_samples))
         except Exception as e:
             logger.exception(e)
             session.rollback()
@@ -86,80 +43,111 @@ class GisaidAccessor:
             self._write_execution_log(session)
             session.close()
             self._log_results()
+            logger.info("Finished GISAID accessor")
 
-    def _get_gisaid_runs(self):
-        # Exemplary columns to be read
-        # 'Virus name': 'hCoV-19/USA/MA-MGH-00523/2020', 
-        # 'Accession ID': 'EPI_ISL_460262', 
-        # 'Collection date': '2020-03-18', 
-        # 'Location': 'North America / USA / Massachusetts', 
-        # 'Host': 'Human', 
-        # 'Passage': 'Original', 
-        # 'Specimen': 'oronasopharynx', 
-        # 'Additional host information': '', 
-        # 'Sequencing technology': 'Illumina NovaSeq', 
-        # 'Assembly method': '', 
-        # 'Comment': '', 
-        # 'Comment type': '', 
-        # 'Lineage': 'B.1', 
-        # 'Clade': 'GH'
+    def process(self, existing_sample_ids, session) -> int:
+        meta_dict = {}
+        logger.info("Reading metadata file...")
+        with open(self.input_metadata) as metadata:
+            for line in metadata:
+                elements = line.rstrip().split("\t")
+                virus_name = elements[0]
+                virus_type = elements[1]
+                accession_id = elements[2]
+                collection_date = elements[3]
+                location = elements[4]
+                host = elements[7]
+                meta_dict[virus_name] = (virus_type, accession_id, collection_date, location, host)
+        logger.info("Metadata (num_samples={}) loaded.".format(len(meta_dict)))
 
-        results = []
-        with open(self.input_file) as infile:
-            reader = csv.DictReader(infile, delimiter='\t')
-            #{'run_accession': 'EPI_ISL_463264', 
-            # 'virus_name': 'hCoV-19/Canada/BC_27280425/2020', 
-            # 'collection_date': '2020-03', 
-            # 'host': 'Human', 
-            # 'host_body_site': 'NA', 
-            # 'instrument_platform': 'nanopore', 
-            # 'instrument_model': 'oxford nanopore', 
-            # 'country': 'Canada'}
-            for row in reader:
-                fields = {}
-                fields["host_tax_id"] = self.host_tax_id
-                fields["run_accession"] = row["accession_id"]
-                fields["virus_name"] = row["virus_name"]
-                fields["collection_date"] = row["collection_date"]
-                fields["host"] = row["host"]
-                fields["host_body_site"] = row["specimen"]
-                fields["instrument_platform"] = row["sequencing_class"]
-                #if "ILLUMINA" in row["sequencing_technology"].upper():
-                #    fields["instrument_platform"] = "ILLUMINA"
-                #else:
-                #    fields["instrument_platform"] = "unknown"
-                fields["instrument_model"] = row["sequencing_technology"]
-                #fields["assembly_method"] = row["assembly_method"]
-                fields["country"] = row["location"].split("/")[1].strip()
-                results.append(fields)
-        return results
+        num_samples = 0
+        gisaid_samples = set()
+        total_time = 0
+        logger.info("Reading FASTA...")
+        samples_gisaid = []
+        jobs_and_samples = []
+        for record in SeqIO.parse(self.input_fasta, "fasta"):
+            start = time.time()
 
-    def _process_runs(self, list_runs, existing_sample_ids, session: Session):
+            fields = record.description.split("|")
+            identifier = fields[0]
 
-        included_samples = []
-        included_samples_gisaid = []
-        included_jobs = []
-        for run in list_runs:
-            if run.get("run_accession") in existing_sample_ids:
+            if identifier in gisaid_samples:
+                continue
+            gisaid_samples.add(identifier)
+
+            if identifier in existing_sample_ids:
+                num_samples += 1
+                # we skip samples already in the database
                 self.excluded_existing += 1
-                continue    # skips runs already registered in the database
-            if not self._complies_with_inclusion_criteria(run):
-                continue    # skips runs not complying with inclusion criteria
-            # NOTE: this parse operation is costly
-            sample_gisaid = self._parse_gisaid_run(run)
+                continue
+
+            metadata = meta_dict.get(identifier)
+            if not metadata:
+                continue
+            
+            location_list = metadata[3].split("/")
+            country_raw = "None"
+            try:
+                country_raw = location_list[1].strip()
+            except:
+                pass
+            region = "None"
+            try:
+                region = location_list[2].strip()
+            except:
+                pass
+
+            host = metadata[4].lower().strip()
+            if host != "human":
+                num_samples += 1
+                self.excluded_by_host += 1
+                continue
+
+            sample_gisaid = SampleGisaid(
+                run_accession=identifier,
+                date=metadata[2],
+                host_tax_id=None,
+                host=host,
+                country_raw=country_raw,
+                region=region,
+                country=None,
+                country_alpha_2=None,
+                country_alpha_3=None,
+                continent=None,
+                continent_alpha_2=None,
+                site=None,
+                site2=None,
+                sequence={"MN908947.3": compress_sequence(record.seq)}
+            )
+
+            self._parse_country(sample_gisaid)
+            self._parse_dates(sample_gisaid)
             sample = self._build_sample(sample_gisaid)
-            self.included += 1
-            included_samples_gisaid.append(sample_gisaid)
-            included_samples.append(sample)
-            included_jobs.append(JobGisaid(run_accession=sample_gisaid.run_accession))
-        if len(included_samples) > 0:
-            session.add_all(included_samples_gisaid)
+            job = JobGisaid(run_accession=sample_gisaid.run_accession)
+            samples_gisaid.append(sample_gisaid)
+            jobs_and_samples.append(job)
+            jobs_and_samples.append(sample)
+            num_samples += 1
+            end = time.time()
+            total_time += end - start
+
+            if len(samples_gisaid) == BATCH_SIZE:
+                session.add_all(samples_gisaid)
+                session.commit()
+                session.add_all(jobs_and_samples)
+                session.commit()
+                samples_gisaid = []
+                jobs_and_samples = []
+
+        if len(samples_gisaid) > 0:
+            session.add_all(samples_gisaid)
             session.commit()
-            session.add_all(included_samples)
-            session.add_all(included_jobs)
+            session.add_all(jobs_and_samples)
             session.commit()
-            logger.info("Added {} new GISAID samples".format(len(included_samples)))
-        logger.info("Processed {} GISAID samples".format(len(list_runs)))
+        if num_samples > 0:
+            logger.info("It took {} secs/sample on average".format(float(total_time) / num_samples))
+        return num_samples
 
     def _build_sample(self, sample_gisaid):
         return Sample(
@@ -168,39 +156,16 @@ class GisaidAccessor:
             gisaid_id=sample_gisaid.run_accession
         )
 
-    def _parse_country(self, gisaid_run):
-        gisaid_run.country_raw = gisaid_run.country
-        if gisaid_run.country_raw is not None and gisaid_run.country_raw.strip() == "":
-            gisaid_run.country_raw = None
-        try:
-            match = pycountry.countries.search_fuzzy(gisaid_run.country_raw.split("/")[0])[0]
-            gisaid_run.country = match.name
-            gisaid_run.country_alpha_2 = match.alpha_2
-            gisaid_run.country_alpha_3 = match.alpha_3
-            gisaid_run.continent_alpha_2 = pycountry_convert.country_alpha2_to_continent_code(gisaid_run.country_alpha_2)
-            gisaid_run.continent = pycountry_convert.convert_continent_code_to_continent_name(gisaid_run.continent_alpha_2)
-        except (LookupError, AttributeError):
-            #logger.error("Error parsing country {}. Filling with NAs".format(gisaid_run.country))
-            gisaid_run.country = "Not available"
-            gisaid_run.country_alpha_2 = "None"    # don't use NA as that is the id of Namibia
-            gisaid_run.country_alpha_3 = "None"
-            gisaid_run.continent_alpha_2 = "None"
-            gisaid_run.continent = "None"
+    def _parse_country(self, gisaid_sample: SampleGisaid):
+        parsed_country = self.country_parser.parse_country(gisaid_sample.country_raw)
+        gisaid_sample.country = parsed_country.country
+        gisaid_sample.country_alpha_2 = parsed_country.country_alpha_2
+        gisaid_sample.country_alpha_3 = parsed_country.country_alpha_3
+        gisaid_sample.continent_alpha_2 = parsed_country.continent_alpha_2
+        gisaid_sample.continent = parsed_country.continent
 
-    def _parse_dates(self, gisaid_run):
-        gisaid_run.collection_date = self._parse_abstract(gisaid_run.collection_date, date.fromisoformat)
-        gisaid_run.first_created = self._parse_abstract(gisaid_run.first_created, date.fromisoformat)
-
-    def _parse_gisaid_run(self, run):
-        gisaid_run = SampleGisaid(**run)
-        self._parse_country(gisaid_run)
-        self._parse_dates(gisaid_run)
-        self._parse_numeric_fields(gisaid_run)
-        return gisaid_run
-
-    def _parse_numeric_fields(self, gisaid_run):
-        gisaid_run.lat = self._parse_abstract(gisaid_run.lat, float)
-        gisaid_run.lon = self._parse_abstract(gisaid_run.lon, float)
+    def _parse_dates(self, gisaid_sample: SampleGisaid):
+        gisaid_sample.date = self._parse_abstract(gisaid_sample.date, date.fromisoformat)
 
     def _parse_abstract(self, value, type):
         try:
@@ -209,38 +174,10 @@ class GisaidAccessor:
             value = None
         return value
 
-    def _complies_with_inclusion_criteria(self, gisaid_run: dict):
-        # NOTE: this uses the original dictionary instead of the parsed SampleGisaid class for performance reasons
-        included = True
-        host_tax_id = gisaid_run.get("host_tax_id")
-        if host_tax_id is None or host_tax_id.strip() == "" or host_tax_id != self.host_tax_id:
-            included = False    # skips runs where the host is empty or does not match
-            self.excluded_samples_by_host_tax_id[str(host_tax_id)] = \
-                self.excluded_samples_by_host_tax_id.get(str(host_tax_id), 0) + 1
-        # too messy within GISAID metadata; requires normalization; maybe skip for now
-        instrument_platform = gisaid_run.get("instrument_platform")
-        if instrument_platform.upper() not in self.INCLUDED_INSTRUMENT_PLATFORMS:
-            included = False    # skips non Illumina data
-            self.excluded_samples_by_instrument_platform[str(instrument_platform)] = \
-                self.excluded_samples_by_instrument_platform.get(str(instrument_platform), 0) + 1
-        # too messy within GISAID metadata; requires normalization; maybe skip for now
-        #assembly_method = gisaid_run.get("assembly_method")
-        #if assembly_method not in self.INCLUDED_ASSEMBLY_METHODS:
-        #    included = False  # skips not included library strategies
-        #    self.excluded_samples_by_assembly_method[str(assembly_method)] = \
-        #        self.excluded_samples_by_assembly_method.get(str(assembly_method), 0) + 1
-        if not included:
-            self.excluded += 1
-        return included
-
     def _log_results(self):
         logger.info("Included new runs = {}".format(self.included))
         logger.info("Excluded already existing runs = {}".format(self.excluded_existing))
-        logger.info("Total excluded runs by selection criteria = {}".format(self.excluded))
-        # logger.info("Excluded due to empty FASTQ FTP URL runs = {}".format(self.excluded_samples_by_fastq_ftp))
-        logger.info("Excluded by platform runs = {}".format(self.excluded_samples_by_instrument_platform))
-        logger.info("Excluded by host if runs = {}".format(self.excluded_samples_by_host_tax_id))
-        logger.info("Excluded by assembly method = {}".format(self.excluded_samples_by_assembly_method))
+        logger.info("Excluded non human host = {}".format(self.excluded_by_host))
 
     def _write_execution_log(self, session: Session):
         end_time = datetime.now()
@@ -254,10 +191,7 @@ class GisaidAccessor:
                 "included": self.included,
                 "excluded": {
                     "existing": self.excluded_existing,
-                    "excluded_by_criteria": self.excluded,
-                    #"platform": self.excluded_samples_by_instrument_platform,
-                    #"assembly_method": self.excluded_samples_by_assembly_method,
-                    "host": self.excluded_samples_by_host_tax_id
+                    "excluded_by_host": self.excluded_by_host
                 }
             }
         ))

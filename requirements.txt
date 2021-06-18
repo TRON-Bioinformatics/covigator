@@ -14,4 +14,5 @@ dash_bio==0.6.1
 faker==8.8.0
 colorlover==0.3.0
 biopython==1.76
+lz4==3.1.3
 scikit-bio==0.5.6

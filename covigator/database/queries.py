@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session, aliased
 from sqlalchemy.sql.sqltypes import NullType
 
 from covigator.database.model import Log, DataSource, CovigatorModule, SampleEna, JobEna, JobStatus, VariantObservation, \
-    Gene, Variant, VariantCooccurrence, Conservation, JobGisaid
+    Gene, Variant, VariantCooccurrence, Conservation, JobGisaid, SampleGisaid
 
 SYNONYMOUS_VARIANT = "synonymous_variant"
 
@@ -74,6 +74,9 @@ class Queries:
     def find_sample_ena_by_accession(self, run_accession: str) -> SampleEna:
         return self.session.query(SampleEna).filter(SampleEna.run_accession == run_accession).first()
 
+    def find_sample_gisaid_by_accession(self, run_accession: str) -> SampleGisaid:
+        return self.session.query(SampleGisaid).filter(SampleGisaid.run_accession == run_accession).first()
+
     def get_accumulated_samples_by_country(self) -> pd.DataFrame:
         """
         Returns a DataFrame with columns: data, country, cumsum, count
@@ -124,8 +127,8 @@ class Queries:
     def get_gene(self, gene_name: str):
         return self.session.query(Gene).filter(Gene.name == gene_name).first()
 
-    def get_genes(self):
-        return [g[0] for g in self.session.query(Gene.name).order_by(Gene.start).all()]
+    def get_genes(self) -> List[Gene]:
+        return self.session.query(Gene).order_by(Gene.start).all()
 
     def get_genes_metadata(self):
         return self.session.query(Gene).order_by(Gene.start).all()

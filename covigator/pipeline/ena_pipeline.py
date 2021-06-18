@@ -11,6 +11,8 @@ class Pipeline:
 
     def __init__(self, config: Configuration):
         self.config = config
+        assert self.config.reference_genome is not None and os.path.exists(self.config.reference_genome), \
+            "Please configure the reference genome in the variable {}".format(self.config.ENV_COVIGATOR_REF_FASTA)
 
     def run(self, run_accession: str, fastq1: str, fastq2: str = None):
 

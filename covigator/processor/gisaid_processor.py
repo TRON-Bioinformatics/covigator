@@ -34,9 +34,11 @@ class GisaidProcessor(AbstractProcessor):
 
     @staticmethod
     def run_pipeline(job: JobGisaid, queries: Queries, config: Configuration):
-        vcf = GisaidPipeline(config=config).run(run_accession=job.run_accession)
+        sample = queries.find_sample_gisaid_by_accession(job.run_accession)
+        vcf = GisaidPipeline(config=config, queries=queries).run(sample=sample)
         job.analysed_at = datetime.now()
         job.vcf_path = vcf
+        return job.run_accession
 
     @staticmethod
     def load(job: JobGisaid, queries: Queries, config: Configuration):
@@ -44,3 +46,4 @@ class GisaidProcessor(AbstractProcessor):
             vcf_file=job.vcf_path, sample=Sample(id=job.run_accession, source=DataSource.GISAID),
             session=queries.session)
         job.loaded_at = datetime.now()
+        return job.run_accession

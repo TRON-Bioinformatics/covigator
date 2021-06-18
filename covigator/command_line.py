@@ -42,16 +42,15 @@ def gisaid_accessor():
     parser = ArgumentParser(
         description="Covigator {} GISAID accessor".format(covigator.VERSION))
     parser.add_argument(
-        "--host-tax-id",
-        dest="host_tax_id",
-        help="the taxonomy id of the host organism, eg: 9606 for Homo sapiens",
+        "--input-fasta",
+        dest="input_fasta",
+        help="the FASTA input file from GISAID",
         required=True
     )
     parser.add_argument(
-        "--input-file",
-        dest="input_file",
-        help="the metadata input file from GISAID "
-             "(/scratch/info/projects/SARS-CoV-2/gisaid/gisaid_hcov-19_2020_10_02_11_ST_corrected_v2.tsv)",
+        "--input-metadata",
+        dest="input_metadata",
+        help="GISAID metadata file",
         required=True
     )
 
@@ -59,8 +58,7 @@ def gisaid_accessor():
 
     config = Configuration()
     covigator.configuration.initialise_logs(config.logfile_accesor)
-    GisaidAccessor(input_file=args.input_file, host_tax_id=args.host_tax_id,
-                   database=Database(initialize=True, config=config)).access()
+    GisaidAccessor(input_fasta=args.input_fasta, input_metadata=args.input_metadata, database=Database(initialize=True, config=config)).access()
 
 
 def processor():

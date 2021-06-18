@@ -45,6 +45,7 @@ class Gene(Base):
     name = Column(String)
     start = Column(Integer, index=True)
     end = Column(Integer)
+    sequence = Column(String)
     data = Column(JSON)
 
     def get_pfam_domains(self):
@@ -91,25 +92,21 @@ class SampleGisaid(Base):
     __tablename__ = SAMPLE_GISAID_TABLE_NAME
 
     run_accession = Column(String, primary_key=True)
-    virus_name = Column(String)
-    first_created = Column(Date)
-    collection_date = Column(Date)
-    instrument_platform = Column(String)
-    instrument_model = Column(String)
-    assembly_method = Column(String)
+    date = Column(Date)
     # Host information
     host_tax_id = Column(String)
     host = Column(String)
-    host_body_site = Column(String)
     # geographical data
-    lat = Column(Float)
-    lon = Column(Float)
     country_raw = Column(String)
+    region = Column(String)
     country = Column(String)
     country_alpha_2 = Column(String)
     country_alpha_3 = Column(String)
     continent = Column(String)
     continent_alpha_2 = Column(String)
+    site = Column(String)
+    site2 = Column(String)
+    sequence = Column(JSON)
 
 
 class SampleEna(Base):
@@ -196,19 +193,13 @@ class JobGisaid(Base):
     run_accession = Column(ForeignKey("{}.run_accession".format(SampleGisaid.__tablename__)), primary_key=True)
 
     # job status
-    status = Column(Enum(JobStatus), default=JobStatus.PENDING)
+    status = Column(Enum(JobStatus, name=JobStatus.__constraint_name__), default=JobStatus.PENDING)
     created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.now())
     queued_at = Column(DateTime(timezone=True))
-    #downloaded_at = Column(DateTime(timezone=True))
     analysed_at = Column(DateTime(timezone=True))
-    #cleaned_at = Column(DateTime(timezone=True))
     loaded_at = Column(DateTime(timezone=True))
     failed_at = Column(DateTime(timezone=True))
     error_message = Column(String)
-
-    # TODO: Test DB size, sequence should be approx 30000bp, compress maybe
-    sequence = Column(String)
-    # local files storage
     vcf_path = Column(String)
 
 

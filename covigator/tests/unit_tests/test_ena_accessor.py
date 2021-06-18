@@ -315,7 +315,7 @@ class EnaAccessorTests(TestCase):
         self.assertEqual(run.continent_alpha_2, "None")
         self.assertEqual(run.continent, "None")
         run = session.query(SampleEna).filter(SampleEna.run_accession == "ERR4080487").first()
-        self.assertEqual(run.country_raw, None)
+        self.assertEqual(run.country_raw, "")
         self.assertEqual(run.country, "Not available")
         self.assertEqual(run.country_alpha_2, "None")
         self.assertEqual(run.country_alpha_3, "None")

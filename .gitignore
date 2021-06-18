@@ -10,7 +10,6 @@ covigator.egg-info
 *.fastq.gz
 *.sqlite
 *.lock
-*.fa
 logs
 .ipynb_checkpoints
 data
