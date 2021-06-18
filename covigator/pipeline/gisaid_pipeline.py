@@ -25,29 +25,12 @@ class Variant:
         return CHROMOSOME, str(self.position + 1), ".", self.reference, self.alternate, ".", "PASS", "."
 
 
-class GisaidPipeline:
+class AssemblyVariantCaller:
 
-    def __init__(self, config: Configuration, queries: Queries):
-        self.config = config
-        self.genes = {g.name: g for g in queries.get_genes()}
-
-    def run(self, sample: SampleGisaid):
-        logger.info("Processing {}".format(sample.run_accession))
-        mutations = []
-        for g, s in sample.sequence.items():
-            gene = self.genes.get(g)
-            # the sequences corresponding to protein domains are not called right now
-            if gene is not None:
-                alignment = self._run_alignment(
-                    sequence=decompress_sequence(s).strip("*"), reference=gene.sequence)
-                mutations.extend(self._call_mutations(alignment=alignment))
-        local_folder = os.path.join(self.config.storage_folder, sample.run_accession)
-        if not os.path.exists(local_folder):
-            pathlib.Path(local_folder).mkdir(parents=True, exist_ok=True)
-        output_vcf = os.path.join(local_folder, "gisaid.vcf")
-        
-        self._output_vcf(mutations, output_vcf)
-        return output_vcf
+    def call_variants(self, sequence: str, reference: str) -> List[Variant]:
+        alignment = self._run_alignment(sequence=sequence, reference=reference)
+        variants = self._call_mutations(alignment)
+        return variants
 
     def _run_alignment(self, sequence: str, reference: str) -> PairwiseAlignment:
         aligner = Align.PairwiseAligner()
@@ -62,8 +45,10 @@ class GisaidPipeline:
         return alignments[0]
 
     def _call_mutations(self, alignment: PairwiseAlignment) -> List[Variant]:
-        #CHROM  POS     ID      REF     ALT     QUAL    FILTER  INFO    FORMAT
-        #MN908947.3      9924    .       C       T       228     .       DP=139;VDB=0.784386;SGB=-0.693147;RPB=0.696296;MQB=1;MQSB=1;BQB=0.740741;MQ0F=0;AC=1;AN=1;DP4=2,0,123,12;MQ=60  GT:PL   1:255,0
+        # CHROM  POS     ID      REF     ALT     QUAL    FILTER  INFO    FORMAT
+        # MN908947.3      9924    .       C       T       228     .
+        # DP=139;VDB=0.784386;SGB=-0.693147;RPB=0.696296;MQB=1;MQSB=1;BQB=0.740741;MQ0F=0;AC=1;AN=1;DP4=2,0,123,12;MQ=60
+        # GT:PL   1:255,0
         alternate = alignment.query
         reference = alignment.target
 
@@ -76,17 +61,17 @@ class GisaidPipeline:
             if prev_ref_end is not None and prev_ref_end != ref_start:
                 # deletion
                 if ref_start - prev_ref_end <= 50:  # skips deletions longer than 50 bp
-                    ref = reference[prev_ref_end:ref_start]
+                    ref = reference[prev_ref_end - 1 : ref_start]
                     if 'N' not in ref:  # do not call deletions with Ns
                         variants.append(Variant(
                             position=prev_ref_end,
                             reference=ref,
-                            alternate=reference[prev_ref_end]))
+                            alternate=reference[prev_ref_end - 1]))
             elif prev_ref_end is not None and  prev_alt_end != alt_start:
                 # insertion
                 if alt_start - prev_alt_end <= 50:  # skips insertions longer than 50 bp
-                    ref = reference[prev_ref_end]
-                    alt = alternate[prev_alt_end+1:alt_start]
+                    ref = reference[prev_ref_end - 1]
+                    alt = alternate[prev_alt_end:alt_start]
                     if ref != 'N' and 'N' not in alt:   # do not call insertions with Ns
                         variants.append(Variant(
                             position=prev_ref_end,
@@ -104,7 +89,32 @@ class GisaidPipeline:
             prev_alt_end = alt_end
 
         return variants
-    
+
+
+class GisaidPipeline:
+
+    def __init__(self, config: Configuration, queries: Queries):
+        self.config = config
+        self.genes = {g.name: g for g in queries.get_genes()}
+        self.variant_caller = AssemblyVariantCaller()
+
+    def run(self, sample: SampleGisaid):
+        logger.info("Processing {}".format(sample.run_accession))
+        mutations = []
+        for g, s in sample.sequence.items():
+            gene = self.genes.get(g)
+            # the sequences corresponding to protein domains are not called right now
+            if gene is not None:
+                mutations.extend(self.variant_caller.call_variants(
+                    sequence=decompress_sequence(s).strip("*"), reference=gene.sequence))
+        local_folder = os.path.join(self.config.storage_folder, sample.run_accession)
+        if not os.path.exists(local_folder):
+            pathlib.Path(local_folder).mkdir(parents=True, exist_ok=True)
+        output_vcf = os.path.join(local_folder, "gisaid.vcf")
+        
+        self._output_vcf(mutations, output_vcf)
+        return output_vcf
+
     def _output_vcf(self, mutations, output_vcf):
         with open(output_vcf, "w") as vcf_out:
             header = (
