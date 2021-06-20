@@ -61,10 +61,10 @@ class AssemblyVariantCaller:
             if prev_ref_end is not None and prev_ref_end != ref_start:
                 # deletion
                 if ref_start - prev_ref_end <= 50:  # skips deletions longer than 50 bp
-                    ref = reference[prev_ref_end - 1 : ref_start]
+                    ref = reference[prev_ref_end - 1: ref_start]
                     if 'N' not in ref:  # do not call deletions with Ns
                         variants.append(Variant(
-                            position=prev_ref_end,
+                            position=prev_ref_end - 1,
                             reference=ref,
                             alternate=reference[prev_ref_end - 1]))
             elif prev_ref_end is not None and  prev_alt_end != alt_start:
@@ -74,7 +74,7 @@ class AssemblyVariantCaller:
                     alt = alternate[prev_alt_end:alt_start]
                     if ref != 'N' and 'N' not in alt:   # do not call insertions with Ns
                         variants.append(Variant(
-                            position=prev_ref_end,
+                            position=prev_ref_end - 1,
                             reference=ref,
                             alternate=ref + alt))
 

@@ -26,7 +26,7 @@ class TestCountryParser(TestCase):
         snv = variants[0]
         self.assertEqual(snv.reference, "TGGA")
         self.assertEqual(snv.alternate, "T")
-        self.assertEqual(snv.position, 45)
+        self.assertEqual(snv.position, 44)
         # insertion
         variants = caller.call_variants(
             sequence= "CTGGTGTGAGCCTGGTCACCAGGGTGGTAGGACAGACCCTCCTCTGCCCGAGGCAAAGTGACG",
@@ -35,7 +35,7 @@ class TestCountryParser(TestCase):
         snv = variants[0]
         self.assertEqual(snv.reference, "G")
         self.assertEqual(snv.alternate, "GCCC")
-        self.assertEqual(snv.position, 46)
+        self.assertEqual(snv.position, 45)
         # another insertion
         variants = caller.call_variants(
             sequence= "CTGGTGTGAGTCCTGGTCACCAGGGTGGTAGGACAGACCCTCCTCTGCCCGAGGCAAAGTGACG",
@@ -44,9 +44,9 @@ class TestCountryParser(TestCase):
         snv = variants[1]
         self.assertEqual(snv.reference, "G")
         self.assertEqual(snv.alternate, "GCCC")
-        self.assertEqual(snv.position, 46)
+        self.assertEqual(snv.position, 45)
         snv = variants[0]
         self.assertEqual(snv.reference, "G")
         self.assertEqual(snv.alternate, "GT")
-        self.assertEqual(snv.position, 10)
+        self.assertEqual(snv.position, 9)
 
