@@ -1,10 +1,8 @@
 import os
-import time
 from pathlib import Path
-import subprocess
 from logzero import logger
 from covigator.configuration import Configuration
-from covigator.exceptions import CovigatorPipelineError
+from covigator.pipeline.runner import run_command
 
 
 class Pipeline:
@@ -52,20 +50,6 @@ class Pipeline:
                 cpus=self.config.workflow_cpus,
                 memory=self.config.workflow_memory
             )
-            self._run_command(command, sample_data_folder)
+            run_command(command, sample_data_folder)
 
         return output_vcf, output_qc
-
-    def _run_command(self, command, temporary_folder):
-            start = time.time()
-            p = subprocess.Popen(
-                command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=temporary_folder, shell=True)
-            stdoutdata, stderrdata = p.communicate()
-            logger.info("Finished in {} secs command: '{}'".format(time.time() - start, command))
-            if p.returncode != 0:
-                error_message = self._decode(stderrdata)
-                logger.error(error_message)
-                raise CovigatorPipelineError("Error executing pipeline command: {}\n{}".format(command, error_message))
-
-    def _decode(self, data):
-        return data.decode("utf8")

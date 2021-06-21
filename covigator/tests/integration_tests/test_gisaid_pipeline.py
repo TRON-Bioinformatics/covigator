@@ -28,7 +28,7 @@ class GisaidProcessorTests(TestCase):
         self.assertEqual(session.query(Sample).count(), 2)
         self.assertEqual(session.query(JobGisaid).count(), 2)
 
-        vcf_file = GisaidPipeline(config=self.config, queries=Queries(session)).run(sample=session.query(SampleGisaid).first())
+        vcf_file = GisaidPipeline(config=self.config).run(sample=session.query(SampleGisaid).first())
         self.assertTrue(os.path.exists(vcf_file))
 
     def test_gisaid_pipeline_some_calls(self):
@@ -38,5 +38,5 @@ class GisaidProcessorTests(TestCase):
         self.assertEqual(session.query(Sample).count(), 2)
         self.assertEqual(session.query(JobGisaid).count(), 2)
 
-        vcf_file = GisaidPipeline(config=self.config, queries=Queries(session)).run(sample=session.query(SampleGisaid).first())
+        vcf_file = GisaidPipeline(config=self.config).run(sample=session.query(SampleGisaid).first())
         self.assertTrue(os.path.exists(vcf_file))

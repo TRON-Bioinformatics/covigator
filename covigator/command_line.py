@@ -136,5 +136,6 @@ def gisaid_pipeline():
     parser.add_argument("--run_accession", dest="run_accession", help="Specify run accession to process", required=True)
 
     args = parser.parse_args()
+    # FIXME: this interface is broken, it requires the SampleGisaid object not the run_accession
     vcf_file = GisaidPipeline(config=Configuration()).run(run_accession=args.run_accession)
     logger.info("Output VCF file: {}".format(vcf_file))
