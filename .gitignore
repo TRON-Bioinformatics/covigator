@@ -1,6 +1,7 @@
 venv
 prototypes/venv
 prototypes/.ipynb_checkpoints
+prototypes/references
 *.backup
 build
 dist
@@ -14,4 +15,5 @@ logs
 .ipynb_checkpoints
 data
 .nextflow.log*
+.nextflow
 
