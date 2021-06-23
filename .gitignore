@@ -13,4 +13,5 @@ covigator.egg-info
 logs
 .ipynb_checkpoints
 data
+.nextflow.log*
 
