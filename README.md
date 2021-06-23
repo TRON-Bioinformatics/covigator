@@ -1,6 +1,16 @@
-# CoVigator (Corona Navigator)
+![CoVigator logo](covigator/dashboard/assets/CoVigator_logo_txt_nobg.png "CoVigator logo")
 
-CoVigator is a fully automatized SARS-CoV-2 analysis pipeline integrating the following major steps:
+-----------------
+
+# CoVigator: Sars-CoV-2 navigator
+
+[![License](https://img.shields.io/badge/license-MIT-green)](https://opensource.org/licenses/MIT)
+[![Powered by NumFOCUS](https://img.shields.io/badge/powered%20by-Nextflow-orange.svg?style=flat&colorA=E1523D&colorB=007D8A)](https://www.nextflow.io/)
+
+CoVigator is a fully automated SARS-CoV-2 analysis pipeline that stores its results in a database and make it 
+available through a dashboard.
+
+Integrating the following major steps:
 
 * Generation/Download of Reference DBs
 * Starting of different workflows depending of input data type (e.g. RNA-Seq, Assembly)
