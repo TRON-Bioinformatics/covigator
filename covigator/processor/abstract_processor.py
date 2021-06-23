@@ -14,6 +14,8 @@ from covigator.database.database import Database, session_scope
 from covigator.database.model import Log, DataSource, CovigatorModule, JobStatus, JobEna, JobGisaid
 from covigator.database.queries import Queries
 
+BATCH_SIZE = 10000
+
 
 class AbstractProcessor:
 
@@ -50,8 +52,14 @@ class AbstractProcessor:
                 futures.append(self._process_run(run_accession=job.run_accession))
                 count += 1
 
+                if len(futures) > BATCH_SIZE:
+                    # waits for a batch to finish before sending more
+                    self.dask_client.gather(futures=futures)
+                    futures = []
+
             # waits for all to finish
-            self.dask_client.gather(futures=futures)
+            if len(futures) > 0:
+                self.dask_client.gather(futures=futures)
             logger.info("Processor finished!")
         except Exception as e:
             logger.exception(e)
