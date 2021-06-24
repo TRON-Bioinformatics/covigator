@@ -45,7 +45,6 @@ class Gene(Base):
     name = Column(String)
     start = Column(Integer, index=True)
     end = Column(Integer)
-    sequence = Column(String)
     data = Column(JSON)
 
     def get_pfam_domains(self):

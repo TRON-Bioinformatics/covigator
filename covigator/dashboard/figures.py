@@ -294,7 +294,7 @@ class Figures:
     def get_variants_abundance_plot(self, bin_size=50):
 
         # reads genes and domains across the whole genome
-        genes = self.queries.get_genes_metadata()
+        genes = self.queries.get_genes()
         domains = []
         for g in genes:
             domains.extend([(g, d) for d in g.get_pfam_domains()])

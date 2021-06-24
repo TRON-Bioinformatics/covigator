@@ -255,7 +255,7 @@ class Dashboard:
                                      """),
                                    dcc.Dropdown(
                                        id='dropdown-gene',
-                                       options=[{'label': c, 'value': c} for c in genes],
+                                       options=[{'label': c.name, 'value': c.name} for c in genes],
                                        value=None,
                                        multi=False
                                    ),

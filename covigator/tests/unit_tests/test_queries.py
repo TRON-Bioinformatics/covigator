@@ -230,7 +230,7 @@ class QueriesTests(TestCase):
         self.assertEqual(conservation5.shape[1], conservation50.shape[1])
 
     def test_get_genes_metadata(self):
-        genes = self.queries.get_genes_metadata()
+        genes = self.queries.get_genes()
         self.assertIsNotNone(genes)
         self.assertGreater(len(genes), 0)
         for g in genes:

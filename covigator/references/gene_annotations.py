@@ -23,13 +23,5 @@ class GeneAnnotationsLoader:
         for g in data["genes"]:
             self.session.add(Gene(identifier=g["id"], name=g["name"], start=int(g["start"]), end=int(g["end"]), data=g))
 
-        genomic_sequences = {}
-        for record in SeqIO.parse(self.config.reference_genome, "fasta"):
-            name = record.description.split(" ")[0]
-            genomic_sequences[name] = str(record.seq)
-
-        for seq_name in genomic_sequences:
-            self.session.add(Gene(identifier=seq_name, name=seq_name, sequence=genomic_sequences[seq_name]))
-
         self.session.commit()
         logger.info("Loaded into the database {} genes".format(len(data["genes"])))
