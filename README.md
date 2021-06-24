@@ -76,9 +76,8 @@ The input files for GISAID need to be downloaded manually from GISAID site after
 
 The processor is in charge of orchestrating the load of samples into the database. 
 The processor is intended to run periodically.
-Whenever the accessor finds a new sample not present in the database it stores all the required sample metadata and it 
-creates a new job. 
-This job is the starting point for the processor which orchestrates the flow of the job through its life cycle.
+This jobs created by the accessor are the starting point for the processor which orchestrates the flow of the job 
+through its life cycle.
 
 The happy path of a job is the following:
 - `PENDING`: newly created job by the accessor
@@ -94,26 +93,22 @@ The failure states are the following and are self descriptive
 - `FAILED_LOAD`
 - `FAILED_COOCCURRENCE`
 
-There is a cleanup task that happens after processing in parallel to the load process, 
-but this is not a state of the job and failures in the cleanup although logged in the database do not stop a job from 
-reaching the final state.
-
-A timestamp is stored for every change of state. The failure states also stores an error message.
+A timestamp is stored for every change of state. The failure states also stores an error message for debugging purposes.
 
 ![Covigator system design](docs/resources/processor_state_diagram.png "Covigator system design")
 
-The above workflow is orchestrated using dask library and a Slurm cluster behind the scenes. Although dask supports
-multiple queue implementations, covigator only does support Slurm.
+The above workflow is orchestrated using the dask library and a Slurm cluster behind the scenes. The cluster 
+configuration is specific to Dask, thus Covigator could be integrated into other clusters than Slurm. 
+Also, it can run on a single computer without any cluster by specifiying the number of available CPUs. 
 
-The different processes have different priorities to ensure that the graph of tasks is processed in a depth first order.
-This is relevant when processing a large amount of jobs to avoid that all jobs are first downloaded, thus requiring that 
-all raw files are stored in the file system simultaneously.
 The tasks managed in this workflow are not computationally intensive and each uses a single CPU and a low amount of memory.
 
 ### Input data
 
 - `--source` The data source to process. Possible values: ENA, GISAID. Required: true
 - `--num-jobs` The number of dask jobs to spin, this corresponds to the number of whole nodes requested to the cluster. Default: 1
+
+To run locally out of a cluster use `--local` and `--num-local-cpus`.
 
 ### Configuration
 
@@ -174,7 +169,6 @@ The configuration is done through environment variables.
 
 - `COVIGATOR_STORAGE_FOLDER`: the folder where files will be stored by the downloaded (default value `./data/covigator`)
 
-
 The downloader takes an ENA run, downloads all of its FASTQs, 
 stores them in a folder structures such as `$COVIGATOR_STORAGE_FOLDER/${run_accession}` 
 (eg: `/covigator/data/ERR12345/ERR12345.fastq.gz`) and then checks the MD5 checksum of the 
@@ -202,7 +196,6 @@ cd /covigator/dependencies
 git clone --branch v0.3.1 https://github.com/TRON-Bioinformatics/covigator-ngs-pipeline.git
 git clone --branch v1.4.0 https://github.com/TRON-Bioinformatics/tronflow-bwa.git
 git clone --branch v1.5.0 https://github.com/TRON-Bioinformatics/tronflow-bam-preprocessing.git
-git clone --branch v1.1.0 https://github.com/TRON-Bioinformatics/tronflow-variant-normalization.git
 ```
 
 And then point the right environment variables to these pipelines:
@@ -210,23 +203,15 @@ And then point the right environment variables to these pipelines:
 export COVIGATOR_WORKFLOW=/covigator/dependencies/covigator-ngs-pipeline/main.nf
 export COVIGATOR_TRONFLOW_BWA=/covigator/dependencies/tronflow-bwa/main.nf
 export COVIGATOR_TRONFLOW_BAM_PREPROCESSING=/covigator/dependencies/tronflow-bam-preprocessing/main.nf
-export COVIGATOR_TRONFLOW_VARIANT_NORMALIZATION=/covigator/dependencies/tronflow-variant-normalization/main.nf
 ```
 
 But before running the covigator processor you will need to make sure that the adequate conda environments are already 
 created, otherwise concurrent creations of the same environment will cause an error.
-
-For each of the workflows move into its folder and run the tests dataset making sure that the work folder is 
-COVIGATOR_TEMP_FOLDER.
+There is an initialization mode for this purpose.
+Make sure that the work folder is set to COVIGATOR_TEMP_FOLDER.
 ```
-cd /covigator/dependencies/tronflow-bwa/
-nextflow run main.nf -profile conda,test -work-dir $COVIGATOR_TEMP_FOLDER
+nextflow run /covigator/dependencies/covigator-ngs-pipeline/main.nf --initialize -profile conda -work-dir $COVIGATOR_TEMP_FOLDER
 ```
-
-
-#### Clean up
-
-Deletes the FASTQ files and eventually intermediate files left behind by the pipeline.
 
 #### Loader
 
