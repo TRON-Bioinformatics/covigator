@@ -77,12 +77,20 @@ class Queries:
     def find_sample_gisaid_by_accession(self, run_accession: str) -> SampleGisaid:
         return self.session.query(SampleGisaid).filter(SampleGisaid.run_accession == run_accession).first()
 
-    def get_accumulated_samples_by_country(self) -> pd.DataFrame:
+    def get_ena_countries(self) -> List[str]:
+        countries = [c for c, in self.session.query(SampleEna.country).join(JobEna).filter(
+            JobEna.status == self.FINAL_JOB_STATE).distinct().all()]
+        return countries
+
+    def get_accumulated_samples_by_country(self, countries: List[str]) -> pd.DataFrame:
         """
         Returns a DataFrame with columns: data, country, cumsum, count
         """
-        samples = pd.read_sql(self.session.query(SampleEna).join(JobEna).filter(JobEna.status == self.FINAL_JOB_STATE).statement,
-                              self.session.bind)
+        query = self.session.query(SampleEna).join(JobEna).filter(JobEna.status == self.FINAL_JOB_STATE)
+        if countries:
+            query = query.filter(SampleEna.country.in_(countries))
+
+        samples = pd.read_sql(query.statement, self.session.bind)
 
         filled_table = None
         if samples.shape[0] > 0:

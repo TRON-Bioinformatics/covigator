@@ -228,11 +228,28 @@ class Dashboard:
         return str(date) if date is not None else MISSING_VALUE
 
     def get_tab_samples(self):
-        figure = self.figures.get_accumulated_samples_by_country_plot()
         return dcc.Tab(label="Samples", style=self.tab_style, selected_style=self.tab_selected_style,
+                            children=[html.Div(id='ena-samples-body', className="row container-display",
+                            style={'overflow': 'scroll'}, # 'top': 0, 'bottom': 0, position: fixed
                             children=[
-                                dcc.Graph(figure=figure)
-                            ])
+                                html.Div(children=[
+                                    html.Br(),
+                                    dcc.Markdown("""Select a country"""),
+                                    dcc.Dropdown(
+                                        id='dropdown-country',
+                                        options=[{'label': c, 'value': c} for c in self.queries.get_ena_countries()],
+                                        value=None,
+                                        multi=True
+                                    )
+                                ], className="two columns"),
+                               html.Div(children=[
+                                   html.Br(),
+                                   html.Div(id='accumulated-samples-per-country'),
+                                   html.Br(),
+                               ], className="ten columns", style={'overflow': 'scroll', "height": "900px"},)
+                           ]),
+                       ]
+                       )
 
     def get_tab_variants(self):
 
@@ -433,6 +450,13 @@ class Dashboard:
             return html.Div(children=self.figures.get_top_occurring_variants_plot(
                 top=top_variants, gene_name=gene_name, date_range_start=date_range_start,
                 date_range_end=date_range_end, metric=metric))
+
+        @app.callback(
+            Output('accumulated-samples-per-country', 'children'),
+            Input('dropdown-country', 'value'),
+        )
+        def update_accumulated_samples_by_country(countries):
+            return html.Div(children=self.figures.get_accumulated_samples_by_country_plot(countries=countries))
 
         @app.callback(
             Output('needle-plot', 'children'),

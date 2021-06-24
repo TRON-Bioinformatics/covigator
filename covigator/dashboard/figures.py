@@ -45,15 +45,15 @@ class Figures:
     def __init__(self, queries: Queries):
         self.queries = queries
 
-    def get_accumulated_samples_by_country_plot(self):
-        data = self.queries.get_accumulated_samples_by_country()
+    def get_accumulated_samples_by_country_plot(self, countries=None):
+        data = self.queries.get_accumulated_samples_by_country(countries)
         fig = None
         if data is not None:
             fig = px.area(data, x="date", y="cumsum", color="country",
                           category_orders={
                               "country": list(data.sort_values("cumsum", ascending=False).country.unique())[::-1]},
                           labels={"cumsum": "num. samples", "count": "increment"},
-                          title="Accumulated samples per country",
+                          #title="Accumulated samples per country",
                           hover_data=["count"],
                           color_discrete_sequence=random.shuffle(px.colors.qualitative.Dark24))
             fig.update_layout(
@@ -61,7 +61,16 @@ class Figures:
                 xaxis={'title': None},
                 yaxis={'dtick': 2000}
             )
-        return fig
+        return [
+                dcc.Graph(
+                    figure=fig,
+                    config=PLOTLY_CONFIG
+                ),
+                dcc.Markdown("""
+                        ***Accumulated ENA samples by country***
+                        *Countries with less than 10 samples are merged into the category "Other"*
+                        """)
+            ]
 
     def _get_color_by_af(self, af):
         color = None
