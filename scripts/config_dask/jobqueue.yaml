@@ -1,0 +1,37 @@
+jobqueue:
+
+   #slurm:
+   #  name: dask-worker
+
+     # Dask worker options
+     #cores: 96                 # Total number of cores per job
+     #memory: "100 GB"                # Total amount of memory per job
+     #processes: 48                # Number of Python processes per job
+
+     #interface: null             # Network interface to use like eth0 or ib0
+     #death-timeout: 60           # Number of seconds to wait if a worker can not find a scheduler
+     #local-directory: "/flash/projects/covigator/dask"       # Location of fast local storage like /scratch or $TMPDIR
+     #extra: []
+
+     # SLURM resource manager options
+     #shebang: "#!/usr/bin/env bash"
+     #queue: "CoViD-19"
+     #project: null
+     #walltime: '00:30:00'
+     #env-extra: []
+     #job-cpu: null
+     #job-mem: null
+     #job-extra: ["-A priesgof"]
+     #log-directory: "/code/covigator-0.1.0/logs"
+   #
+     # Scheduler options
+     #scheduler-options: {}
+
+distributed:
+  worker:
+    memory:
+      target: false  # don't spill to disk
+      spill: false  # don't spill to disk
+      pause: 0.80  # pause execution at 80% memory use
+      terminate: 0.95  # restart the worker at 95% use
+

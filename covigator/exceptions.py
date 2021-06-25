@@ -11,3 +11,7 @@ class CovigatorPipelineError(Exception):
 
 class CovigatorDashBoardInitialisationError(Exception):
     pass
+
+
+class CovigatorExcludedAssemblySequence(Exception):
+    pass

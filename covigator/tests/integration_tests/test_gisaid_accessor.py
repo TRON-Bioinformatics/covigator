@@ -9,6 +9,7 @@ from covigator.accessor.gisaid_accessor import GisaidAccessor
 from covigator.configuration import Configuration
 from covigator.database.database import Database
 from covigator.database.model import SampleGisaid, Sample, JobGisaid
+from covigator.misc.compression import decompress_sequence
 from covigator.pipeline.gisaid_pipeline import GisaidPipeline
 from covigator.tests.unit_tests.faked_objects import FakeConfiguration
 
@@ -38,7 +39,7 @@ class GisaidAccessorTests(TestCase):
             self.assertEqual(s.host, "human")
             # checks that every sequence after decompression can be found in the fasta file
             for g, seq in s.sequence.items():
-                decompressed_sequence = GisaidPipeline.decompress_sequence(seq)
+                decompressed_sequence = decompress_sequence(seq)
                 found = False
                 for record in SeqIO.parse(self.input_fasta, "fasta"):
                     if str(record.seq) == decompressed_sequence:

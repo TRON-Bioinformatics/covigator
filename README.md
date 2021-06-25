@@ -1,26 +1,35 @@
-# CoVigator (Corona Navigator)
+![CoVigator logo](covigator/dashboard/assets/CoVigator_logo_txt_nobg.png "CoVigator logo")
 
-CoVigator is a fully automatized SARS-CoV-2 analysis pipeline integrating the following major steps:
+-----------------
 
-* Generation/Download of Reference DBs
-* Starting of different workflows depending of input data type (e.g. RNA-Seq, Assembly)
+# CoVigator: Sars-CoV-2 navigator
+
+[![License](https://img.shields.io/badge/license-MIT-green)](https://opensource.org/licenses/MIT)
+[![Powered by NumFOCUS](https://img.shields.io/badge/powered%20by-Nextflow-orange.svg?style=flat&colorA=E1523D&colorB=007D8A)](https://www.nextflow.io/)
+
+CoVigator is a monitoring system for SARS-CoV-2 which integrates a full variant calling pipeline, 
+a database that stores all relevant information about mutations in Sars-Cov-2, a dashboard to enable visual analytics
+and finally an Application Programming Interface to make the data programmatically available.
+
+For full details on the variant calling pipeline go to 
+![https://github.com/TRON-Bioinformatics/covigator-ngs-pipeline](https://github.com/TRON-Bioinformatics/covigator-ngs-pipeline).
 
 The system architecture has the following components:
 - **Database**: all other modules need access to the database
-- **Accessor**: queries external systems for new data and creates an entry in the local database with all necessary metadata
-- **Processor**: reads from the database samples to be processed and triggers a workflow with multiple steps
-    - Download: downloads the necessary FASTQ files
-    - Pipeline: triggers a variant calling pipeline which outputs VCF files
-    - Delete: deletes the FASTQ files
-    - Load: loads the variants from VCF files into the database
-    - Cooccurrence matrix: once the variants from a sample have been loaded the cooccurrence matrix is updated
+- **Accessor**: queries external systems (ie: ENA and GISAID) for new samples and stores all necessary raw data and 
+  metadata to be analysed
+- **Processor**: reads data from new samples and process it through a workflow with multiple steps to generate the 
+  analysis ready data
 - **Dashboard**: a web application reading data from the database and presenting through tables and visualizations
-
-While accessor and processor are backend processes that are intended to run asynchronously and periodically, the dashboard is accessible by end users.
-
-Although the initial use case for Covigator is SARS-CoV-2 data, it is intended to be usable with other infectious organisms.
+- **API**: a set of REST endpoints that make the data available
 
 ![Covigator system design](docs/resources/system_design.png "Covigator system design")
+
+While accessor and processor are backend processes that are intended to run asynchronously and periodically, 
+the dashboard and API are publicly reachable by end users.
+
+Although the initial use case for Covigator is SARS-CoV-2 data, it is intended to be usable with other infectious 
+organisms.
 
 ## Database configuration
 
@@ -39,31 +48,36 @@ All Covigator modules require access to the database. This is configured through
 
 ## Accessor
 
-The accessor queries external systems, checks in the database which samples are new and creates the required entries in the database.
+The accessor queries external systems, checks in the database which samples are new and creates the required entries 
+in the database.
 The accessor is intended to run periodically.
-The accessor currently uses the European Nucleotide Archive (ENA) to fetch NGS raw data and it is intended to use GSAID to fetch assemblies in the future.
+The accessor uses the European Nucleotide Archive (ENA) to fetch NGS raw data and GSAID to fetch assemblies. 
 The accessor does not download large raw files, but only the sample metadata, the URLs and MD5 check sums required to download the data.
 The accessor implements a retry mechanism with an exponential backoff to manage temporary failures of 
 service of any external data provider.
 
-### Input data
+### Usage
+
+For ENA:
+`covigator-ena-accessor --tax-id 2697049 --host-tax-id 9606`
 
 - The organism taxonomic identifier (eg: for SARS-CoV-2 the taxonomic identifier is 2697049)
 - The host organism taxonomic identifier (eg: for Homo sapiens the taxonomic identifier is 9606)
 
 The taxonomic identifiers for the different organisms is available through EMBL-EBI as described here https://ena-docs.readthedocs.io/en/latest/retrieval/programmatic-access/taxon-api.html or through NCBI here https://www.ncbi.nlm.nih.gov/taxonomy.
 
-### Usage
 
-`covigator-ena-accessor --tax-id 2697049 --host-tax-id 9606`
+For GISAID:
+`covigator-gisaid-accessor --input-fasta gisaid_dna.fasta --input-metadata gisaid.tsv`
+
+The input files for GISAID need to be downloaded manually from GISAID site after accepting their license.
 
 ## Processor
 
 The processor is in charge of orchestrating the load of samples into the database. 
 The processor is intended to run periodically.
-Whenever the accessor finds a new sample not present in the database it stores all the required sample metadata and it 
-creates a new job. 
-This job is the starting point for the processor which orchestrates the flow of the job through its life cycle.
+This jobs created by the accessor are the starting point for the processor which orchestrates the flow of the job 
+through its life cycle.
 
 The happy path of a job is the following:
 - `PENDING`: newly created job by the accessor
@@ -79,26 +93,22 @@ The failure states are the following and are self descriptive
 - `FAILED_LOAD`
 - `FAILED_COOCCURRENCE`
 
-There is a cleanup task that happens after processing in parallel to the load process, 
-but this is not a state of the job and failures in the cleanup although logged in the database do not stop a job from 
-reaching the final state.
-
-A timestamp is stored for every change of state. The failure states also stores an error message.
+A timestamp is stored for every change of state. The failure states also stores an error message for debugging purposes.
 
 ![Covigator system design](docs/resources/processor_state_diagram.png "Covigator system design")
 
-The above workflow is orchestrated using dask library and a Slurm cluster behind the scenes. Although dask supports
-multiple queue implementations, covigator only does support Slurm.
+The above workflow is orchestrated using the dask library and a Slurm cluster behind the scenes. The cluster 
+configuration is specific to Dask, thus Covigator could be integrated into other clusters than Slurm. 
+Also, it can run on a single computer without any cluster by specifiying the number of available CPUs. 
 
-The different processes have different priorities to ensure that the graph of tasks is processed in a depth first order.
-This is relevant when processing a large amount of jobs to avoid that all jobs are first downloaded, thus requiring that 
-all raw files are stored in the file system simultaneously.
 The tasks managed in this workflow are not computationally intensive and each uses a single CPU and a low amount of memory.
 
 ### Input data
 
 - `--source` The data source to process. Possible values: ENA, GISAID. Required: true
 - `--num-jobs` The number of dask jobs to spin, this corresponds to the number of whole nodes requested to the cluster. Default: 1
+
+To run locally out of a cluster use `--local` and `--num-local-cpus`.
 
 ### Configuration
 
@@ -159,7 +169,6 @@ The configuration is done through environment variables.
 
 - `COVIGATOR_STORAGE_FOLDER`: the folder where files will be stored by the downloaded (default value `./data/covigator`)
 
-
 The downloader takes an ENA run, downloads all of its FASTQs, 
 stores them in a folder structures such as `$COVIGATOR_STORAGE_FOLDER/${run_accession}` 
 (eg: `/covigator/data/ERR12345/ERR12345.fastq.gz`) and then checks the MD5 checksum of the 
@@ -187,7 +196,6 @@ cd /covigator/dependencies
 git clone --branch v0.3.1 https://github.com/TRON-Bioinformatics/covigator-ngs-pipeline.git
 git clone --branch v1.4.0 https://github.com/TRON-Bioinformatics/tronflow-bwa.git
 git clone --branch v1.5.0 https://github.com/TRON-Bioinformatics/tronflow-bam-preprocessing.git
-git clone --branch v1.1.0 https://github.com/TRON-Bioinformatics/tronflow-variant-normalization.git
 ```
 
 And then point the right environment variables to these pipelines:
@@ -195,23 +203,15 @@ And then point the right environment variables to these pipelines:
 export COVIGATOR_WORKFLOW=/covigator/dependencies/covigator-ngs-pipeline/main.nf
 export COVIGATOR_TRONFLOW_BWA=/covigator/dependencies/tronflow-bwa/main.nf
 export COVIGATOR_TRONFLOW_BAM_PREPROCESSING=/covigator/dependencies/tronflow-bam-preprocessing/main.nf
-export COVIGATOR_TRONFLOW_VARIANT_NORMALIZATION=/covigator/dependencies/tronflow-variant-normalization/main.nf
 ```
 
 But before running the covigator processor you will need to make sure that the adequate conda environments are already 
 created, otherwise concurrent creations of the same environment will cause an error.
-
-For each of the workflows move into its folder and run the tests dataset making sure that the work folder is 
-COVIGATOR_TEMP_FOLDER.
+There is an initialization mode for this purpose.
+Make sure that the work folder is set to COVIGATOR_TEMP_FOLDER.
 ```
-cd /covigator/dependencies/tronflow-bwa/
-nextflow run main.nf -profile conda,test -work-dir $COVIGATOR_TEMP_FOLDER
+nextflow run /covigator/dependencies/covigator-ngs-pipeline/main.nf --initialize -profile conda -work-dir $COVIGATOR_TEMP_FOLDER
 ```
-
-
-#### Clean up
-
-Deletes the FASTQ files and eventually intermediate files left behind by the pipeline.
 
 #### Loader
 
@@ -226,58 +226,6 @@ Computes the cooccurrence matrix incrementally for every new sample.
 Increases the count of every pairwise combination of variants within the new sample.
 It stores the cooccurrence matrix in one single table indexed by two variants. Only the lower diagonal is stored.
 
-
-## Developer guide
-
-### Setup your development environment
-
-1. Create a virtual environment `virtualenv venv` making sure you are using a Python >= 3.6 interpreter.
-2. Activate your virtual environment `source venv/bin/activate`
-3. Install all dependencies `pip install -r requirements.txt`
-
-### Tests
-
-There are two type of tests:
-- **Unit tests**. This need to have two attributes: being fast (in the order of milliseconds) and not depending on any external resource. The objective is to run these constantly during development and in a continuous integration environment and to provide a fast feedback loop. These are under `covigator.tests.unit_tests`
-- **Integration tests**. This tests are normally more complex, involve multiple components of the application and/or external resources, and they can be slow. These tests are not intended for automation.  These are under `covigator.tests.integration_tests`
-
-Tests can be run from an IDE like PyCharm or otherwise from the commmand line.
-
-Run all tests as follows:
-`python -m unittests discover covigator.tests.unit_tests`
-
-Run a specific test as follows:
-`python -m unittest covigator.tests.unit_tests.test_vcf_loader`
-
-**NOTE**: unit tests can make use of the database by initialising it as `Database(test=True)` will start an empty in memory SQLite database.
-
-### Install the Python package
-
-1. Build the binary: `python setup.py bdist_wheel`
-2. Install covigator: `pip install dist/covigator-x.y.z-py3-none-any.whl`
-
-After installation there will be two endpoints available in the path: `covigator-download` and `covigator-pipeline`.
-
-### Setup the database
-
-Given a working Postgres database:
-
-1. Connect to the default database: `psql -W postgres`
-2. Create a user for covigator `CREATE USER covigator WITH PASSWORD 'covigator';`
-3. Create a database: CREATE DATABASE covigator OWNER covigator;
-
-### Configure access to the database
-
-The application expects some environment variables to be configured with the credentials to the database:
-```
-COVIGATOR_DB_HOST=0.0.0.0
-COVIGATOR_DB_NAME=covigator
-COVIGATOR_DB_USER=covigator
-COVIGATOR_DB_PASSWORD=covigator
-COVIGATOR_DB_PORT=5432
-```
-
-If these are not provided it will use the values shown above as default values.
 
 ## References
 
