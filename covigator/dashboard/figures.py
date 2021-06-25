@@ -59,7 +59,8 @@ class Figures:
             fig.update_layout(
                 legend={'traceorder': 'reversed'},
                 xaxis={'title': None},
-                yaxis={'dtick': 2000}
+                yaxis={'dtick': 2000},
+                template="plotly_white",
             )
         return [
                 dcc.Graph(
