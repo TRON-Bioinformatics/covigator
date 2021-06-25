@@ -411,7 +411,7 @@ class Figures:
 
         if variants.shape[0] > 0:
             # reads total number of samples and calculates frequencies
-            count_samples = self.queries.count_ena_samples()
+            count_samples = self.queries.count_samples()
             variants["af"] = variants.count_occurrences / count_samples
             variants["log_af"] = variants.af.transform(lambda x: np.log(x + 1))
             variants["log_count"] = variants.count_occurrences.transform(lambda x: np.log(x))

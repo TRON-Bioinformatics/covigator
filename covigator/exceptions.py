@@ -15,3 +15,7 @@ class CovigatorDashBoardInitialisationError(Exception):
 
 class CovigatorExcludedAssemblySequence(Exception):
     pass
+
+
+class CovigatorQueryException(Exception):
+    pass

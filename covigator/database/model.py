@@ -1,9 +1,8 @@
-import os
 from datetime import datetime
 from typing import List
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, String, Float, Enum, DateTime, Integer, Boolean, Date, ForeignKey, \
-    ForeignKeyConstraint, BigInteger, JSON, Index
+    ForeignKeyConstraint, BigInteger, JSON
 import enum
 
 from covigator.configuration import Configuration

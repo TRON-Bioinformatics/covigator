@@ -13,7 +13,8 @@ from sqlalchemy.orm import Session, aliased
 from sqlalchemy.sql.sqltypes import NullType
 
 from covigator.database.model import Log, DataSource, CovigatorModule, SampleEna, JobEna, JobStatus, VariantObservation, \
-    Gene, Variant, VariantCooccurrence, Conservation, JobGisaid, SampleGisaid
+    Gene, Variant, VariantCooccurrence, Conservation, JobGisaid, SampleGisaid, SubclonalVariantObservation
+from covigator.exceptions import CovigatorQueryException
 
 SYNONYMOUS_VARIANT = "synonymous_variant"
 
@@ -160,33 +161,68 @@ class Queries:
                          VariantCooccurrence.variant_id_two == variant_two.variant_id)) \
             .first()
 
-    def count_ena_samples(self) -> int:
-        return self.session.query(JobEna).filter(JobEna.status == self.FINAL_JOB_STATE).count()
+    def count_samples(self, source: DataSource = None) -> int:
+        count = 0
+        if source is None or source == DataSource.ENA:
+            count += self.session.query(JobEna).filter(JobEna.status == self.FINAL_JOB_STATE).count()
+        if source is None or source == DataSource.GISAID:
+            count += self.session.query(JobGisaid).filter(JobGisaid.status == self.FINAL_JOB_STATE).count()
+        return count
 
     def count_countries(self):
-        return self.session.query(SampleEna).join(JobEna).filter(JobEna.status == self.FINAL_JOB_STATE)\
-            .distinct(SampleEna.country).count()
+        countries_ena = self.session.query(SampleEna.country)\
+            .join(JobEna).filter(JobEna.status == self.FINAL_JOB_STATE)\
+            .distinct().all()
+        countries_gisaid = self.session.query(SampleGisaid.country) \
+            .join(JobGisaid).filter(JobGisaid.status == self.FINAL_JOB_STATE) \
+            .distinct().all()
+        return len(set(countries_ena + countries_gisaid))
 
     def count_variants(self):
         return self.session.query(Variant).count()
 
+    def count_insertions(self):
+        return self.session.query(Variant).filter(func.length(Variant.alternate) > 1).count()
+
+    def count_deletions(self):
+        return self.session.query(Variant).filter(func.length(Variant.reference) > 1).count()
+
     def count_variant_observations(self):
         return self.session.query(VariantObservation).count()
 
-    def get_date_of_first_ena_sample(self) -> date:
+    def count_subclonal_variant_observations(self):
+        return self.session.query(SubclonalVariantObservation).count()
+
+    def get_date_of_first_sample(self, source: DataSource = DataSource.ENA) -> date:
         """
         Returns the date of the earliest ENA sample loaded in the database
         """
-        result = self.session.query(SampleEna.first_created).join(JobEna).filter(JobEna.status == self.FINAL_JOB_STATE) \
-            .order_by(asc(SampleEna.first_created)).first()
+        if source == DataSource.ENA:
+            result = self.session.query(SampleEna.first_created).join(JobEna).filter(
+                and_(JobEna.status == self.FINAL_JOB_STATE, SampleEna.first_created.isnot(None))) \
+                .order_by(asc(SampleEna.first_created)).first()
+        elif source == DataSource.GISAID:
+            result = self.session.query(SampleGisaid.date).join(JobGisaid).filter(
+                and_(JobGisaid.status == self.FINAL_JOB_STATE, SampleGisaid.date.isnot(None))) \
+                .order_by(asc(SampleGisaid.date)).first()
+        else:
+            raise CovigatorQueryException("No valid data source for query of first sample")
         return result[0] if result is not None else result
 
-    def get_date_of_most_recent_ena_sample(self) -> date:
+    def get_date_of_most_recent_sample(self, source: DataSource = DataSource.ENA) -> date:
         """
         Returns the date of the latest ENA sample loaded in the database
         """
-        result = self.session.query(SampleEna.first_created).join(JobEna).filter(JobEna.status == self.FINAL_JOB_STATE) \
-            .order_by(desc(SampleEna.first_created)).first()
+        if source == DataSource.ENA:
+            result = self.session.query(SampleEna.first_created).join(JobEna).filter(
+                and_(JobEna.status == self.FINAL_JOB_STATE, SampleEna.first_created.isnot(None))) \
+                .order_by(desc(SampleEna.first_created)).first()
+        elif source == DataSource.GISAID:
+            result = self.session.query(SampleGisaid.date).join(JobGisaid).filter(
+                and_(JobGisaid.status == self.FINAL_JOB_STATE, SampleGisaid.date.isnot(None))) \
+                .order_by(desc(SampleGisaid.date)).first()
+        else:
+            raise CovigatorQueryException("No valid data source for query of most recent sample")
         return result[0] if result is not None else result
 
     def get_date_of_last_check(self, data_source: DataSource) -> date:
@@ -269,7 +305,7 @@ class Queries:
             top_occurring_variants.rename(columns={'variant_id': 'dna_mutation'}, inplace=True)
 
             # replace the total count by the frequency
-            count_samples = self.count_ena_samples()
+            count_samples = self.count_samples()
             top_occurring_variants['frequency'] = top_occurring_variants.total.transform(
                 lambda t: round(float(t) / count_samples, 3))
 
@@ -306,7 +342,8 @@ class Queries:
         min_occurrences occurrences.
         """
         # query for total samples required to calculate frequencies
-        count_samples = self.count_ena_samples()
+        # FIXME: once we have the cooccurrence for GISAID samples we need to count all samples here
+        count_samples = self.count_samples(source=DataSource.ENA)
 
         # query for cooccurrence matrix
         variant_one = aliased(Variant)

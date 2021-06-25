@@ -10,10 +10,14 @@ from covigator.database.queries import Queries
 
 def get_tab_overview(queries: Queries):
 
-    count_samples = queries.count_ena_samples()
+    count_samples_ena = queries.count_samples(source=DataSource.ENA)
+    count_samples_gisaid = queries.count_samples(source=DataSource.GISAID)
     count_countries = queries.count_countries()
     count_variants = queries.count_variants()
+    count_insertions = queries.count_insertions()
+    count_deletions = queries.count_deletions()
     count_variants_observed = queries.count_variant_observations()
+    count_subclonal_variants_observed = queries.count_subclonal_variant_observations()
     # count_library_strategies = session.query(SampleEna.library_strategy, func.count(SampleEna.library_strategy)) \
     #    .join(JobEna).filter(JobEna.status == JobStatus.LOADED)\
     #    .group_by(SampleEna.library_strategy).all()
@@ -21,10 +25,12 @@ def get_tab_overview(queries: Queries):
     #    .join(JobEna).filter(JobEna.status == JobStatus.LOADED) \
     #    .group_by(SampleEna.instrument_model).all()
 
-    date_of_first_ena_sample = queries.get_date_of_first_ena_sample()
-    date_of_most_recent_ena_sample = queries.get_date_of_most_recent_ena_sample()
-    date_of_last_check_ena = queries.get_date_of_last_check(data_source=DataSource.ENA)
+    date_of_first_ena_sample = queries.get_date_of_first_sample(source=DataSource.ENA)
+    date_of_first_gisaid_sample = queries.get_date_of_first_sample(source=DataSource.GISAID)
+    date_of_most_recent_ena_sample = queries.get_date_of_most_recent_sample(source=DataSource.ENA)
+    date_of_most_recent_gisaid_sample = queries.get_date_of_most_recent_sample(source=DataSource.GISAID)
     date_of_last_update_ena = queries.get_date_of_last_update(data_source=DataSource.ENA)
+    date_of_last_update_gisaid = queries.get_date_of_last_update(data_source=DataSource.GISAID)
 
     return dcc.Tab(label="About",
                    style=TAB_STYLE,
@@ -50,50 +56,44 @@ def get_tab_overview(queries: Queries):
                                    html.A("https://doi.org/10.1101/2021.02.04.429765",
                                           href="https://doi.org/10.1101/2021.02.04.429765")],
                                    style={"font-style": "italic"}),
-                               html.Div([
-                                   html.Div(
-                                       [html.H6("No. of Samples"), html.H6(count_samples)],
-                                       className="mini_container",
-                                   ),
-                                   html.Div(
-                                       [html.H6("No. of countries"), html.H6(count_countries)],
-                                       className="mini_container",
-                                   ),
-                                   html.Div(
-                                       [html.H6("No. of unique variants"), html.H6(count_variants)],
-                                       className="mini_container",
-                                   ),
-                                   html.Div(
-                                       [html.H6("No. of variant observations"), html.H6(count_variants_observed)],
-                                       className="mini_container",
-                                   ),
+                               html.Div(
+                                   children=[
+                                       get_mini_container(
+                                           title="No. of Samples",
+                                           value=print_number(count_samples_ena + count_samples_gisaid)),
+                                       get_mini_container(title="No. of countries", value=print_number(count_countries)),
+                                       html.Div(
+                                           children=[
+                                               html.H6("No. of unique mutations"),
+                                               html.H6(print_number(count_variants)),
+                                               html.P("{} SNVs".format(
+                                                   print_number(count_variants - count_insertions - count_deletions))),
+                                               html.P("{} insertions".format(print_number(count_insertions))),
+                                               html.P("{} deletions".format(print_number(count_deletions)))
+                                           ],
+                                           className="mini_container",
+                                       ),
+                                       get_mini_container(
+                                           title="No. of mutation observations",
+                                           value=print_number(count_variants_observed)),
+                                       get_mini_container(
+                                           title="No. of intrahost mutation observations",
+                                           value=print_number(count_subclonal_variants_observed)),
                                    ],
                                    id="info-container-1",
                                    className="row container-display",
                                ),
                                html.Div(html.H4("European Nucleotide Archive (ENA)")),
                                html.Div(
-                                   [
-                                       html.Div(
-                                           [html.H6("First sample"),
-                                            html.H6(print_date(date_of_first_ena_sample))],
-                                           className="mini_container",
-                                       ),
-                                       html.Div(
-                                           [html.H6("Most recent sample"),
-                                            html.H6(print_date(date_of_most_recent_ena_sample))],
-                                           className="mini_container",
-                                       ),
-                                       html.Div(
-                                           [html.H6("Last checked"),
-                                            html.H6(print_date(date_of_last_check_ena))],
-                                           className="mini_container",
-                                       ),
-                                       html.Div(
-                                           [html.H6("Last updated"),
-                                            html.H6(print_date(date_of_last_update_ena))],
-                                           className="mini_container",
-                                       ),
+                                   children=[
+                                       get_mini_container(
+                                           title="No. of Samples", value=print_number(count_samples_ena)),
+                                       get_mini_container(
+                                           title="First sample", value=print_date(date_of_first_ena_sample)),
+                                       get_mini_container(
+                                           title="Most recent sample", value=print_date(date_of_most_recent_ena_sample)),
+                                       get_mini_container(
+                                           title="Last updated", value=print_date(date_of_last_update_ena))
                                    ],
                                    id="info-container-2",
                                    className="row container-display",
@@ -101,22 +101,15 @@ def get_tab_overview(queries: Queries):
                                html.Div(html.H4("GISAID")),
                                html.Div(
                                    [
-                                       html.Div(
-                                           [html.H6("First sample"), html.H6(MISSING_VALUE)],
-                                           className="mini_container",
-                                       ),
-                                       html.Div(
-                                           [html.H6("Most recent sample"), html.H6(MISSING_VALUE)],
-                                           className="mini_container",
-                                       ),
-                                       html.Div(
-                                           [html.H6("Last checked"), html.H6(MISSING_VALUE)],
-                                           className="mini_container",
-                                       ),
-                                       html.Div(
-                                           [html.H6("Last updated"), html.H6(MISSING_VALUE)],
-                                           className="mini_container",
-                                       ),
+                                       get_mini_container(
+                                           title="No. of Samples", value=print_number(count_samples_gisaid)),
+                                       get_mini_container(
+                                           title="First sample", value=print_date(date_of_first_gisaid_sample)),
+                                       get_mini_container(
+                                           title="Most recent sample",
+                                           value=print_date(date_of_most_recent_gisaid_sample)),
+                                       get_mini_container(
+                                           title="Last updated", value=print_date(date_of_last_update_gisaid))
                                    ],
                                    id="info-container-3",
                                    className="row container-display",
@@ -145,6 +138,16 @@ def get_tab_overview(queries: Queries):
                        )])
 
 
+def get_mini_container(title, value):
+    return html.Div(
+        children=[
+            html.H6(title),
+            html.H6(value)
+        ],
+        className="mini_container",
+    )
+
+
 def get_header():
     logo = "/assets/CoVigator_logo_txt_nobg.png"
     return html.Div(
@@ -169,3 +172,7 @@ def get_header():
 
 def print_date(date: datetime.date):
     return str(date) if date is not None else MISSING_VALUE
+
+
+def print_number(value):
+    return '{:,}'.format(value)
