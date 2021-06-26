@@ -21,8 +21,6 @@ SYNONYMOUS_VARIANT = "synonymous_variant"
 
 class Queries:
 
-    FINAL_JOB_STATE = JobStatus.FINISHED
-
     def __init__(self, session: Session):
         self.session = session
 
@@ -81,10 +79,12 @@ class Queries:
             raise CovigatorQueryException("Bad query trying to fetch a sample")
         return sample
 
-    def get_ena_countries(self) -> List[str]:
-        countries = [c for c, in self.session.query(SampleEna.country).join(JobEna).filter(
-            JobEna.status == self.FINAL_JOB_STATE).distinct().all()]
-        return countries
+    def get_countries(self) -> List[str]:
+        countries_ena = [c for c, in self.session.query(SampleEna.country).filter(
+            SampleEna.finished).distinct().all()]
+        countries_gisaid = [c for c, in self.session.query(SampleGisaid.country).filter(
+            SampleGisaid.finished).distinct().all()]
+        return sorted(list(set(countries_ena + countries_gisaid)))
 
     def get_accumulated_samples_by_country(
             self, data_source: DataSource, countries: List[str], min_samples=100) -> pd.DataFrame:
@@ -149,10 +149,13 @@ class Queries:
         return filled_table
 
     def get_sample_months(self, pattern) -> List[datetime]:
-        dates = [
-            d[0] for d in
-            self.session.query(SampleEna.first_created).join(JobEna).filter(JobEna.status == self.FINAL_JOB_STATE).all()]
-        return sorted(set([d.strftime(pattern) for d in dates]))
+        dates_ena = [d.strftime(pattern) for d, in
+                     self.session.query(SampleEna.first_created).filter(
+                         and_(SampleEna.finished, SampleEna.first_created.isnot(None))).distinct().all()]
+        dates_gisaid = [d.strftime(pattern) for d, in
+                     self.session.query(SampleGisaid.date).filter(
+                         and_(SampleGisaid.finished, SampleGisaid.date.isnot(None))).distinct().all()]
+        return sorted(set(dates_ena + dates_gisaid))
 
     def get_gene(self, gene_name: str):
         return self.session.query(Gene).filter(Gene.name == gene_name).first()
@@ -185,19 +188,13 @@ class Queries:
     def count_samples(self, source: DataSource = None) -> int:
         count = 0
         if source is None or source == DataSource.ENA:
-            count += self.session.query(JobEna).filter(JobEna.status == self.FINAL_JOB_STATE).count()
+            count += self.session.query(SampleEna).filter(SampleEna.finished).count()
         if source is None or source == DataSource.GISAID:
-            count += self.session.query(JobGisaid).filter(JobGisaid.status == self.FINAL_JOB_STATE).count()
+            count += self.session.query(SampleGisaid).filter(SampleGisaid.finished).count()
         return count
 
     def count_countries(self):
-        countries_ena = self.session.query(SampleEna.country)\
-            .join(JobEna).filter(JobEna.status == self.FINAL_JOB_STATE)\
-            .distinct().all()
-        countries_gisaid = self.session.query(SampleGisaid.country) \
-            .join(JobGisaid).filter(JobGisaid.status == self.FINAL_JOB_STATE) \
-            .distinct().all()
-        return len(set(countries_ena + countries_gisaid))
+        return len(self.get_countries())
 
     def count_variants(self):
         return self.session.query(Variant).count()
@@ -219,12 +216,12 @@ class Queries:
         Returns the date of the earliest ENA sample loaded in the database
         """
         if source == DataSource.ENA:
-            result = self.session.query(SampleEna.first_created).join(JobEna).filter(
-                and_(JobEna.status == self.FINAL_JOB_STATE, SampleEna.first_created.isnot(None))) \
+            result = self.session.query(SampleEna.first_created).filter(
+                and_(SampleEna.finished, SampleEna.first_created.isnot(None))) \
                 .order_by(asc(SampleEna.first_created)).first()
         elif source == DataSource.GISAID:
-            result = self.session.query(SampleGisaid.date).join(JobGisaid).filter(
-                and_(JobGisaid.status == self.FINAL_JOB_STATE, SampleGisaid.date.isnot(None))) \
+            result = self.session.query(SampleGisaid.date).filter(
+                and_(SampleGisaid.finished, SampleGisaid.date.isnot(None))) \
                 .order_by(asc(SampleGisaid.date)).first()
         else:
             raise CovigatorQueryException("No valid data source for query of first sample")
@@ -235,12 +232,12 @@ class Queries:
         Returns the date of the latest ENA sample loaded in the database
         """
         if source == DataSource.ENA:
-            result = self.session.query(SampleEna.first_created).join(JobEna).filter(
-                and_(JobEna.status == self.FINAL_JOB_STATE, SampleEna.first_created.isnot(None))) \
+            result = self.session.query(SampleEna.first_created).filter(
+                and_(SampleEna.finished, SampleEna.first_created.isnot(None))) \
                 .order_by(desc(SampleEna.first_created)).first()
         elif source == DataSource.GISAID:
-            result = self.session.query(SampleGisaid.date).join(JobGisaid).filter(
-                and_(JobGisaid.status == self.FINAL_JOB_STATE, SampleGisaid.date.isnot(None))) \
+            result = self.session.query(SampleGisaid.date).filter(
+                and_(SampleGisaid.finished, SampleGisaid.date.isnot(None))) \
                 .order_by(desc(SampleGisaid.date)).first()
         else:
             raise CovigatorQueryException("No valid data source for query of most recent sample")

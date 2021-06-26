@@ -90,7 +90,7 @@ class AbstractProcessor:
                         function(job, queries, config)
                         if end_status is not None:
                             job.status = end_status
-                            if job.status == Queries.FINAL_JOB_STATE:
+                            if job.status == JobStatus.FINISHED:
                                 sample = queries.find_sample_by_accession(
                                     run_accession=run_accession, source=data_source)
                                 sample.finished = True

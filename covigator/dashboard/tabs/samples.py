@@ -58,7 +58,7 @@ def get_samples_tab_left_bar(queries: Queries):
             dcc.Markdown("""Select a country"""),
             dcc.Dropdown(
                 id=ID_DROPDOWN_COUNTRY,
-                options=[{'label': c, 'value': c} for c in queries.get_ena_countries()],
+                options=[{'label': c, 'value': c} for c in queries.get_countries()],
                 value=None,
                 multi=True
             ),
