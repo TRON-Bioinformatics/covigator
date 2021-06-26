@@ -90,6 +90,7 @@ class SampleGisaid(Base):
     __tablename__ = SAMPLE_GISAID_TABLE_NAME
 
     run_accession = Column(String, primary_key=True)
+    finished = Column(Boolean)
     date = Column(Date)
     # Host information
     host_tax_id = Column(String)
@@ -116,6 +117,7 @@ class SampleEna(Base):
     # data on run
     # TODO: add foreign keys to jobs
     run_accession = Column(String, primary_key=True)            # 'ERR4080473',
+    finished = Column(Boolean)
     sample_accession = Column(String)                           # 'SAMEA6798401',
     scientific_name = Column(String)
     study_accession = Column(String)

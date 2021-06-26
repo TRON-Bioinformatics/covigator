@@ -75,7 +75,7 @@ class EnaProcessor(AbstractProcessor):
         # ensures that the download is done with retries, even after MD5 check sum failure
         downloader = Downloader(config=config)
         download_with_retries = backoff_retrier.wrapper(downloader.download, NUMBER_RETRIES_DOWNLOADER)
-        sample_ena = queries.find_sample_ena_by_accession(job.run_accession)
+        sample_ena = queries.find_sample_by_accession(job.run_accession, source=DataSource.ENA)
         paths = download_with_retries(sample_ena=sample_ena)
         job.fastq_path = paths
         job.downloaded_at = datetime.now()

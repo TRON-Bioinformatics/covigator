@@ -13,7 +13,7 @@ import re
 
 from logzero import logger
 
-from covigator.database.model import Gene
+from covigator.database.model import Gene, DataSource
 from covigator.database.queries import Queries
 
 VARIANT_TOOLTIP = '<b>%{text}</b><br>' + 'Allele frequency: %{y:.5f}<br>' + 'Genomic Position: %{x}'
@@ -45,31 +45,27 @@ class Figures:
     def __init__(self, queries: Queries):
         self.queries = queries
 
-    def get_accumulated_samples_by_country_plot(self, countries=None):
-        data = self.queries.get_accumulated_samples_by_country(countries)
-        fig = None
-        if data is not None:
+    def get_accumulated_samples_by_country_plot(self, data_source: DataSource = None, countries=None, min_samples=1000):
+        data = self.queries.get_accumulated_samples_by_country(
+            data_source=data_source, countries=countries, min_samples=min_samples)
+        graph = dcc.Markdown("""**No data for the current selection**""")
+        if data is not None and data.shape[0] > 0:
             fig = px.area(data, x="date", y="cumsum", color="country",
                           category_orders={
                               "country": list(data.sort_values("cumsum", ascending=False).country.unique())[::-1]},
                           labels={"cumsum": "num. samples", "count": "increment"},
-                          #title="Accumulated samples per country",
                           hover_data=["count"],
                           color_discrete_sequence=random.shuffle(px.colors.qualitative.Dark24))
             fig.update_layout(
                 legend={'traceorder': 'reversed'},
                 xaxis={'title': None},
-                yaxis={'dtick': 2000},
                 template="plotly_white",
             )
+            graph = dcc.Graph(figure=fig, config=PLOTLY_CONFIG)
         return [
-                dcc.Graph(
-                    figure=fig,
-                    config=PLOTLY_CONFIG
-                ),
+                graph,
                 dcc.Markdown("""
-                        ***Accumulated ENA samples by country***
-                        *Countries with less than 10 samples are merged into the category "Other"*
+                        ***Accumulated samples by country***
                         """)
             ]
 

@@ -72,58 +72,79 @@ class Queries:
             raise ValueError("Bad data source {}".format(data_source))
         return count
 
-    def find_sample_ena_by_accession(self, run_accession: str) -> SampleEna:
-        return self.session.query(SampleEna).filter(SampleEna.run_accession == run_accession).first()
-
-    def find_sample_gisaid_by_accession(self, run_accession: str) -> SampleGisaid:
-        return self.session.query(SampleGisaid).filter(SampleGisaid.run_accession == run_accession).first()
+    def find_sample_by_accession(self, run_accession: str, source: DataSource) -> SampleEna:
+        if source == DataSource.ENA:
+            sample = self.session.query(SampleEna).filter(SampleEna.run_accession == run_accession).first()
+        elif source == DataSource.GISAID:
+            sample = self.session.query(SampleGisaid).filter(SampleGisaid.run_accession == run_accession).first()
+        else:
+            raise CovigatorQueryException("Bad query trying to fetch a sample")
+        return sample
 
     def get_ena_countries(self) -> List[str]:
         countries = [c for c, in self.session.query(SampleEna.country).join(JobEna).filter(
             JobEna.status == self.FINAL_JOB_STATE).distinct().all()]
         return countries
 
-    def get_accumulated_samples_by_country(self, countries: List[str]) -> pd.DataFrame:
+    def get_accumulated_samples_by_country(
+            self, data_source: DataSource, countries: List[str], min_samples=100) -> pd.DataFrame:
         """
         Returns a DataFrame with columns: data, country, cumsum, count
         """
-        query = self.session.query(SampleEna).join(JobEna).filter(JobEna.status == self.FINAL_JOB_STATE)
-        if countries:
-            query = query.filter(SampleEna.country.in_(countries))
+        samples_ena = None
+        if data_source is None or data_source == DataSource.ENA.name:
+            query = self.session.query(
+                func.count().label("count"), SampleEna.first_created.label("date"), SampleEna.country) \
+                .filter(SampleEna.finished == True) \
+                .group_by(SampleEna.first_created, SampleEna.country)
+            if countries:
+                query = query.filter(SampleEna.country.in_(countries))
+            samples_ena = pd.read_sql(query.statement, self.session.bind)
 
-        samples = pd.read_sql(query.statement, self.session.bind)
+        samples_gisaid = None
+        if data_source is None or data_source == DataSource.GISAID.name:
+            query = self.session.query(
+                func.count().label("count"), SampleGisaid.date, SampleGisaid.country) \
+                .filter(SampleGisaid.finished == True)\
+                .group_by(SampleGisaid.date, SampleGisaid.country)
+            if countries:
+                query = query.filter(SampleGisaid.country.in_(countries))
+            samples_gisaid = pd.read_sql(query.statement, self.session.bind)
+
+        if samples_gisaid is None:
+            # NOTE: setting index and then resetting is necessary to get the date column in the right dtype
+            samples = samples_ena.set_index(["date", "country"]).reset_index()
+        elif samples_ena is None:
+            # NOTE: setting index and then resetting is necessary to get the date column in the right dtype
+            samples = samples_gisaid.set_index(["date", "country"]).reset_index()
+        else:
+            samples = samples_gisaid.set_index(["date", "country"]).add(
+                samples_ena.set_index(["date", "country"]), fill_value=0).reset_index()
 
         filled_table = None
         if samples.shape[0] > 0:
-            # merge countries with less than 10 samples into OTHER
-            country_value_counts = samples.country.value_counts()
-            other_countries = list(country_value_counts[country_value_counts < 10].index)
-            null_country_values = ["none", "not available"]
-            samples["country_merged"] = samples.country.transform(
-                lambda c: "Other" if c in other_countries or c is None or c.lower() in null_country_values else c)
-
-            # counts samples by country and data
-            sample_counts = samples[["first_created", "run_accession", "country_merged"]] \
-                .groupby(["first_created", "country_merged"]).count()
-            sample_counts.reset_index(inplace=True)
-            sample_counts.rename(columns={"run_accession": "count"}, inplace=True)
 
             # accumulates count ordered by date
-            sample_counts['cumsum'] = sample_counts.groupby(['country_merged'])['count'].cumsum()
+            samples['cumsum'] = samples.groupby(['country'])['count'].cumsum()
 
             # creates empty table with all pairwise combinations of date and country
-            dates = sample_counts.first_created.unique()
-            countries = sample_counts.sort_values("cumsum", ascending=False).country_merged.unique()
+            dates = samples.date[~samples.date.isna()].sort_values().unique()
+            countries = samples[(~samples.country.isna()) & (samples["cumsum"] > min_samples)] \
+                .sort_values("cumsum", ascending=False).country.unique()
+
             empty_table = pd.DataFrame(
-                index=pd.MultiIndex.from_product([dates, countries], names=["first_created", "country_merged"]))
+                index=pd.MultiIndex.from_product([dates, countries], names=["date", "country"]))
             empty_table["count"] = 0
 
             # adds values into empty table
-            filled_table = empty_table + sample_counts.set_index(["first_created", "country_merged"])
-            filled_table.fillna(0, inplace=True)
-            filled_table.reset_index(inplace=True)
-            filled_table['cumsum'] = filled_table.groupby(['country_merged'])['count'].cumsum()
-            filled_table.rename(columns={"first_created": "date", "country_merged": "country"}, inplace=True)
+            filled_table = pd.merge(
+                left=empty_table.reset_index(),
+                right=samples.loc[:, ["date", "country", "count"]],
+                on=["date", "country"],
+                how='left',
+                suffixes=("_x", "_y")).fillna(0)
+            filled_table["count"] = filled_table.count_x + filled_table.count_y
+            filled_table['cumsum'] = filled_table.groupby(['country'])['count'].cumsum()
 
         return filled_table
 
