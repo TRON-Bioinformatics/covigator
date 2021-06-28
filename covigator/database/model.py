@@ -319,6 +319,14 @@ class VariantObservation(Base):
     dp4_alt_reverse = Column(Integer)
     vaf = Column(Float)
     strand_bias = Column(Integer)
+    # fields replicated from Variant for performance reasons
+    annotation = Column(String)
+    gene_name = Column(String)
+    hgvs_c = Column(String)
+    hgvs_p = Column(String)
+    # fields replicated from sample for performance reasons
+    date = Column(Date)
+
     ForeignKeyConstraint([sample, source], [Sample.id, Sample.source])
     ForeignKeyConstraint([variant_id], [Variant.variant_id])
 
@@ -354,6 +362,14 @@ class SubclonalVariantObservation(Base):
     dp4_alt_reverse = Column(Integer)
     vaf = Column(Float)
     strand_bias = Column(Integer)
+    # fields replicated from Variant for performance reasons
+    annotation = Column(String)
+    gene_name = Column(String)
+    hgvs_c = Column(String)
+    hgvs_p = Column(String)
+    # fields replicated from sample for performance reasons
+    date = Column(Date)
+
     ForeignKeyConstraint([sample, source], [Sample.id, Sample.source])
     ForeignKeyConstraint([variant_id], [Variant.variant_id])
 

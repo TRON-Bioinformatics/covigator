@@ -10,8 +10,8 @@ from covigator.database.queries import Queries
 
 def get_tab_overview(queries: Queries):
 
-    count_samples_ena = queries.count_samples(source=DataSource.ENA)
-    count_samples_gisaid = queries.count_samples(source=DataSource.GISAID)
+    count_samples_ena = queries.count_samples(source=DataSource.ENA.name)
+    count_samples_gisaid = queries.count_samples(source=DataSource.GISAID.name)
     count_countries = queries.count_countries()
     count_variants = queries.count_variants()
     count_insertions = queries.count_insertions()

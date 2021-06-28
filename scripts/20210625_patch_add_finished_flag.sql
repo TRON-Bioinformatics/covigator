@@ -9,3 +9,4 @@ update sample_ena_v13 set finished=True where run_accession in (select run_acces
 
 CREATE INDEX ON sample_gisaid_v13(date, country, finished);
 CREATE INDEX ON sample_ena_v13(first_created, country, finished);
+CREATE INDEX ON sample_ena_v13(first_created, country);

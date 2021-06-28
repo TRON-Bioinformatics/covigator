@@ -63,7 +63,9 @@ def get_samples_tab_left_bar(queries: Queries):
                 multi=True
             ),
             html.Br(),
-            dcc.Markdown("""Minimum number of samples per country"""),
+            dcc.Markdown("""**Accumulated samples by country**
+            
+Minimum number of samples per country"""),
             dcc.Slider(
                 id=ID_SLIDER_MIN_SAMPLES,
                 min=0,

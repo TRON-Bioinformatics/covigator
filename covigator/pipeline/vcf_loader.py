@@ -1,3 +1,5 @@
+from typing import Union
+
 import sqlalchemy
 from cyvcf2 import VCF, Variant
 import os
@@ -5,7 +7,8 @@ import os
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from covigator.database.model import Variant as CovigatorVariant, VariantObservation, Sample, \
-    SubclonalVariantObservation
+    SubclonalVariantObservation, SampleEna, SampleGisaid, DataSource
+from covigator.database.queries import Queries
 
 
 class VcfLoader:
@@ -19,6 +22,9 @@ class VcfLoader:
 
         observed_variants = []
         subclonal_observed_variants = []
+        specific_sample = Queries(session=session).find_sample_by_accession(
+            run_accession=sample.id, source=sample.source)
+        assert specific_sample is not None, "Cannot find sample in database"
         variant: Variant
         for variant in VCF(vcf_file):
             if variant.FILTER is None or variant.FILTER in ["LOW_FREQUENCY", "SUBCLONAL"]:
@@ -35,10 +41,10 @@ class VcfLoader:
                 if variant.FILTER is None:
                     # only stores clonal high quality variants in this table
                     observed_variants.append(
-                        self._parse_variant_observation(variant, sample, covigator_variant, VariantObservation))
+                        self._parse_variant_observation(variant, specific_sample, covigator_variant, VariantObservation))
                 elif variant.FILTER in ["LOW_FREQUENCY", "SUBCLONAL"]:
                     subclonal_observed_variants.append(
-                        self._parse_variant_observation(variant, sample, covigator_variant, SubclonalVariantObservation))
+                        self._parse_variant_observation(variant, specific_sample, covigator_variant, SubclonalVariantObservation))
         session.add_all(observed_variants)
         session.add_all(subclonal_observed_variants)
         # NOTE: commit will happen afterwards when the job status is updated
@@ -71,7 +77,8 @@ class VcfLoader:
                 parsed_variant.aa_pos_length=values[13].strip()
         return parsed_variant
 
-    def _parse_variant_observation(self, variant: Variant, sample: Sample, covigator_variant: CovigatorVariant, klass):
+    def _parse_variant_observation(
+            self, variant: Variant, sample: Union[SampleEna, SampleGisaid], covigator_variant: CovigatorVariant, klass):
 
         dp4 = variant.INFO.get("DP4")
         return klass(
@@ -91,5 +98,11 @@ class VcfLoader:
             dp4_alt_forward=dp4[2] if dp4 else None,
             dp4_alt_reverse=dp4[3] if dp4 else None,
             vaf=variant.INFO.get("AF"),
-            strand_bias=variant.INFO.get("SB")
+            strand_bias=variant.INFO.get("SB"),
+            # denormalized fields
+            annotation=covigator_variant.annotation,
+            gene_name=covigator_variant.gene_name,
+            hgvs_p=covigator_variant.hgvs_p,
+            hgvs_c=covigator_variant.hgvs_c,
+            date=sample.first_created if sample.source == DataSource.ENA else sample.date
         )

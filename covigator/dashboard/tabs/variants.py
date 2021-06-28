@@ -5,7 +5,25 @@ import dash_table
 from dash.dependencies import Output, Input
 from covigator.dashboard.figures import Figures
 from covigator.dashboard.tabs import TAB_STYLE, TAB_SELECTED_STYLE, MONTH_PATTERN
+from covigator.database.model import DataSource
 from covigator.database.queries import Queries
+
+ID_DROPDOWN_DATE_RANGE_END_DIV = 'dropdown-date-range-end-div'
+ID_DROPDOWN_GENE = 'dropdown-gene'
+ID_SLIDER_MIN_SAMPLES = 'slider-min-samples'
+ID_SLIDER_MIN_COOCCURRENCES = 'slider-min-cooccurrences'
+ID_DROPDOWN_SIMILARITY_METRIC = 'dropdown-heatmap-metric'
+ID_SLIDER_BIN_SIZE = 'slider-bin-size'
+ID_DROPDOWN_DATE_RANGE_END = 'dropdown-date-range-end'
+ID_DROPDOWN_DATE_RANGE_START = 'dropdown-date-range-start'
+ID_TOP_VARIANTS_METRIC = 'dropdown-top-variants-metric'
+ID_SLIDER_TOP_VARIANTS = 'slider-top-variants'
+ID_VARIANTS_MDS = 'variants-mds'
+ID_COOCCURRENCE_HEATMAP = 'cooccurrence-heatmap'
+ID_NEEDLE_PLOT = 'needle-plot'
+ID_TOP_OCCURRING_VARIANTS = 'top-occurring-variants'
+ID_TOP_OCCURRING_VARIANTS_TABLE = 'top-occurring-variants-table'
+ID_DROPDOWN_DATA_SOURCE = "dropdown-data-source-variants-tab"
 
 
 def get_tab_variants(queries: Queries):
@@ -28,13 +46,13 @@ def get_tab_variants(queries: Queries):
 def get_variants_tab_graphs():
     return html.Div(children=[
         html.Br(),
-        html.Div(id='top-occurring-variants', children=dash_table.DataTable(id="top-occurring-variants-table")),
+        html.Div(id=ID_TOP_OCCURRING_VARIANTS, children=dash_table.DataTable(id=ID_TOP_OCCURRING_VARIANTS_TABLE)),
         html.Br(),
-        html.Div(id='needle-plot'),
+        html.Div(id=ID_NEEDLE_PLOT),
         html.Br(),
-        html.Div(id='cooccurrence-heatmap'),
+        html.Div(id=ID_COOCCURRENCE_HEATMAP),
         html.Br(),
-        html.Div(id='variants-mds'),
+        html.Div(id=ID_VARIANTS_MDS),
         html.Br(),
     ], className="ten columns", style={'overflow': 'scroll', "height": "900px"}, )
 
@@ -50,18 +68,28 @@ def get_variants_tab_left_bar(queries: Queries):
 
     return html.Div(children=[
         html.Br(),
+        dcc.Markdown("""Select data source"""),
+        dcc.Dropdown(
+            id=ID_DROPDOWN_DATA_SOURCE,
+            options=[{'label': DataSource.ENA.name, 'value': DataSource.ENA.name},
+                     {'label': DataSource.GISAID.name, 'value': DataSource.GISAID.name}],
+            value=None,
+            multi=False
+        ),
+        html.Br(),
         dcc.Markdown("Select a gene"),
         dcc.Dropdown(
-            id='dropdown-gene',
+            id=ID_DROPDOWN_GENE,
             options=[{'label': c.name, 'value': c.name} for c in genes],
             value=None,
             multi=False
         ),
         html.Br(),
         dcc.Markdown("""**Top occurring variants**
-        Number of top occurring variants"""),
+
+Number of top occurring variants"""),
         dcc.Slider(
-            id='slider-top-variants',
+            id=ID_SLIDER_TOP_VARIANTS,
             min=10,
             max=100,
             step=10,
@@ -73,7 +101,7 @@ def get_variants_tab_left_bar(queries: Queries):
         html.Br(),
         dcc.Markdown("""Metric to measure abundance of variants per month"""),
         dcc.Dropdown(
-            id='dropdown-top-variants-metric',
+            id=ID_TOP_VARIANTS_METRIC,
             options=[
                 {'label': 'Count', 'value': 'count'},
                 {'label': 'Frequency', 'value': 'frequency_by_month'}],
@@ -86,28 +114,28 @@ def get_variants_tab_left_bar(queries: Queries):
         html.Div(children=[
             html.Div(
                 dcc.Dropdown(
-                    id='dropdown-date-range-start',
+                    id=ID_DROPDOWN_DATE_RANGE_START,
                     options=[{'label': c, 'value': c} for c in months],
                     value=oneyearago_formatted,
                     multi=False,
                     clearable=False
                 ), className="six column"),
-            html.Div(id="dropdown-date-range-end-div",
-                     children=dcc.Dropdown(
-                         id='dropdown-date-range-end',
-                         options=[{'label': c, 'value': c} for c in months],
-                         value=today_formatted,
-                         multi=False,
-                         clearable=False
-                     ),
-                     className="six column"),
+            html.Div(
+                id=ID_DROPDOWN_DATE_RANGE_END_DIV,
+                children=dcc.Dropdown(
+                    id=ID_DROPDOWN_DATE_RANGE_END,
+                    options=[{'label': c, 'value': c} for c in months],
+                    value=today_formatted,
+                    multi=False,
+                    clearable=False
+                ), className="six column"),
         ], className="row container-display"),
         html.Br(),
         dcc.Markdown("""**Genome view**
         
-        Bin size"""),
+Bin size"""),
         dcc.Slider(
-            id='slider-bin-size',
+            id=ID_SLIDER_BIN_SIZE,
             min=5,
             max=400,
             step=5,
@@ -119,9 +147,9 @@ def get_variants_tab_left_bar(queries: Queries):
         html.Br(),
         dcc.Markdown("""**Co-occurrence matrix**
         
-        Metric to assess paiwise co-occurrence"""),
+Metric to assess paiwise co-occurrence"""),
         dcc.Dropdown(
-            id='dropdown-heatmap-metric',
+            id=ID_DROPDOWN_SIMILARITY_METRIC,
             options=[{'label': "Count", 'value': "count"},
                      {'label': "Frequency", 'value': "frequency"},
                      {'label': "Jaccard index", 'value': "jaccard"},
@@ -133,7 +161,7 @@ def get_variants_tab_left_bar(queries: Queries):
         ),
         dcc.Markdown("""Minimum number of pairwise co-occurrences"""),
         dcc.Slider(
-            id='slider-min-cooccurrences',
+            id=ID_SLIDER_MIN_COOCCURRENCES,
             min=1,
             max=100,
             step=5,
@@ -145,10 +173,10 @@ def get_variants_tab_left_bar(queries: Queries):
         html.Br(),
         dcc.Markdown("""**Variants clustering**
         
-        The number of samples (or total weight) in a neighborhood for a point to be 
-        considered as a core point. This includes the point itself."""),
+The number of samples (or total weight) in a neighborhood for a point to be 
+considered as a core point. This includes the point itself."""),
         dcc.Slider(
-            id='slider-min-samples',
+            id=ID_SLIDER_MIN_SAMPLES,
             min=2,
             max=10,
             step=1,
@@ -162,48 +190,51 @@ def get_variants_tab_left_bar(queries: Queries):
 
 def set_callbacks_variants_tab(app, figures: Figures, queries: Queries):
     @app.callback(
-        Output('top-occurring-variants', 'children'),
-        Input('slider-top-variants', 'value'),
-        Input('dropdown-gene', 'value'),
-        Input('dropdown-date-range-start', 'value'),
-        Input('dropdown-date-range-end', 'value'),
-        Input('dropdown-top-variants-metric', 'value')
+        Output(ID_TOP_OCCURRING_VARIANTS, 'children'),
+        Input(ID_SLIDER_TOP_VARIANTS, 'value'),
+        Input(ID_DROPDOWN_GENE, 'value'),
+        Input(ID_DROPDOWN_DATE_RANGE_START, 'value'),
+        Input(ID_DROPDOWN_DATE_RANGE_END, 'value'),
+        Input(ID_TOP_VARIANTS_METRIC, 'value'),
+        Input(ID_DROPDOWN_DATA_SOURCE, 'value')
     )
-    def update_top_occurring_variants(top_variants, gene_name, date_range_start, date_range_end, metric):
+    def update_top_occurring_variants(top_variants, gene_name, date_range_start, date_range_end, metric, source):
         return html.Div(children=figures.get_top_occurring_variants_plot(
             top=top_variants, gene_name=gene_name, date_range_start=date_range_start,
-            date_range_end=date_range_end, metric=metric))
+            date_range_end=date_range_end, metric=metric, source=source))
 
     @app.callback(
-        Output('needle-plot', 'children'),
-        Input('dropdown-gene', 'value'),
-        Input('top-occurring-variants-table', "derived_virtual_data"),
-        Input('top-occurring-variants-table', "derived_virtual_selected_rows"),
-        Input('slider-bin-size', 'value'),
+        Output(ID_NEEDLE_PLOT, 'children'),
+        Input(ID_DROPDOWN_GENE, 'value'),
+        Input(ID_TOP_OCCURRING_VARIANTS_TABLE, "derived_virtual_data"),
+        Input(ID_TOP_OCCURRING_VARIANTS_TABLE, "derived_virtual_selected_rows"),
+        Input(ID_SLIDER_BIN_SIZE, 'value'),
+        Input(ID_DROPDOWN_DATA_SOURCE, 'value')
     )
-    def update_needle_plot(gene_name, rows, selected_rows_indices, bin_size):
+    def update_needle_plot(gene_name, rows, selected_rows_indices, bin_size, source):
         if gene_name is not None:
             selected_rows = [rows[s] for s in selected_rows_indices] if selected_rows_indices else None
             plot = html.Div(
                 children=figures.get_variants_plot(
                     gene_name=gene_name,
                     selected_variants=selected_rows,
-                    bin_size=bin_size))
+                    bin_size=bin_size,
+                    source=source
+                ))
         else:
             plot = html.Div(
-                children=figures.get_variants_abundance_plot(
-                    bin_size=bin_size))
+                children=figures.get_variants_abundance_plot(bin_size=bin_size, source=source))
         return plot
 
     @app.callback(
-        Output('dropdown-date-range-end-div', 'children'),
-        Input('dropdown-date-range-start', 'value'))
+        Output(ID_DROPDOWN_DATE_RANGE_END_DIV, 'children'),
+        Input(ID_DROPDOWN_DATE_RANGE_START, 'value'))
     def update_dropdown_end_date(start_date):
         today = datetime.now()
         today_formatted = today.strftime(MONTH_PATTERN)
         months = [m for m in queries.get_sample_months(MONTH_PATTERN) if m >= start_date]
         return dcc.Dropdown(
-            id='dropdown-date-range-end',
+            id=ID_DROPDOWN_DATE_RANGE_END,
             options=[{'label': c, 'value': c} for c in months],
             value=today_formatted,
             multi=False,
@@ -211,35 +242,47 @@ def set_callbacks_variants_tab(app, figures: Figures, queries: Queries):
         )
 
     @app.callback(
-        Output('cooccurrence-heatmap', 'children'),
-        Input('dropdown-gene', 'value'),
-        Input('top-occurring-variants-table', "derived_virtual_data"),
-        Input('top-occurring-variants-table', "derived_virtual_selected_rows"),
-        Input('dropdown-heatmap-metric', 'value'),
-        Input('slider-min-cooccurrences', 'value'),
+        Output(ID_COOCCURRENCE_HEATMAP, 'children'),
+        Input(ID_DROPDOWN_GENE, 'value'),
+        Input(ID_TOP_OCCURRING_VARIANTS_TABLE, "derived_virtual_data"),
+        Input(ID_TOP_OCCURRING_VARIANTS_TABLE, "derived_virtual_selected_rows"),
+        Input(ID_DROPDOWN_SIMILARITY_METRIC, 'value'),
+        Input(ID_SLIDER_MIN_COOCCURRENCES, 'value'),
+        Input(ID_DROPDOWN_DATA_SOURCE, 'value')
     )
-    def update_cooccurrence_heatmap(gene_name, rows, selected_rows_indices, metric, min_occurrences):
-        selected_rows = [rows[s] for s in selected_rows_indices] if selected_rows_indices else None
-        plot = html.Div(children=figures.get_cooccurrence_heatmap(
-            gene_name=gene_name,
-            selected_variants=selected_rows,
-            metric=metric,
-            min_occurrences=min_occurrences))
+    def update_cooccurrence_heatmap(gene_name, rows, selected_rows_indices, metric, min_occurrences, source):
+        if source != DataSource.ENA.name:
+            plot = html.Div(
+                children=[dcc.Markdown(
+                    """The cooccurrence heatmap is currently only available for the ENA dataset""")])
+        else:
+            selected_rows = [rows[s] for s in selected_rows_indices] if selected_rows_indices else None
+            plot = html.Div(children=figures.get_cooccurrence_heatmap(
+                gene_name=gene_name,
+                selected_variants=selected_rows,
+                metric=metric,
+                min_occurrences=min_occurrences))
         return plot
 
     @app.callback(
-        Output('variants-mds', 'children'),
-        Input('dropdown-gene', 'value'),
-        Input('top-occurring-variants-table', "derived_virtual_data"),
-        Input('top-occurring-variants-table', "derived_virtual_selected_rows"),
-        Input('slider-min-cooccurrences', 'value'),
-        Input('slider-min-samples', 'value')
+        Output(ID_VARIANTS_MDS, 'children'),
+        Input(ID_DROPDOWN_GENE, 'value'),
+        Input(ID_TOP_OCCURRING_VARIANTS_TABLE, "derived_virtual_data"),
+        Input(ID_TOP_OCCURRING_VARIANTS_TABLE, "derived_virtual_selected_rows"),
+        Input(ID_SLIDER_MIN_COOCCURRENCES, 'value'),
+        Input(ID_SLIDER_MIN_SAMPLES, 'value'),
+        Input(ID_DROPDOWN_DATA_SOURCE, 'value')
     )
-    def update_variants_mds(gene_name, rows, selected_rows_indices, min_cooccurrence, min_samples):
-        selected_rows = [rows[s] for s in selected_rows_indices] if selected_rows_indices else None
-        plot = html.Div(children=figures.get_variants_clustering(
-            gene_name=gene_name,
-            selected_variants=selected_rows,
-            min_cooccurrence=min_cooccurrence,
-            min_samples=min_samples))
+    def update_variants_mds(gene_name, rows, selected_rows_indices, min_cooccurrence, min_samples, source):
+        if source != DataSource.ENA.name:
+            plot = html.Div(children=
+                            [dcc.Markdown(
+                                """The variants clustering is currently only available for the ENA dataset""")])
+        else:
+            selected_rows = [rows[s] for s in selected_rows_indices] if selected_rows_indices else None
+            plot = html.Div(children=figures.get_variants_clustering(
+                gene_name=gene_name,
+                selected_variants=selected_rows,
+                min_cooccurrence=min_cooccurrence,
+                min_samples=min_samples))
         return plot

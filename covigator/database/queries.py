@@ -7,7 +7,7 @@ from logzero import logger
 from skbio.stats.distance import DissimilarityMatrix
 from sklearn.cluster import OPTICS
 from sklearn.manifold import MDS
-from sqlalchemy import and_, desc, asc, func, String, DateTime
+from sqlalchemy import and_, desc, asc, func, String, DateTime, cast
 from sqlalchemy.engine.default import DefaultDialect
 from sqlalchemy.orm import Session, aliased
 from sqlalchemy.sql.sqltypes import NullType
@@ -70,7 +70,7 @@ class Queries:
             raise ValueError("Bad data source {}".format(data_source))
         return count
 
-    def find_sample_by_accession(self, run_accession: str, source: DataSource) -> SampleEna:
+    def find_sample_by_accession(self, run_accession: str, source: DataSource) -> Union[SampleEna, SampleGisaid]:
         if source == DataSource.ENA:
             sample = self.session.query(SampleEna).filter(SampleEna.run_accession == run_accession).first()
         elif source == DataSource.GISAID:
@@ -95,7 +95,7 @@ class Queries:
         if data_source is None or data_source == DataSource.ENA.name:
             query = self.session.query(
                 func.count().label("count"), SampleEna.first_created.label("date"), SampleEna.country) \
-                .filter(SampleEna.finished == True) \
+                .filter(SampleEna.finished) \
                 .group_by(SampleEna.first_created, SampleEna.country)
             if countries:
                 query = query.filter(SampleEna.country.in_(countries))
@@ -105,7 +105,7 @@ class Queries:
         if data_source is None or data_source == DataSource.GISAID.name:
             query = self.session.query(
                 func.count().label("count"), SampleGisaid.date, SampleGisaid.country) \
-                .filter(SampleGisaid.finished == True)\
+                .filter(SampleGisaid.finished)\
                 .group_by(SampleGisaid.date, SampleGisaid.country)
             if countries:
                 query = query.filter(SampleGisaid.country.in_(countries))
@@ -163,13 +163,18 @@ class Queries:
     def get_genes(self):
         return self.session.query(Gene).order_by(Gene.start).all()
 
-    def get_non_synonymous_variants_by_region(self, start, end) -> pd.DataFrame:
-        subquery = self.session.query(VariantObservation.position, Variant.annotation, Variant.hgvs_p,
-                               func.count(VariantObservation.position).label("count_occurrences"))\
-            .join(Variant)\
-            .filter(and_(Variant.position >= start, Variant.position <= end,
-                         Variant.annotation != SYNONYMOUS_VARIANT))\
-            .group_by(VariantObservation.position, Variant.annotation, Variant.hgvs_p).subquery()
+    def get_non_synonymous_variants_by_region(self, start, end, source) -> pd.DataFrame:
+        query = self.session.query(VariantObservation.position,
+                                      VariantObservation.annotation,
+                                      VariantObservation.hgvs_p,
+                                      func.count().label("count_occurrences"))\
+            .filter(and_(VariantObservation.position >= start, VariantObservation.position <= end,
+                         VariantObservation.annotation != SYNONYMOUS_VARIANT))
+        if source == DataSource.ENA.name:
+            query = query.filter(VariantObservation.source == DataSource.ENA)
+        elif source == DataSource.GISAID.name:
+            query = query.filter(VariantObservation.source == DataSource.GISAID)
+        subquery = query.group_by(VariantObservation.position, VariantObservation.annotation, VariantObservation.hgvs_p).subquery()
         return pd.read_sql(
             self.session.query(subquery).filter(subquery.c.count_occurrences > 1).statement, self.session.bind)
 
@@ -185,11 +190,11 @@ class Queries:
                          VariantCooccurrence.variant_id_two == variant_two.variant_id)) \
             .first()
 
-    def count_samples(self, source: DataSource = None) -> int:
+    def count_samples(self, source: str = None) -> int:
         count = 0
-        if source is None or source == DataSource.ENA:
+        if source is None or source == DataSource.ENA.name:
             count += self.session.query(SampleEna).filter(SampleEna.finished).count()
-        if source is None or source == DataSource.GISAID:
+        if source is None or source == DataSource.GISAID.name:
             count += self.session.query(SampleGisaid).filter(SampleGisaid.finished).count()
         return count
 
@@ -277,34 +282,48 @@ class Queries:
                 .order_by(desc(Log.start)).first()
         return result2[0] if result2 is not None else result2
 
-    def get_top_occurring_variants(self, top=10, gene_name=None, metric="count") -> pd.DataFrame:
+    def get_top_occurring_variants(self, top=10, gene_name=None, metric="count", source=None) -> pd.DataFrame:
         """
         Returns the top occurring variants + the segregated counts of occurrences per month
         with columns: chromosome, position, reference, alternate, total, month, count
         """
+
+        logger.info("eins")
+
         # query for top occurring variants
         query = self.session.query(
-            VariantObservation.variant_id, Variant.hgvs_p, Variant.gene_name, Variant.annotation,
-            func.count().label('total')).join(Variant)
+            VariantObservation.variant_id, VariantObservation.hgvs_p, VariantObservation.gene_name,
+            VariantObservation.annotation, func.count().label('total'))
         if gene_name is not None:
-            query = query.filter(and_(Variant.gene_name == gene_name, Variant.annotation != SYNONYMOUS_VARIANT))
+            query = query.filter(and_(VariantObservation.gene_name == gene_name,
+                                      VariantObservation.annotation != SYNONYMOUS_VARIANT))
         else:
-            query = query.filter(Variant.annotation != SYNONYMOUS_VARIANT)
+            query = query.filter(VariantObservation.annotation != SYNONYMOUS_VARIANT)
+        if source == DataSource.ENA.name:
+            query = query.filter(VariantObservation.source == DataSource.ENA)
+        elif source == DataSource.GISAID.name:
+            query = query.filter(VariantObservation.source == DataSource.GISAID)
+
         query = query.group_by(
-            VariantObservation.variant_id, Variant.hgvs_p, Variant.gene_name, Variant.annotation)
+            VariantObservation.variant_id, VariantObservation.hgvs_p, VariantObservation.gene_name,
+            VariantObservation.annotation)
         query = query.order_by(desc('total')).limit(top)
         top_occurring_variants = pd.read_sql(query.statement, self.session.bind)
+
+        logger.info("zwei")
 
         if top_occurring_variants is not None and top_occurring_variants.shape[0] > 0:
             variant_counts_by_month = []
 
             # NOTE: one query per variant for the counts per month, will this be efficient?
             for _, variant in top_occurring_variants.iterrows():
-                variant_counts_by_month.append(self.get_variant_counts_by_month(variant.variant_id))
+                variant_counts_by_month.append(self.get_variant_counts_by_month(variant.variant_id, source=source))
             top_occurring_variants_by_month = pd.concat(variant_counts_by_month)
 
+            logger.info("drei")
+
             # get total count of samples per month to calculate the frequency by month
-            sample_counts_by_month = self.get_sample_counts_by_month()
+            sample_counts_by_month = self.get_sample_counts_by_month(source=source)
             top_occurring_variants_by_month = pd.merge(
                 left=top_occurring_variants_by_month, right=sample_counts_by_month, how="left", on="month")
             top_occurring_variants_by_month["frequency_by_month"] = \
@@ -323,36 +342,61 @@ class Queries:
             top_occurring_variants.rename(columns={'variant_id': 'dna_mutation'}, inplace=True)
 
             # replace the total count by the frequency
-            count_samples = self.count_samples()
+            count_samples = self.count_samples(source=source)
             top_occurring_variants['frequency'] = top_occurring_variants.total.transform(
                 lambda t: round(float(t) / count_samples, 3))
+
+            logger.info("vier")
 
             # pivots the table over months
             top_occurring_variants = pd.pivot_table(
                 top_occurring_variants, index=['gene_name', 'dna_mutation', 'hgvs_p', 'annotation', "frequency", "total"],
                 columns=["month"], values=[metric], fill_value=0).droplevel(0, axis=1).reset_index()
 
+            logger.info("funf")
+
         return top_occurring_variants
 
-    def get_variant_counts_by_month(self, variant_id) -> pd.DataFrame:
+    def get_variant_counts_by_month(self, variant_id, source=None) -> pd.DataFrame:
         query = self.session.query(
             VariantObservation.variant_id,
-            func.date_trunc('month', SampleEna.first_created).label("month"),
+            func.date_trunc('month', VariantObservation.date).label("month"),
             func.count().label("count"))\
-            .join(SampleEna, VariantObservation.sample == SampleEna.run_accession) \
-            .join(JobEna, VariantObservation.sample == JobEna.run_accession) \
-            .filter(and_(VariantObservation.variant_id == variant_id, JobEna.status == JobStatus.FINISHED))\
-            .group_by(VariantObservation.variant_id, func.date_trunc('month', SampleEna.first_created))
+            .filter(and_(VariantObservation.variant_id == variant_id, VariantObservation.date.isnot(None)))
+        if source == DataSource.ENA.name:
+            query = query.filter(VariantObservation.source == DataSource.ENA)
+        elif source == DataSource.GISAID.name:
+            query = query.filter(VariantObservation.source == DataSource.GISAID)
+        query = query.group_by(VariantObservation.variant_id, func.date_trunc('month', VariantObservation.date))
         return pd.read_sql(query.statement, self.session.bind)
 
-    def get_sample_counts_by_month(self) -> pd.DataFrame:
-        query = self.session.query(
-            func.date_trunc('month', SampleEna.first_created).label("month"),
-            func.count().label("sample_count"))\
-            .join(JobEna) \
-            .filter(JobEna.status == JobStatus.FINISHED) \
-            .group_by(func.date_trunc('month', SampleEna.first_created))
-        return pd.read_sql(query.statement, self.session.bind)
+    def get_sample_counts_by_month(self, source=None) -> pd.DataFrame:
+        counts_ena = None
+        if source is None or source == DataSource.ENA.name:
+            query = self.session.query(
+                func.date_trunc('month', SampleEna.first_created).label("month"),
+                func.count().label("sample_count"))\
+                .filter(SampleEna.finished) \
+                .group_by(func.date_trunc('month', SampleEna.first_created))
+            counts_ena = pd.read_sql(query.statement, self.session.bind)
+        counts_gisaid = None
+        if source is None or source == DataSource.GISAID.name:
+            query = self.session.query(
+                func.date_trunc('month', SampleGisaid.date).label("month"),
+                func.count().label("sample_count"))\
+                .filter(SampleGisaid.finished) \
+                .group_by(func.date_trunc('month', SampleGisaid.date))
+            counts_gisaid = pd.read_sql(query.statement, self.session.bind)
+        if counts_gisaid is None:
+            # NOTE: setting index and then resetting is necessary to get the date column in the right dtype
+            counts = counts_ena
+        elif counts_ena is None:
+            # NOTE: setting index and then resetting is necessary to get the date column in the right dtype
+            counts = counts_gisaid
+        else:
+            counts = counts_gisaid.set_index(["month"]).add(
+                counts_ena.set_index(["month"]), fill_value=0).reset_index()
+        return counts
 
     def get_variants_cooccurrence_by_gene(self, gene_name, min_cooccurrence=5, test=False) -> pd.DataFrame:
         """
@@ -361,7 +405,7 @@ class Queries:
         """
         # query for total samples required to calculate frequencies
         # FIXME: once we have the cooccurrence for GISAID samples we need to count all samples here
-        count_samples = self.count_samples(source=DataSource.ENA)
+        count_samples = self.count_samples(source=DataSource.ENA.name)
 
         # query for cooccurrence matrix
         variant_one = aliased(Variant)
@@ -568,7 +612,7 @@ class Queries:
 
         return data
 
-    def get_variant_abundance_histogram(self, bin_size=50) -> pd.DataFrame:
+    def get_variant_abundance_histogram(self, bin_size=50, source: str = None) -> pd.DataFrame:
 
         # queries for the maximum position
         maximum_position = self.session.query(func.max(Variant.position)).first()[0]
@@ -592,9 +636,11 @@ class Queries:
                     SELECT cast("position"/{bin_size} as int)*{bin_size} AS position_bin,
                            COUNT(*) as count_variant_observations
                     FROM {table_name}
+                    {source_filter}
                     GROUP BY position_bin
                     ORDER BY position_bin;
-                    """.format(bin_size=bin_size, table_name=VariantObservation.__tablename__)
+                    """.format(bin_size=bin_size, table_name=VariantObservation.__tablename__,
+                               source_filter="WHERE source='{}'".format(source) if source is not None else "")
             binned_counts_variant_observations = pd.read_sql_query(sql_query, self.session.bind)
 
             histogram = all_bins.set_index("position_bin").join(binned_counts_variants.set_index("position_bin"))

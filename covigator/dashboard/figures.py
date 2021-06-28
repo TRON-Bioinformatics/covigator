@@ -55,7 +55,7 @@ class Figures:
                               "country": list(data.sort_values("cumsum", ascending=False).country.unique())[::-1]},
                           labels={"cumsum": "num. samples", "count": "increment"},
                           hover_data=["count"],
-                          color_discrete_sequence=random.shuffle(px.colors.qualitative.Dark24))
+                          color_discrete_sequence=px.colors.qualitative.Dark24)
             fig.update_layout(
                 legend={'traceorder': 'reversed'},
                 xaxis={'title': None},
@@ -119,8 +119,8 @@ class Figures:
             }
         ]
 
-    def get_top_occurring_variants_plot(self, top, gene_name, date_range_start, date_range_end, metric):
-        data = self.queries.get_top_occurring_variants(top, gene_name, metric)
+    def get_top_occurring_variants_plot(self, top, gene_name, date_range_start, date_range_end, metric, source):
+        data = self.queries.get_top_occurring_variants(top, gene_name, metric, source)
         fig = dcc.Markdown("""**No variants for the current selection**""")
         if data is not None and data.shape[0] > 0:
 
@@ -221,7 +221,7 @@ class Figures:
 
     def get_cooccurrence_heatmap(self, gene_name, selected_variants, metric="jaccard", min_occurrences=5):
         data = self.queries.get_variants_cooccurrence_by_gene(gene_name=gene_name, min_cooccurrence=min_occurrences)
-        fig = dcc.Markdown("""**No co-occurrent variants for the current selection**""")
+        graph = dcc.Markdown("""**No co-occurrent variants for the current selection**""")
         if data is not None and data.shape[0] > 0:
 
             all_variants = data.variant_id_one.unique()
@@ -279,12 +279,10 @@ class Figures:
 
             # the y index is reversed in plotly heatmap
             fig.update_yaxes(autorange="reversed")
+            graph = dcc.Graph(figure=fig, config=PLOTLY_CONFIG)
 
         return [
-                dcc.Graph(
-                    figure=fig,
-                    config=PLOTLY_CONFIG
-                ),
+                graph,
                 dcc.Markdown("""
                         ***Co-occurrence matrix*** *showing variant pairs co-occurring in at least {} samples (this value is configurable).*
                         *The metric in the co-occurrence matrix can be chosen among counts, frequencies, Jaccard index or 
@@ -297,7 +295,7 @@ class Figures:
                         """.format(min_occurrences, metric, " on gene {}".format(gene_name) if gene_name else ""))
             ]
 
-    def get_variants_abundance_plot(self, bin_size=50):
+    def get_variants_abundance_plot(self, bin_size=50, source=None):
 
         # reads genes and domains across the whole genome
         genes = self.queries.get_genes()
@@ -306,7 +304,7 @@ class Figures:
             domains.extend([(g, d) for d in g.get_pfam_domains()])
 
         # reads variants abundance
-        variant_abundance = self.queries.get_variant_abundance_histogram(bin_size=bin_size)
+        variant_abundance = self.queries.get_variant_abundance_histogram(bin_size=bin_size, source=source)
 
         # reads conservation and bins it
         conservation = self.queries.get_conservation_table(bin_size=bin_size)
@@ -393,21 +391,21 @@ class Figures:
                            round(np.corrcoef(data.conservation_vertebrates, data.count_unique_variants)[0][1], 5)
                            ))]
 
-    def get_variants_plot(self, gene_name, selected_variants, bin_size):
+    def get_variants_plot(self, gene_name, selected_variants, bin_size, source):
 
         # reads gene annotations
         gene = self.queries.get_gene(gene_name)
         pfam_protein_features = gene.get_pfam_domains()
 
         # reads variants
-        variants = self.queries.get_non_synonymous_variants_by_region(start=gene.start, end=gene.end)
+        variants = self.queries.get_non_synonymous_variants_by_region(start=gene.start, end=gene.end, source=source)
 
         # reads conservation and bins it
         conservation = self.queries.get_conservation_table(start=gene.start, end=gene.end, bin_size=bin_size)
 
         if variants.shape[0] > 0:
             # reads total number of samples and calculates frequencies
-            count_samples = self.queries.count_samples()
+            count_samples = self.queries.count_samples(source=source)
             variants["af"] = variants.count_occurrences / count_samples
             variants["log_af"] = variants.af.transform(lambda x: np.log(x + 1))
             variants["log_count"] = variants.count_occurrences.transform(lambda x: np.log(x))

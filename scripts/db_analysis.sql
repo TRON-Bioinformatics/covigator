@@ -8,7 +8,7 @@ SELECT p1.relname as table,
     pg_size_pretty (pg_indexes_size(p1.relid)) as indexes_size
 from pg_catalog.pg_statio_user_tables as p1,
     pg_stat_all_tables as p2 where p1.relid=p2.relid
-order by pg_relation_size(p1.relid);;
+order by pg_relation_size(p1.relid);
 
 -- size of table
 select pg_size_pretty(pg_relation_size('variant_observation_v12'));
