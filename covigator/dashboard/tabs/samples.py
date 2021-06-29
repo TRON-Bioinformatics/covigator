@@ -6,9 +6,12 @@ from covigator.dashboard.tabs import TAB_STYLE, TAB_SELECTED_STYLE
 from covigator.database.model import DataSource
 from covigator.database.queries import Queries
 
+ID_VARIANTS_PER_SAMPLE_GRAPH = 'variants-per-sample-graph'
+
 ID_SLIDER_MIN_SAMPLES = 'slider-min-samples-per-country'
 ID_DROPDOWN_DATA_SOURCE = "dropdown-data-source"
 ID_DROPDOWN_COUNTRY = 'dropdown-country'
+ID_DROPDOWN_GENE = 'dropdown-gene-overall-mutations'
 ID_ACCUMULATED_SAMPLES_GRAPH = 'accumulated-samples-per-country'
 
 
@@ -37,6 +40,8 @@ def get_samples_tab_graphs():
         children=[
             html.Br(),
             html.Div(id=ID_ACCUMULATED_SAMPLES_GRAPH),
+            html.Br(),
+            html.Div(id=ID_VARIANTS_PER_SAMPLE_GRAPH),
             html.Br()
         ])
 
@@ -55,7 +60,9 @@ def get_samples_tab_left_bar(queries: Queries):
                 multi=False
             ),
             html.Br(),
-            dcc.Markdown("""Select a country"""),
+            dcc.Markdown("""**Accumulated samples by country**"""),
+            html.Br(),
+            dcc.Markdown("""Select one or more countries"""),
             dcc.Dropdown(
                 id=ID_DROPDOWN_COUNTRY,
                 options=[{'label': c, 'value': c} for c in queries.get_countries()],
@@ -63,9 +70,7 @@ def get_samples_tab_left_bar(queries: Queries):
                 multi=True
             ),
             html.Br(),
-            dcc.Markdown("""**Accumulated samples by country**
-            
-Minimum number of samples per country"""),
+            dcc.Markdown("""Minimum number of samples per country"""),
             dcc.Slider(
                 id=ID_SLIDER_MIN_SAMPLES,
                 min=0,
@@ -76,6 +81,15 @@ Minimum number of samples per country"""),
                 tooltip=dict(always_visible=True, placement="right")
             ),
             html.Br(),
+            dcc.Markdown("""**Overall mutations per sample**"""),
+            html.Br(),
+            dcc.Markdown("""Select one or more genes"""),
+            dcc.Dropdown(
+                id=ID_DROPDOWN_GENE,
+                options=[{'label': g.name, 'value': g.name} for g in queries.get_genes()],
+                value=None,
+                multi=True
+            ),
         ])
 
 
@@ -89,3 +103,11 @@ def set_callbacks_samples_tab(app, figures: Figures, queries: Queries):
     def update_accumulated_samples_by_country(data_source, countries, min_samples):
         return html.Div(children=figures.get_accumulated_samples_by_country_plot(
             data_source=data_source, countries=countries, min_samples=min_samples))
+
+    @app.callback(
+        Output(ID_VARIANTS_PER_SAMPLE_GRAPH, 'children'),
+        Input(ID_DROPDOWN_DATA_SOURCE, 'value'),
+        Input(ID_DROPDOWN_GENE, 'value')
+    )
+    def update_variants_per_sample(data_source, genes):
+        return html.Div(children=figures.get_variants_per_sample_plot(data_source=data_source, genes=genes))

@@ -1,14 +1,12 @@
 from typing import Union
-
-import sqlalchemy
 from cyvcf2 import VCF, Variant
 import os
-
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from covigator.database.model import Variant as CovigatorVariant, VariantObservation, Sample, \
-    SubclonalVariantObservation, SampleEna, SampleGisaid, DataSource
+    SubclonalVariantObservation, SampleEna, SampleGisaid, DataSource, VariantType
 from covigator.database.queries import Queries
+from covigator.exceptions import CovigatorNotSupportedVariant
 
 
 class VcfLoader:
@@ -104,5 +102,16 @@ class VcfLoader:
             gene_name=covigator_variant.gene_name,
             hgvs_p=covigator_variant.hgvs_p,
             hgvs_c=covigator_variant.hgvs_c,
-            date=sample.first_created if sample.source == DataSource.ENA else sample.date
+            date=sample.first_created if sample.source == DataSource.ENA else sample.date,
+            variant_type=self._get_variant_type(reference=variant.REF, alternate=variant.ALT[0])
         )
+
+    def _get_variant_type(self, reference, alternate):
+        if len(reference) and len(alternate):
+            return VariantType.SNV
+        elif len(reference) == 1 and len(alternate) > 1:
+            return VariantType.INSERTION
+        elif len(reference) > 1 and len(alternate) == 1:
+            return VariantType.DELETION
+        else:
+            raise CovigatorNotSupportedVariant

@@ -17,5 +17,9 @@ class CovigatorExcludedAssemblySequence(Exception):
     pass
 
 
+class CovigatorNotSupportedVariant(Exception):
+    pass
+
+
 class CovigatorQueryException(Exception):
     pass

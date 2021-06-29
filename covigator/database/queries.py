@@ -13,7 +13,8 @@ from sqlalchemy.orm import Session, aliased
 from sqlalchemy.sql.sqltypes import NullType
 
 from covigator.database.model import Log, DataSource, CovigatorModule, SampleEna, JobEna, JobStatus, VariantObservation, \
-    Gene, Variant, VariantCooccurrence, Conservation, JobGisaid, SampleGisaid, SubclonalVariantObservation
+    Gene, Variant, VariantCooccurrence, Conservation, JobGisaid, SampleGisaid, SubclonalVariantObservation, \
+    PrecomputedVariantsPerSample
 from covigator.exceptions import CovigatorQueryException
 
 SYNONYMOUS_VARIANT = "synonymous_variant"
@@ -86,6 +87,24 @@ class Queries:
             SampleGisaid.finished).distinct().all()]
         return sorted(list(set(countries_ena + countries_gisaid)))
 
+    def get_variants_per_sample(self, data_source: str, genes: List[str]):
+        """
+        Returns a DataFrame with columns: number_mutations, count, type
+        where type: SNV, insertion or deletion
+        """
+        query = self.session.query(PrecomputedVariantsPerSample)
+        if data_source is not None:
+            query = query.filter(PrecomputedVariantsPerSample.source == data_source)
+        if genes is not None and genes:
+            query = query.filter(PrecomputedVariantsPerSample.gene_name.in_(genes))
+        else:
+            query = query.filter(PrecomputedVariantsPerSample.gene_name == None)
+
+        data = pd.read_sql(query.statement, self.session.bind)
+        data.variant_type = data.variant_type.transform(lambda x: x.name)
+        return data[["number_mutations", "variant_type", "count"]] \
+            .groupby(["number_mutations", "variant_type"]).sum().reset_index()
+
     def get_accumulated_samples_by_country(
             self, data_source: DataSource, countries: List[str], min_samples=100) -> pd.DataFrame:
         """
@@ -123,6 +142,8 @@ class Queries:
 
         filled_table = None
         if samples.shape[0] > 0:
+            # NOTE: it needs to explicitly set the type, otherwise when having few data, Pandas guess is wrong
+            samples = samples.astype({'count': 'float64'})
 
             # accumulates count ordered by date
             samples['cumsum'] = samples.groupby(['country'])['count'].cumsum()

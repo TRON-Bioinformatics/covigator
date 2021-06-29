@@ -25,9 +25,11 @@ SAMPLE_TABLE_NAME = get_table_versioned_name('sample', config=config)
 SAMPLE_GISAID_TABLE_NAME = get_table_versioned_name('sample_gisaid', config=config)
 SAMPLE_ENA_TABLE_NAME = get_table_versioned_name('sample_ena', config=config)
 CONSERVATION_TABLE_NAME = get_table_versioned_name('conservation', config=config)
+PRECOMPUTED_VARIANTS_PER_SAMPLE_TABLE_NAME = get_table_versioned_name('precomputed_variants_per_sample', config=config)
 JOB_STATUS_CONSTRAINT_NAME = get_table_versioned_name('job_status', config=config)
 DATA_SOURCE_CONSTRAINT_NAME = get_table_versioned_name('data_source', config=config)
 COVIGATOR_MODULE_CONSTRAINT_NAME = get_table_versioned_name('covigator_module', config=config)
+VARIANT_TYPE_CONSTRAINT_NAME = get_table_versioned_name('variant_type', config=config)
 SEPARATOR = ";"
 
 Base = declarative_base()
@@ -425,3 +427,23 @@ class Conservation(Base):
     conservation = Column(Float)
     conservation_sarbecovirus = Column(Float)
     conservation_vertebrates = Column(Float)
+
+
+class VariantType(enum.Enum):
+    __constraint_name__ = VARIANT_TYPE_CONSTRAINT_NAME
+
+    SNV = 1
+    INSERTION = 2
+    DELETION = 3
+
+
+class PrecomputedVariantsPerSample(Base):
+
+    __tablename__ = PRECOMPUTED_VARIANTS_PER_SAMPLE_TABLE_NAME
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    count = Column(Integer)
+    number_mutations = Column(Integer)
+    source = Column(Enum(DataSource, name=DataSource.__constraint_name__))
+    variant_type = Column(Enum(VariantType, name=VariantType.__constraint_name__))
+    gene_name = Column(String)
