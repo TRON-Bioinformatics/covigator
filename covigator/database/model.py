@@ -85,6 +85,14 @@ class DataSource(enum.Enum):
     GISAID = 2
 
 
+class VariantType(enum.Enum):
+    __constraint_name__ = VARIANT_TYPE_CONSTRAINT_NAME
+
+    SNV = 1
+    INSERTION = 2
+    DELETION = 3
+
+
 class SampleGisaid(Base):
     """
     The table that holds all metadata for a GISAID sample
@@ -285,6 +293,7 @@ class Variant(Base):
     cdna_pos_length = Column(String)
     cds_pos_length = Column(String)
     aa_pos_length = Column(String)
+    variant_type = Column(Enum(VariantType, name=VariantType.__constraint_name__))
 
     def get_variant_id(self):
         return "{}:{}>{}".format(self.position, self.reference, self.alternate)
@@ -328,6 +337,7 @@ class VariantObservation(Base):
     hgvs_p = Column(String)
     # fields replicated from sample for performance reasons
     date = Column(Date)
+    variant_type = Column(Enum(VariantType, name=VariantType.__constraint_name__))
 
     ForeignKeyConstraint([sample, source], [Sample.id, Sample.source])
     ForeignKeyConstraint([variant_id], [Variant.variant_id])
@@ -371,6 +381,7 @@ class SubclonalVariantObservation(Base):
     hgvs_p = Column(String)
     # fields replicated from sample for performance reasons
     date = Column(Date)
+    variant_type = Column(Enum(VariantType, name=VariantType.__constraint_name__))
 
     ForeignKeyConstraint([sample, source], [Sample.id, Sample.source])
     ForeignKeyConstraint([variant_id], [Variant.variant_id])
@@ -427,14 +438,6 @@ class Conservation(Base):
     conservation = Column(Float)
     conservation_sarbecovirus = Column(Float)
     conservation_vertebrates = Column(Float)
-
-
-class VariantType(enum.Enum):
-    __constraint_name__ = VARIANT_TYPE_CONSTRAINT_NAME
-
-    SNV = 1
-    INSERTION = 2
-    DELETION = 3
 
 
 class PrecomputedVariantsPerSample(Base):

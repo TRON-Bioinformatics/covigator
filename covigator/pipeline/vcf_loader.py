@@ -6,12 +6,13 @@ from sqlalchemy.orm import Session
 from covigator.database.model import Variant as CovigatorVariant, VariantObservation, Sample, \
     SubclonalVariantObservation, SampleEna, SampleGisaid, DataSource, VariantType
 from covigator.database.queries import Queries
-from covigator.exceptions import CovigatorNotSupportedVariant
+from covigator.exceptions import CovigatorNotSupportedVariant, CovigatorExcludedSampleTooManyMutations
 
 
 class VcfLoader:
 
-    def load(self, vcf_file: str, sample: Sample, session: Session):
+    def load(self, vcf_file: str, sample: Sample, session: Session,
+             max_snvs=None, max_deletions=None, max_insertions=None):
 
         assert vcf_file is not None or vcf_file == "", "Missing VCF file provided to VcfLoader"
         assert os.path.exists(vcf_file) and os.path.isfile(vcf_file), "Non existing VCF file provided to VcfLoader"
@@ -23,8 +24,24 @@ class VcfLoader:
         specific_sample = Queries(session=session).find_sample_by_accession(
             run_accession=sample.id, source=sample.source)
         assert specific_sample is not None, "Cannot find sample in database"
+
+        # reads whole VCF in memory to count variants
+        variants = [v for v in VCF(vcf_file)]
+        if max_snvs is not None:
+            count_snvs = len([v for v in variants if v.FILTER is None and len(v.REF) == 1 and len(v.ALT[0]) == 1])
+            if count_snvs > max_snvs:
+                raise CovigatorExcludedSampleTooManyMutations
+        if max_insertions is not None:
+            count_insertions = len([v for v in variants if v.FILTER is None and len(v.REF) == 1 and len(v.ALT[0]) > 1])
+            if count_insertions > max_insertions:
+                raise CovigatorExcludedSampleTooManyMutations
+        if max_deletions is not None:
+            count_deletions = len([v for v in variants if v.FILTER is None and len(v.REF) > 1 and len(v.ALT[0]) == 1])
+            if count_deletions > max_deletions:
+                raise CovigatorExcludedSampleTooManyMutations
+
         variant: Variant
-        for variant in VCF(vcf_file):
+        for variant in variants:
             if variant.FILTER is None or variant.FILTER in ["LOW_FREQUENCY", "SUBCLONAL"]:
                 covigator_variant = self._parse_variant(variant)
                 if covigator_variant:
@@ -39,22 +56,24 @@ class VcfLoader:
                 if variant.FILTER is None:
                     # only stores clonal high quality variants in this table
                     observed_variants.append(
-                        self._parse_variant_observation(variant, specific_sample, covigator_variant, VariantObservation))
+                        self._parse_variant_observation(variant, specific_sample, sample.source, covigator_variant, VariantObservation))
                 elif variant.FILTER in ["LOW_FREQUENCY", "SUBCLONAL"]:
                     subclonal_observed_variants.append(
-                        self._parse_variant_observation(variant, specific_sample, covigator_variant, SubclonalVariantObservation))
+                        self._parse_variant_observation(variant, specific_sample, sample.source, covigator_variant, SubclonalVariantObservation))
         session.add_all(observed_variants)
         session.add_all(subclonal_observed_variants)
         # NOTE: commit will happen afterwards when the job status is updated
 
     def _parse_variant(self, variant: Variant) -> CovigatorVariant:
         parsed_variant = CovigatorVariant(
-                    chromosome=variant.CHROM,
-                    position=variant.POS,
-                    reference=variant.REF,
-                    # NOTE: because we only support haploid organisms we expect only one alternate,
-                    # TODO: support subclonal variants at some point
-                    alternate=variant.ALT[0])
+            chromosome=variant.CHROM,
+            position=variant.POS,
+            reference=variant.REF,
+            # NOTE: because we only support haploid organisms we expect only one alternate,
+            # TODO: support subclonal variants at some point
+            alternate=variant.ALT[0],
+            variant_type=self._get_variant_type(reference=variant.REF, alternate=variant.ALT[0])
+        )
         parsed_variant.variant_id = parsed_variant.get_variant_id()
         ann = variant.INFO.get("ANN")
         if ann is not None:
@@ -76,12 +95,12 @@ class VcfLoader:
         return parsed_variant
 
     def _parse_variant_observation(
-            self, variant: Variant, sample: Union[SampleEna, SampleGisaid], covigator_variant: CovigatorVariant, klass):
+            self, variant: Variant, sample: Union[SampleEna, SampleGisaid], source: DataSource, covigator_variant: CovigatorVariant, klass):
 
         dp4 = variant.INFO.get("DP4")
         return klass(
-            sample=sample.id,
-            source=sample.source,
+            sample=sample.run_accession,
+            source=source,
             variant_id=covigator_variant.variant_id,
             chromosome=variant.CHROM,
             position=variant.POS,
@@ -102,7 +121,7 @@ class VcfLoader:
             gene_name=covigator_variant.gene_name,
             hgvs_p=covigator_variant.hgvs_p,
             hgvs_c=covigator_variant.hgvs_c,
-            date=sample.first_created if sample.source == DataSource.ENA else sample.date,
+            date=sample.first_created if source == DataSource.ENA else sample.date,
             variant_type=self._get_variant_type(reference=variant.REF, alternate=variant.ALT[0])
         )
 

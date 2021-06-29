@@ -11,7 +11,9 @@ from covigator.processor.abstract_processor import AbstractProcessor
 from covigator.pipeline.gisaid_pipeline import GisaidPipeline
 from covigator.pipeline.vcf_loader import VcfLoader
 
-NUMBER_RETRIES_DOWNLOADER = 5
+MAX_INSERTIONS = 10
+MAX_DELETIONS = 10
+MAX_SNVS = 76
 
 
 class GisaidProcessor(AbstractProcessor):
@@ -44,6 +46,6 @@ class GisaidProcessor(AbstractProcessor):
     def load(job: JobGisaid, queries: Queries, config: Configuration):
         VcfLoader().load(
             vcf_file=job.vcf_path, sample=Sample(id=job.run_accession, source=DataSource.GISAID),
-            session=queries.session)
+            session=queries.session, max_snvs=MAX_SNVS, max_deletions=MAX_DELETIONS, max_insertions=MAX_INSERTIONS)
         job.loaded_at = datetime.now()
         return job.run_accession

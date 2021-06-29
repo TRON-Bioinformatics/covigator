@@ -27,3 +27,7 @@ class CovigatorQueryException(Exception):
 
 class CovigatorExcludedSampleTooEarlyDateException(Exception):
     pass
+
+
+class CovigatorExcludedSampleTooManyMutations(Exception):
+    pass
