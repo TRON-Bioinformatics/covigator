@@ -1,6 +1,9 @@
 from datetime import date, datetime
 import requests
 from sqlalchemy.orm import Session
+
+from covigator.accessor import MINIMUM_DATE
+from covigator.exceptions import CovigatorExcludedSampleTooEarlyDateException
 from covigator.misc import backoff_retrier
 from covigator.database.model import SampleEna, JobEna, Sample, DataSource, Log, CovigatorModule
 from covigator.database.database import Database
@@ -79,6 +82,7 @@ class EnaAccessor:
         self.excluded_existing = 0
         self.included = 0
         self.excluded = 0
+        self.excluded_by_date = 0
         self.country_parser = CountryParser()
 
         # this ensures there is a retry mechanism in place with a limited number of retries
@@ -139,12 +143,18 @@ class EnaAccessor:
             if not self._complies_with_inclusion_criteria(run):
                 continue    # skips runs not complying with inclusion criteria
             # NOTE: this parse operation is costly
-            sample_ena = self._parse_ena_run(run)
-            sample = self._build_sample(sample_ena)
-            self.included += 1
-            included_samples_ena.append(sample_ena)
-            included_samples.append(sample)
-            included_jobs.append(JobEna(run_accession=sample_ena.run_accession))
+            try:
+                sample_ena = self._parse_ena_run(run)
+                sample = self._build_sample(sample_ena)
+                self.included += 1
+                included_samples_ena.append(sample_ena)
+                included_samples.append(sample)
+                included_jobs.append(JobEna(run_accession=sample_ena.run_accession))
+            except CovigatorExcludedSampleTooEarlyDateException:
+                logger.error("Excluded sample due to too early date")
+                self.excluded_by_date += 1
+                self.excluded += 1
+
         if len(included_samples) > 0:
             session.add_all(included_samples_ena)
             session.commit()
@@ -174,6 +184,8 @@ class EnaAccessor:
     def _parse_dates(self, ena_run):
         ena_run.collection_date = self._parse_abstract(ena_run.collection_date, date.fromisoformat)
         ena_run.first_created = self._parse_abstract(ena_run.first_created, date.fromisoformat)
+        if ena_run.first_created < MINIMUM_DATE:
+            raise CovigatorExcludedSampleTooEarlyDateException
 
     def _parse_ena_run(self, run):
         sample = SampleEna(**run)
@@ -249,6 +261,7 @@ class EnaAccessor:
                 "excluded": {
                     "existing": self.excluded_existing,
                     "excluded_by_criteria": self.excluded,
+                    "excluded_by_date": self.excluded_by_date,
                     "missing_fastq": self.excluded_samples_by_fastq_ftp,
                     "platform": self.excluded_samples_by_instrument_platform,
                     "library_strategy": self.excluded_samples_by_library_strategy,

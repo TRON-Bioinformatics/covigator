@@ -23,3 +23,7 @@ class CovigatorNotSupportedVariant(Exception):
 
 class CovigatorQueryException(Exception):
     pass
+
+
+class CovigatorExcludedSampleTooEarlyDateException(Exception):
+    pass
