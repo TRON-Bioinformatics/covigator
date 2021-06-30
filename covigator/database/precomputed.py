@@ -2,7 +2,8 @@ import pandas as pd
 from sqlalchemy.orm import Session
 from covigator.configuration import Configuration
 from covigator.database.database import get_database
-from covigator.database.model import PrecomputedVariantsPerSample, PrecomputedSubstitutionsCounts
+from covigator.database.model import PrecomputedVariantsPerSample, PrecomputedSubstitutionsCounts, \
+    PRECOMPUTED_VARIANTS_PER_SAMPLE_TABLE_NAME, VARIANT_OBSERVATION_TABLE_NAME
 
 
 class Precomputer:
@@ -14,18 +15,18 @@ class Precomputer:
 
         # reads the data from the database
         sql_query = """
-        select count(*), counts.number_mutations, counts.source, counts.variant_type, counts.gene_name from (
-            select count(*) as number_mutations, source, variant_type, gene_name, sample from variant_observation_v13
+        select count(*) as count, counts.number_mutations, counts.source, counts.variant_type, counts.gene_name from (
+            select count(*) as number_mutations, source, variant_type, gene_name, sample from {table_name}
             group by source, variant_type, gene_name, sample)
             as counts group by counts.number_mutations, counts.source, counts.variant_type, counts.gene_name;
-            """
+            """.format(table_name=VARIANT_OBSERVATION_TABLE_NAME)
         data = pd.read_sql_query(sql_query, self.session.bind)
         sql_query = """
-        select count(*), counts.number_mutations, counts.source, counts.variant_type from (
-            select count(*) as number_mutations, source, variant_type, sample from variant_observation_v13
+        select count(*) as count, counts.number_mutations, counts.source, counts.variant_type from (
+            select count(*) as number_mutations, source, variant_type, sample from {table_name}
             group by source, variant_type, sample)
             as counts group by counts.number_mutations, counts.source, counts.variant_type;
-            """
+            """.format(table_name=VARIANT_OBSERVATION_TABLE_NAME)
         data_without_gene = pd.read_sql_query(sql_query, self.session.bind)
 
         # delete all rows before starting

@@ -1,7 +1,7 @@
 from typing import Tuple
 from faker import Faker
 from covigator.database.model import SampleEna, Sample, DataSource, JobEna, JobStatus, Log, CovigatorModule, Variant, \
-    VariantObservation, VariantCooccurrence
+    VariantObservation, VariantCooccurrence, VariantType
 from Bio.Alphabet.IUPAC import IUPACData
 
 
@@ -12,6 +12,7 @@ def get_mocked_variant(faker: Faker, chromosome=None, gene_name=None) -> Variant
         reference=faker.random_choices(list(IUPACData.unambiguous_dna_letters), length=1)[0],
         # TODO: reference and alternate could be equal!
         alternate=faker.random_choices(list(IUPACData.unambiguous_dna_letters), length=1)[0],
+        variant_type=VariantType.SNV,
         gene_name=gene_name,
         hgvs_p="p.{}{}{}".format(
             faker.random_choices(list(IUPACData.protein_letters_1to3.values()), length=1)[0],
@@ -26,14 +27,14 @@ def get_mocked_variant(faker: Faker, chromosome=None, gene_name=None) -> Variant
 
 def get_mocked_variant_observation(sample: Sample, variant: Variant, faker=Faker()):
     return VariantObservation(
-                    sample=sample.id if sample else faker.unique.uuid4(),
-                    source=sample.source if sample else faker.random_choices((DataSource.ENA, DataSource.GISAID)),
-                    variant_id=variant.variant_id,
-                    chromosome=variant.chromosome,
-                    position=variant.position,
-                    reference=variant.reference,
-                    alternate=variant.alternate
-                )
+        sample=sample.id if sample else faker.unique.uuid4(),
+        source=sample.source if sample else faker.random_choices((DataSource.ENA, DataSource.GISAID)),
+        variant_id=variant.variant_id,
+        chromosome=variant.chromosome,
+        position=variant.position,
+        reference=variant.reference,
+        alternate=variant.alternate,
+        variant_type=VariantType.SNV)
 
 
 def get_mocked_ena_sample(faker: Faker, job_status=JobStatus.FINISHED) -> Tuple[SampleEna, Sample, JobEna]:

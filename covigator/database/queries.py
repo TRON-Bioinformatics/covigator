@@ -101,7 +101,8 @@ class Queries:
             query = query.filter(PrecomputedVariantsPerSample.gene_name == None)
 
         data = pd.read_sql(query.statement, self.session.bind)
-        data.variant_type = data.variant_type.transform(lambda x: x.name)
+        if data.shape[0] > 0:
+            data.variant_type = data.variant_type.transform(lambda x: x.name if x else x)
         return data[["number_mutations", "variant_type", "count"]] \
             .groupby(["number_mutations", "variant_type"]).sum().reset_index()
 
