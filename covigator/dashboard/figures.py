@@ -446,7 +446,7 @@ class Figures:
                            round(np.corrcoef(data.conservation_vertebrates, data.count_unique_variants)[0][1], 5)
                            ))]
 
-    def get_variants_plot(self, gene_name, selected_variants, bin_size, source):
+    def get_variants_plot(self, gene_name, selected_variants, bin_size, source=None):
 
         # reads gene annotations
         gene = self.queries.get_gene(gene_name)

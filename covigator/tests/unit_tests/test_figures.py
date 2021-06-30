@@ -1,5 +1,7 @@
 from unittest import TestCase
 
+from dash_core_components import Markdown
+
 from covigator.configuration import Configuration
 from covigator.dashboard.figures import Figures
 from covigator.database.database import Database
@@ -29,8 +31,8 @@ class FiguresTests(TestCase):
 
     def test_samples_by_country_no_data(self):
         figure = self.figures.get_accumulated_samples_by_country_plot()
-        self.assertIsNone(figure)
+        self.assertIsInstance(figure, Markdown)
 
     def test_needle_plot_no_data(self):
         figure = self.figures.get_variants_plot(gene_name="S", selected_variants=None, bin_size=50)
-        self.assertIsNotNone(figure)
+        self.assertIsInstance(figure, Markdown)

@@ -180,7 +180,7 @@ class GisaidAccessor:
 
     def _parse_dates(self, gisaid_sample: SampleGisaid):
         gisaid_sample.date = self._parse_abstract(gisaid_sample.date, date.fromisoformat)
-        if gisaid_sample.date < MINIMUM_DATE:
+        if gisaid_sample.date is not None and gisaid_sample.date < MINIMUM_DATE:
             raise CovigatorExcludedSampleTooEarlyDateException
 
     def _parse_abstract(self, value, type):

@@ -47,7 +47,8 @@ def get_mocked_ena_sample(faker: Faker, job_status=JobStatus.FINISHED) -> Tuple[
         country=faker.country(),
         fastq_ftp=faker.uri(),
         fastq_md5=faker.md5(),
-        num_fastqs=1
+        num_fastqs=1,
+        finished=job_status == JobStatus.FINISHED
     )
     sample = Sample(
         id=identifier,
