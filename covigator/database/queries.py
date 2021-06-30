@@ -140,8 +140,8 @@ class Queries:
                 .group_by(SampleEna.first_created, SampleEna.country)
             if countries:
                 query = query.filter(SampleEna.country.in_(countries))
-            samples_ena = pd.read_sql(query.statement, self.session.bind).astype(
-                {'date': 'datetime64', 'count': 'float64'})
+                samples_ena = pd.read_sql(query.statement, self.session.bind).astype(
+                    {'date': 'datetime64', 'count': 'float64'})
 
         samples_gisaid = None
         if data_source is None or data_source == DataSource.GISAID.name:

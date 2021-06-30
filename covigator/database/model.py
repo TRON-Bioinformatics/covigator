@@ -313,6 +313,10 @@ class Variant(Base):
     cds_pos_length = Column(String)
     aa_pos_length = Column(String)
     variant_type = Column(Enum(VariantType, name=VariantType.__constraint_name__))
+    length = Column(Integer)
+    reference_amino_acid = Column(String)
+    alternate_amino_acid = Column(String)
+    position_amino_acid = Column(Integer)
 
     def get_variant_id(self):
         return "{}:{}>{}".format(self.position, self.reference, self.alternate)
@@ -357,6 +361,10 @@ class VariantObservation(Base):
     # fields replicated from sample for performance reasons
     date = Column(Date)
     variant_type = Column(Enum(VariantType, name=VariantType.__constraint_name__))
+    length = Column(Integer)
+    reference_amino_acid = Column(String)
+    alternate_amino_acid = Column(String)
+    position_amino_acid = Column(Integer)
 
     ForeignKeyConstraint([sample, source], [Sample.id, Sample.source])
     ForeignKeyConstraint([variant_id], [Variant.variant_id])
@@ -401,6 +409,10 @@ class SubclonalVariantObservation(Base):
     # fields replicated from sample for performance reasons
     date = Column(Date)
     variant_type = Column(Enum(VariantType, name=VariantType.__constraint_name__))
+    length = Column(Integer)
+    reference_amino_acid = Column(String)
+    alternate_amino_acid = Column(String)
+    position_amino_acid = Column(Integer)
 
     ForeignKeyConstraint([sample, source], [Sample.id, Sample.source])
     ForeignKeyConstraint([variant_id], [Variant.variant_id])

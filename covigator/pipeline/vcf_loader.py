@@ -87,7 +87,8 @@ class VcfLoader:
             # NOTE: because we only support haploid organisms we expect only one alternate,
             # TODO: support subclonal variants at some point
             alternate=variant.ALT[0],
-            variant_type=self._get_variant_type(reference=variant.REF, alternate=variant.ALT[0])
+            variant_type=self._get_variant_type(reference=variant.REF, alternate=variant.ALT[0]),
+            length=self._get_variant_length(variant)
         )
         parsed_variant.variant_id = parsed_variant.get_variant_id()
         ann = variant.INFO.get("ANN")
@@ -107,6 +108,10 @@ class VcfLoader:
                 parsed_variant.cdna_pos_length=values[11].strip()
                 parsed_variant.cds_pos_length=values[12].strip()
                 parsed_variant.aa_pos_length=values[13].strip()
+                if parsed_variant.annotation == "missense_variant":
+                    parsed_variant.reference_amino_acid = parsed_variant.hgvs_p[2]
+                    parsed_variant.alternate_amino_acid = parsed_variant.hgvs_p[-1]
+                    parsed_variant.position_amino_acid = int(parsed_variant.hgvs_p[3:-1])
         return parsed_variant
 
     def _parse_variant_observation(
@@ -137,7 +142,11 @@ class VcfLoader:
             hgvs_p=covigator_variant.hgvs_p,
             hgvs_c=covigator_variant.hgvs_c,
             date=sample.first_created if source == DataSource.ENA else sample.date,
-            variant_type=self._get_variant_type(reference=variant.REF, alternate=variant.ALT[0])
+            variant_type=self._get_variant_type(reference=variant.REF, alternate=variant.ALT[0]),
+            length=self._get_variant_length(variant),
+            reference_amino_acid=covigator_variant.reference_amino_acid,
+            alternate_amino_acid = covigator_variant.alternate_amino_acid,
+            position_amino_acid = covigator_variant.position_amino_acid
         )
 
     def _get_variant_type(self, reference, alternate):
@@ -149,3 +158,6 @@ class VcfLoader:
             return VariantType.DELETION
         else:
             raise CovigatorNotSupportedVariant
+
+    def _get_variant_length(self, variant):
+        return len(variant.ALT[0]) - len(variant.REF)
