@@ -115,7 +115,17 @@ class SampleGisaid(Base):
     continent_alpha_2 = Column(String)
     site = Column(String)
     site2 = Column(String)
+
+    # sequence  information
     sequence = Column(JSON)
+    sequence_length = Column(Integer)
+    counts_n_bases = Column(Integer)
+    counts_ambiguous_bases = Column(Integer)
+
+    # counts of variants
+    count_snvs = Column(Integer)
+    count_insertions = Column(Integer)
+    count_deletions = Column(Integer)
 
 
 class SampleEna(Base):
@@ -171,6 +181,14 @@ class SampleEna(Base):
     country_alpha_3 = Column(String)
     continent = Column(String)
     continent_alpha_2 = Column(String)
+
+    # counts of variants
+    count_snvs = Column(Integer)
+    count_insertions = Column(Integer)
+    count_deletions = Column(Integer)
+    count_subclonal_snvs = Column(Integer)
+    count_subclonal_insertions = Column(Integer)
+    count_subclonal_deletions = Column(Integer)
 
     def get_fastqs_ftp(self) -> List:
         return self.fastq_ftp.split(SEPARATOR) if self.fastq_ftp is not None else []

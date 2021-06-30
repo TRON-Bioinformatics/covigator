@@ -27,18 +27,33 @@ class VcfLoader:
 
         # reads whole VCF in memory to count variants
         variants = [v for v in VCF(vcf_file)]
-        if max_snvs is not None:
-            count_snvs = len([v for v in variants if v.FILTER is None and len(v.REF) == 1 and len(v.ALT[0]) == 1])
-            if count_snvs > max_snvs:
-                raise CovigatorExcludedSampleTooManyMutations
-        if max_insertions is not None:
-            count_insertions = len([v for v in variants if v.FILTER is None and len(v.REF) == 1 and len(v.ALT[0]) > 1])
-            if count_insertions > max_insertions:
-                raise CovigatorExcludedSampleTooManyMutations
-        if max_deletions is not None:
-            count_deletions = len([v for v in variants if v.FILTER is None and len(v.REF) > 1 and len(v.ALT[0]) == 1])
-            if count_deletions > max_deletions:
-                raise CovigatorExcludedSampleTooManyMutations
+
+        # counts variants
+        count_snvs = len([v for v in variants if v.FILTER is None and len(v.REF) == 1 and len(v.ALT[0]) == 1])
+        count_insertions = len([v for v in variants if v.FILTER is None and len(v.REF) == 1 and len(v.ALT[0]) > 1])
+        count_deletions = len([v for v in variants if v.FILTER is None and len(v.REF) > 1 and len(v.ALT[0]) == 1])
+        too_many_snvs = max_snvs is not None and count_snvs > max_snvs
+        too_many_insertions = max_insertions is not None and count_insertions > max_insertions
+        too_many_deletions = max_deletions is not None and count_deletions > max_deletions
+        if too_many_snvs or too_many_deletions or too_many_insertions:
+            raise CovigatorExcludedSampleTooManyMutations(
+                "Too many variants: SNVs={}, insertions={}, deletions={}".format(
+                    count_snvs, count_insertions, count_deletions))
+
+        specific_sample.count_snvs = count_snvs
+        specific_sample.count_deletions = count_deletions
+        specific_sample.count_insertions = count_insertions
+
+        if sample.source == DataSource.ENA:
+            count_subclonal_snvs = len([v for v in variants if v.FILTER in ["LOW_FREQUENCY", "SUBCLONAL"]
+                                        and len(v.REF) == 1 and len(v.ALT[0]) == 1])
+            count_subclonal_deletions = len([v for v in variants if v.FILTER in ["LOW_FREQUENCY", "SUBCLONAL"]
+                                             and len(v.REF) > 1 and len(v.ALT[0]) == 1])
+            count_subclonal_insertions = len([v for v in variants if v.FILTER in ["LOW_FREQUENCY", "SUBCLONAL"]
+                                              and len(v.REF) == 1 and len(v.ALT[0]) > 1])
+            specific_sample.count_subclonal_snvs = count_subclonal_snvs
+            specific_sample.count_subclonal_deletions = count_subclonal_deletions
+            specific_sample.count_subclonal_insertions = count_subclonal_insertions
 
         variant: Variant
         for variant in variants:

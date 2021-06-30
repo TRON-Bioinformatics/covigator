@@ -125,7 +125,11 @@ class GisaidAccessor:
                 continent_alpha_2=None,
                 site=None,
                 site2=None,
-                sequence={"MN908947.3": compress_sequence(record.seq)}
+                sequence={"MN908947.3": compress_sequence(record.seq)},
+                sequence_length=len(record.seq),
+                count_n_bases=sum([x == 'N' for x in record.seq]),
+                count_ambiguous_bases=sum([x not in ["ACGTN"] for x in record.seq])
+
             )
             try:
                 self._parse_country(sample_gisaid)
