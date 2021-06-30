@@ -84,7 +84,8 @@ class SampleFigures(Figures):
         graph = dcc.Markdown("""**No data for the current selection**""")
         if data is not None and data.shape[0] > 0:
             fig = px.bar(
-                data, y="substitution", x="count", color="variant_type", color_discrete_map=VARIANT_TYPE_COLOR_MAP)\
+                data, y="substitution", x="count", color="variant_type", text="rate",
+                color_discrete_map=VARIANT_TYPE_COLOR_MAP)\
                 .update_yaxes(categoryorder="total descending")
             fig.update_layout(
                 margin=MARGIN,
@@ -126,7 +127,7 @@ class SampleFigures(Figures):
             graph = [
                 dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
                 dcc.Markdown("""
-                        **Overall mutations per sample.**
+                        **Overall mutations per sample**
 
                         *Average SNVs: {average} (STD: {std}), *
                         *insertions: {average_insertions} (STD: {std_insertions}), *
