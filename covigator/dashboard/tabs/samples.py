@@ -81,7 +81,7 @@ def get_samples_tab_left_bar(queries: Queries):
                 min=0,
                 max=10000,
                 step=100,
-                value=1000,
+                value=100,
                 dots=False,
                 tooltip=dict(always_visible=True, placement="right")
             ),

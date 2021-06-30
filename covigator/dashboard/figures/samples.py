@@ -1,5 +1,6 @@
 from math import sqrt
 from typing import List
+from logzero import logger
 
 from covigator.dashboard.figures.figures import Figures, PLOTLY_CONFIG, MARGIN, TEMPLATE
 import plotly.express as px
@@ -95,7 +96,7 @@ class SampleFigures(Figures):
                               "country": countries[::-1]},
                           labels={"cumsum": "num. samples", "count": "increment"},
                           hover_data=["count"],
-                          color_discrete_sequence=px.colors.qualitative.Dark24)
+                          color_discrete_sequence=px.colors.qualitative.Light24)
             fig.update_layout(
                 margin=MARGIN,
                 template=TEMPLATE,

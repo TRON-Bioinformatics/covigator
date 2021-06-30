@@ -132,6 +132,7 @@ class Queries:
         Returns a DataFrame with columns: data, country, cumsum, count
         """
         samples_ena = None
+
         if data_source is None or data_source == DataSource.ENA.name:
             query = self.session.query(
                 func.count().label("count"), SampleEna.first_created.label("date"), SampleEna.country) \
@@ -139,7 +140,8 @@ class Queries:
                 .group_by(SampleEna.first_created, SampleEna.country)
             if countries:
                 query = query.filter(SampleEna.country.in_(countries))
-            samples_ena = pd.read_sql(query.statement, self.session.bind)
+            samples_ena = pd.read_sql(query.statement, self.session.bind).astype(
+                {'date': 'datetime64', 'count': 'float64'})
 
         samples_gisaid = None
         if data_source is None or data_source == DataSource.GISAID.name:
@@ -149,23 +151,18 @@ class Queries:
                 .group_by(SampleGisaid.date, SampleGisaid.country)
             if countries:
                 query = query.filter(SampleGisaid.country.in_(countries))
-            samples_gisaid = pd.read_sql(query.statement, self.session.bind)
+            samples_gisaid = pd.read_sql(query.statement, self.session.bind).astype(
+                {'date': 'datetime64', 'count': 'float64'})
 
         if samples_gisaid is None:
-            # NOTE: setting index and then resetting is necessary to get the date column in the right dtype
-            samples = samples_ena.set_index(["date", "country"]).reset_index()
+            samples = samples_ena
         elif samples_ena is None:
-            # NOTE: setting index and then resetting is necessary to get the date column in the right dtype
-            samples = samples_gisaid.set_index(["date", "country"]).reset_index()
+            samples = samples_gisaid
         else:
-            samples = samples_gisaid.set_index(["date", "country"]).add(
-                samples_ena.set_index(["date", "country"]), fill_value=0).reset_index()
+            samples = pd.concat([samples_gisaid, samples_ena]).groupby(['date', 'country']).sum().reset_index()
 
         filled_table = None
         if samples.shape[0] > 0:
-            # NOTE: it needs to explicitly set the type, otherwise when having few data, Pandas guess is wrong
-            samples = samples.astype({'count': 'float64'})
-
             # accumulates count ordered by date
             samples['cumsum'] = samples.groupby(['country'])['count'].cumsum()
 
@@ -185,6 +182,7 @@ class Queries:
                 on=["date", "country"],
                 how='left',
                 suffixes=("_x", "_y")).fillna(0)
+
             filled_table["count"] = filled_table.count_x + filled_table.count_y
             filled_table['cumsum'] = filled_table.groupby(['country'])['count'].cumsum()
 
@@ -329,9 +327,6 @@ class Queries:
         Returns the top occurring variants + the segregated counts of occurrences per month
         with columns: chromosome, position, reference, alternate, total, month, count
         """
-
-        logger.info("eins")
-
         # query for top occurring variants
         query = self.session.query(
             VariantObservation.variant_id, VariantObservation.hgvs_p, VariantObservation.gene_name,
@@ -352,8 +347,6 @@ class Queries:
         query = query.order_by(desc('total')).limit(top)
         top_occurring_variants = pd.read_sql(query.statement, self.session.bind)
 
-        logger.info("zwei")
-
         if top_occurring_variants is not None and top_occurring_variants.shape[0] > 0:
             variant_counts_by_month = []
 
@@ -361,8 +354,6 @@ class Queries:
             for _, variant in top_occurring_variants.iterrows():
                 variant_counts_by_month.append(self.get_variant_counts_by_month(variant.variant_id, source=source))
             top_occurring_variants_by_month = pd.concat(variant_counts_by_month)
-
-            logger.info("drei")
 
             # get total count of samples per month to calculate the frequency by month
             sample_counts_by_month = self.get_sample_counts_by_month(source=source)
@@ -388,14 +379,10 @@ class Queries:
             top_occurring_variants['frequency'] = top_occurring_variants.total.transform(
                 lambda t: round(float(t) / count_samples, 3))
 
-            logger.info("vier")
-
             # pivots the table over months
             top_occurring_variants = pd.pivot_table(
                 top_occurring_variants, index=['gene_name', 'dna_mutation', 'hgvs_p', 'annotation', "frequency", "total"],
                 columns=["month"], values=[metric], fill_value=0).droplevel(0, axis=1).reset_index()
-
-            logger.info("funf")
 
         return top_occurring_variants
 
