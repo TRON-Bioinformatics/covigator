@@ -1,5 +1,7 @@
 from math import sqrt
 from typing import List
+
+import plotly
 from logzero import logger
 
 from covigator.dashboard.figures.figures import Figures, PLOTLY_CONFIG, MARGIN, TEMPLATE
@@ -25,6 +27,31 @@ INDEL_TYPE_COLOR_MAP = {
 
 class SampleFigures(Figures):
 
+    def get_annotations_plot(self, data_source: str = None, genes: List[str] = None):
+        data = self.queries.get_annotations(data_source=data_source, genes=genes)
+        graph = dcc.Markdown("""**No data for the current selection**""")
+        if data is not None and data.shape[0] > 0:
+            fig = px.bar(data, y="count", x="annotation", log_y=True, color='count',
+                         color_continuous_scale=plotly.colors.sequential.Brwnyl)
+            #.update_yaxes(categoryorder="total descending")
+            fig.update_layout(
+                margin=MARGIN,
+                template=TEMPLATE,
+                legend={'traceorder': 'normal', 'title': None},
+                yaxis={'title': "num. variants (log)"},  # , 'autorange': 'reversed'},
+                xaxis={'title': None},
+            )
+            graph = [
+                dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
+                dcc.Markdown("""
+                **Most common mutation effects**
+                
+                *dN/dS: {dnds}*
+                """.format(dnds=round(data[data.annotation == "missense_variant"]["count"].sum() /
+                                data[data.annotation == "synonymous_variant"]["count"].sum(), 3)))
+            ]
+        return graph
+
     def get_indels_lengths_plot(self, data_source: str = None, genes: List[str] = None):
         data = self.queries.get_indel_lengths(data_source=data_source, genes=genes)
         graph = dcc.Markdown("""**No data for the current selection**""")
@@ -42,8 +69,13 @@ class SampleFigures(Figures):
             graph = [
                 dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
                 dcc.Markdown("""
-                        **Indel length distribution**
-                        """)
+                **Indel length distribution**
+                
+                *Insertion to deletion ratio: {indel_ratio}*
+                """.format(
+                    indel_ratio=round(data[
+                        data.variant_type.isin(["INSERTION_INFRAME", "INSERTION_FRAMESHIFT"])]["count"].sum() /
+                        data[data.variant_type.isin(["DELETION_INFRAME", "DELETION_FRAMESHIFT"])]["count"].sum(), 3)))
             ]
         return graph
 
@@ -96,9 +128,9 @@ class SampleFigures(Figures):
                 dcc.Markdown("""
                         **Overall mutations per sample.**
 
-                        *Average SNVs: {average} (STD: {std}). *
-                        *Average insertions: {average_insertions} (STD: {std_insertions}). *
-                        *Average deletions: {average_deletions} (STD: {std_deletions}).*
+                        *Average SNVs: {average} (STD: {std}), *
+                        *insertions: {average_insertions} (STD: {std_insertions}), *
+                        *deletions: {average_deletions} (STD: {std_deletions})*
                         """.format(average=average, std=std, average_insertions=average_insertions,
                                    std_insertions=std_insertions, average_deletions=average_deletions,
                                    std_deletions=std_deletions))

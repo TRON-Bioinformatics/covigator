@@ -28,6 +28,7 @@ CONSERVATION_TABLE_NAME = get_table_versioned_name('conservation', config=config
 PRECOMPUTED_VARIANTS_PER_SAMPLE_TABLE_NAME = get_table_versioned_name('precomputed_variants_per_sample', config=config)
 PRECOMPUTED_SUBSTITUTIONS_COUNTS_TABLE_NAME = get_table_versioned_name('precomputed_substitutions_counts', config=config)
 PRECOMPUTED_INDEL_LENGTH_TABLE_NAME = get_table_versioned_name('precomputed_indel_length', config=config)
+PRECOMPUTED_ANNOTATION_TABLE_NAME = get_table_versioned_name('precomputed_annotation', config=config)
 JOB_STATUS_CONSTRAINT_NAME = get_table_versioned_name('job_status', config=config)
 DATA_SOURCE_CONSTRAINT_NAME = get_table_versioned_name('data_source', config=config)
 COVIGATOR_MODULE_CONSTRAINT_NAME = get_table_versioned_name('covigator_module', config=config)
@@ -304,6 +305,7 @@ class Variant(Base):
     ERRORS / WARNINGS / INFO'   
     """
     annotation = Column(String, index=True)
+    annotation_highest_impact = Column(String, index=True)
     annotation_impact = Column(String, index=True)
     gene_name = Column(String, index=True)
     gene_id = Column(String)
@@ -356,6 +358,7 @@ class VariantObservation(Base):
     strand_bias = Column(Integer)
     # fields replicated from Variant for performance reasons
     annotation = Column(String)
+    annotation_highest_impact = Column(String, index=True)
     gene_name = Column(String)
     hgvs_c = Column(String)
     hgvs_p = Column(String)
@@ -404,6 +407,7 @@ class SubclonalVariantObservation(Base):
     strand_bias = Column(Integer)
     # fields replicated from Variant for performance reasons
     annotation = Column(String)
+    annotation_highest_impact = Column(String, index=True)
     gene_name = Column(String)
     hgvs_c = Column(String)
     hgvs_p = Column(String)
@@ -504,5 +508,16 @@ class PrecomputedIndelLength(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     count = Column(Integer)
     length = Column(Integer)
+    source = Column(Enum(DataSource, name=DataSource.__constraint_name__))
+    gene_name = Column(String)
+
+
+class PrecomputedAnnotation(Base):
+
+    __tablename__ = PRECOMPUTED_ANNOTATION_TABLE_NAME
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    count = Column(Integer)
+    annotation = Column(String)
     source = Column(Enum(DataSource, name=DataSource.__constraint_name__))
     gene_name = Column(String)

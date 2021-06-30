@@ -14,7 +14,8 @@ from sqlalchemy.sql.sqltypes import NullType
 
 from covigator.database.model import Log, DataSource, CovigatorModule, SampleEna, JobEna, JobStatus, VariantObservation, \
     Gene, Variant, VariantCooccurrence, Conservation, JobGisaid, SampleGisaid, SubclonalVariantObservation, \
-    PrecomputedVariantsPerSample, PrecomputedSubstitutionsCounts, PrecomputedIndelLength, VariantType
+    PrecomputedVariantsPerSample, PrecomputedSubstitutionsCounts, PrecomputedIndelLength, VariantType, \
+    PrecomputedAnnotation
 from covigator.exceptions import CovigatorQueryException
 
 SYNONYMOUS_VARIANT = "synonymous_variant"
@@ -125,6 +126,22 @@ class Queries:
             return data[["length", "variant_type", "count"]] \
                 .groupby(["length", "variant_type", ]).sum().reset_index() \
                 .sort_values("length", ascending=True)
+        return data
+
+    def get_annotations(self, data_source, genes):
+        query = self.session.query(PrecomputedAnnotation)
+        if data_source is not None:
+            query = query.filter(PrecomputedAnnotation.source == data_source)
+        if genes is not None and genes:
+            query = query.filter(PrecomputedAnnotation.gene_name.in_(genes))
+        else:
+            query = query.filter(PrecomputedAnnotation.gene_name == None)
+
+        data = pd.read_sql(query.statement, self.session.bind)
+        if data.shape[0] > 0:
+            return data[["annotation", "count"]] \
+                .groupby(["annotation", ]).sum().reset_index() \
+                .sort_values("count", ascending=False)
         return data
 
     def get_substitutions(self, data_source, genes, variant_types):

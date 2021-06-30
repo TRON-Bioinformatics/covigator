@@ -1,6 +1,7 @@
 from typing import Union
 from cyvcf2 import VCF, Variant
 import os
+import re
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from covigator.database.model import Variant as CovigatorVariant, VariantObservation, Sample, \
@@ -97,17 +98,18 @@ class VcfLoader:
             annotation = annotations[0]     # NOTE: chooses arbitrarily the first annotation
             if "|" in annotation:
                 values = annotation.split("|")
-                parsed_variant.overlaps_multiple_genes=len(annotations) > 1
-                parsed_variant.annotation=values[1].strip()
-                parsed_variant.annotation_impact=values[2].strip()
-                parsed_variant.gene_name=values[3].strip()
-                parsed_variant.gene_id=values[4].strip()
-                parsed_variant.biotype=values[7].strip()
-                parsed_variant.hgvs_c=values[9].strip()
-                parsed_variant.hgvs_p=values[10].strip()
-                parsed_variant.cdna_pos_length=values[11].strip()
-                parsed_variant.cds_pos_length=values[12].strip()
-                parsed_variant.aa_pos_length=values[13].strip()
+                parsed_variant.overlaps_multiple_genes = len(annotations) > 1
+                parsed_variant.annotation = values[1].strip()
+                parsed_variant.annotation_highest_impact = re.sub("&.*", "", parsed_variant.annotation)
+                parsed_variant.annotation_impact = values[2].strip()
+                parsed_variant.gene_name = values[3].strip()
+                parsed_variant.gene_id = values[4].strip()
+                parsed_variant.biotype = values[7].strip()
+                parsed_variant.hgvs_c = values[9].strip()
+                parsed_variant.hgvs_p = values[10].strip()
+                parsed_variant.cdna_pos_length = values[11].strip()
+                parsed_variant.cds_pos_length = values[12].strip()
+                parsed_variant.aa_pos_length = values[13].strip()
                 if parsed_variant.annotation == "missense_variant":
                     parsed_variant.reference_amino_acid = parsed_variant.hgvs_p[2]
                     parsed_variant.alternate_amino_acid = parsed_variant.hgvs_p[-1]
