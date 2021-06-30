@@ -14,7 +14,7 @@ from sqlalchemy.sql.sqltypes import NullType
 
 from covigator.database.model import Log, DataSource, CovigatorModule, SampleEna, JobEna, JobStatus, VariantObservation, \
     Gene, Variant, VariantCooccurrence, Conservation, JobGisaid, SampleGisaid, SubclonalVariantObservation, \
-    PrecomputedVariantsPerSample
+    PrecomputedVariantsPerSample, PrecomputedSubstitutionsCounts
 from covigator.exceptions import CovigatorQueryException
 
 SYNONYMOUS_VARIANT = "synonymous_variant"
@@ -105,6 +105,24 @@ class Queries:
             data.variant_type = data.variant_type.transform(lambda x: x.name if x else x)
         return data[["number_mutations", "variant_type", "count"]] \
             .groupby(["number_mutations", "variant_type"]).sum().reset_index()
+
+    def get_substitutions(self, data_source, genes, variant_type):
+        query = self.session.query(PrecomputedSubstitutionsCounts) \
+            .filter(PrecomputedSubstitutionsCounts.variant_type == variant_type)
+        if data_source is not None:
+            query = query.filter(PrecomputedSubstitutionsCounts.source == data_source)
+        if genes is not None and genes:
+            query = query.filter(PrecomputedSubstitutionsCounts.gene_name.in_(genes))
+        else:
+            query = query.filter(PrecomputedSubstitutionsCounts.gene_name == None)
+
+        data = pd.read_sql(query.statement, self.session.bind)
+        if data.shape[0] > 0:
+            data.variant_type = data.variant_type.transform(lambda x: x.name if x else x)
+            data["substitution"] = data[["reference", "alternate"]].apply(lambda x: "{}>{}".format(x[0], x[1]), axis=1)
+            return data[["substitution", "count"]].groupby(["substitution"]).sum().reset_index()\
+                .sort_values("count", ascending=False).head(10)
+        return data
 
     def get_accumulated_samples_by_country(
             self, data_source: DataSource, countries: List[str], min_samples=100) -> pd.DataFrame:

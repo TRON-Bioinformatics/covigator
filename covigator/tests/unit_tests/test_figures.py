@@ -6,10 +6,12 @@ from covigator.dashboard.figures.variants import VariantsFigures
 from covigator.database.database import Database
 from faker import Faker
 
+from covigator.database.model import VariantType
 from covigator.database.precomputed import Precomputer
 from covigator.database.queries import Queries
 from covigator.tests.unit_tests.faked_objects import FakeConfiguration
-from covigator.tests.unit_tests.mocked import get_mocked_ena_sample, get_mocked_variant, get_mocked_variant_observation
+from covigator.tests.unit_tests.mocked import get_mocked_ena_sample, get_mocked_variant, get_mocked_variant_observation, \
+    mock_samples_and_variants
 
 
 class FiguresTests(TestCase):
@@ -40,18 +42,7 @@ class FiguresTests(TestCase):
 
     def test_variants_per_sample(self):
         # populates the ENA samples tables
-        existing_variants = set()
-        for _ in range(100):
-            sample_ena, sample, job = get_mocked_ena_sample(faker=self.faker)
-            self.session.add_all([sample_ena, sample, job])
-            variants = [get_mocked_variant(faker=self.faker) for _ in range(10)]
-            self.session.add_all(list(filter(lambda x: x in existing_variants, variants)))
-            existing_variants.update([v.variant_id for v in variants])
-            self.session.commit()
-            variants_observations = [get_mocked_variant_observation(faker=self.faker, variant=v, sample=sample)
-                                     for v in variants]
-            self.session.add_all(variants_observations)
-        self.session.commit()
+        mock_samples_and_variants(session=self.session, faker=self.faker, num_samples=100)
         Precomputer(session=self.session).load_counts_variants_per_sample()
         figure = self.sample_figures.get_variants_per_sample_plot()
         self.assertIsNotNone(figure)
@@ -61,6 +52,21 @@ class FiguresTests(TestCase):
 
     def test_variants_per_sample_no_data(self):
         figure = self.sample_figures.get_variants_per_sample_plot()
+        self.assertIsInstance(figure, Markdown)
+
+    def test_substitutions(self):
+        # populates the ENA samples tables
+        mock_samples_and_variants(session=self.session, faker=self.faker, num_samples=100)
+        Precomputer(session=self.session).load_count_substitutions()
+        figure = self.sample_figures.get_substitutions_plot(
+            variant_type=VariantType.SNV.name)
+        self.assertIsNotNone(figure)
+        self.assertTrue(len(figure) == 2)
+        self.assertIsInstance(figure[0], Graph)
+        self.assertIsInstance(figure[1], Markdown)
+
+    def test_substitutions_no_data(self):
+        figure = self.sample_figures.get_substitutions_plot(variant_type=VariantType.SNV.name)
         self.assertIsInstance(figure, Markdown)
 
     def test_needle_plot_no_data(self):

@@ -11,6 +11,25 @@ from covigator.database.model import VariantType, DataSource
 
 class SampleFigures(Figures):
 
+    def get_substitutions_plot(self, variant_type: str, data_source: str = None, genes: List[str] = None):
+        data = self.queries.get_substitutions(data_source=data_source, genes=genes, variant_type=variant_type)
+        graph = dcc.Markdown("""**No data for the current selection**""")
+        if data is not None and data.shape[0] > 0:
+            fig = px.bar(data, x="substitution", y="count")
+            fig.update_layout(
+                margin=MARGIN,
+                template=TEMPLATE,
+                xaxis={'title': None},
+                yaxis={'title': "num. samples"},
+            )
+            graph = [
+                dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
+                dcc.Markdown("""
+                **Top substitutions**
+                """)
+            ]
+        return graph
+
     def get_variants_per_sample_plot(self, data_source: str = None, genes: List[str] = None):
         data = self.queries.get_variants_per_sample(data_source=data_source, genes=genes)
         graph = dcc.Markdown("""**No data for the current selection**""")

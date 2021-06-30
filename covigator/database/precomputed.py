@@ -61,19 +61,19 @@ class Precomputer:
 
         sql_query = """
         select * from (select count(*) as count, reference, alternate, source, variant_type, gene_name 
-            from variant_observation_v13
+            from {table_name}
             group by reference, alternate, source, variant_type, gene_name
             order by count desc) 
             as counts where counts.count > 10;
-        """
+        """.format(table_name=VARIANT_OBSERVATION_TABLE_NAME)
         data = pd.read_sql_query(sql_query, self.session.bind)
         sql_query = """
-                select * from (select count(*) as count, reference, alternate, source, variant_type 
-                    from variant_observation_v13
-                    group by reference, alternate, source, variant_type
-                    order by count desc) 
-                    as counts where counts.count > 10;
-                """
+        select * from (select count(*) as count, reference, alternate, source, variant_type 
+            from {table_name}
+            group by reference, alternate, source, variant_type
+            order by count desc) 
+            as counts where counts.count > 10;
+        """.format(table_name=VARIANT_OBSERVATION_TABLE_NAME)
         data_without_gene = pd.read_sql_query(sql_query, self.session.bind)
 
         # delete all rows before starting

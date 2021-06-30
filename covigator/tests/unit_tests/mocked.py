@@ -1,5 +1,7 @@
 from typing import Tuple
 from faker import Faker
+from sqlalchemy.orm import Session
+
 from covigator.database.model import SampleEna, Sample, DataSource, JobEna, JobStatus, Log, CovigatorModule, Variant, \
     VariantObservation, VariantCooccurrence, VariantType
 from Bio.Alphabet.IUPAC import IUPACData
@@ -91,3 +93,18 @@ def get_mocked_variant_cooccurrence(faker: Faker, variant_one: Variant, variant_
             count=faker.random_int(min=1, max=10)
         )
     return cooccurrence
+
+
+def mock_samples_and_variants(faker, session: Session, num_samples=10):
+    existing_variants = set()
+    for _ in range(num_samples):
+        sample_ena, sample, job = get_mocked_ena_sample(faker=faker)
+        session.add_all([sample_ena, sample, job])
+        variants = [get_mocked_variant(faker=faker) for _ in range(10)]
+        session.add_all(list(filter(lambda x: x in existing_variants, variants)))
+        existing_variants.update([v.variant_id for v in variants])
+        session.commit()
+        variants_observations = [get_mocked_variant_observation(faker=faker, variant=v, sample=sample)
+                                 for v in variants]
+        session.add_all(variants_observations)
+    session.commit()
