@@ -21,7 +21,7 @@ class GisaidPipeline:
 
     def run(self, sample: SampleGisaid):
         logger.info("Processing {}".format(sample.run_accession))
-        sample_name = sample.run_accession.replace("/", "_").replace(" ", "-")
+        sample_name = sample.run_accession.replace("/", "_").replace(" ", "-").replace("'", "-").replace("$", "")
         sample_data_folder = os.path.join(self.config.storage_folder, sample_name)
         output_vcf = os.path.join(
             sample_data_folder,
