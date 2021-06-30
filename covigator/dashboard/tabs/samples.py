@@ -7,6 +7,8 @@ from covigator.database.model import DataSource, VariantType
 from covigator.database.queries import Queries
 
 ID_VARIANTS_PER_SAMPLE_GRAPH = 'variants-per-sample-graph'
+ID_INDEL_LENGTH_GRAPH = 'indel-lengths-graph'
+ID_ANNOTATIONS_GRAPH = 'id-annotations-graph'
 ID_SUBSTITUTIONS_GRAPH = 'substitutions-graph'
 ID_SLIDER_MIN_SAMPLES = 'slider-min-samples-per-country'
 ID_DROPDOWN_DATA_SOURCE = "dropdown-data-source"
@@ -44,10 +46,14 @@ def get_samples_tab_graphs():
             html.Div(id=ID_ACCUMULATED_SAMPLES_GRAPH),
             html.Br(),
             html.Div(children=[
-                html.Div(id=ID_VARIANTS_PER_SAMPLE_GRAPH, className="five columns"),
-                html.Div(id=ID_SUBSTITUTIONS_GRAPH, className="six columns"),
+                html.Div(id=ID_VARIANTS_PER_SAMPLE_GRAPH, className="six columns"),
+                html.Div(id=ID_SUBSTITUTIONS_GRAPH, className="five columns"),
             ]),
-            html.Br()
+            html.Br(),
+            html.Div(children=[
+                html.Div(id=ID_INDEL_LENGTH_GRAPH, className="six columns"),
+                html.Div(id=ID_ANNOTATIONS_GRAPH, className="five columns"),
+            ]),
         ])
 
 
@@ -63,6 +69,14 @@ def get_samples_tab_left_bar(queries: Queries):
                          {'label': DataSource.GISAID.name, 'value': DataSource.GISAID.name}],
                 value=None,
                 multi=False
+            ),
+            html.Br(),
+            dcc.Markdown("""Select one or more genes"""),
+            dcc.Dropdown(
+                id=ID_DROPDOWN_GENE,
+                options=[{'label': g.name, 'value': g.name} for g in queries.get_genes()],
+                value=None,
+                multi=True
             ),
             html.Br(),
             dcc.Markdown("""**Accumulated samples by country**"""),
@@ -88,23 +102,8 @@ def get_samples_tab_left_bar(queries: Queries):
             html.Br(),
             dcc.Markdown("""**Overall mutations per sample**"""),
             html.Br(),
-            dcc.Markdown("""Select one or more genes"""),
-            dcc.Dropdown(
-                id=ID_DROPDOWN_GENE,
-                options=[{'label': g.name, 'value': g.name} for g in queries.get_genes()],
-                value=None,
-                multi=True
-            ),
-            html.Br(),
+
             dcc.Markdown("""**Top substitutions**"""),
-            html.Br(),
-            dcc.Markdown("""Select one or more genes"""),
-            dcc.Dropdown(
-                id=ID_DROPDOWN_GENE2,
-                options=[{'label': g.name, 'value': g.name} for g in queries.get_genes()],
-                value=None,
-                multi=True
-            ),
             html.Br(),
             dcc.Markdown("""Select a variant type"""),
             dcc.Dropdown(
@@ -145,9 +144,17 @@ def set_callbacks_samples_tab(app, queries: Queries):
     @app.callback(
         Output(ID_SUBSTITUTIONS_GRAPH, 'children'),
         Input(ID_DROPDOWN_DATA_SOURCE, 'value'),
-        Input(ID_DROPDOWN_GENE2, 'value'),
+        Input(ID_DROPDOWN_GENE, 'value'),
         Input(ID_DROPDOWN_VARIANT_TYPE, 'value')
     )
     def update_substitutions(data_source, genes, variant_types):
         return html.Div(children=figures.get_substitutions_plot(
             data_source=data_source, genes=genes, variant_types=variant_types))
+
+    @app.callback(
+        Output(ID_INDEL_LENGTH_GRAPH, 'children'),
+        Input(ID_DROPDOWN_DATA_SOURCE, 'value'),
+        Input(ID_DROPDOWN_GENE, 'value'),
+    )
+    def update_indel_lengths(data_source, genes):
+        return html.Div(children=figures.get_indels_lengths_plot(data_source=data_source, genes=genes))

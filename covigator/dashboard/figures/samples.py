@@ -15,8 +15,37 @@ VARIANT_TYPE_COLOR_MAP = {
     VariantType.DELETION.name: "#66c2a5",
 }
 
+INDEL_TYPE_COLOR_MAP = {
+    "INSERTION_INFRAME": "#fc8d62",
+    "DELETION_INFRAME": "#66c2a5",
+    "INSERTION_FRAMESHIFT": "#fdc4ad",
+    "DELETION_FRAMESHIFT": "#9dd8c5",
+}
+
 
 class SampleFigures(Figures):
+
+    def get_indels_lengths_plot(self, data_source: str = None, genes: List[str] = None):
+        data = self.queries.get_indel_lengths(data_source=data_source, genes=genes)
+        graph = dcc.Markdown("""**No data for the current selection**""")
+        if data is not None and data.shape[0] > 0:
+            fig = px.bar(
+                data, y="count", x="length", color="variant_type", color_discrete_map=INDEL_TYPE_COLOR_MAP)
+                #.update_yaxes(categoryorder="total descending")
+            fig.update_layout(
+                margin=MARGIN,
+                template=TEMPLATE,
+                legend={'traceorder': 'normal', 'title': None},
+                yaxis={'title': "num. samples"},  #, 'autorange': 'reversed'},
+                xaxis={'title': None},
+            )
+            graph = [
+                dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
+                dcc.Markdown("""
+                        **Indel length distribution**
+                        """)
+            ]
+        return graph
 
     def get_substitutions_plot(self, variant_types: List[str], data_source: str = None, genes: List[str] = None):
         data = self.queries.get_substitutions(data_source=data_source, genes=genes, variant_types=variant_types)

@@ -145,8 +145,8 @@ class VcfLoader:
             variant_type=self._get_variant_type(reference=variant.REF, alternate=variant.ALT[0]),
             length=self._get_variant_length(variant),
             reference_amino_acid=covigator_variant.reference_amino_acid,
-            alternate_amino_acid = covigator_variant.alternate_amino_acid,
-            position_amino_acid = covigator_variant.position_amino_acid
+            alternate_amino_acid=covigator_variant.alternate_amino_acid,
+            position_amino_acid=covigator_variant.position_amino_acid
         )
 
     def _get_variant_type(self, reference, alternate):

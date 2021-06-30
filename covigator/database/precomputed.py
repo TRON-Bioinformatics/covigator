@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from covigator.configuration import Configuration
 from covigator.database.database import get_database
 from covigator.database.model import PrecomputedVariantsPerSample, PrecomputedSubstitutionsCounts, \
-    PRECOMPUTED_VARIANTS_PER_SAMPLE_TABLE_NAME, VARIANT_OBSERVATION_TABLE_NAME
+    PRECOMPUTED_VARIANTS_PER_SAMPLE_TABLE_NAME, VARIANT_OBSERVATION_TABLE_NAME, PrecomputedIndelLength
 
 
 class Precomputer:
@@ -106,9 +106,55 @@ class Precomputer:
         self.session.add_all(database_rows)
         self.session.commit()
 
+    def load_indel_length(self):
+
+        sql_query = """
+        select count(*) as count, length, source, gene_name 
+            from {table_name}
+            where variant_type != 'SNV'
+            group by length, source, gene_name
+            order by count asc;
+        """.format(table_name=VARIANT_OBSERVATION_TABLE_NAME)
+        data = pd.read_sql_query(sql_query, self.session.bind)
+        sql_query = """
+        select count(*) as count, length, source, gene_name 
+            from {table_name}
+            where variant_type != 'SNV'
+            group by length, source, gene_name
+            order by count desc;
+        """.format(table_name=VARIANT_OBSERVATION_TABLE_NAME)
+        data_without_gene = pd.read_sql_query(sql_query, self.session.bind)
+
+        # delete all rows before starting
+        self.session.query(PrecomputedIndelLength).delete()
+        self.session.commit()
+
+        # stores the precomputed data
+        database_rows = []
+        for index, row in data.iterrows():
+            # add entries per gene
+            database_rows.append(PrecomputedIndelLength(
+                count=row["count"],
+                length=row["length"],
+                source=row["source"],
+                gene_name=row["gene_name"] if row["gene_name"] is not None else "intergenic"
+            ))
+
+        for index, row in data_without_gene.iterrows():
+            # add entries per gene
+            database_rows.append(PrecomputedIndelLength(
+                count=row["count"],
+                length=row["length"],
+                source=row["source"]
+            ))
+
+        self.session.add_all(database_rows)
+        self.session.commit()
+
 
 if __name__ == '__main__':
     database = get_database(config=Configuration(), initialize=True, verbose=True)
     precomputer = Precomputer(session=database.get_database_session())
-    precomputer.load_counts_variants_per_sample()
-    precomputer.load_count_substitutions()
+    #precomputer.load_counts_variants_per_sample()
+    #precomputer.load_count_substitutions()
+    precomputer.load_indel_length()

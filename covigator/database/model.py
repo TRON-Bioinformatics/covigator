@@ -27,6 +27,7 @@ SAMPLE_ENA_TABLE_NAME = get_table_versioned_name('sample_ena', config=config)
 CONSERVATION_TABLE_NAME = get_table_versioned_name('conservation', config=config)
 PRECOMPUTED_VARIANTS_PER_SAMPLE_TABLE_NAME = get_table_versioned_name('precomputed_variants_per_sample', config=config)
 PRECOMPUTED_SUBSTITUTIONS_COUNTS_TABLE_NAME = get_table_versioned_name('precomputed_substitutions_counts', config=config)
+PRECOMPUTED_INDEL_LENGTH_TABLE_NAME = get_table_versioned_name('precomputed_indel_length', config=config)
 JOB_STATUS_CONSTRAINT_NAME = get_table_versioned_name('job_status', config=config)
 DATA_SOURCE_CONSTRAINT_NAME = get_table_versioned_name('data_source', config=config)
 COVIGATOR_MODULE_CONSTRAINT_NAME = get_table_versioned_name('covigator_module', config=config)
@@ -493,4 +494,15 @@ class PrecomputedSubstitutionsCounts(Base):
     alternate = Column(String)
     source = Column(Enum(DataSource, name=DataSource.__constraint_name__))
     variant_type = Column(Enum(VariantType, name=VariantType.__constraint_name__))
+    gene_name = Column(String)
+
+
+class PrecomputedIndelLength(Base):
+
+    __tablename__ = PRECOMPUTED_INDEL_LENGTH_TABLE_NAME
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    count = Column(Integer)
+    length = Column(Integer)
+    source = Column(Enum(DataSource, name=DataSource.__constraint_name__))
     gene_name = Column(String)

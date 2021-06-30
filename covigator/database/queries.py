@@ -14,7 +14,7 @@ from sqlalchemy.sql.sqltypes import NullType
 
 from covigator.database.model import Log, DataSource, CovigatorModule, SampleEna, JobEna, JobStatus, VariantObservation, \
     Gene, Variant, VariantCooccurrence, Conservation, JobGisaid, SampleGisaid, SubclonalVariantObservation, \
-    PrecomputedVariantsPerSample, PrecomputedSubstitutionsCounts
+    PrecomputedVariantsPerSample, PrecomputedSubstitutionsCounts, PrecomputedIndelLength, VariantType
 from covigator.exceptions import CovigatorQueryException
 
 SYNONYMOUS_VARIANT = "synonymous_variant"
@@ -106,6 +106,27 @@ class Queries:
         return data[["number_mutations", "variant_type", "count"]] \
             .groupby(["number_mutations", "variant_type"]).sum().reset_index()
 
+    def get_indel_lengths(self, data_source, genes):
+        query = self.session.query(PrecomputedIndelLength)
+        if data_source is not None:
+            query = query.filter(PrecomputedIndelLength.source == data_source)
+        if genes is not None and genes:
+            query = query.filter(PrecomputedIndelLength.gene_name.in_(genes))
+        else:
+            query = query.filter(PrecomputedIndelLength.gene_name == None)
+
+        data = pd.read_sql(query.statement, self.session.bind)
+        if data.shape[0] > 0:
+            data["tmp_variant_type"] = data["length"].transform(
+                lambda x: VariantType.INSERTION.name if x > 0 else VariantType.DELETION.name)
+            data["inframe"] = data["length"].transform(lambda x: "INFRAME" if x % 3 == 0 else "FRAMESHIFT")
+            data["variant_type"] = data[["tmp_variant_type", "inframe"]].apply(
+                lambda x: "{}_{}".format(x[0], x[1]), axis=1)
+            return data[["length", "variant_type", "count"]] \
+                .groupby(["length", "variant_type", ]).sum().reset_index() \
+                .sort_values("length", ascending=True)
+        return data
+
     def get_substitutions(self, data_source, genes, variant_types):
         query = self.session.query(PrecomputedSubstitutionsCounts)
         if variant_types is not None and variant_types:
@@ -140,8 +161,8 @@ class Queries:
                 .group_by(SampleEna.first_created, SampleEna.country)
             if countries:
                 query = query.filter(SampleEna.country.in_(countries))
-                samples_ena = pd.read_sql(query.statement, self.session.bind).astype(
-                    {'date': 'datetime64', 'count': 'float64'})
+            samples_ena = pd.read_sql(query.statement, self.session.bind).astype(
+                {'date': 'datetime64', 'count': 'float64'})
 
         samples_gisaid = None
         if data_source is None or data_source == DataSource.GISAID.name:
@@ -162,7 +183,7 @@ class Queries:
             samples = pd.concat([samples_gisaid, samples_ena]).groupby(['date', 'country']).sum().reset_index()
 
         filled_table = None
-        if samples.shape[0] > 0:
+        if samples is not None and samples.shape[0] > 0:
             # accumulates count ordered by date
             samples['cumsum'] = samples.groupby(['country'])['count'].cumsum()
 
