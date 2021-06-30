@@ -8,24 +8,35 @@ import dash_core_components as dcc
 
 from covigator.database.model import VariantType, DataSource
 
+VARIANT_TYPE_COLOR_MAP = {
+    VariantType.SNV.name: "#8da0cb",
+    VariantType.INSERTION.name: "#fc8d62",
+    VariantType.DELETION.name: "#66c2a5",
+}
+
 
 class SampleFigures(Figures):
 
-    def get_substitutions_plot(self, variant_type: str, data_source: str = None, genes: List[str] = None):
-        data = self.queries.get_substitutions(data_source=data_source, genes=genes, variant_type=variant_type)
+    def get_substitutions_plot(self, variant_types: List[str], data_source: str = None, genes: List[str] = None):
+        data = self.queries.get_substitutions(data_source=data_source, genes=genes, variant_types=variant_types)
         graph = dcc.Markdown("""**No data for the current selection**""")
         if data is not None and data.shape[0] > 0:
-            fig = px.bar(data, x="substitution", y="count")
+            fig = px.bar(
+                data, y="substitution", x="count", color="variant_type", color_discrete_map=VARIANT_TYPE_COLOR_MAP)\
+                .update_yaxes(categoryorder="total descending")
             fig.update_layout(
                 margin=MARGIN,
                 template=TEMPLATE,
-                xaxis={'title': None},
-                yaxis={'title': "num. samples"},
+                legend={'traceorder': 'normal', 'title': None},
+                yaxis={'title': None, 'autorange': 'reversed'},
+                xaxis={'title': "num. samples"},
             )
             graph = [
                 dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
                 dcc.Markdown("""
-                **Top substitutions**
+                **Top 20 substitutions**
+                
+                *Only substitutions occurring at least in 10 samples are represented*
                 """)
             ]
         return graph
@@ -34,18 +45,16 @@ class SampleFigures(Figures):
         data = self.queries.get_variants_per_sample(data_source=data_source, genes=genes)
         graph = dcc.Markdown("""**No data for the current selection**""")
         if data is not None and data.shape[0] > 0:
-            fig = px.bar(data, x="number_mutations", y="count", color="variant_type",
-                         color_discrete_map={
-                             VariantType.SNV.name: "#8da0cb",
-                             VariantType.INSERTION.name: "#fc8d62",
-                             VariantType.DELETION.name: "#66c2a5",
-                         })
+            fig = px.bar(
+                data, y="number_mutations", x="count", color="variant_type", color_discrete_map=VARIANT_TYPE_COLOR_MAP,
+                orientation='h'
+            )
             fig.update_layout(
                 margin=MARGIN,
                 template=TEMPLATE,
                 legend={'traceorder': 'normal', 'title': None},
-                xaxis={'title': "num. mutations"},
-                yaxis={'title': "num. samples"},
+                yaxis={'title': "num. mutations", 'autorange': 'reversed'},
+                xaxis={'title': "num. samples"},
             )
             average, std = self._get_avg_and_std(data[data.variant_type == VariantType.SNV.name])
             average_insertions, std_insertions = self._get_avg_and_std(

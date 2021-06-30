@@ -38,10 +38,10 @@ select percentile_disc(0.25) within group (order by count),
 -- count samples with more than 92 variants
 select count(*) from (
     select count(*) as count, sample from variant_observation_v12
-    where length(reference) = 1 and length(alternate) = 1 group by sample) as counts where count > 76;
+    where variant_type='SNV' group by sample) as counts where count > 76;
 select count(*) from (
     select count(*) as count, sample from variant_observation_v12
-    where length(reference) > 1 and length(alternate) = 1 group by sample) as counts where count > 10;
+    where variant_type='DELETION' group by sample) as counts where count > 10;
 
 -- indel length distribution
 select count(*), length(reference) from variant_observation_v12 where length(reference) > 1 group by length(reference);

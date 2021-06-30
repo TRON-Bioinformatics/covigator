@@ -43,9 +43,10 @@ def get_samples_tab_graphs():
             html.Br(),
             html.Div(id=ID_ACCUMULATED_SAMPLES_GRAPH),
             html.Br(),
-            html.Div(id=ID_VARIANTS_PER_SAMPLE_GRAPH),
-            html.Br(),
-            html.Div(id=ID_SUBSTITUTIONS_GRAPH),
+            html.Div(children=[
+                html.Div(id=ID_VARIANTS_PER_SAMPLE_GRAPH, className="five columns"),
+                html.Div(id=ID_SUBSTITUTIONS_GRAPH, className="six columns"),
+            ]),
             html.Br()
         ])
 
@@ -113,8 +114,8 @@ def get_samples_tab_left_bar(queries: Queries):
                     {'label': VariantType.INSERTION.name, 'value': VariantType.INSERTION.name},
                     {'label': VariantType.DELETION.name, 'value': VariantType.DELETION.name}
                 ],
-                value=VariantType.SNV.name,
-                multi=False
+                value=None,
+                multi=True
             ),
         ])
 
@@ -147,6 +148,6 @@ def set_callbacks_samples_tab(app, queries: Queries):
         Input(ID_DROPDOWN_GENE2, 'value'),
         Input(ID_DROPDOWN_VARIANT_TYPE, 'value')
     )
-    def update_substitutions(data_source, genes, variant_type):
+    def update_substitutions(data_source, genes, variant_types):
         return html.Div(children=figures.get_substitutions_plot(
-            data_source=data_source, genes=genes, variant_type=variant_type))
+            data_source=data_source, genes=genes, variant_types=variant_types))
