@@ -11,7 +11,6 @@ from covigator.dashboard.tabs.variants import get_tab_variants, set_callbacks_va
 from covigator.database.database import session_scope, get_database
 from logzero import logger
 from covigator.database.queries import Queries
-from covigator.dashboard.figures import Figures
 
 
 class Dashboard:
@@ -28,7 +27,6 @@ class Dashboard:
         logger.info("Serving layout")
         with session_scope(database=self.database) as session:
             self.queries = Queries(session=session)
-            self.figures = Figures(self.queries)
             footer = get_footer()
             tabs = self.get_tabs()
             # , style={'margin-top': '0px', 'padding-top': '0px'})
@@ -52,8 +50,8 @@ class Dashboard:
         try:
             logger.info("Starting covigator dashboard")
             app = self.get_application()
-            set_callbacks_variants_tab(app=app, figures=self.figures, queries=self.queries)
-            set_callbacks_samples_tab(app=app, figures=self.figures, queries=self.queries)
+            set_callbacks_variants_tab(app=app, queries=self.queries)
+            set_callbacks_samples_tab(app=app, queries=self.queries)
             app.run_server(debug=debug, host=self.config.dash_host, port=self.config.dash_port)
         except Exception as e:
             logger.exception(e)

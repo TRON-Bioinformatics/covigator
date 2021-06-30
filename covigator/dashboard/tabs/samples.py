@@ -1,7 +1,7 @@
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Output, Input
-from covigator.dashboard.figures import Figures
+from covigator.dashboard.figures.samples import SampleFigures
 from covigator.dashboard.tabs import TAB_STYLE, TAB_SELECTED_STYLE
 from covigator.database.model import DataSource
 from covigator.database.queries import Queries
@@ -93,7 +93,10 @@ def get_samples_tab_left_bar(queries: Queries):
         ])
 
 
-def set_callbacks_samples_tab(app, figures: Figures, queries: Queries):
+def set_callbacks_samples_tab(app, queries: Queries):
+
+    figures = SampleFigures(queries)
+
     @app.callback(
         Output(ID_ACCUMULATED_SAMPLES_GRAPH, 'children'),
         Input(ID_DROPDOWN_DATA_SOURCE, 'value'),

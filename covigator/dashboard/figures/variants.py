@@ -1,29 +1,18 @@
-import os
-import random
 from itertools import cycle
-from math import sqrt
-
 import colorlover
 import dash_table
 import numpy as np
+import re
+from covigator.dashboard.figures.figures import Figures, PLOTLY_CONFIG, TEMPLATE, MARGIN
 import plotly
 import plotly.express as px
 import plotly.graph_objects as go
 import dash_core_components as dcc
-import re
-
-from logzero import logger
-from typing import List
-
-from covigator.database.model import Gene, DataSource, VariantType
-from covigator.database.queries import Queries
+from covigator.database.model import Gene
 
 VARIANT_TOOLTIP = '<b>%{text}</b><br>' + 'Allele frequency: %{y:.5f}<br>' + 'Genomic Position: %{x}'
-
 GENE_COLORS = cycle(plotly.express.colors.sequential.Reds)
-
 DOMAIN_COLORS = cycle(reversed(plotly.express.colors.sequential.Purples))
-
 OTHER_VARIANT_SYMBOL = "x"
 INSERTION_SYMBOL = "triangle-up"
 DELETION_SYMBOL = "triangle-down"
@@ -36,93 +25,9 @@ LOW_FREQUENCY_VARIANTS_THRESHOLD = 0.01
 LOW_FREQUENCY_VARIANTS_COLOR = plotly.express.colors.sequential.Reds[-5]
 RARE_VARIANTS_THRESHOLD = 0.001
 MONTH_PATTERN = re.compile('[0-9]{4}-[0-9]{2}')
-PLOTLY_CONFIG = {
-    'displaylogo': False,
-    'displayModeBar': False
-}
 
 
-class Figures:
-
-    def __init__(self, queries: Queries):
-        self.queries = queries
-
-    def get_variants_per_sample_plot(self, data_source: str = None, genes: List[str]=None):
-        data = self.queries.get_variants_per_sample(data_source=data_source, genes=genes)
-        graph = dcc.Markdown("""**No data for the current selection**""")
-        if data is not None and data.shape[0] > 0:
-            fig = px.bar(data, x="number_mutations", y="count", color="variant_type",
-                         color_discrete_map={
-                             VariantType.SNV.name: "#8da0cb",
-                             VariantType.INSERTION.name: "#fc8d62",
-                             VariantType.DELETION.name: "#66c2a5",
-                         })
-            fig.update_layout(
-                margin=go.layout.Margin(l=0, r=0, b=0, t=30),
-                legend={'traceorder': 'normal', 'title': None},
-                xaxis={'title': "num. mutations"},
-                yaxis={'title': "num. samples"},
-                template="plotly_white",
-            )
-            average, std = self._get_avg_and_std(data[data.variant_type == VariantType.SNV.name])
-            average_insertions, std_insertions = self._get_avg_and_std(data[data.variant_type == VariantType.INSERTION.name])
-            average_deletions, std_deletions = self._get_avg_and_std(data[data.variant_type == VariantType.DELETION.name])
-            graph = [
-                dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
-                dcc.Markdown("""
-                        **Overall mutations per sample.**
-                        
-                        *Average SNVs: {average} (STD: {std}). *
-                        *Average insertions: {average_insertions} (STD: {std_insertions}). *
-                        *Average deletions: {average_deletions} (STD: {std_deletions}).*
-                        """.format(average=average, std=std, average_insertions=average_insertions,
-                                   std_insertions=std_insertions, average_deletions=average_deletions,
-                                   std_deletions=std_deletions))
-            ]
-        return graph
-
-    def _get_avg_and_std(self, data):
-        average = 0.0
-        std = 0.0
-        if data is not None and data.shape[0] > 0:
-            average = round((data["number_mutations"] * data["count"]).sum() / data["count"].sum(), 3)
-            std = round(sqrt((data["number_mutations"].transform(
-                lambda x: (x - average) ** 2) * data["count"]).sum() / data["count"].sum()), 3)
-        return average, std
-
-    def get_accumulated_samples_by_country_plot(self, data_source: DataSource = None, countries=None, min_samples=1000):
-        data = self.queries.get_accumulated_samples_by_country(
-            data_source=data_source, countries=countries, min_samples=min_samples)
-        graph = dcc.Markdown("""**No data for the current selection**""")
-        if data is not None and data.shape[0] > 0:
-            countries = list(data.sort_values("cumsum", ascending=False).country.unique())
-            fig = px.area(data, x="date", y="cumsum", color="country",
-                          category_orders={
-                              "country": countries[::-1]},
-                          labels={"cumsum": "num. samples", "count": "increment"},
-                          hover_data=["count"],
-                          color_discrete_sequence=px.colors.qualitative.Dark24)
-            fig.update_layout(
-                margin=go.layout.Margin(l=0, r=0, b=0, t=30),
-                legend={'traceorder': 'reversed', 'title': None},
-                xaxis={'title': None},
-                template="plotly_white",
-            )
-
-            top_countries = countries[0: min(5, len(countries))]
-            top_countries_and_cumsum = data[data.country.isin(top_countries)][["country", "cumsum"]] \
-                .groupby("country").max().reset_index().sort_values("cumsum", ascending=False)
-            top_countries_tooltip = list(top_countries_and_cumsum.apply(lambda x: "{} ({})".format(x[0], int(x[1])), axis=1))
-
-            graph = [
-                dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
-                dcc.Markdown("""
-                **Accumulated samples by country**
-                
-                *Top {} countries: {}*
-                """.format(len(top_countries_tooltip), ", ".join(top_countries_tooltip)))
-            ]
-        return graph
+class VariantsFigures(Figures):
 
     def _get_color_by_af(self, af):
         color = None
@@ -178,7 +83,6 @@ class Figures:
         data = self.queries.get_top_occurring_variants(top, gene_name, metric, source)
         fig = dcc.Markdown("""**No variants for the current selection**""")
         if data is not None and data.shape[0] > 0:
-
             # removes the columns from the months out of the range
             month_columns = [c for c in data.columns if MONTH_PATTERN.match(c)]
             included_month_colums = [c for c in month_columns if c >= date_range_start and c <= date_range_end]
@@ -198,33 +102,33 @@ class Figures:
             month_columns[0]['name'][0] = 'Monthly counts' if metric == "count" else 'Monthly frequencies'
 
             fig = dash_table.DataTable(
-                    id="top-occurring-variants-table",
-                    data=data.to_dict('records'),
-                    sort_action='native',
-                    columns=[
-                        {"name": ["Variant", "Gene"], "id": "gene_name"},
-                        {"name": ["", "DNA mutation"], "id": "dna_mutation"},
-                        {"name": ["", "Protein mutation"], "id": "hgvs_p"},
-                        {"name": ["", "Effect"], "id": "annotation"},
-                        {"name": ["", "Frequency"], "id": "frequency"},
-                        {"name": ["", "Count"], "id": "total"},
-                    ] + month_columns,
-                    style_data_conditional=styles_striped + styles_counts + styles_frequency + styles_total_count,
-                    style_cell_conditional=[
-                        {
-                            'if': {'column_id': c},
-                            'textAlign': 'left'
-                        } for c in ['gene_name', 'dna_mutation', 'hgvs_p', 'annotation']
-                    ],
-                    style_table={'overflowX': 'auto'},
-                    style_as_list_view=True,
-                    style_header={
-                        'backgroundColor': 'rgb(230, 230, 230)',
-                        'fontWeight': 'bold'
-                    },
-                    sort_by=[{"column_id": "frequency", "direction": "desc"}],
-                    row_selectable='multi'
-                )
+                id="top-occurring-variants-table",
+                data=data.to_dict('records'),
+                sort_action='native',
+                columns=[
+                            {"name": ["Variant", "Gene"], "id": "gene_name"},
+                            {"name": ["", "DNA mutation"], "id": "dna_mutation"},
+                            {"name": ["", "Protein mutation"], "id": "hgvs_p"},
+                            {"name": ["", "Effect"], "id": "annotation"},
+                            {"name": ["", "Frequency"], "id": "frequency"},
+                            {"name": ["", "Count"], "id": "total"},
+                        ] + month_columns,
+                style_data_conditional=styles_striped + styles_counts + styles_frequency + styles_total_count,
+                style_cell_conditional=[
+                    {
+                        'if': {'column_id': c},
+                        'textAlign': 'left'
+                    } for c in ['gene_name', 'dna_mutation', 'hgvs_p', 'annotation']
+                ],
+                style_table={'overflowX': 'auto'},
+                style_as_list_view=True,
+                style_header={
+                    'backgroundColor': 'rgb(230, 230, 230)',
+                    'fontWeight': 'bold'
+                },
+                sort_by=[{"column_id": "frequency", "direction": "desc"}],
+                row_selectable='multi'
+            )
 
         return [
             fig,
@@ -319,13 +223,13 @@ class Figures:
                     hovertemplate=hovertemplate,
                 )
             layout = go.Layout(
-                template="plotly_white",
+                template=TEMPLATE,
+                margin=MARGIN,
                 height=700,
                 yaxis=dict(visible=True, tickfont={"size": 10}, showgrid=False, showspikes=True, spikemode='toaxis',
                            spikethickness=2),
                 xaxis=dict(tickangle=-45, tickfont={"size": 10}, showgrid=False, showspikes=True, spikemode='toaxis',
                            spikethickness=2),
-                margin=go.layout.Margin(l=0, r=0, b=0, t=0)
             )
             traces = [heatmap]
             if selected_variants:
@@ -337,8 +241,8 @@ class Figures:
             graph = dcc.Graph(figure=fig, config=PLOTLY_CONFIG)
 
         return [
-                graph,
-                dcc.Markdown("""
+            graph,
+            dcc.Markdown("""
                         ***Co-occurrence matrix*** *showing variant pairs co-occurring in at least {} samples (this value is configurable).*
                         *The metric in the co-occurrence matrix can be chosen among counts, frequencies, Jaccard index or 
                         Cohen's kappa coefficient. The Cohen's kappa coefficient introduces a correction to the Jaccard index for
@@ -348,7 +252,7 @@ class Figures:
                         *Synonymous variants are excluded.*
                         *Different genomic variants causing the same protein variant are not grouped.*
                         """.format(min_occurrences, metric, " on gene {}".format(gene_name) if gene_name else ""))
-            ]
+        ]
 
     def get_variants_abundance_plot(self, bin_size=50, source=None):
 
@@ -370,7 +274,8 @@ class Figures:
         data.fillna(0, inplace=True)
 
         layout = go.Layout(
-            template="plotly_white",
+            template=TEMPLATE,
+            margin=MARGIN,
             xaxis=dict(domain=[0, 1.0], tickformat=',d', hoverformat=',d', ticksuffix=" bp", ticks="outside",
                        visible=True, anchor="y7", showspikes=True, spikemode='across', spikethickness=2),
             yaxis=dict(domain=[0.9, 1.0], anchor='x7'),
@@ -380,7 +285,6 @@ class Figures:
             yaxis5=dict(domain=[0.15, 0.3], anchor='x7', visible=False),
             yaxis6=dict(domain=[0.05, 0.1], anchor='x7', visible=False),
             yaxis7=dict(domain=[0.0, 0.05], anchor='x7', visible=False),
-            margin=go.layout.Margin(l=0, r=0, b=0, t=30),
             legend={'traceorder': 'normal'}
         )
 
@@ -390,18 +294,18 @@ class Figures:
         conservation_traces = self._get_conservation_traces(
             conservation, xaxis='x', yaxis1='y3', yaxis2='y4', yaxis3='y5')
         variant_counts_traces = [
-                     go.Scatter(x=data.position_bin, y=data.count_variant_observations,
-                                name="All variants", text="All variants", showlegend=False,
-                                line_color=plotly.express.colors.sequential.Blues[-2], line_width=1),
-                     go.Scatter(x=data.position_bin,
-                                y=[data.count_unique_variants.mean() for _ in range(data.shape[0])],
-                                yaxis='y2', name="Mean unique variants", text="Mean unique variants",
-                                line_width=1,
-                                showlegend=False, line_color=plotly.express.colors.sequential.Blues[-3]),
-                     go.Scatter(x=data.position_bin, y=data.count_unique_variants, yaxis='y2',
-                                name="Unique variants", text="Unique variants", showlegend=False, fill='tonexty',
-                                line_color=plotly.express.colors.sequential.Blues[-4], line_width=1)
-                 ]
+            go.Scatter(x=data.position_bin, y=data.count_variant_observations,
+                       name="All variants", text="All variants", showlegend=False,
+                       line_color=plotly.express.colors.sequential.Blues[-2], line_width=1),
+            go.Scatter(x=data.position_bin,
+                       y=[data.count_unique_variants.mean() for _ in range(data.shape[0])],
+                       yaxis='y2', name="Mean unique variants", text="Mean unique variants",
+                       line_width=1,
+                       showlegend=False, line_color=plotly.express.colors.sequential.Blues[-3]),
+            go.Scatter(x=data.position_bin, y=data.count_unique_variants, yaxis='y2',
+                       name="Unique variants", text="Unique variants", showlegend=False, fill='tonexty',
+                       line_color=plotly.express.colors.sequential.Blues[-4], line_width=1)
+        ]
 
         fig = go.Figure(data=variant_counts_traces + conservation_traces + gene_traces + domain_traces, layout=layout)
 
@@ -425,7 +329,7 @@ class Figures:
             dcc.Markdown("""
                 ***Genome view*** *representing the abundance of variants and ConsHMM (Arneson, 2019) conservation 
                 using a bin size of {} bp. Synonymous variants are included.*
-                
+
                 *The first track shows the count of variants across the genome including repetitions. *
                 *The second track shows the count of unique variants across the genome, the horizontal line represents 
                 the average number of unique variants per bin and thus distinguishes regions with over and under the 
@@ -435,9 +339,9 @@ class Figures:
                 unique variants and conservation within Sars-CoV-2, among SARS-like betacoronavirus and among 
                 vertebrates CoV respectively: {}, {}, {}.*
                 *Genes and Pfam domains are represented in tones of red and purple respectively.*
-                
+
                 *Conservation data source: https://github.com/ernstlab/ConsHMM_CoV*
-                
+
                 *Arneson A, Ernst J. Systematic discovery of conservation states for single-nucleotide annotation of the 
                 human genome. Communications Biology, 248, 2019. doi: https://doi.org/10.1038/s42003-019-0488-1*
                 """.format(bin_size,
@@ -526,7 +430,8 @@ class Figures:
                 data.append(selected_variants_trace)
 
             layout = go.Layout(
-                template="plotly_white",
+                template=TEMPLATE,
+                margin=go.layout.Margin(l=0, r=0, b=0, t=20),
                 xaxis=dict(tickformat=',d', hoverformat=',d', ticksuffix=" bp", ticks="outside",
                            showspikes=True, spikemode='across', spikethickness=1, anchor='y6'),
                 yaxis=dict(title='Allele frequency', type='log', domain=[0.4, 1.0], anchor=main_xaxis),
@@ -534,8 +439,7 @@ class Figures:
                 yaxis3=dict(domain=[0.2, 0.3], visible=False, anchor=main_xaxis),
                 yaxis4=dict(domain=[0.1, 0.2], visible=False, anchor=main_xaxis),
                 yaxis5=dict(domain=[0.05, 0.1], visible=False, anchor=main_xaxis),
-                yaxis6=dict(domain=[0.0, 0.05], visible=False, anchor=main_xaxis),
-                margin=go.layout.Margin(l=0, r=0, b=0, t=20)
+                yaxis6=dict(domain=[0.0, 0.05], visible=False, anchor=main_xaxis)
             )
 
             fig = go.Figure(data=data, layout=layout)
@@ -557,7 +461,7 @@ class Figures:
                         ***Gene view*** *representing each variant with its frequency in the population and 
                         ConsHMM (Arneson, 2019) conservation using a bin size of {} bp. Synonymous variants and variants 
                         occurring in a single sample are excluded.*
-                    
+
                         *The scatter plot shows non synonymous variants occurring in at least two samples on gene {}. 
                         The x-axis shows the genomic coordinates and the y-axis shows the allele frequency.*
                         *The category of "other variants" includes frameshift indels, stop codon gain and lost and 
@@ -567,9 +471,9 @@ class Figures:
                         variants (>= 10%). The second, third and fourth tracks in grey represent the conservation as 
                         reported by ConsHMM within SARS-CoV-2, among SARS-like betaCoV and among vertebrate CoV.*
                         *Genes and Pfam domains are represented in tones of red and purple respectively.*
-                        
+
                         *Conservation data source: https://github.com/ernstlab/ConsHMM_CoV*
-                        
+
                         *Arneson A, Ernst J. Systematic discovery of conservation states for single-nucleotide annotation of the 
                         human genome. Communications Biology, 248, 2019. doi: https://doi.org/10.1038/s42003-019-0488-1*
                         """.format(bin_size, gene_name))]
@@ -590,7 +494,7 @@ class Figures:
         ]
 
     @staticmethod
-    def _get_domain_trace(color:str, domain: dict, gene: Gene, yaxis='y', xaxis='x', showlegend=False):
+    def _get_domain_trace(color: str, domain: dict, gene: Gene, yaxis='y', xaxis='x', showlegend=False):
         domain_start = gene.start + int(domain["start"])
         domain_end = gene.start + int(domain["end"])
         domain_name = domain.get('description')
@@ -679,11 +583,11 @@ class Figures:
         fig = go.Figure(
             data=traces,
             layout=go.Layout(
-                template="plotly_white",
+                template=TEMPLATE,
+                margin=MARGIN,
                 height=700,
                 yaxis=dict(visible=True, tickfont={"size": 10}, showgrid=True, title="PC2"),
                 xaxis=dict(visible=True, tickfont={"size": 10}, showgrid=True, title="PC1"),
-                margin=go.layout.Margin(l=0, r=0, b=0, t=0),
                 shapes=shapes
             )
         )
@@ -700,6 +604,6 @@ class Figures:
             a cluster is {}.
             Variants selected in the top occurrent variants table are highlighted with a greater size in the plot.
             *
-            
+
             *Ankerst et al. “OPTICS: ordering points to identify the clustering structure.” ACM SIGMOD Record 28, no. 2 (1999): 49-60.*
             """.format(min_cooccurrence, min_samples))]

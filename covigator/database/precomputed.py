@@ -2,7 +2,7 @@ import pandas as pd
 from sqlalchemy.orm import Session
 from covigator.configuration import Configuration
 from covigator.database.database import get_database
-from covigator.database.model import PrecomputedVariantsPerSample
+from covigator.database.model import PrecomputedVariantsPerSample, PrecomputedSubstitutionsCounts
 
 
 class Precomputer:
@@ -56,7 +56,58 @@ class Precomputer:
         self.session.add_all(database_rows)
         self.session.commit()
 
+    def load_count_substitutions(self):
+
+        sql_query = """
+        select * from (select count(*) as count, reference, alternate, source, variant_type, gene_name 
+            from variant_observation_v13
+            group by reference, alternate, source, variant_type, gene_name
+            order by count desc) 
+            as counts where counts.count > 10;
+        """
+        data = pd.read_sql_query(sql_query, self.session.bind)
+        sql_query = """
+                select * from (select count(*) as count, reference, alternate, source, variant_type 
+                    from variant_observation_v13
+                    group by reference, alternate, source, variant_type
+                    order by count desc) 
+                    as counts where counts.count > 10;
+                """
+        data_without_gene = pd.read_sql_query(sql_query, self.session.bind)
+
+        # delete all rows before starting
+        self.session.query(PrecomputedSubstitutionsCounts).delete()
+        self.session.commit()
+
+        # stores the precomputed data
+        database_rows = []
+        for index, row in data.iterrows():
+            # add entries per gene
+            database_rows.append(PrecomputedSubstitutionsCounts(
+                count=row["count"],
+                reference=row["reference"],
+                alternate=row["alternate"],
+                source=row["source"],
+                variant_type=row["variant_type"],
+                gene_name=row["gene_name"] if row["gene_name"] is not None else "intergenic"
+            ))
+
+        for index, row in data_without_gene.iterrows():
+            # add entries per gene
+            database_rows.append(PrecomputedSubstitutionsCounts(
+                count=row["count"],
+                reference=row["reference"],
+                alternate=row["alternate"],
+                source=row["source"],
+                variant_type=row["variant_type"]
+            ))
+
+        self.session.add_all(database_rows)
+        self.session.commit()
+
 
 if __name__ == '__main__':
     database = get_database(config=Configuration(), initialize=True, verbose=True)
-    Precomputer(session=database.get_database_session()).load_counts_variants_per_sample()
+    precomputer = Precomputer(session=database.get_database_session())
+    precomputer.load_counts_variants_per_sample()
+    precomputer.load_count_substitutions()

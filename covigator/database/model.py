@@ -26,6 +26,7 @@ SAMPLE_GISAID_TABLE_NAME = get_table_versioned_name('sample_gisaid', config=conf
 SAMPLE_ENA_TABLE_NAME = get_table_versioned_name('sample_ena', config=config)
 CONSERVATION_TABLE_NAME = get_table_versioned_name('conservation', config=config)
 PRECOMPUTED_VARIANTS_PER_SAMPLE_TABLE_NAME = get_table_versioned_name('precomputed_variants_per_sample', config=config)
+PRECOMPUTED_SUBSTITUTIONS_COUNTS_TABLE_NAME = get_table_versioned_name('precomputed_substitutions_counts', config=config)
 JOB_STATUS_CONSTRAINT_NAME = get_table_versioned_name('job_status', config=config)
 DATA_SOURCE_CONSTRAINT_NAME = get_table_versioned_name('data_source', config=config)
 COVIGATOR_MODULE_CONSTRAINT_NAME = get_table_versioned_name('covigator_module', config=config)
@@ -119,8 +120,8 @@ class SampleGisaid(Base):
     # sequence  information
     sequence = Column(JSON)
     sequence_length = Column(Integer)
-    counts_n_bases = Column(Integer)
-    counts_ambiguous_bases = Column(Integer)
+    count_n_bases = Column(Integer)
+    count_ambiguous_bases = Column(Integer)
 
     # counts of variants
     count_snvs = Column(Integer)
@@ -465,6 +466,19 @@ class PrecomputedVariantsPerSample(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     count = Column(Integer)
     number_mutations = Column(Integer)
+    source = Column(Enum(DataSource, name=DataSource.__constraint_name__))
+    variant_type = Column(Enum(VariantType, name=VariantType.__constraint_name__))
+    gene_name = Column(String)
+
+
+class PrecomputedSubstitutionsCounts(Base):
+
+    __tablename__ = PRECOMPUTED_SUBSTITUTIONS_COUNTS_TABLE_NAME
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    count = Column(Integer)
+    reference = Column(String)
+    alternate = Column(String)
     source = Column(Enum(DataSource, name=DataSource.__constraint_name__))
     variant_type = Column(Enum(VariantType, name=VariantType.__constraint_name__))
     gene_name = Column(String)

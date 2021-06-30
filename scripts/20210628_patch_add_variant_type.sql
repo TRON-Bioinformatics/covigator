@@ -1,5 +1,6 @@
 
 
+ALTER TABLE variant_v13 ADD variant_type variant_type_v13;
 ALTER TABLE variant_observation_v13 ADD variant_type variant_type_v13;
 ALTER TABLE subclonal_variant_observation_v13 ADD variant_type variant_type_v13;
 

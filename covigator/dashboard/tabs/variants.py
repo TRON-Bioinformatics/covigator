@@ -3,7 +3,7 @@ import dash_core_components as dcc
 import dash_html_components as html
 import dash_table
 from dash.dependencies import Output, Input
-from covigator.dashboard.figures import Figures
+from covigator.dashboard.figures.variants import VariantsFigures
 from covigator.dashboard.tabs import TAB_STYLE, TAB_SELECTED_STYLE, MONTH_PATTERN
 from covigator.database.model import DataSource
 from covigator.database.queries import Queries
@@ -188,7 +188,10 @@ considered as a core point. This includes the point itself."""),
     ], className="two columns")
 
 
-def set_callbacks_variants_tab(app, figures: Figures, queries: Queries):
+def set_callbacks_variants_tab(app, queries: Queries):
+
+    figures = VariantsFigures(queries)
+
     @app.callback(
         Output(ID_TOP_OCCURRING_VARIANTS, 'children'),
         Input(ID_SLIDER_TOP_VARIANTS, 'value'),
