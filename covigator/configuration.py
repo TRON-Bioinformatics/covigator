@@ -28,9 +28,6 @@ class Configuration:
     # pipeline
     ENV_COVIGATOR_NEXTFLOW = "COVIGATOR_NEXTFLOW"
     ENV_COVIGATOR_WORKFLOW = "COVIGATOR_WORKFLOW"
-    ENV_COVIGATOR_TRONFLOW_BWA = "COVIGATOR_TRONFLOW_BWA"
-    ENV_COVIGATOR_TRONFLOW_BAM_PREPROCESSING = "COVIGATOR_TRONFLOW_BAM_PREPROCESSING"
-    ENV_COVIGATOR_TRONFLOW_VARIANT_NORMALIZATION = "COVIGATOR_TRONFLOW_VARIANT_NORMALIZATION"
     ENV_COVIGATOR_FORCE_PIPELINE = "COVIGATOR_FORCE_PIPELINE"
     ENV_COVIGATOR_WORKFLOW_CPUS = "COVIGATOR_WORKFLOW_CPUS"
     ENV_COVIGATOR_WORKFLOW_MEMORY = "COVIGATOR_WORKFLOW_MEMORY"
@@ -80,9 +77,6 @@ class Configuration:
         self.workflow_cpus = os.getenv(self.ENV_COVIGATOR_WORKFLOW_CPUS, "1")
         self.workflow_memory = os.getenv(self.ENV_COVIGATOR_WORKFLOW_MEMORY, "3g")
         # NOTE: the defaults are already set in the workflow config
-        self.tronflow_bwa = os.getenv(self.ENV_COVIGATOR_TRONFLOW_BWA)
-        self.tronflow_bam_preprocessing = os.getenv(self.ENV_COVIGATOR_TRONFLOW_BAM_PREPROCESSING)
-        self.tronflow_variant_normalization = os.getenv(self.ENV_COVIGATOR_TRONFLOW_VARIANT_NORMALIZATION)
         self.temp_folder = os.getenv(self.ENV_COVIGATOR_TEMP_FOLDER, "/data/covigator-tmp")
 
 

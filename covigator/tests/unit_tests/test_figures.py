@@ -58,15 +58,14 @@ class FiguresTests(TestCase):
         # populates the ENA samples tables
         mock_samples_and_variants(session=self.session, faker=self.faker, num_samples=100)
         Precomputer(session=self.session).load_count_substitutions()
-        figure = self.sample_figures.get_substitutions_plot(
-            variant_type=VariantType.SNV.name)
+        figure = self.sample_figures.get_substitutions_plot(variant_types=[VariantType.SNV.name])
         self.assertIsNotNone(figure)
         self.assertTrue(len(figure) == 2)
         self.assertIsInstance(figure[0], Graph)
         self.assertIsInstance(figure[1], Markdown)
 
     def test_substitutions_no_data(self):
-        figure = self.sample_figures.get_substitutions_plot(variant_type=VariantType.SNV.name)
+        figure = self.sample_figures.get_substitutions_plot(variant_types=[VariantType.SNV.name])
         self.assertIsInstance(figure, Markdown)
 
     def test_needle_plot_no_data(self):

@@ -190,22 +190,18 @@ export COVIGATOR_NEXTFLOW=/bin/nextflow
 export COVIGATOR_TEMP_FOLDER=/covigator/data/temp
 ```
 
-Clone the Nextflow workflow and its dependencies as follows:
+Clone the Nextflow workflow as follows:
 ```
 cd /covigator/dependencies
 git clone --branch v0.3.1 https://github.com/TRON-Bioinformatics/covigator-ngs-pipeline.git
-git clone --branch v1.4.0 https://github.com/TRON-Bioinformatics/tronflow-bwa.git
-git clone --branch v1.5.0 https://github.com/TRON-Bioinformatics/tronflow-bam-preprocessing.git
 ```
 
-And then point the right environment variables to these pipelines:
+And then point the right environment variables to the pipeline:
 ```
 export COVIGATOR_WORKFLOW=/covigator/dependencies/covigator-ngs-pipeline/main.nf
-export COVIGATOR_TRONFLOW_BWA=/covigator/dependencies/tronflow-bwa/main.nf
-export COVIGATOR_TRONFLOW_BAM_PREPROCESSING=/covigator/dependencies/tronflow-bam-preprocessing/main.nf
 ```
 
-But before running the covigator processor you will need to make sure that the adequate conda environments are already 
+But before running the covigator processor you will need to make sure that the adequate conda environment is already 
 created, otherwise concurrent creations of the same environment will cause an error.
 There is an initialization mode for this purpose.
 Make sure that the work folder is set to COVIGATOR_TEMP_FOLDER.

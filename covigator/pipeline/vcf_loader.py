@@ -111,9 +111,12 @@ class VcfLoader:
                 parsed_variant.cds_pos_length = values[12].strip()
                 parsed_variant.aa_pos_length = values[13].strip()
                 if parsed_variant.annotation == "missense_variant":
-                    parsed_variant.reference_amino_acid = parsed_variant.hgvs_p[2]
-                    parsed_variant.alternate_amino_acid = parsed_variant.hgvs_p[-1]
-                    parsed_variant.position_amino_acid = int(parsed_variant.hgvs_p[3:-1])
+                    hgvs_pattern = re.compile(r"^p\.([a-zA-Z]{1,3})([0-9]+)([a-zA-Z]{1,3})$")
+                    match = hgvs_pattern.match(parsed_variant.hgvs_p)
+                    if match:
+                        parsed_variant.reference_amino_acid = match.group(1)
+                        parsed_variant.alternate_amino_acid = match.group(3)
+                        parsed_variant.position_amino_acid = int(match.group(2))
         return parsed_variant
 
     def _parse_variant_observation(
