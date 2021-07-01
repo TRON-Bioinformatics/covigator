@@ -31,3 +31,7 @@ class CovigatorExcludedSampleTooEarlyDateException(Exception):
 
 class CovigatorExcludedSampleTooManyMutations(Exception):
     pass
+
+
+class CovigatorErrorProcessingCoverageResults(Exception):
+    pass

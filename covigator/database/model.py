@@ -257,7 +257,18 @@ class JobEna(Base):
     # local files storage
     fastq_path = Column(String)     # the local path where FASTQ files are stored in semi colon separated list
     vcf_path = Column(String)
+    # FASTP results
     qc = Column(JSON)
+    qc_path = Column(String)
+    # coverage analysis results
+    horizontal_coverage_path = Column(String)
+    vertical_coverage_path = Column(String)
+    num_reads = Column(Integer)
+    covered_bases = Column(Integer)
+    coverage = Column(Float)
+    mean_depth = Column(Float)
+    mean_base_quality = Column(Float)
+    mean_mapping_quality = Column(Float)
 
     def get_fastq_paths(self):
         return self.fastq_path.split(SEPARATOR) if self.fastq_path is not None else []

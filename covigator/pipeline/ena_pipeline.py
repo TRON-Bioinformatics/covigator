@@ -22,10 +22,17 @@ class Pipeline:
             self.config.storage_folder, run_accession,
             "{name}.lofreq.normalized.annotated.vcf.gz".format(name=run_accession))
         output_qc = os.path.join(
-            self.config.storage_folder, run_accession,
-            "{name}.fastp_stats.json".format(name=run_accession))
+            self.config.storage_folder, run_accession, "{name}.fastp_stats.json".format(name=run_accession))
+        output_vertical_coverage = os.path.join(
+            self.config.storage_folder, run_accession, "{name}.depth.tsv".format(name=run_accession))
+        output_horizontal_coverage = os.path.join(
+            self.config.storage_folder, run_accession, "{name}.coverage.tsv".format(name=run_accession))
 
-        if not os.path.exists(output_vcf) or not os.path.exists(output_qc) or self.config.force_pipeline:
+        if not os.path.exists(output_vcf) \
+                or not os.path.exists(output_qc) \
+                or not os.path.exists(output_horizontal_coverage) \
+                or not os.path.exists(output_vertical_coverage) \
+                or self.config.force_pipeline:
 
             command = "{nextflow} run {workflow} " \
                       "--fastq1 {fastq1} {fastq2} --output {output_folder} --name {name} " \
@@ -44,4 +51,4 @@ class Pipeline:
             )
             run_command(command, sample_data_folder)
 
-        return output_vcf, output_qc
+        return output_vcf, output_qc, output_vertical_coverage, output_horizontal_coverage
