@@ -1,12 +1,18 @@
 from datetime import date, datetime
 from sqlalchemy.orm import Session
+
+from covigator.accessor import MINIMUM_DATE
 from covigator.database.model import SampleGisaid, JobGisaid, Sample, DataSource, Log, CovigatorModule
 from covigator.database.database import Database
 from logzero import logger
 from Bio import SeqIO
 import time
+
+from covigator.exceptions import CovigatorExcludedSampleTooEarlyDateException
 from covigator.misc.compression import compress_sequence
 from covigator.misc.country_parser import CountryParser
+
+
 
 BATCH_SIZE = 1000
 
@@ -24,6 +30,7 @@ class GisaidAccessor:
 
         self.excluded_by_host = 0
         self.excluded_existing = 0
+        self.excluded_by_date = 0
         self.included = 0
         self.country_parser = CountryParser()
 
@@ -118,27 +125,34 @@ class GisaidAccessor:
                 continent_alpha_2=None,
                 site=None,
                 site2=None,
-                sequence={"MN908947.3": compress_sequence(record.seq)}
+                sequence={"MN908947.3": compress_sequence(record.seq)},
+                sequence_length=len(record.seq),
+                count_n_bases=sum([x == 'N' for x in record.seq]),
+                count_ambiguous_bases=sum([x not in ["ACGTN"] for x in record.seq])
+
             )
+            try:
+                self._parse_country(sample_gisaid)
+                self._parse_dates(sample_gisaid)
+                sample = self._build_sample(sample_gisaid)
+                job = JobGisaid(run_accession=sample_gisaid.run_accession)
+                samples_gisaid.append(sample_gisaid)
+                jobs_and_samples.append(job)
+                jobs_and_samples.append(sample)
+                num_samples += 1
+                end = time.time()
+                total_time += end - start
 
-            self._parse_country(sample_gisaid)
-            self._parse_dates(sample_gisaid)
-            sample = self._build_sample(sample_gisaid)
-            job = JobGisaid(run_accession=sample_gisaid.run_accession)
-            samples_gisaid.append(sample_gisaid)
-            jobs_and_samples.append(job)
-            jobs_and_samples.append(sample)
-            num_samples += 1
-            end = time.time()
-            total_time += end - start
-
-            if len(samples_gisaid) == BATCH_SIZE:
-                session.add_all(samples_gisaid)
-                session.commit()
-                session.add_all(jobs_and_samples)
-                session.commit()
-                samples_gisaid = []
-                jobs_and_samples = []
+                if len(samples_gisaid) == BATCH_SIZE:
+                    session.add_all(samples_gisaid)
+                    session.commit()
+                    session.add_all(jobs_and_samples)
+                    session.commit()
+                    samples_gisaid = []
+                    jobs_and_samples = []
+            except CovigatorExcludedSampleTooEarlyDateException:
+                logger.error("Sample excluded due to too early date")
+                self.excluded_by_date += 0
 
         if len(samples_gisaid) > 0:
             session.add_all(samples_gisaid)
@@ -166,6 +180,8 @@ class GisaidAccessor:
 
     def _parse_dates(self, gisaid_sample: SampleGisaid):
         gisaid_sample.date = self._parse_abstract(gisaid_sample.date, date.fromisoformat)
+        if gisaid_sample.date is not None and gisaid_sample.date < MINIMUM_DATE:
+            raise CovigatorExcludedSampleTooEarlyDateException
 
     def _parse_abstract(self, value, type):
         try:
@@ -191,7 +207,8 @@ class GisaidAccessor:
                 "included": self.included,
                 "excluded": {
                     "existing": self.excluded_existing,
-                    "excluded_by_host": self.excluded_by_host
+                    "excluded_by_host": self.excluded_by_host,
+                    "excluded_by_date": self.excluded_by_date
                 }
             }
         ))

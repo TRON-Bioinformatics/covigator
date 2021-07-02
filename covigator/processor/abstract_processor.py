@@ -90,6 +90,10 @@ class AbstractProcessor:
                         function(job, queries, config)
                         if end_status is not None:
                             job.status = end_status
+                            if job.status == JobStatus.FINISHED:
+                                sample = queries.find_sample_by_accession(
+                                    run_accession=run_accession, source=data_source)
+                                sample.finished = True
                     else:
                         logger.warning("Expected ENA job {} in status {}".format(run_accession, start_status))
                         run_accession = None

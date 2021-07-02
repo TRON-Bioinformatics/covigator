@@ -1,7 +1,9 @@
 from typing import Tuple
 from faker import Faker
+from sqlalchemy.orm import Session
+
 from covigator.database.model import SampleEna, Sample, DataSource, JobEna, JobStatus, Log, CovigatorModule, Variant, \
-    VariantObservation, VariantCooccurrence
+    VariantObservation, VariantCooccurrence, VariantType
 from Bio.Alphabet.IUPAC import IUPACData
 
 
@@ -12,6 +14,7 @@ def get_mocked_variant(faker: Faker, chromosome=None, gene_name=None) -> Variant
         reference=faker.random_choices(list(IUPACData.unambiguous_dna_letters), length=1)[0],
         # TODO: reference and alternate could be equal!
         alternate=faker.random_choices(list(IUPACData.unambiguous_dna_letters), length=1)[0],
+        variant_type=VariantType.SNV,
         gene_name=gene_name,
         hgvs_p="p.{}{}{}".format(
             faker.random_choices(list(IUPACData.protein_letters_1to3.values()), length=1)[0],
@@ -26,14 +29,14 @@ def get_mocked_variant(faker: Faker, chromosome=None, gene_name=None) -> Variant
 
 def get_mocked_variant_observation(sample: Sample, variant: Variant, faker=Faker()):
     return VariantObservation(
-                    sample=sample.id if sample else faker.unique.uuid4(),
-                    source=sample.source if sample else faker.random_choices((DataSource.ENA, DataSource.GISAID)),
-                    variant_id=variant.variant_id,
-                    chromosome=variant.chromosome,
-                    position=variant.position,
-                    reference=variant.reference,
-                    alternate=variant.alternate
-                )
+        sample=sample.id if sample else faker.unique.uuid4(),
+        source=sample.source if sample else faker.random_choices((DataSource.ENA, DataSource.GISAID)),
+        variant_id=variant.variant_id,
+        chromosome=variant.chromosome,
+        position=variant.position,
+        reference=variant.reference,
+        alternate=variant.alternate,
+        variant_type=VariantType.SNV)
 
 
 def get_mocked_ena_sample(faker: Faker, job_status=JobStatus.FINISHED) -> Tuple[SampleEna, Sample, JobEna]:
@@ -47,7 +50,8 @@ def get_mocked_ena_sample(faker: Faker, job_status=JobStatus.FINISHED) -> Tuple[
         country=faker.country(),
         fastq_ftp=faker.uri(),
         fastq_md5=faker.md5(),
-        num_fastqs=1
+        num_fastqs=1,
+        finished=job_status == JobStatus.FINISHED
     )
     sample = Sample(
         id=identifier,
@@ -89,3 +93,18 @@ def get_mocked_variant_cooccurrence(faker: Faker, variant_one: Variant, variant_
             count=faker.random_int(min=1, max=10)
         )
     return cooccurrence
+
+
+def mock_samples_and_variants(faker, session: Session, num_samples=10):
+    existing_variants = set()
+    for _ in range(num_samples):
+        sample_ena, sample, job = get_mocked_ena_sample(faker=faker)
+        session.add_all([sample_ena, sample, job])
+        variants = [get_mocked_variant(faker=faker) for _ in range(10)]
+        session.add_all(list(filter(lambda x: x in existing_variants, variants)))
+        existing_variants.update([v.variant_id for v in variants])
+        session.commit()
+        variants_observations = [get_mocked_variant_observation(faker=faker, variant=v, sample=sample)
+                                 for v in variants]
+        session.add_all(variants_observations)
+    session.commit()

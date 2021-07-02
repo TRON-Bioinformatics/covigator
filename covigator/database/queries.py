@@ -7,20 +7,21 @@ from logzero import logger
 from skbio.stats.distance import DissimilarityMatrix
 from sklearn.cluster import OPTICS
 from sklearn.manifold import MDS
-from sqlalchemy import and_, desc, asc, func, String, DateTime
+from sqlalchemy import and_, desc, asc, func, String, DateTime, cast
 from sqlalchemy.engine.default import DefaultDialect
 from sqlalchemy.orm import Session, aliased
 from sqlalchemy.sql.sqltypes import NullType
 
 from covigator.database.model import Log, DataSource, CovigatorModule, SampleEna, JobEna, JobStatus, VariantObservation, \
-    Gene, Variant, VariantCooccurrence, Conservation, JobGisaid, SampleGisaid
+    Gene, Variant, VariantCooccurrence, Conservation, JobGisaid, SampleGisaid, SubclonalVariantObservation, \
+    PrecomputedVariantsPerSample, PrecomputedSubstitutionsCounts, PrecomputedIndelLength, VariantType, \
+    PrecomputedAnnotation
+from covigator.exceptions import CovigatorQueryException
 
 SYNONYMOUS_VARIANT = "synonymous_variant"
 
 
 class Queries:
-
-    FINAL_JOB_STATE = JobStatus.FINISHED
 
     def __init__(self, session: Session):
         self.session = session
@@ -71,75 +72,189 @@ class Queries:
             raise ValueError("Bad data source {}".format(data_source))
         return count
 
-    def find_sample_ena_by_accession(self, run_accession: str) -> SampleEna:
-        return self.session.query(SampleEna).filter(SampleEna.run_accession == run_accession).first()
+    def find_sample_by_accession(self, run_accession: str, source: DataSource) -> Union[SampleEna, SampleGisaid]:
+        if source == DataSource.ENA:
+            sample = self.session.query(SampleEna).filter(SampleEna.run_accession == run_accession).first()
+        elif source == DataSource.GISAID:
+            sample = self.session.query(SampleGisaid).filter(SampleGisaid.run_accession == run_accession).first()
+        else:
+            raise CovigatorQueryException("Bad query trying to fetch a sample")
+        return sample
 
-    def find_sample_gisaid_by_accession(self, run_accession: str) -> SampleGisaid:
-        return self.session.query(SampleGisaid).filter(SampleGisaid.run_accession == run_accession).first()
+    def get_countries(self) -> List[str]:
+        countries_ena = [c for c, in self.session.query(SampleEna.country).filter(
+            SampleEna.finished).distinct().all()]
+        countries_gisaid = [c for c, in self.session.query(SampleGisaid.country).filter(
+            SampleGisaid.finished).distinct().all()]
+        return sorted(list(set(countries_ena + countries_gisaid)))
 
-    def get_accumulated_samples_by_country(self) -> pd.DataFrame:
+    def get_variants_per_sample(self, data_source: str, genes: List[str]):
+        """
+        Returns a DataFrame with columns: number_mutations, count, type
+        where type: SNV, insertion or deletion
+        """
+        query = self.session.query(PrecomputedVariantsPerSample)
+        if data_source is not None:
+            query = query.filter(PrecomputedVariantsPerSample.source == data_source)
+        if genes is not None and genes:
+            query = query.filter(PrecomputedVariantsPerSample.gene_name.in_(genes))
+        else:
+            query = query.filter(PrecomputedVariantsPerSample.gene_name == None)
+
+        data = pd.read_sql(query.statement, self.session.bind)
+        if data.shape[0] > 0:
+            data.variant_type = data.variant_type.transform(lambda x: x.name if x else x)
+        return data[["number_mutations", "variant_type", "count"]] \
+            .groupby(["number_mutations", "variant_type"]).sum().reset_index()
+
+    def get_indel_lengths(self, data_source, genes):
+        query = self.session.query(PrecomputedIndelLength)
+        if data_source is not None:
+            query = query.filter(PrecomputedIndelLength.source == data_source)
+        if genes is not None and genes:
+            query = query.filter(PrecomputedIndelLength.gene_name.in_(genes))
+        else:
+            query = query.filter(PrecomputedIndelLength.gene_name == None)
+
+        data = pd.read_sql(query.statement, self.session.bind)
+        if data.shape[0] > 0:
+            data["tmp_variant_type"] = data["length"].transform(
+                lambda x: VariantType.INSERTION.name if x > 0 else VariantType.DELETION.name)
+            data["inframe"] = data["length"].transform(lambda x: "INFRAME" if x % 3 == 0 else "FRAMESHIFT")
+            data["variant_type"] = data[["tmp_variant_type", "inframe"]].apply(
+                lambda x: "{}_{}".format(x[0], x[1]), axis=1)
+            return data[["length", "variant_type", "count"]] \
+                .groupby(["length", "variant_type", ]).sum().reset_index() \
+                .sort_values("length", ascending=True)
+        return data
+
+    def get_annotations(self, data_source, genes):
+        query = self.session.query(PrecomputedAnnotation)
+        if data_source is not None:
+            query = query.filter(PrecomputedAnnotation.source == data_source)
+        if genes is not None and genes:
+            query = query.filter(PrecomputedAnnotation.gene_name.in_(genes))
+        else:
+            query = query.filter(PrecomputedAnnotation.gene_name == None)
+
+        data = pd.read_sql(query.statement, self.session.bind)
+        if data.shape[0] > 0:
+            return data[["annotation", "count"]] \
+                .groupby(["annotation", ]).sum().reset_index() \
+                .sort_values("count", ascending=False)
+        return data
+
+    def get_substitutions(self, data_source, genes, variant_types):
+        query = self.session.query(PrecomputedSubstitutionsCounts)
+        if variant_types is not None and variant_types:
+            query = query.filter(PrecomputedSubstitutionsCounts.variant_type.in_(variant_types))
+        if data_source is not None:
+            query = query.filter(PrecomputedSubstitutionsCounts.source == data_source)
+        if genes is not None and genes:
+            query = query.filter(PrecomputedSubstitutionsCounts.gene_name.in_(genes))
+        else:
+            query = query.filter(PrecomputedSubstitutionsCounts.gene_name == None)
+
+        data = pd.read_sql(query.statement, self.session.bind)
+        if data.shape[0] > 0:
+            data.variant_type = data.variant_type.transform(lambda x: x.name if x else x)
+            data["substitution"] = data[["reference", "alternate"]].apply(lambda x: "{}>{}".format(x[0], x[1]), axis=1)
+            data = data[["substitution", "variant_type", "count"]] \
+                .groupby(["substitution", "variant_type"]).sum().reset_index()\
+                .sort_values("count", ascending=False)
+            data["rate"] = (data["count"] / data["count"].sum()).transform(lambda x: "{} %".format(round(x * 100, 1)))
+            data = data.head(20)
+        return data
+
+    def get_accumulated_samples_by_country(
+            self, data_source: DataSource, countries: List[str], min_samples=100) -> pd.DataFrame:
         """
         Returns a DataFrame with columns: data, country, cumsum, count
         """
-        samples = pd.read_sql(self.session.query(SampleEna).join(JobEna).filter(JobEna.status == self.FINAL_JOB_STATE).statement,
-                              self.session.bind)
+        samples_ena = None
+
+        if data_source is None or data_source == DataSource.ENA.name:
+            query = self.session.query(
+                func.count().label("count"), SampleEna.first_created.label("date"), SampleEna.country) \
+                .filter(SampleEna.finished) \
+                .group_by(SampleEna.first_created, SampleEna.country)
+            if countries:
+                query = query.filter(SampleEna.country.in_(countries))
+            samples_ena = pd.read_sql(query.statement, self.session.bind).astype(
+                {'date': 'datetime64', 'count': 'float64'})
+
+        samples_gisaid = None
+        if data_source is None or data_source == DataSource.GISAID.name:
+            query = self.session.query(
+                func.count().label("count"), SampleGisaid.date, SampleGisaid.country) \
+                .filter(SampleGisaid.finished)\
+                .group_by(SampleGisaid.date, SampleGisaid.country)
+            if countries:
+                query = query.filter(SampleGisaid.country.in_(countries))
+            samples_gisaid = pd.read_sql(query.statement, self.session.bind).astype(
+                {'date': 'datetime64', 'count': 'float64'})
+
+        if samples_gisaid is None:
+            samples = samples_ena
+        elif samples_ena is None:
+            samples = samples_gisaid
+        else:
+            samples = pd.concat([samples_gisaid, samples_ena]).groupby(['date', 'country']).sum().reset_index()
 
         filled_table = None
-        if samples.shape[0] > 0:
-            # merge countries with less than 10 samples into OTHER
-            country_value_counts = samples.country.value_counts()
-            other_countries = list(country_value_counts[country_value_counts < 10].index)
-            null_country_values = ["none", "not available"]
-            samples["country_merged"] = samples.country.transform(
-                lambda c: "Other" if c in other_countries or c is None or c.lower() in null_country_values else c)
-
-            # counts samples by country and data
-            sample_counts = samples[["first_created", "run_accession", "country_merged"]] \
-                .groupby(["first_created", "country_merged"]).count()
-            sample_counts.reset_index(inplace=True)
-            sample_counts.rename(columns={"run_accession": "count"}, inplace=True)
-
+        if samples is not None and samples.shape[0] > 0:
             # accumulates count ordered by date
-            sample_counts['cumsum'] = sample_counts.groupby(['country_merged'])['count'].cumsum()
+            samples['cumsum'] = samples.groupby(['country'])['count'].cumsum()
 
             # creates empty table with all pairwise combinations of date and country
-            dates = sample_counts.first_created.unique()
-            countries = sample_counts.sort_values("cumsum", ascending=False).country_merged.unique()
+            dates = samples.date[~samples.date.isna()].sort_values().unique()
+            countries = samples[(~samples.country.isna()) & (samples["cumsum"] > min_samples)] \
+                .sort_values("cumsum", ascending=False).country.unique()
+
             empty_table = pd.DataFrame(
-                index=pd.MultiIndex.from_product([dates, countries], names=["first_created", "country_merged"]))
+                index=pd.MultiIndex.from_product([dates, countries], names=["date", "country"]))
             empty_table["count"] = 0
 
             # adds values into empty table
-            filled_table = empty_table + sample_counts.set_index(["first_created", "country_merged"])
-            filled_table.fillna(0, inplace=True)
-            filled_table.reset_index(inplace=True)
-            filled_table['cumsum'] = filled_table.groupby(['country_merged'])['count'].cumsum()
-            filled_table.rename(columns={"first_created": "date", "country_merged": "country"}, inplace=True)
+            filled_table = pd.merge(
+                left=empty_table.reset_index(),
+                right=samples.loc[:, ["date", "country", "count"]],
+                on=["date", "country"],
+                how='left',
+                suffixes=("_x", "_y")).fillna(0)
+
+            filled_table["count"] = filled_table.count_x + filled_table.count_y
+            filled_table['cumsum'] = filled_table.groupby(['country'])['count'].cumsum()
 
         return filled_table
 
     def get_sample_months(self, pattern) -> List[datetime]:
-        dates = [
-            d[0] for d in
-            self.session.query(SampleEna.first_created).join(JobEna).filter(JobEna.status == self.FINAL_JOB_STATE).all()]
-        return sorted(set([d.strftime(pattern) for d in dates]))
+        dates_ena = [d.strftime(pattern) for d, in
+                     self.session.query(SampleEna.first_created).filter(
+                         and_(SampleEna.finished, SampleEna.first_created.isnot(None))).distinct().all()]
+        dates_gisaid = [d.strftime(pattern) for d, in
+                     self.session.query(SampleGisaid.date).filter(
+                         and_(SampleGisaid.finished, SampleGisaid.date.isnot(None))).distinct().all()]
+        return sorted(set(dates_ena + dates_gisaid))
 
     def get_gene(self, gene_name: str):
         return self.session.query(Gene).filter(Gene.name == gene_name).first()
 
-    def get_genes(self) -> List[Gene]:
+    def get_genes(self):
         return self.session.query(Gene).order_by(Gene.start).all()
 
-    def get_genes_metadata(self):
-        return self.session.query(Gene).order_by(Gene.start).all()
-
-    def get_non_synonymous_variants_by_region(self, start, end) -> pd.DataFrame:
-        subquery = self.session.query(VariantObservation.position, Variant.annotation, Variant.hgvs_p,
-                               func.count(VariantObservation.position).label("count_occurrences"))\
-            .join(Variant)\
-            .filter(and_(Variant.position >= start, Variant.position <= end,
-                         Variant.annotation != SYNONYMOUS_VARIANT))\
-            .group_by(VariantObservation.position, Variant.annotation, Variant.hgvs_p).subquery()
+    def get_non_synonymous_variants_by_region(self, start, end, source) -> pd.DataFrame:
+        query = self.session.query(VariantObservation.position,
+                                      VariantObservation.annotation,
+                                      VariantObservation.hgvs_p,
+                                      func.count().label("count_occurrences"))\
+            .filter(and_(VariantObservation.position >= start, VariantObservation.position <= end,
+                         VariantObservation.annotation != SYNONYMOUS_VARIANT))
+        if source == DataSource.ENA.name:
+            query = query.filter(VariantObservation.source == DataSource.ENA)
+        elif source == DataSource.GISAID.name:
+            query = query.filter(VariantObservation.source == DataSource.GISAID)
+        subquery = query.group_by(VariantObservation.position, VariantObservation.annotation, VariantObservation.hgvs_p).subquery()
         return pd.read_sql(
             self.session.query(subquery).filter(subquery.c.count_occurrences > 1).statement, self.session.bind)
 
@@ -155,33 +270,62 @@ class Queries:
                          VariantCooccurrence.variant_id_two == variant_two.variant_id)) \
             .first()
 
-    def count_ena_samples(self) -> int:
-        return self.session.query(JobEna).filter(JobEna.status == self.FINAL_JOB_STATE).count()
+    def count_samples(self, source: str = None) -> int:
+        count = 0
+        if source is None or source == DataSource.ENA.name:
+            count += self.session.query(SampleEna).filter(SampleEna.finished).count()
+        if source is None or source == DataSource.GISAID.name:
+            count += self.session.query(SampleGisaid).filter(SampleGisaid.finished).count()
+        return count
 
     def count_countries(self):
-        return self.session.query(SampleEna).join(JobEna).filter(JobEna.status == self.FINAL_JOB_STATE)\
-            .distinct(SampleEna.country).count()
+        return len(self.get_countries())
 
     def count_variants(self):
         return self.session.query(Variant).count()
 
+    def count_insertions(self):
+        return self.session.query(Variant).filter(func.length(Variant.alternate) > 1).count()
+
+    def count_deletions(self):
+        return self.session.query(Variant).filter(func.length(Variant.reference) > 1).count()
+
     def count_variant_observations(self):
         return self.session.query(VariantObservation).count()
 
-    def get_date_of_first_ena_sample(self) -> date:
+    def count_subclonal_variant_observations(self):
+        return self.session.query(SubclonalVariantObservation).count()
+
+    def get_date_of_first_sample(self, source: DataSource = DataSource.ENA) -> date:
         """
         Returns the date of the earliest ENA sample loaded in the database
         """
-        result = self.session.query(SampleEna.first_created).join(JobEna).filter(JobEna.status == self.FINAL_JOB_STATE) \
-            .order_by(asc(SampleEna.first_created)).first()
+        if source == DataSource.ENA:
+            result = self.session.query(SampleEna.first_created).filter(
+                and_(SampleEna.finished, SampleEna.first_created.isnot(None))) \
+                .order_by(asc(SampleEna.first_created)).first()
+        elif source == DataSource.GISAID:
+            result = self.session.query(SampleGisaid.date).filter(
+                and_(SampleGisaid.finished, SampleGisaid.date.isnot(None))) \
+                .order_by(asc(SampleGisaid.date)).first()
+        else:
+            raise CovigatorQueryException("No valid data source for query of first sample")
         return result[0] if result is not None else result
 
-    def get_date_of_most_recent_ena_sample(self) -> date:
+    def get_date_of_most_recent_sample(self, source: DataSource = DataSource.ENA) -> date:
         """
         Returns the date of the latest ENA sample loaded in the database
         """
-        result = self.session.query(SampleEna.first_created).join(JobEna).filter(JobEna.status == self.FINAL_JOB_STATE) \
-            .order_by(desc(SampleEna.first_created)).first()
+        if source == DataSource.ENA:
+            result = self.session.query(SampleEna.first_created).filter(
+                and_(SampleEna.finished, SampleEna.first_created.isnot(None))) \
+                .order_by(desc(SampleEna.first_created)).first()
+        elif source == DataSource.GISAID:
+            result = self.session.query(SampleGisaid.date).filter(
+                and_(SampleGisaid.finished, SampleGisaid.date.isnot(None))) \
+                .order_by(desc(SampleGisaid.date)).first()
+        else:
+            raise CovigatorQueryException("No valid data source for query of most recent sample")
         return result[0] if result is not None else result
 
     def get_date_of_last_check(self, data_source: DataSource) -> date:
@@ -218,21 +362,28 @@ class Queries:
                 .order_by(desc(Log.start)).first()
         return result2[0] if result2 is not None else result2
 
-    def get_top_occurring_variants(self, top=10, gene_name=None, metric="count") -> pd.DataFrame:
+    def get_top_occurring_variants(self, top=10, gene_name=None, metric="count", source=None) -> pd.DataFrame:
         """
         Returns the top occurring variants + the segregated counts of occurrences per month
         with columns: chromosome, position, reference, alternate, total, month, count
         """
         # query for top occurring variants
         query = self.session.query(
-            VariantObservation.variant_id, Variant.hgvs_p, Variant.gene_name, Variant.annotation,
-            func.count().label('total')).join(Variant)
+            VariantObservation.variant_id, VariantObservation.hgvs_p, VariantObservation.gene_name,
+            VariantObservation.annotation, func.count().label('total'))
         if gene_name is not None:
-            query = query.filter(and_(Variant.gene_name == gene_name, Variant.annotation != SYNONYMOUS_VARIANT))
+            query = query.filter(and_(VariantObservation.gene_name == gene_name,
+                                      VariantObservation.annotation != SYNONYMOUS_VARIANT))
         else:
-            query = query.filter(Variant.annotation != SYNONYMOUS_VARIANT)
+            query = query.filter(VariantObservation.annotation != SYNONYMOUS_VARIANT)
+        if source == DataSource.ENA.name:
+            query = query.filter(VariantObservation.source == DataSource.ENA)
+        elif source == DataSource.GISAID.name:
+            query = query.filter(VariantObservation.source == DataSource.GISAID)
+
         query = query.group_by(
-            VariantObservation.variant_id, Variant.hgvs_p, Variant.gene_name, Variant.annotation)
+            VariantObservation.variant_id, VariantObservation.hgvs_p, VariantObservation.gene_name,
+            VariantObservation.annotation)
         query = query.order_by(desc('total')).limit(top)
         top_occurring_variants = pd.read_sql(query.statement, self.session.bind)
 
@@ -241,11 +392,11 @@ class Queries:
 
             # NOTE: one query per variant for the counts per month, will this be efficient?
             for _, variant in top_occurring_variants.iterrows():
-                variant_counts_by_month.append(self.get_variant_counts_by_month(variant.variant_id))
+                variant_counts_by_month.append(self.get_variant_counts_by_month(variant.variant_id, source=source))
             top_occurring_variants_by_month = pd.concat(variant_counts_by_month)
 
             # get total count of samples per month to calculate the frequency by month
-            sample_counts_by_month = self.get_sample_counts_by_month()
+            sample_counts_by_month = self.get_sample_counts_by_month(source=source)
             top_occurring_variants_by_month = pd.merge(
                 left=top_occurring_variants_by_month, right=sample_counts_by_month, how="left", on="month")
             top_occurring_variants_by_month["frequency_by_month"] = \
@@ -264,7 +415,7 @@ class Queries:
             top_occurring_variants.rename(columns={'variant_id': 'dna_mutation'}, inplace=True)
 
             # replace the total count by the frequency
-            count_samples = self.count_ena_samples()
+            count_samples = self.count_samples(source=source)
             top_occurring_variants['frequency'] = top_occurring_variants.total.transform(
                 lambda t: round(float(t) / count_samples, 3))
 
@@ -275,25 +426,46 @@ class Queries:
 
         return top_occurring_variants
 
-    def get_variant_counts_by_month(self, variant_id) -> pd.DataFrame:
+    def get_variant_counts_by_month(self, variant_id, source=None) -> pd.DataFrame:
         query = self.session.query(
             VariantObservation.variant_id,
-            func.date_trunc('month', SampleEna.first_created).label("month"),
+            func.date_trunc('month', VariantObservation.date).label("month"),
             func.count().label("count"))\
-            .join(SampleEna, VariantObservation.sample == SampleEna.run_accession) \
-            .join(JobEna, VariantObservation.sample == JobEna.run_accession) \
-            .filter(and_(VariantObservation.variant_id == variant_id, JobEna.status == JobStatus.FINISHED))\
-            .group_by(VariantObservation.variant_id, func.date_trunc('month', SampleEna.first_created))
+            .filter(and_(VariantObservation.variant_id == variant_id, VariantObservation.date.isnot(None)))
+        if source == DataSource.ENA.name:
+            query = query.filter(VariantObservation.source == DataSource.ENA)
+        elif source == DataSource.GISAID.name:
+            query = query.filter(VariantObservation.source == DataSource.GISAID)
+        query = query.group_by(VariantObservation.variant_id, func.date_trunc('month', VariantObservation.date))
         return pd.read_sql(query.statement, self.session.bind)
 
-    def get_sample_counts_by_month(self) -> pd.DataFrame:
-        query = self.session.query(
-            func.date_trunc('month', SampleEna.first_created).label("month"),
-            func.count().label("sample_count"))\
-            .join(JobEna) \
-            .filter(JobEna.status == JobStatus.FINISHED) \
-            .group_by(func.date_trunc('month', SampleEna.first_created))
-        return pd.read_sql(query.statement, self.session.bind)
+    def get_sample_counts_by_month(self, source=None) -> pd.DataFrame:
+        counts_ena = None
+        if source is None or source == DataSource.ENA.name:
+            query = self.session.query(
+                func.date_trunc('month', SampleEna.first_created).label("month"),
+                func.count().label("sample_count"))\
+                .filter(SampleEna.finished) \
+                .group_by(func.date_trunc('month', SampleEna.first_created))
+            counts_ena = pd.read_sql(query.statement, self.session.bind)
+        counts_gisaid = None
+        if source is None or source == DataSource.GISAID.name:
+            query = self.session.query(
+                func.date_trunc('month', SampleGisaid.date).label("month"),
+                func.count().label("sample_count"))\
+                .filter(SampleGisaid.finished) \
+                .group_by(func.date_trunc('month', SampleGisaid.date))
+            counts_gisaid = pd.read_sql(query.statement, self.session.bind)
+        if counts_gisaid is None:
+            # NOTE: setting index and then resetting is necessary to get the date column in the right dtype
+            counts = counts_ena
+        elif counts_ena is None:
+            # NOTE: setting index and then resetting is necessary to get the date column in the right dtype
+            counts = counts_gisaid
+        else:
+            counts = counts_gisaid.set_index(["month"]).add(
+                counts_ena.set_index(["month"]), fill_value=0).reset_index()
+        return counts
 
     def get_variants_cooccurrence_by_gene(self, gene_name, min_cooccurrence=5, test=False) -> pd.DataFrame:
         """
@@ -301,7 +473,8 @@ class Queries:
         min_occurrences occurrences.
         """
         # query for total samples required to calculate frequencies
-        count_samples = self.count_ena_samples()
+        # FIXME: once we have the cooccurrence for GISAID samples we need to count all samples here
+        count_samples = self.count_samples(source=DataSource.ENA.name)
 
         # query for cooccurrence matrix
         variant_one = aliased(Variant)
@@ -508,7 +681,7 @@ class Queries:
 
         return data
 
-    def get_variant_abundance_histogram(self, bin_size=50) -> pd.DataFrame:
+    def get_variant_abundance_histogram(self, bin_size=50, source: str = None) -> pd.DataFrame:
 
         # queries for the maximum position
         maximum_position = self.session.query(func.max(Variant.position)).first()[0]
@@ -532,9 +705,11 @@ class Queries:
                     SELECT cast("position"/{bin_size} as int)*{bin_size} AS position_bin,
                            COUNT(*) as count_variant_observations
                     FROM {table_name}
+                    {source_filter}
                     GROUP BY position_bin
                     ORDER BY position_bin;
-                    """.format(bin_size=bin_size, table_name=VariantObservation.__tablename__)
+                    """.format(bin_size=bin_size, table_name=VariantObservation.__tablename__,
+                               source_filter="WHERE source='{}'".format(source) if source is not None else "")
             binned_counts_variant_observations = pd.read_sql_query(sql_query, self.session.bind)
 
             histogram = all_bins.set_index("position_bin").join(binned_counts_variants.set_index("position_bin"))

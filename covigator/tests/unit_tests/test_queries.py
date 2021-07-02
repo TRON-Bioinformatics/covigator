@@ -33,11 +33,11 @@ class QueriesTests(TestCase):
                 if sample_ena.first_created < first_sample_date:
                     first_sample_date = sample_ena.first_created
         self.session.commit()
-        observed_date = self.queries.get_date_of_first_ena_sample()
+        observed_date = self.queries.get_date_of_first_sample()
         self.assertEqual(observed_date, first_sample_date.date())
 
     def test_get_date_of_first_ena_sample_empty(self):
-        observed_date = self.queries.get_date_of_first_ena_sample()
+        observed_date = self.queries.get_date_of_first_sample()
         self.assertIsNone(observed_date)
 
     def test_get_date_of_most_recent_ena_sample(self):
@@ -53,11 +53,11 @@ class QueriesTests(TestCase):
                 if sample_ena.first_created > most_recent_sample_date:
                     most_recent_sample_date = sample_ena.first_created
         self.session.commit()
-        observed_date = self.queries.get_date_of_most_recent_ena_sample()
+        observed_date = self.queries.get_date_of_most_recent_sample()
         self.assertEqual(observed_date, most_recent_sample_date.date())
 
     def test_get_date_of_most_recent_ena_sample_empty(self):
-        observed_date = self.queries.get_date_of_most_recent_ena_sample()
+        observed_date = self.queries.get_date_of_most_recent_sample()
         self.assertIsNone(observed_date)
 
     def test_get_date_of_last_ena_check(self):
@@ -230,7 +230,7 @@ class QueriesTests(TestCase):
         self.assertEqual(conservation5.shape[1], conservation50.shape[1])
 
     def test_get_genes_metadata(self):
-        genes = self.queries.get_genes_metadata()
+        genes = self.queries.get_genes()
         self.assertIsNotNone(genes)
         self.assertGreater(len(genes), 0)
         for g in genes:

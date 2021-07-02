@@ -1,9 +1,8 @@
-import os
 from datetime import datetime
 from typing import List
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, String, Float, Enum, DateTime, Integer, Boolean, Date, ForeignKey, \
-    ForeignKeyConstraint, BigInteger, JSON, Index
+    ForeignKeyConstraint, BigInteger, JSON
 import enum
 
 from covigator.configuration import Configuration
@@ -26,9 +25,14 @@ SAMPLE_TABLE_NAME = get_table_versioned_name('sample', config=config)
 SAMPLE_GISAID_TABLE_NAME = get_table_versioned_name('sample_gisaid', config=config)
 SAMPLE_ENA_TABLE_NAME = get_table_versioned_name('sample_ena', config=config)
 CONSERVATION_TABLE_NAME = get_table_versioned_name('conservation', config=config)
+PRECOMPUTED_VARIANTS_PER_SAMPLE_TABLE_NAME = get_table_versioned_name('precomputed_variants_per_sample', config=config)
+PRECOMPUTED_SUBSTITUTIONS_COUNTS_TABLE_NAME = get_table_versioned_name('precomputed_substitutions_counts', config=config)
+PRECOMPUTED_INDEL_LENGTH_TABLE_NAME = get_table_versioned_name('precomputed_indel_length', config=config)
+PRECOMPUTED_ANNOTATION_TABLE_NAME = get_table_versioned_name('precomputed_annotation', config=config)
 JOB_STATUS_CONSTRAINT_NAME = get_table_versioned_name('job_status', config=config)
 DATA_SOURCE_CONSTRAINT_NAME = get_table_versioned_name('data_source', config=config)
 COVIGATOR_MODULE_CONSTRAINT_NAME = get_table_versioned_name('covigator_module', config=config)
+VARIANT_TYPE_CONSTRAINT_NAME = get_table_versioned_name('variant_type', config=config)
 SEPARATOR = ";"
 
 Base = declarative_base()
@@ -45,7 +49,6 @@ class Gene(Base):
     name = Column(String)
     start = Column(Integer, index=True)
     end = Column(Integer)
-    sequence = Column(String)
     data = Column(JSON)
 
     def get_pfam_domains(self):
@@ -85,6 +88,14 @@ class DataSource(enum.Enum):
     GISAID = 2
 
 
+class VariantType(enum.Enum):
+    __constraint_name__ = VARIANT_TYPE_CONSTRAINT_NAME
+
+    SNV = 1
+    INSERTION = 2
+    DELETION = 3
+
+
 class SampleGisaid(Base):
     """
     The table that holds all metadata for a GISAID sample
@@ -92,6 +103,7 @@ class SampleGisaid(Base):
     __tablename__ = SAMPLE_GISAID_TABLE_NAME
 
     run_accession = Column(String, primary_key=True)
+    finished = Column(Boolean)
     date = Column(Date)
     # Host information
     host_tax_id = Column(String)
@@ -106,7 +118,17 @@ class SampleGisaid(Base):
     continent_alpha_2 = Column(String)
     site = Column(String)
     site2 = Column(String)
+
+    # sequence  information
     sequence = Column(JSON)
+    sequence_length = Column(Integer)
+    count_n_bases = Column(Integer)
+    count_ambiguous_bases = Column(Integer)
+
+    # counts of variants
+    count_snvs = Column(Integer)
+    count_insertions = Column(Integer)
+    count_deletions = Column(Integer)
 
 
 class SampleEna(Base):
@@ -118,6 +140,7 @@ class SampleEna(Base):
     # data on run
     # TODO: add foreign keys to jobs
     run_accession = Column(String, primary_key=True)            # 'ERR4080473',
+    finished = Column(Boolean)
     sample_accession = Column(String)                           # 'SAMEA6798401',
     scientific_name = Column(String)
     study_accession = Column(String)
@@ -161,6 +184,14 @@ class SampleEna(Base):
     country_alpha_3 = Column(String)
     continent = Column(String)
     continent_alpha_2 = Column(String)
+
+    # counts of variants
+    count_snvs = Column(Integer)
+    count_insertions = Column(Integer)
+    count_deletions = Column(Integer)
+    count_subclonal_snvs = Column(Integer)
+    count_subclonal_insertions = Column(Integer)
+    count_subclonal_deletions = Column(Integer)
 
     def get_fastqs_ftp(self) -> List:
         return self.fastq_ftp.split(SEPARATOR) if self.fastq_ftp is not None else []
@@ -226,7 +257,18 @@ class JobEna(Base):
     # local files storage
     fastq_path = Column(String)     # the local path where FASTQ files are stored in semi colon separated list
     vcf_path = Column(String)
+    # FASTP results
     qc = Column(JSON)
+    qc_path = Column(String)
+    # coverage analysis results
+    horizontal_coverage_path = Column(String)
+    vertical_coverage_path = Column(String)
+    num_reads = Column(Integer)
+    covered_bases = Column(Integer)
+    coverage = Column(Float)
+    mean_depth = Column(Float)
+    mean_base_quality = Column(Float)
+    mean_mapping_quality = Column(Float)
 
     def get_fastq_paths(self):
         return self.fastq_path.split(SEPARATOR) if self.fastq_path is not None else []
@@ -255,6 +297,7 @@ class Variant(Base):
     alternate = Column(String)
     overlaps_multiple_genes = Column(Boolean, default=False)
     """
+    SnpEff annotations
     ##INFO=<ID=ANN,Number=.,Type=String,Description="Functional annotations: '
     Allele |                    C 
     Annotation |                missense_variant
@@ -274,6 +317,7 @@ class Variant(Base):
     ERRORS / WARNINGS / INFO'   
     """
     annotation = Column(String, index=True)
+    annotation_highest_impact = Column(String, index=True)
     annotation_impact = Column(String, index=True)
     gene_name = Column(String, index=True)
     gene_id = Column(String)
@@ -283,6 +327,22 @@ class Variant(Base):
     cdna_pos_length = Column(String)
     cds_pos_length = Column(String)
     aa_pos_length = Column(String)
+
+    # derived annotations
+    variant_type = Column(Enum(VariantType, name=VariantType.__constraint_name__))
+    length = Column(Integer)
+    reference_amino_acid = Column(String)
+    alternate_amino_acid = Column(String)
+    position_amino_acid = Column(Integer)
+
+    # ConsHMM conservation annotations
+    cons_hmm_sars_cov_2 = Column(Float)
+    cons_hmm_sarbecovirus = Column(Float)
+    cons_hmm_vertebrate_cov = Column(Float)
+
+    # Pfam protein domains
+    pfam_name = Column(String)
+    pfam_description = Column(String)
 
     def get_variant_id(self):
         return "{}:{}>{}".format(self.position, self.reference, self.alternate)
@@ -319,6 +379,32 @@ class VariantObservation(Base):
     dp4_alt_reverse = Column(Integer)
     vaf = Column(Float)
     strand_bias = Column(Integer)
+    # fields replicated from Variant for performance reasons
+    annotation = Column(String)
+    annotation_highest_impact = Column(String, index=True)
+    gene_name = Column(String)
+    hgvs_c = Column(String)
+    hgvs_p = Column(String)
+
+    # fields replicated from sample for performance reasons
+    date = Column(Date)
+
+    # derived annotations
+    variant_type = Column(Enum(VariantType, name=VariantType.__constraint_name__))
+    length = Column(Integer)
+    reference_amino_acid = Column(String)
+    alternate_amino_acid = Column(String)
+    position_amino_acid = Column(Integer)
+
+    # ConsHMM conservation annotations
+    cons_hmm_sars_cov_2 = Column(Float)
+    cons_hmm_sarbecovirus = Column(Float)
+    cons_hmm_vertebrate_cov = Column(Float)
+
+    # Pfam protein domains
+    pfam_name = Column(String)
+    pfam_description = Column(String)
+
     ForeignKeyConstraint([sample, source], [Sample.id, Sample.source])
     ForeignKeyConstraint([variant_id], [Variant.variant_id])
 
@@ -354,6 +440,33 @@ class SubclonalVariantObservation(Base):
     dp4_alt_reverse = Column(Integer)
     vaf = Column(Float)
     strand_bias = Column(Integer)
+
+    # fields replicated from Variant for performance reasons
+    annotation = Column(String)
+    annotation_highest_impact = Column(String, index=True)
+    gene_name = Column(String)
+    hgvs_c = Column(String)
+    hgvs_p = Column(String)
+
+    # fields replicated from sample for performance reasons
+    date = Column(Date)
+
+    # derived annotations
+    variant_type = Column(Enum(VariantType, name=VariantType.__constraint_name__))
+    length = Column(Integer)
+    reference_amino_acid = Column(String)
+    alternate_amino_acid = Column(String)
+    position_amino_acid = Column(Integer)
+
+    # ConsHMM conservation annotations
+    cons_hmm_sars_cov_2 = Column(Float)
+    cons_hmm_sarbecovirus = Column(Float)
+    cons_hmm_vertebrate_cov = Column(Float)
+
+    # Pfam protein domains
+    pfam_name = Column(String)
+    pfam_description = Column(String)
+
     ForeignKeyConstraint([sample, source], [Sample.id, Sample.source])
     ForeignKeyConstraint([variant_id], [Variant.variant_id])
 
@@ -409,3 +522,50 @@ class Conservation(Base):
     conservation = Column(Float)
     conservation_sarbecovirus = Column(Float)
     conservation_vertebrates = Column(Float)
+
+
+class PrecomputedVariantsPerSample(Base):
+
+    __tablename__ = PRECOMPUTED_VARIANTS_PER_SAMPLE_TABLE_NAME
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    count = Column(Integer)
+    number_mutations = Column(Integer)
+    source = Column(Enum(DataSource, name=DataSource.__constraint_name__))
+    variant_type = Column(Enum(VariantType, name=VariantType.__constraint_name__))
+    gene_name = Column(String)
+
+
+class PrecomputedSubstitutionsCounts(Base):
+
+    __tablename__ = PRECOMPUTED_SUBSTITUTIONS_COUNTS_TABLE_NAME
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    count = Column(Integer)
+    reference = Column(String)
+    alternate = Column(String)
+    source = Column(Enum(DataSource, name=DataSource.__constraint_name__))
+    variant_type = Column(Enum(VariantType, name=VariantType.__constraint_name__))
+    gene_name = Column(String)
+
+
+class PrecomputedIndelLength(Base):
+
+    __tablename__ = PRECOMPUTED_INDEL_LENGTH_TABLE_NAME
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    count = Column(Integer)
+    length = Column(Integer)
+    source = Column(Enum(DataSource, name=DataSource.__constraint_name__))
+    gene_name = Column(String)
+
+
+class PrecomputedAnnotation(Base):
+
+    __tablename__ = PRECOMPUTED_ANNOTATION_TABLE_NAME
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    count = Column(Integer)
+    annotation = Column(String)
+    source = Column(Enum(DataSource, name=DataSource.__constraint_name__))
+    gene_name = Column(String)

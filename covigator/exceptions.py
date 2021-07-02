@@ -15,3 +15,23 @@ class CovigatorDashBoardInitialisationError(Exception):
 
 class CovigatorExcludedAssemblySequence(Exception):
     pass
+
+
+class CovigatorNotSupportedVariant(Exception):
+    pass
+
+
+class CovigatorQueryException(Exception):
+    pass
+
+
+class CovigatorExcludedSampleTooEarlyDateException(Exception):
+    pass
+
+
+class CovigatorExcludedSampleTooManyMutations(Exception):
+    pass
+
+
+class CovigatorErrorProcessingCoverageResults(Exception):
+    pass
