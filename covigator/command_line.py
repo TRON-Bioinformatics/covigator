@@ -21,13 +21,13 @@ def ena_accessor():
         "--tax-id",
         dest="tax_id",
         help="the taxonomy id of the organism to analyse, eg: 2697049 for Sars-COV-2",
-        required=True
+        default="2697049"
     )
     parser.add_argument(
         "--host-tax-id",
         dest="host_tax_id",
         help="the taxonomy id of the host organism, eg: 9606 for Homo sapiens",
-        required=True
+        default="9606"
     )
 
     args = parser.parse_args()
