@@ -92,32 +92,43 @@ class VcfLoader:
             length=self._get_variant_length(variant)
         )
         parsed_variant.variant_id = parsed_variant.get_variant_id()
-        ann = variant.INFO.get("ANN")
+        self._parse_snpeff_annotations(covigator_variant=parsed_variant, vcf_variant=variant)
+        self._parse_additional_annotations(covigator_variant=parsed_variant, vcf_variant=variant)
+        return parsed_variant
+
+    def _parse_additional_annotations(self, covigator_variant: CovigatorVariant, vcf_variant: Variant):
+        covigator_variant.cons_hmm_sars_cov_2 = vcf_variant.INFO.get("CONS_HMM_SARS_COV_2")
+        covigator_variant.cons_hmm_sarbecovirus = vcf_variant.INFO.get("CONS_HMM_SARBECOVIRUS")
+        covigator_variant.cons_hmm_vertebrate_cov = vcf_variant.INFO.get("CONS_HMM_VERTEBRATE_COV")
+        covigator_variant.pfam_name = vcf_variant.INFO.get("PFAM_NAME")
+        covigator_variant.pfam_description = vcf_variant.INFO.get("PFAM_DESCRIPTION")
+
+    def _parse_snpeff_annotations(self, covigator_variant: CovigatorVariant, vcf_variant: Variant):
+        ann = vcf_variant.INFO.get("ANN")
         if ann is not None:
             annotations = ann.split(",")
-            annotation = annotations[0]     # NOTE: chooses arbitrarily the first annotation
+            annotation = annotations[0]  # NOTE: chooses arbitrarily the first annotation
             if "|" in annotation:
                 values = annotation.split("|")
-                parsed_variant.overlaps_multiple_genes = len(annotations) > 1
-                parsed_variant.annotation = values[1].strip()
-                parsed_variant.annotation_highest_impact = re.sub("&.*", "", parsed_variant.annotation)
-                parsed_variant.annotation_impact = values[2].strip()
-                parsed_variant.gene_name = values[3].strip()
-                parsed_variant.gene_id = values[4].strip()
-                parsed_variant.biotype = values[7].strip()
-                parsed_variant.hgvs_c = values[9].strip()
-                parsed_variant.hgvs_p = values[10].strip()
-                parsed_variant.cdna_pos_length = values[11].strip()
-                parsed_variant.cds_pos_length = values[12].strip()
-                parsed_variant.aa_pos_length = values[13].strip()
-                if parsed_variant.annotation == "missense_variant":
+                covigator_variant.overlaps_multiple_genes = len(annotations) > 1
+                covigator_variant.annotation = values[1].strip()
+                covigator_variant.annotation_highest_impact = re.sub("&.*", "", covigator_variant.annotation)
+                covigator_variant.annotation_impact = values[2].strip()
+                covigator_variant.gene_name = values[3].strip()
+                covigator_variant.gene_id = values[4].strip()
+                covigator_variant.biotype = values[7].strip()
+                covigator_variant.hgvs_c = values[9].strip()
+                covigator_variant.hgvs_p = values[10].strip()
+                covigator_variant.cdna_pos_length = values[11].strip()
+                covigator_variant.cds_pos_length = values[12].strip()
+                covigator_variant.aa_pos_length = values[13].strip()
+                if covigator_variant.annotation == "missense_variant":
                     hgvs_pattern = re.compile(r"^p\.([a-zA-Z]{1,3})([0-9]+)([a-zA-Z]{1,3})$")
-                    match = hgvs_pattern.match(parsed_variant.hgvs_p)
+                    match = hgvs_pattern.match(covigator_variant.hgvs_p)
                     if match:
-                        parsed_variant.reference_amino_acid = match.group(1)
-                        parsed_variant.alternate_amino_acid = match.group(3)
-                        parsed_variant.position_amino_acid = int(match.group(2))
-        return parsed_variant
+                        covigator_variant.reference_amino_acid = match.group(1)
+                        covigator_variant.alternate_amino_acid = match.group(3)
+                        covigator_variant.position_amino_acid = int(match.group(2))
 
     def _parse_variant_observation(
             self, variant: Variant, sample: Union[SampleEna, SampleGisaid], source: DataSource, covigator_variant: CovigatorVariant, klass):
@@ -151,7 +162,12 @@ class VcfLoader:
             length=self._get_variant_length(variant),
             reference_amino_acid=covigator_variant.reference_amino_acid,
             alternate_amino_acid=covigator_variant.alternate_amino_acid,
-            position_amino_acid=covigator_variant.position_amino_acid
+            position_amino_acid=covigator_variant.position_amino_acid,
+            cons_hmm_sars_cov_2=covigator_variant.cons_hmm_sars_cov_2,
+            cons_hmm_sarbecovirus=covigator_variant.cons_hmm_sarbecovirus,
+            cons_hmm_vertebrate_cov=covigator_variant.cons_hmm_vertebrate_cov,
+            pfam_name=covigator_variant.pfam_name,
+            pfam_description=covigator_variant.pfam_description
         )
 
     def _get_variant_type(self, reference, alternate):

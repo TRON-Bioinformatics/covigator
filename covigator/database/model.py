@@ -297,6 +297,7 @@ class Variant(Base):
     alternate = Column(String)
     overlaps_multiple_genes = Column(Boolean, default=False)
     """
+    SnpEff annotations
     ##INFO=<ID=ANN,Number=.,Type=String,Description="Functional annotations: '
     Allele |                    C 
     Annotation |                missense_variant
@@ -326,11 +327,22 @@ class Variant(Base):
     cdna_pos_length = Column(String)
     cds_pos_length = Column(String)
     aa_pos_length = Column(String)
+
+    # derived annotations
     variant_type = Column(Enum(VariantType, name=VariantType.__constraint_name__))
     length = Column(Integer)
     reference_amino_acid = Column(String)
     alternate_amino_acid = Column(String)
     position_amino_acid = Column(Integer)
+
+    # ConsHMM conservation annotations
+    cons_hmm_sars_cov_2 = Column(Float)
+    cons_hmm_sarbecovirus = Column(Float)
+    cons_hmm_vertebrate_cov = Column(Float)
+
+    # Pfam protein domains
+    pfam_name = Column(String)
+    pfam_description = Column(String)
 
     def get_variant_id(self):
         return "{}:{}>{}".format(self.position, self.reference, self.alternate)
@@ -373,13 +385,25 @@ class VariantObservation(Base):
     gene_name = Column(String)
     hgvs_c = Column(String)
     hgvs_p = Column(String)
+
     # fields replicated from sample for performance reasons
     date = Column(Date)
+
+    # derived annotations
     variant_type = Column(Enum(VariantType, name=VariantType.__constraint_name__))
     length = Column(Integer)
     reference_amino_acid = Column(String)
     alternate_amino_acid = Column(String)
     position_amino_acid = Column(Integer)
+
+    # ConsHMM conservation annotations
+    cons_hmm_sars_cov_2 = Column(Float)
+    cons_hmm_sarbecovirus = Column(Float)
+    cons_hmm_vertebrate_cov = Column(Float)
+
+    # Pfam protein domains
+    pfam_name = Column(String)
+    pfam_description = Column(String)
 
     ForeignKeyConstraint([sample, source], [Sample.id, Sample.source])
     ForeignKeyConstraint([variant_id], [Variant.variant_id])
@@ -416,19 +440,32 @@ class SubclonalVariantObservation(Base):
     dp4_alt_reverse = Column(Integer)
     vaf = Column(Float)
     strand_bias = Column(Integer)
+
     # fields replicated from Variant for performance reasons
     annotation = Column(String)
     annotation_highest_impact = Column(String, index=True)
     gene_name = Column(String)
     hgvs_c = Column(String)
     hgvs_p = Column(String)
+
     # fields replicated from sample for performance reasons
     date = Column(Date)
+
+    # derived annotations
     variant_type = Column(Enum(VariantType, name=VariantType.__constraint_name__))
     length = Column(Integer)
     reference_amino_acid = Column(String)
     alternate_amino_acid = Column(String)
     position_amino_acid = Column(Integer)
+
+    # ConsHMM conservation annotations
+    cons_hmm_sars_cov_2 = Column(Float)
+    cons_hmm_sarbecovirus = Column(Float)
+    cons_hmm_vertebrate_cov = Column(Float)
+
+    # Pfam protein domains
+    pfam_name = Column(String)
+    pfam_description = Column(String)
 
     ForeignKeyConstraint([sample, source], [Sample.id, Sample.source])
     ForeignKeyConstraint([variant_id], [Variant.variant_id])
