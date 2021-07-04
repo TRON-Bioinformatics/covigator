@@ -21,7 +21,8 @@ setup(
             "covigator-gisaid-accessor=covigator.command_line:gisaid_accessor",
             "covigator-processor=covigator.command_line:processor",
             "covigator-dashboard=covigator.dashboard.dashboard:main",
-            "covigator-pipeline=covigator.command_line:pipeline"
+            "covigator-pipeline=covigator.command_line:pipeline",
+            "covigator-precompute=covigator.command_line:precompute_queries"
         ],
     },
     author_email="patrick.sorn@tron-mainz.de",

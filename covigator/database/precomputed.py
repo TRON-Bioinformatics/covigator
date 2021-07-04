@@ -5,6 +5,7 @@ from covigator.database.database import get_database
 from covigator.database.model import PrecomputedVariantsPerSample, PrecomputedSubstitutionsCounts, \
     PRECOMPUTED_VARIANTS_PER_SAMPLE_TABLE_NAME, VARIANT_OBSERVATION_TABLE_NAME, PrecomputedIndelLength, \
     PrecomputedAnnotation
+from logzero import logger
 
 
 class Precomputer:
@@ -57,6 +58,7 @@ class Precomputer:
 
         self.session.add_all(database_rows)
         self.session.commit()
+        logger.info("Added {} entries to {}".format(len(database_rows), PrecomputedVariantsPerSample.__tablename__))
 
     def load_count_substitutions(self):
 
@@ -106,6 +108,7 @@ class Precomputer:
 
         self.session.add_all(database_rows)
         self.session.commit()
+        logger.info("Added {} entries to {}".format(len(database_rows), PrecomputedSubstitutionsCounts.__tablename__))
 
     def load_indel_length(self):
 
@@ -151,6 +154,7 @@ class Precomputer:
 
         self.session.add_all(database_rows)
         self.session.commit()
+        logger.info("Added {} entries to {}".format(len(database_rows), PrecomputedIndelLength.__tablename__))
 
     def load_annotation(self):
 
@@ -196,12 +200,4 @@ class Precomputer:
 
         self.session.add_all(database_rows)
         self.session.commit()
-
-
-if __name__ == '__main__':
-    database = get_database(config=Configuration(), initialize=True, verbose=True)
-    precomputer = Precomputer(session=database.get_database_session())
-    #precomputer.load_counts_variants_per_sample()
-    #precomputer.load_count_substitutions()
-    precomputer.load_indel_length()
-    precomputer.load_annotation()
+        logger.info("Added {} entries to {}".format(len(database_rows), PrecomputedAnnotation.__tablename__))
