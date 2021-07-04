@@ -105,7 +105,7 @@ class EnaProcessor(AbstractProcessor):
             job.num_reads = int(data.numreads.loc[0])
             job.num_reads = int(data.numreads.loc[0])
             job.covered_bases = int(data.covbases.loc[0])
-            job.coverage = int(data.coverage.loc[0])
+            job.coverage = float(data.coverage.loc[0])
         except Exception as e:
             raise CovigatorErrorProcessingCoverageResults(e)
 

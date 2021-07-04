@@ -381,7 +381,9 @@ class VariantObservation(Base):
     strand_bias = Column(Integer)
     # fields replicated from Variant for performance reasons
     annotation = Column(String)
-    annotation_highest_impact = Column(String, index=True)
+    annotation_impact = Column(String)
+    biotype = Column(String)
+    annotation_highest_impact = Column(String)
     gene_name = Column(String)
     hgvs_c = Column(String)
     hgvs_p = Column(String)
@@ -443,6 +445,8 @@ class SubclonalVariantObservation(Base):
 
     # fields replicated from Variant for performance reasons
     annotation = Column(String)
+    annotation_impact = Column(String)
+    biotype = Column(String)
     annotation_highest_impact = Column(String, index=True)
     gene_name = Column(String)
     hgvs_c = Column(String)

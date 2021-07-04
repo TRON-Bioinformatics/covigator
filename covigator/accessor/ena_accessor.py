@@ -137,23 +137,26 @@ class EnaAccessor:
         included_samples_ena = []
         included_jobs = []
         for run in list_runs:
-            if run.get("run_accession") in existing_sample_ids:
-                self.excluded_existing += 1
-                continue    # skips runs already registered in the database
-            if not self._complies_with_inclusion_criteria(run):
-                continue    # skips runs not complying with inclusion criteria
-            # NOTE: this parse operation is costly
-            try:
-                sample_ena = self._parse_ena_run(run)
-                sample = self._build_sample(sample_ena)
-                self.included += 1
-                included_samples_ena.append(sample_ena)
-                included_samples.append(sample)
-                included_jobs.append(JobEna(run_accession=sample_ena.run_accession))
-            except CovigatorExcludedSampleTooEarlyDateException:
-                logger.error("Excluded sample due to too early date")
-                self.excluded_by_date += 1
-                self.excluded += 1
+            if isinstance(run, dict):
+                if run.get("run_accession") in existing_sample_ids:
+                    self.excluded_existing += 1
+                    continue    # skips runs already registered in the database
+                if not self._complies_with_inclusion_criteria(run):
+                    continue    # skips runs not complying with inclusion criteria
+                # NOTE: this parse operation is costly
+                try:
+                    sample_ena = self._parse_ena_run(run)
+                    sample = self._build_sample(sample_ena)
+                    self.included += 1
+                    included_samples_ena.append(sample_ena)
+                    included_samples.append(sample)
+                    included_jobs.append(JobEna(run_accession=sample_ena.run_accession))
+                except CovigatorExcludedSampleTooEarlyDateException:
+                    logger.error("Excluded sample due to too early date")
+                    self.excluded_by_date += 1
+                    self.excluded += 1
+            else:
+                logger.error("Run from ENA without the expected format")
 
         if len(included_samples) > 0:
             session.add_all(included_samples_ena)
