@@ -99,7 +99,7 @@ def get_samples_tab_left_bar(queries: Queries):
                 tooltip=dict(always_visible=True, placement="right")
             ),
             html.Br(),
-            dcc.Markdown("""**Top 20 substitutions**"""),
+            dcc.Markdown("""**Top substitutions**"""),
             dcc.Markdown("""Select a variant type"""),
             dcc.Dropdown(
                 id=ID_DROPDOWN_VARIANT_TYPE,

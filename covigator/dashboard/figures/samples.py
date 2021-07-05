@@ -87,17 +87,20 @@ class SampleFigures(Figures):
                 data, y="substitution", x="count", color="variant_type", text="rate",
                 color_discrete_map=VARIANT_TYPE_COLOR_MAP)\
                 .update_yaxes(categoryorder="total descending")
+            fig.update_traces(textposition='outside')
             fig.update_layout(
-                margin=MARGIN,
+                margin=go.layout.Margin(l=0, r=40, b=0, t=30),  # we need some extra space for some labels overflowing
                 template=TEMPLATE,
-                legend={'traceorder': 'normal', 'title': None},
+                showlegend=False,
                 yaxis={'title': None, 'autorange': 'reversed'},
                 xaxis={'title': "num. samples"},
+                uniformtext_mode='show',
+                uniformtext_minsize=8
             )
             graph = [
                 dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
                 dcc.Markdown("""
-                **Top 20 substitutions**
+                **Top substitutions**
                 
                 *Only substitutions occurring at least in 10 samples are represented*
                 """)
