@@ -66,6 +66,7 @@ class AbstractProcessor:
             self.has_error = True
         finally:
             self._write_execution_log(session, count, data_source=self.data_source)
+            self.dask_client.shutdown()
             session.close()
             logger.info("Finished processor")
 
