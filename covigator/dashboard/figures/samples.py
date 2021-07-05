@@ -110,6 +110,7 @@ class SampleFigures(Figures):
 
     def get_variants_per_sample_plot(
             self, data_source: str = None, genes: List[str] = None, variant_types: List[str] = None):
+
         data = self.queries.get_variants_per_sample(data_source=data_source, genes=genes, variant_types=variant_types)
         graph = dcc.Markdown("""**No data for the current selection**""")
         if data is not None and data.shape[0] > 0:
@@ -164,7 +165,9 @@ class SampleFigures(Figures):
                 dcc.Markdown("""
                 **Accumulated samples by country**
 
-                *Top {} countries: {}*
-                """.format(len(top_countries_tooltip), ", ".join(top_countries_tooltip)))
+                *Top {} countries: {}. Countries with < {} samples are excluded*
+                """.format(len(top_countries_tooltip),
+                           ", ".join(top_countries_tooltip),
+                           min_samples))
             ]
         return graph

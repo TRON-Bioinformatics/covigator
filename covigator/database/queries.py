@@ -211,7 +211,7 @@ class Queries:
 
             # creates empty table with all pairwise combinations of date and country
             dates = samples.date[~samples.date.isna()].sort_values().unique()
-            countries = samples[(~samples.country.isna()) & (samples["cumsum"] > min_samples)] \
+            countries = samples[(~samples.country.isna()) & (samples["cumsum"] >= min_samples)] \
                 .sort_values("cumsum", ascending=False).country.unique()
 
             empty_table = pd.DataFrame(
