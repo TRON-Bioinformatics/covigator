@@ -88,7 +88,7 @@ class Queries:
             SampleGisaid.finished).distinct().all()]
         return sorted(list(set(countries_ena + countries_gisaid)))
 
-    def get_variants_per_sample(self, data_source: str, genes: List[str]):
+    def get_variants_per_sample(self, data_source: str, genes: List[str], variant_types: List[str]):
         """
         Returns a DataFrame with columns: number_mutations, count, type
         where type: SNV, insertion or deletion
@@ -100,6 +100,8 @@ class Queries:
             query = query.filter(PrecomputedVariantsPerSample.gene_name.in_(genes))
         else:
             query = query.filter(PrecomputedVariantsPerSample.gene_name == None)
+        if variant_types is not None and variant_types:
+            query = query.filter(PrecomputedVariantsPerSample.variant_type.in_(variant_types))
 
         data = pd.read_sql(query.statement, self.session.bind)
         if data.shape[0] > 0:

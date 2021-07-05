@@ -99,7 +99,7 @@ def get_samples_tab_left_bar(queries: Queries):
                 tooltip=dict(always_visible=True, placement="right")
             ),
             html.Br(),
-            dcc.Markdown("""**Top substitutions**"""),
+            dcc.Markdown("""**Mutations per sample and top substitutions**"""),
             dcc.Markdown("""Select a variant type"""),
             dcc.Dropdown(
                 id=ID_DROPDOWN_VARIANT_TYPE,
@@ -131,10 +131,12 @@ def set_callbacks_samples_tab(app, queries: Queries):
     @app.callback(
         Output(ID_VARIANTS_PER_SAMPLE_GRAPH, 'children'),
         Input(ID_DROPDOWN_DATA_SOURCE, 'value'),
-        Input(ID_DROPDOWN_GENE, 'value')
+        Input(ID_DROPDOWN_GENE, 'value'),
+        Input(ID_DROPDOWN_VARIANT_TYPE, 'value')
     )
-    def update_variants_per_sample(data_source, genes):
-        return html.Div(children=figures.get_variants_per_sample_plot(data_source=data_source, genes=genes))
+    def update_variants_per_sample(data_source, genes, variant_types):
+        return html.Div(children=figures.get_variants_per_sample_plot(
+            data_source=data_source, genes=genes, variant_types=variant_types))
 
     @app.callback(
         Output(ID_SUBSTITUTIONS_GRAPH, 'children'),

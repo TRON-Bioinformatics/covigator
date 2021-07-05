@@ -1,6 +1,7 @@
 from math import sqrt
 from typing import List
-
+import numpy as np
+import pandas as pd
 import plotly
 from logzero import logger
 
@@ -107,48 +108,31 @@ class SampleFigures(Figures):
             ]
         return graph
 
-    def get_variants_per_sample_plot(self, data_source: str = None, genes: List[str] = None):
-        data = self.queries.get_variants_per_sample(data_source=data_source, genes=genes)
+    def get_variants_per_sample_plot(
+            self, data_source: str = None, genes: List[str] = None, variant_types: List[str] = None):
+        data = self.queries.get_variants_per_sample(data_source=data_source, genes=genes, variant_types=variant_types)
         graph = dcc.Markdown("""**No data for the current selection**""")
         if data is not None and data.shape[0] > 0:
-            fig = px.bar(
-                data, y="number_mutations", x="count", color="variant_type", color_discrete_map=VARIANT_TYPE_COLOR_MAP,
-                orientation='h'
-            )
+            counts = np.repeat(data.number_mutations, data["count"])
+            fig = px.violin(y=counts, orientation='v', box=True, color_discrete_sequence=["grey"])
             fig.update_layout(
                 margin=MARGIN,
                 template=TEMPLATE,
                 legend={'traceorder': 'normal', 'title': None},
-                yaxis={'title': "num. mutations", 'autorange': 'reversed'},
-                xaxis={'title': "num. samples"},
+                yaxis={'title': "num. mutations"},
+                xaxis={'title': None},
             )
-            average, std = self._get_avg_and_std(data[data.variant_type == VariantType.SNV.name])
-            average_insertions, std_insertions = self._get_avg_and_std(
-                data[data.variant_type == VariantType.INSERTION.name])
-            average_deletions, std_deletions = self._get_avg_and_std(
-                data[data.variant_type == VariantType.DELETION.name])
+
             graph = [
                 dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
                 dcc.Markdown("""
-                        **Overall mutations per sample**
+                        **Mutations per sample**
 
-                        *Average SNVs: {average} (STD: {std}), *
-                        *insertions: {average_insertions} (STD: {std_insertions}), *
-                        *deletions: {average_deletions} (STD: {std_deletions})*
-                        """.format(average=average, std=std, average_insertions=average_insertions,
-                                   std_insertions=std_insertions, average_deletions=average_deletions,
-                                   std_deletions=std_deletions))
+                        *Median: {median} (IQR: {iqr})*
+                        """.format(median=round(np.median(counts), 3),
+                                   iqr=round(np.percentile(counts, 75) - np.percentile(counts, 25), 3)))
             ]
         return graph
-
-    def _get_avg_and_std(self, data):
-        average = 0.0
-        std = 0.0
-        if data is not None and data.shape[0] > 0:
-            average = round((data["number_mutations"] * data["count"]).sum() / data["count"].sum(), 3)
-            std = round(sqrt((data["number_mutations"].transform(
-                lambda x: (x - average) ** 2) * data["count"]).sum() / data["count"].sum()), 3)
-        return average, std
 
     def get_accumulated_samples_by_country_plot(self, data_source: DataSource = None, countries=None, min_samples=1000):
         data = self.queries.get_accumulated_samples_by_country(
