@@ -49,3 +49,12 @@ COVIGATOR_DB_PORT=5432
 ```
 
 If these are not provided it will use the values shown above as default values.
+
+## Deploy to uWGSI
+
+1. Install covigator and uwsgi using pip
+2. Configure CoVigator using the necessary environment variables
+3. Go to the folder where the file `wsgi.py` is located (this can be copied elsewhere) and start the uWSGI server as follows:
+```
+uwsgi --socket 0.0.0.0:8080 --protocol=http -w wsgi:server
+```

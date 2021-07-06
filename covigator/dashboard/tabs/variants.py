@@ -3,6 +3,7 @@ import dash_core_components as dcc
 import dash_html_components as html
 import dash_table
 from dash.dependencies import Output, Input
+from sqlalchemy.orm import Session
 from covigator.dashboard.figures.variants import VariantsFigures
 from covigator.dashboard.tabs import TAB_STYLE, TAB_SELECTED_STYLE, MONTH_PATTERN
 from covigator.database.model import DataSource
@@ -188,9 +189,10 @@ considered as a core point. This includes the point itself."""),
     ], className="two columns")
 
 
-def set_callbacks_variants_tab(app, queries: Queries):
+def set_callbacks_variants_tab(app, session: Session):
 
-    figures = VariantsFigures(queries)
+    queries = Queries(session=session)
+    figures = VariantsFigures(queries=queries)
 
     @app.callback(
         Output(ID_TOP_OCCURRING_VARIANTS, 'children'),
