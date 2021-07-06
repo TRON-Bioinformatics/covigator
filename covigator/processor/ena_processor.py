@@ -5,7 +5,8 @@ import pandas as pd
 
 from covigator.configuration import Configuration
 from covigator.database.queries import Queries
-from covigator.exceptions import CovigatorErrorProcessingCoverageResults
+from covigator.exceptions import CovigatorErrorProcessingCoverageResults, CovigatorExcludedSampleBadQualityReads, \
+    CovigatorExcludedSampleNarrowCoverage
 from covigator.misc import backoff_retrier
 from covigator.database.model import JobStatus, JobEna, Sample, DataSource
 from covigator.database.database import Database
@@ -118,6 +119,11 @@ class EnaProcessor(AbstractProcessor):
 
     @staticmethod
     def load(job: JobEna, queries: Queries, config: Configuration):
+        if job.mean_mapping_quality < 10 or job.mean_base_quality < 10:
+            raise CovigatorExcludedSampleBadQualityReads("Mean MQ: {}; mean BCQ: {}".format(
+                job.mean_mapping_quality, job.mean_base_quality))
+        if job.coverage < 20.0:
+            raise CovigatorExcludedSampleNarrowCoverage("Horizontal coverage {} %".format(job.coverage))
         VcfLoader().load(
             vcf_file=job.vcf_path, sample=Sample(id=job.run_accession, source=DataSource.ENA), session=queries.session)
         job.loaded_at = datetime.now()
