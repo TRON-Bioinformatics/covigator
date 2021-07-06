@@ -1,10 +1,10 @@
 import abc
-import time
 import traceback
 from datetime import datetime
 from typing import Callable
 import typing as typing
 from dask.distributed import Client
+from dask.distributed import wait
 from sqlalchemy.orm import Session
 from logzero import logger
 import covigator
@@ -57,7 +57,7 @@ class AbstractProcessor:
 
             # waits for all to finish
             if len(futures) > 0:
-                self.dask_client.gather(futures=futures)
+                wait(futures)
             logger.info("Processor finished!")
         except Exception as e:
             logger.exception(e)
