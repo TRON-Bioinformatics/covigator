@@ -257,7 +257,7 @@ def set_callbacks_variants_tab(app, queries: Queries):
         if source != DataSource.ENA.name:
             plot = html.Div(
                 children=[dcc.Markdown(
-                    """The cooccurrence heatmap is currently only available for the ENA dataset""")])
+                    """**The cooccurrence heatmap is currently only available for the ENA dataset**""")])
         else:
             selected_rows = [rows[s] for s in selected_rows_indices] if selected_rows_indices else None
             plot = html.Div(children=figures.get_cooccurrence_heatmap(
@@ -280,7 +280,7 @@ def set_callbacks_variants_tab(app, queries: Queries):
         if source != DataSource.ENA.name:
             plot = html.Div(children=
                             [dcc.Markdown(
-                                """The variants clustering is currently only available for the ENA dataset""")])
+                                """**The variants clustering is currently only available for the ENA dataset**""")])
         else:
             selected_rows = [rows[s] for s in selected_rows_indices] if selected_rows_indices else None
             plot = html.Div(children=figures.get_variants_clustering(

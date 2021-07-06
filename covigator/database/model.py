@@ -29,6 +29,7 @@ PRECOMPUTED_VARIANTS_PER_SAMPLE_TABLE_NAME = get_table_versioned_name('precomput
 PRECOMPUTED_SUBSTITUTIONS_COUNTS_TABLE_NAME = get_table_versioned_name('precomputed_substitutions_counts', config=config)
 PRECOMPUTED_INDEL_LENGTH_TABLE_NAME = get_table_versioned_name('precomputed_indel_length', config=config)
 PRECOMPUTED_ANNOTATION_TABLE_NAME = get_table_versioned_name('precomputed_annotation', config=config)
+PRECOMPUTED_OCCURRENCE_TABLE_NAME = get_table_versioned_name('precomputed_top_occurrence', config=config)
 JOB_STATUS_CONSTRAINT_NAME = get_table_versioned_name('job_status', config=config)
 DATA_SOURCE_CONSTRAINT_NAME = get_table_versioned_name('data_source', config=config)
 COVIGATOR_MODULE_CONSTRAINT_NAME = get_table_versioned_name('covigator_module', config=config)
@@ -573,3 +574,20 @@ class PrecomputedAnnotation(Base):
     annotation = Column(String)
     source = Column(Enum(DataSource, name=DataSource.__constraint_name__))
     gene_name = Column(String)
+
+
+class PrecomputedOccurrence(Base):
+
+    __tablename__ = PRECOMPUTED_OCCURRENCE_TABLE_NAME
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    total = Column(Integer)
+    count = Column(Integer)
+    month = Column(String)
+    frequency = Column(Float)
+    frequency_by_month = Column(Float)
+    variant_id = Column(String)
+    hgvs_p = Column(String)
+    gene_name = Column(String)
+    annotation = Column(String)
+    source = Column(Enum(DataSource, name=DataSource.__constraint_name__))

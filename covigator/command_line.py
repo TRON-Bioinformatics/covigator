@@ -153,3 +153,4 @@ def precompute_queries():
     precomputer.load_count_substitutions()
     precomputer.load_indel_length()
     precomputer.load_annotation()
+    precomputer.load_top_occurrences()
