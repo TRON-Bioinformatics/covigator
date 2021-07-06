@@ -47,7 +47,7 @@ class SampleFigures(Figures):
                 dcc.Markdown("""
                 **Most common mutation effects**
                 
-                *dN/dS: {dnds}*
+                *Ratio of non synonymous to synonymous SNVs (dN/dS): {dnds}*
                 """.format(dnds=round(data[data.annotation == "missense_variant"]["count"].sum() /
                                 data[data.annotation == "synonymous_variant"]["count"].sum(), 3)))
             ]
@@ -101,9 +101,9 @@ class SampleFigures(Figures):
             graph = [
                 dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
                 dcc.Markdown("""
-                **Top substitutions**
+                **Top mutations**
                 
-                *Only substitutions occurring at least in 10 samples are represented*
+                *Only mutations occurring at least in 10 samples are represented*
                 """)
             ]
         return graph
