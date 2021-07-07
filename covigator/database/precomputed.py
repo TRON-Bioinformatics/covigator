@@ -211,64 +211,83 @@ class Precomputer:
         queries = Queries(self.session)
 
         # gets the top occurrent variants for each source and overall
-        top_occurring_variants_ena = queries.get_top_occurring_variants(
-            top=NUMBER_TOP_OCCURRENCES, source=DataSource.ENA)
-        top_occurring_variants_gisaid = queries.get_top_occurring_variants(
-            top=NUMBER_TOP_OCCURRENCES, source=DataSource.GISAID)
-        top_occurring_variants = queries.get_top_occurring_variants(top=NUMBER_TOP_OCCURRENCES, source=None)
+        top_occurring_variants_ena = None
+        try:
+            top_occurring_variants_ena = queries.get_top_occurring_variants(
+                top=NUMBER_TOP_OCCURRENCES, source=DataSource.ENA)
+        except ValueError:
+            logger.error("No top occurrences for ENA data")
+
+
+        top_occurring_variants_gisaid = None
+        try:
+            top_occurring_variants_gisaid = queries.get_top_occurring_variants(
+                top=NUMBER_TOP_OCCURRENCES, source=DataSource.GISAID)
+        except ValueError:
+            logger.error("No top occurrences for GISAID data")
+
+        top_occurring_variants = None
+        try:
+            top_occurring_variants = queries.get_top_occurring_variants(top=NUMBER_TOP_OCCURRENCES, source=None)
+        except ValueError:
+            logger.error("No top occurrences")
 
         # delete all rows before starting
         self.session.query(PrecomputedOccurrence).delete()
         self.session.commit()
 
-        # stores the precomputed data
         database_rows = []
-        for index, row in top_occurring_variants_ena.iterrows():
-            # add entries per gene
-            database_rows.append(PrecomputedOccurrence(
-                total=row["total"],
-                frequency=row["frequency"],
-                variant_id=row["variant_id"],
-                hgvs_p=row["hgvs_p"],
-                gene_name=row["gene_name"],
-                annotation=row["annotation_highest_impact"],
-                source=DataSource.ENA,
-                month=row["month"],
-                count=row["count"],
-                frequency_by_month=row["frequency_by_month"],
-            ))
+        # stores the precomputed data
+        if top_occurring_variants_ena is not None:
+            for index, row in top_occurring_variants_ena.iterrows():
+                # add entries per gene
+                database_rows.append(PrecomputedOccurrence(
+                    total=row["total"],
+                    frequency=row["frequency"],
+                    variant_id=row["variant_id"],
+                    hgvs_p=row["hgvs_p"],
+                    gene_name=row["gene_name"],
+                    annotation=row["annotation_highest_impact"],
+                    source=DataSource.ENA,
+                    month=row["month"],
+                    count=row["count"],
+                    frequency_by_month=row["frequency_by_month"],
+                ))
 
-        for index, row in top_occurring_variants_gisaid.iterrows():
-            # add entries per gene
-            database_rows.append(PrecomputedOccurrence(
-                total=row["total"],
-                frequency=row["frequency"],
-                variant_id=row["variant_id"],
-                hgvs_p=row["hgvs_p"],
-                gene_name=row["gene_name"],
-                annotation=row["annotation_highest_impact"],
-                source=DataSource.GISAID,
-                month=row["month"],
-                count=row["count"],
-                frequency_by_month=row["frequency_by_month"],
-            ))
+        if top_occurring_variants_gisaid is not None:
+            for index, row in top_occurring_variants_gisaid.iterrows():
+                # add entries per gene
+                database_rows.append(PrecomputedOccurrence(
+                    total=row["total"],
+                    frequency=row["frequency"],
+                    variant_id=row["variant_id"],
+                    hgvs_p=row["hgvs_p"],
+                    gene_name=row["gene_name"],
+                    annotation=row["annotation_highest_impact"],
+                    source=DataSource.GISAID,
+                    month=row["month"],
+                    count=row["count"],
+                    frequency_by_month=row["frequency_by_month"],
+                ))
 
-        for index, row in top_occurring_variants.iterrows():
-            # add entries per gene
-            database_rows.append(PrecomputedOccurrence(
-                total=row["total"],
-                frequency=row["frequency"],
-                variant_id=row["variant_id"],
-                hgvs_p=row["hgvs_p"],
-                gene_name=row["gene_name"],
-                annotation=row["annotation_highest_impact"],
-                month=row["month"],
-                count=row["count"],
-                frequency_by_month=row["frequency_by_month"],
-            ))
+        if top_occurring_variants is not None:
+            for index, row in top_occurring_variants.iterrows():
+                # add entries per gene
+                database_rows.append(PrecomputedOccurrence(
+                    total=row["total"],
+                    frequency=row["frequency"],
+                    variant_id=row["variant_id"],
+                    hgvs_p=row["hgvs_p"],
+                    gene_name=row["gene_name"],
+                    annotation=row["annotation_highest_impact"],
+                    month=row["month"],
+                    count=row["count"],
+                    frequency_by_month=row["frequency_by_month"],
+                ))
 
-        self.session.add_all(database_rows)
-        self.session.commit()
+        if len(database_rows) > 0:
+            self.session.add_all(database_rows)
+            self.session.commit()
         logger.info("Added {} entries to {}".format(len(database_rows), PrecomputedOccurrence.__tablename__))
 
 
