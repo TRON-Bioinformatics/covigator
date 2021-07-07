@@ -1,0 +1,3 @@
+include covigator/dashboard/assets/*
+include covigator/references/*.bed
+include covigator/tests/resources/*

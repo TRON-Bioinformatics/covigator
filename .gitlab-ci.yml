@@ -1,0 +1,60 @@
+image: python:3.8-buster
+
+# Change pip's cache directory to be inside the project directory since we can
+# only cache local items.
+variables:
+    PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+    VENV_CACHE_DIR: "$CI_PROJECT_DIR/venv"
+
+# Pip's cache doesn't store the python packages
+# https://pip.pypa.io/en/stable/reference/pip_install/#caching
+#
+# If you want to also cache the installed packages, you have to install
+# them in a virtualenv and cache it as well.
+cache:
+  paths:
+    - $PIP_CACHE_DIR
+    - $VENV_CACHE_DIR
+
+before_script:
+  - apt-get clean
+  - apt-get --allow-insecure-repositories update
+  - apt-get --assume-yes install gcc gfortran build-essential wget libfreetype6-dev libpng-dev libopenblas-dev
+  - python -V
+  - pip install virtualenv
+  - virtualenv venv
+  - source venv/bin/activate
+  - pip install numpy
+
+stages:
+  - validation
+  - test
+  - deploy
+
+check_version_changes:
+  stage: validation
+  script:
+    # if the version number does not change between this branch and develop it fails
+    - git fetch origin develop
+    - if git diff origin/develop -- covigator/__init__.py | grep VERSION; then exit 0; else echo "Version needs to be increased!"; exit -1; fi
+  except:
+    - develop
+    - master
+
+run_test:
+  stage: test
+  script:
+    - python setup.py bdist_wheel
+    - pip uninstall -y covigator
+    - pip install dist/covigator-*.whl
+    - python -m unittest discover covigator.tests.unit_tests
+
+publish_package:
+  stage: deploy
+  script:
+    - pip install twine
+    - python setup.py sdist bdist_wheel
+    - TWINE_PASSWORD=${CI_JOB_TOKEN} TWINE_USERNAME=gitlab-ci-token python -m twine upload --repository-url https://gitlab.rlp.net/api/v4/projects/${CI_PROJECT_ID}/packages/pypi dist/*
+  only:
+    - develop
+    - main
