@@ -80,7 +80,7 @@ class VariantsFigures(Figures):
         ]
 
     def get_top_occurring_variants_plot(self, top, gene_name, date_range_start, date_range_end, metric, source):
-        data = self.queries.get_top_occurring_variants(top, gene_name, metric, source)
+        data = self.queries.get_top_occurring_variants_precomputed(top, gene_name, metric, source)
         fig = dcc.Markdown("""**No variants for the current selection**""")
         if data is not None and data.shape[0] > 0:
             # removes the columns from the months out of the range

@@ -1,6 +1,5 @@
 
 
-
 class CovigatorDatabaseConnectionException(Exception):
     pass
 
@@ -34,4 +33,12 @@ class CovigatorExcludedSampleTooManyMutations(Exception):
 
 
 class CovigatorErrorProcessingCoverageResults(Exception):
+    pass
+
+
+class CovigatorExcludedSampleNarrowCoverage(Exception):
+    pass
+
+
+class CovigatorExcludedSampleBadQualityReads(Exception):
     pass

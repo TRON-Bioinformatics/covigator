@@ -1,6 +1,7 @@
 import logging
 import os
 import logzero
+from logzero import logger
 from covigator.exceptions import CovigatorDashBoardInitialisationError
 
 
@@ -31,6 +32,7 @@ class Configuration:
     ENV_COVIGATOR_FORCE_PIPELINE = "COVIGATOR_FORCE_PIPELINE"
     ENV_COVIGATOR_WORKFLOW_CPUS = "COVIGATOR_WORKFLOW_CPUS"
     ENV_COVIGATOR_WORKFLOW_MEMORY = "COVIGATOR_WORKFLOW_MEMORY"
+    ENV_COVIGATOR_BATCH_SIZE = "COVIGATOR_BATCH_SIZE"
 
     # references
     ENV_COVIGATOR_REF_FASTA = "COVIGATOR_REF_FASTA"
@@ -76,8 +78,19 @@ class Configuration:
         self.workflow = os.getenv(self.ENV_COVIGATOR_WORKFLOW, "tron-bioinformatics/covigator-ngs-pipeline -r v0.3.0")
         self.workflow_cpus = os.getenv(self.ENV_COVIGATOR_WORKFLOW_CPUS, "1")
         self.workflow_memory = os.getenv(self.ENV_COVIGATOR_WORKFLOW_MEMORY, "3g")
+        try:
+            self.batch_size = int(os.getenv(self.ENV_COVIGATOR_BATCH_SIZE, "1000"))
+        except ValueError as e:
+            raise CovigatorDashBoardInitialisationError("The batch size needs to be a numeric value. " + str(e))
         # NOTE: the defaults are already set in the workflow config
         self.temp_folder = os.getenv(self.ENV_COVIGATOR_TEMP_FOLDER, "/data/covigator-tmp")
+
+        self.log_configuration()
+
+    def log_configuration(self):
+        logger.info("Configuration")
+        for k, v in self.__dict__.items():
+            logger.info("{}={}".format(k, v))
 
 
 def initialise_logs(logfile, sample_id: str = None):

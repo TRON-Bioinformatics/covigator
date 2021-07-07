@@ -105,3 +105,9 @@ select * from (select count(*) as count, sample from variant_observation_v12
      4 | hCoV-19/Germany/NW-RKI-I-019153/2021
 
 
+-- FP calls from bad samples
+select count(*) from variant_observation_v14 where run_accession in (
+    select run_accession from sample_ena_v14 where mean_mapping_quality < 10);
+select count(*) from variant_observation_v14 where sample in (
+    select run_accession from job_ena_v14 where coverage < 20.0);
+

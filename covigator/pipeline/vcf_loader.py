@@ -154,11 +154,14 @@ class VcfLoader:
             strand_bias=variant.INFO.get("SB"),
             # denormalized fields
             annotation=covigator_variant.annotation,
+            annotation_impact=covigator_variant.annotation_impact,
+            biotype=covigator_variant.biotype,
+            annotation_highest_impact=covigator_variant.annotation_highest_impact,
             gene_name=covigator_variant.gene_name,
             hgvs_p=covigator_variant.hgvs_p,
             hgvs_c=covigator_variant.hgvs_c,
             date=sample.first_created if source == DataSource.ENA else sample.date,
-            variant_type=self._get_variant_type(reference=variant.REF, alternate=variant.ALT[0]),
+            variant_type=covigator_variant.variant_type,
             length=self._get_variant_length(variant),
             reference_amino_acid=covigator_variant.reference_amino_acid,
             alternate_amino_acid=covigator_variant.alternate_amino_acid,
@@ -171,7 +174,7 @@ class VcfLoader:
         )
 
     def _get_variant_type(self, reference, alternate):
-        if len(reference) and len(alternate):
+        if len(reference) == 1 and len(alternate) == 1:
             return VariantType.SNV
         elif len(reference) == 1 and len(alternate) > 1:
             return VariantType.INSERTION

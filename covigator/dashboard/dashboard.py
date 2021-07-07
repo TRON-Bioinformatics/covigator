@@ -20,25 +20,23 @@ class Dashboard:
         self.config = config
         # the connection to the database is created only once, but multiple sessions are used
         self.database = get_database(config=config, initialize=True, verbose=verbose)
-        self.queries = None
-        self.figures = None
 
     def serve_layout(self):
         logger.info("Serving layout")
         with session_scope(database=self.database) as session:
-            self.queries = Queries(session=session)
+            queries = Queries(session=session)
             footer = get_footer()
-            tabs = self.get_tabs()
+            tabs = self.get_tabs(queries)
             # , style={'margin-top': '0px', 'padding-top': '0px'})
             layout = html.Div(
                 children=[tabs, footer]
             )
         return layout
 
-    def get_tabs(self):
-        tab_overview = get_tab_overview(queries=self.queries)
-        tab_samples = get_tab_samples(queries=self.queries)
-        tab_variants = get_tab_variants(queries=self.queries)
+    def get_tabs(self, queries: Queries):
+        tab_overview = get_tab_overview(queries=queries)
+        tab_samples = get_tab_samples(queries=queries)
+        tab_variants = get_tab_variants(queries=queries)
         # assemble tabs in dcc.Tabs object
         # style={'margin': '0 0 0 0', 'padding-top': '2px'})
         return dcc.Tabs(
@@ -50,8 +48,6 @@ class Dashboard:
         try:
             logger.info("Starting covigator dashboard")
             app = self.get_application()
-            set_callbacks_variants_tab(app=app, queries=self.queries)
-            set_callbacks_samples_tab(app=app, queries=self.queries)
             app.run_server(debug=debug, host=self.config.dash_host, port=self.config.dash_port)
         except Exception as e:
             logger.exception(e)
@@ -62,7 +58,7 @@ class Dashboard:
         # creates the Dash application
         logger.info("Create the application")
         app = dash.Dash(
-            __name__,
+            name=__name__,
             title="CoVigator",
             meta_tags=[
                 # A description of the app, used by e.g.
@@ -93,6 +89,9 @@ class Dashboard:
         )
         # Warning pass the layout as a function, do not call it otherwise the application will serve a static dataset
         app.layout = self.serve_layout
+        session = self.database.get_database_session()
+        set_callbacks_variants_tab(app=app, session=session)
+        set_callbacks_samples_tab(app=app, session=session)
         return app
 
 

@@ -1,4 +1,6 @@
 from argparse import ArgumentParser
+
+from covigator.database.precomputed import Precomputer
 from dask.distributed import Client
 from dask_jobqueue import SLURMCluster
 import covigator
@@ -139,3 +141,16 @@ def gisaid_pipeline():
     # FIXME: this interface is broken, it requires the SampleGisaid object not the run_accession
     vcf_file = GisaidPipeline(config=Configuration()).run(run_accession=args.run_accession)
     logger.info("Output VCF file: {}".format(vcf_file))
+
+
+def precompute_queries():
+    parser = ArgumentParser(description="Precompute some aggregation queries")
+    parser.parse_args()
+
+    database = Database(initialize=True, config=Configuration())
+    precomputer = Precomputer(session=database.get_database_session())
+    precomputer.load_counts_variants_per_sample()
+    precomputer.load_count_substitutions()
+    precomputer.load_indel_length()
+    precomputer.load_annotation()
+    precomputer.load_top_occurrences()

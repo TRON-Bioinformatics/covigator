@@ -127,9 +127,8 @@ class GisaidAccessor:
                 site2=None,
                 sequence={"MN908947.3": compress_sequence(record.seq)},
                 sequence_length=len(record.seq),
-                count_n_bases=sum([x == 'N' for x in record.seq]),
-                count_ambiguous_bases=sum([x not in ["ACGTN"] for x in record.seq])
-
+                count_n_bases=record.seq.count("N"),
+                count_ambiguous_bases=sum([record.seq.count(b) for b in "RYWSMKHBVD"])
             )
             try:
                 self._parse_country(sample_gisaid)
@@ -140,6 +139,7 @@ class GisaidAccessor:
                 jobs_and_samples.append(job)
                 jobs_and_samples.append(sample)
                 num_samples += 1
+                self.included += 1
                 end = time.time()
                 total_time += end - start
 

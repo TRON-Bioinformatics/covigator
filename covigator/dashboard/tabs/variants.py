@@ -3,6 +3,7 @@ import dash_core_components as dcc
 import dash_html_components as html
 import dash_table
 from dash.dependencies import Output, Input
+from sqlalchemy.orm import Session
 from covigator.dashboard.figures.variants import VariantsFigures
 from covigator.dashboard.tabs import TAB_STYLE, TAB_SELECTED_STYLE, MONTH_PATTERN
 from covigator.database.model import DataSource
@@ -188,9 +189,10 @@ considered as a core point. This includes the point itself."""),
     ], className="two columns")
 
 
-def set_callbacks_variants_tab(app, queries: Queries):
+def set_callbacks_variants_tab(app, session: Session):
 
-    figures = VariantsFigures(queries)
+    queries = Queries(session=session)
+    figures = VariantsFigures(queries=queries)
 
     @app.callback(
         Output(ID_TOP_OCCURRING_VARIANTS, 'children'),
@@ -257,7 +259,7 @@ def set_callbacks_variants_tab(app, queries: Queries):
         if source != DataSource.ENA.name:
             plot = html.Div(
                 children=[dcc.Markdown(
-                    """The cooccurrence heatmap is currently only available for the ENA dataset""")])
+                    """**The cooccurrence heatmap is currently only available for the ENA dataset**""")])
         else:
             selected_rows = [rows[s] for s in selected_rows_indices] if selected_rows_indices else None
             plot = html.Div(children=figures.get_cooccurrence_heatmap(
@@ -280,7 +282,7 @@ def set_callbacks_variants_tab(app, queries: Queries):
         if source != DataSource.ENA.name:
             plot = html.Div(children=
                             [dcc.Markdown(
-                                """The variants clustering is currently only available for the ENA dataset""")])
+                                """**The variants clustering is currently only available for the ENA dataset**""")])
         else:
             selected_rows = [rows[s] for s in selected_rows_indices] if selected_rows_indices else None
             plot = html.Div(children=figures.get_variants_clustering(
