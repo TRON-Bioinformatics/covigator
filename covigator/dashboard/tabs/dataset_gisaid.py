@@ -58,7 +58,6 @@ def get_dataset_gisaid_tab_graphs(queries: Queries, count_samples):
 
     return html.Div(
         className="twelve columns",
-        style={'overflow': 'scroll', "height": "900px"},
         children=[
             html.Br(),
             html.Div(children=[

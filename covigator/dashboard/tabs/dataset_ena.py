@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from covigator.dashboard.figures import VARIANT_TYPE_COLOR_MAP
 from covigator.dashboard.figures.figures import PLOTLY_CONFIG, MARGIN, TEMPLATE
 from covigator.dashboard.figures.samples import SampleFigures
-from covigator.dashboard.tabs import TAB_STYLE, TAB_SELECTED_STYLE
+from covigator.dashboard.tabs import TAB_STYLE, TAB_SELECTED_STYLE, get_mini_container
 from covigator.database.model import DataSource, VariantType, SAMPLE_ENA_TABLE_NAME, JOB_ENA_TABLE_NAME, \
     VARIANT_OBSERVATION_TABLE_NAME
 from covigator.database.queries import Queries
@@ -28,15 +28,43 @@ LIBRARY_LAYOUT_COLOR_MAP = {
 
 
 def get_tab_dataset_ena(queries: Queries):
+
+    count_samples = queries.count_samples(source=DataSource.ENA.name)
+    count_variants = queries.count_variant_observations(source=DataSource.ENA.name)
+    date_of_first_sample = queries.get_date_of_first_sample(source=DataSource.ENA)
+    date_of_most_recent_sample = queries.get_date_of_most_recent_sample(source=DataSource.ENA)
+
     return dcc.Tab(
         label="ENA dataset",
         style=TAB_STYLE,
         selected_style=TAB_SELECTED_STYLE,
         children=[
+            html.Div(id="something-ena", children=[
+                html.Div(className="two columns", children=[html.Br()]),
+                html.Div(className="eight columns", children=[
+                    html.Br(),
+                    dcc.Markdown("""
+                                The ENA dataset was downloaded using the API https://www.ebi.ac.uk/ena/portal/api/.
+                                Metadata was downloaded from the API and the FASTQ files with the raw reads were 
+                                downloaded from the provided URLs for each sample. 
+                                FASTQ files were MD5 checked after download.
+                                All samples were the host was not human were excluded.
+                                """),
+                    html.Div(
+                        className="row container-display",
+                        children=[
+                            get_mini_container(title="No. of samples", value=count_samples),
+                            get_mini_container(title="No. of variant calls", value=count_variants),
+                            get_mini_container(title="First sample", value=date_of_first_sample),
+                            get_mini_container(title="Latest sample", value=date_of_most_recent_sample),
+                        ]
+                    )
+                ]),
+                html.Div(className="two columns", children=[html.Br()]),
+            ]),
             html.Div(
                 id='ena-dataset-body',
-                className="row container-display",
-                style={'overflow': 'scroll'}, # 'top': 0, 'bottom': 0, position: fixed
+                className="row container-display twelve columns",
                 children=[
                     get_dataset_ena_tab_graphs(queries)
                 ])
@@ -47,7 +75,6 @@ def get_tab_dataset_ena(queries: Queries):
 def get_dataset_ena_tab_graphs(queries: Queries):
     return html.Div(
         className="twelve columns",
-        style={'overflow': 'scroll', "height": "900px"},
         children=[
             html.Br(),
             html.Div(id="something"),
