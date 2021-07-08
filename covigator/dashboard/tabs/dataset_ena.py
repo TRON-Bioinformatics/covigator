@@ -38,7 +38,6 @@ def get_tab_dataset_ena(queries: Queries):
                 className="row container-display",
                 style={'overflow': 'scroll'}, # 'top': 0, 'bottom': 0, position: fixed
                 children=[
-                    #get_dataset_ena_tab_left_bar(queries),
                     get_dataset_ena_tab_graphs(queries)
                 ])
         ]
@@ -220,19 +219,3 @@ def get_dataset_ena_tab_left_bar(queries: Queries):
                 multi=True
             )
         ])
-
-
-def set_callbacks_dataset_ena_tab(app, session: Session):
-
-    queries = Queries(session=session)
-    figures = SampleFigures(queries)
-
-    #@app.callback(
-    #    Output(ID_ACCUMULATED_SAMPLES_GRAPH, 'children'),
-    #    Input(ID_DROPDOWN_DATA_SOURCE, 'value'),
-    #    Input(ID_DROPDOWN_COUNTRY, 'value'),
-    #    Input(ID_SLIDER_MIN_SAMPLES, 'value'),
-    #)
-    #def update_accumulated_samples_by_country(data_source, countries, min_samples):
-    #    return html.Div(children=figures.get_accumulated_samples_by_country_plot(
-    #        data_source=data_source, countries=countries, min_samples=min_samples))

@@ -3,7 +3,7 @@ from datetime import datetime
 import dash_core_components as dcc
 import dash_html_components as html
 
-from covigator.dashboard.tabs import TAB_STYLE, TAB_SELECTED_STYLE, MISSING_VALUE
+from covigator.dashboard.tabs import TAB_STYLE, TAB_SELECTED_STYLE, MISSING_VALUE, get_mini_container
 from covigator.database.model import DataSource
 from covigator.database.queries import Queries
 
@@ -136,16 +136,6 @@ def get_tab_overview(queries: Queries):
                            ],
                            style={"text-align": "left"}
                        )])
-
-
-def get_mini_container(title, value):
-    return html.Div(
-        children=[
-            html.H6(title),
-            html.H6(value)
-        ],
-        className="mini_container",
-    )
 
 
 def get_header():

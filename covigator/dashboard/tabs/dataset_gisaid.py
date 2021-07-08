@@ -1,72 +1,130 @@
 import dash_core_components as dcc
 import dash_html_components as html
-from dash.dependencies import Output, Input
-from sqlalchemy.orm import Session
-from covigator.dashboard.figures.samples import SampleFigures
-from covigator.dashboard.tabs import TAB_STYLE, TAB_SELECTED_STYLE
-from covigator.database.model import DataSource, VariantType
+import plotly
+
+from covigator.dashboard.figures.figures import PLOTLY_CONFIG, MARGIN, TEMPLATE
+from covigator.dashboard.tabs import TAB_STYLE, TAB_SELECTED_STYLE, get_mini_container
+from covigator.database.model import DataSource, VariantType, SAMPLE_GISAID_TABLE_NAME
 from covigator.database.queries import Queries
+import pandas as pd
+import plotly.express as px
 
 
 def get_tab_dataset_gisaid(queries: Queries):
+
+    count_samples = queries.count_samples(source=DataSource.GISAID.name)
+    count_variants = queries.count_variant_observations(source=DataSource.GISAID.name)
+    date_of_first_gisaid_sample = queries.get_date_of_first_sample(source=DataSource.GISAID)
+    date_of_most_recent_gisaid_sample = queries.get_date_of_most_recent_sample(source=DataSource.GISAID)
+
     return dcc.Tab(
         label="GISAID dataset",
         style=TAB_STYLE,
         selected_style=TAB_SELECTED_STYLE,
         children=[
+            html.Div(id="something-gisaid", children=[
+                html.Div(className="two columns", children=[html.Br()]),
+                html.Div(className="eight columns", children=[
+                    html.Br(),
+                    dcc.Markdown("""
+                        The GISAID dataset was manually downloaded from the site https://www.gisaid.org/.
+                        DNA assemblies and metadata were matched together and variant calling was done after performing 
+                        a global alignment to the reference genome.
+                        """),
+                    html.Div(
+                        className="row container-display",
+                        children=[
+                            get_mini_container(title="No. of samples", value=count_samples),
+                            get_mini_container(title="No. of variant calls", value=count_variants),
+                            get_mini_container(title="First sample", value=date_of_first_gisaid_sample),
+                            get_mini_container(title="Latest sample", value=date_of_most_recent_gisaid_sample),
+                        ]
+                    )
+                ]),
+                html.Div(className="two columns", children=[html.Br()]),
+            ]),
+            html.Br(),
             html.Div(
                 id='gisaid-dataset-body',
-                className="row container-display",
-                style={'overflow': 'scroll'}, # 'top': 0, 'bottom': 0, position: fixed
+                className="row container-display twelve columns",
                 children=[
-                    get_dataset_gisaid_tab_left_bar(queries),
-                    get_dataset_gisaid_tab_graphs()
+                    get_dataset_gisaid_tab_graphs(queries=queries, count_samples=count_samples)
                 ])
         ]
     )
 
 
-def get_dataset_gisaid_tab_graphs():
+def get_dataset_gisaid_tab_graphs(queries: Queries, count_samples):
+
     return html.Div(
-        className="ten columns",
+        className="twelve columns",
         style={'overflow': 'scroll', "height": "900px"},
         children=[
             html.Br(),
-            html.Div(id="something-gisaid"),
-            html.Br(),
             html.Div(children=[
-                html.Div(id="else-gisaid", className="five columns"),
-                html.Div(id="another-gisaid", className="five columns"),
+                html.Div(className="two columns", children=[html.Br()]),
+                html.Div(className="four columns", children=get_plot_coverage(queries)),
+                html.Div(className="four columns", children=get_plot_bad_bases_ratio(queries, count_samples)),
             ]),
         ])
 
 
-def get_dataset_gisaid_tab_left_bar(queries: Queries):
-    return html.Div(
-        className="two columns",
-        children=[
-            html.Br(),
-            dcc.Markdown("""Select one or more genes"""),
-            dcc.Dropdown(
-                id="sample-dropdown-gisaid",
-                options=[{'label': g.name, 'value': g.name} for g in queries.get_genes()],
-                value=None,
-                multi=True
-            )
-        ])
+def get_plot_coverage(queries: Queries):
+    sql_query = """
+    select count(*), (sequence_length::float / 29903 * 100)::int as coverage
+    from {table} 
+    where finished
+    group by coverage
+    """.format(table=SAMPLE_GISAID_TABLE_NAME)
+    data = pd.read_sql_query(sql_query, queries.session.bind)
+    fig = px.bar(data_frame=data, x="coverage", y="count", log_y=True, color="count",
+                 color_continuous_scale=plotly.colors.sequential.Brwnyl)
+    fig.update_layout(
+        margin=MARGIN,
+        template=TEMPLATE,
+        yaxis={'title': "Num. of samples"},
+        xaxis={'title': None},
+        legend={'title': None}
+    )
+    return [
+        dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
+        dcc.Markdown("""
+        **Horizontal coverage (%)**
+        
+        Horizontal coverage is estimated as the sequence length divided by the reference genome length.
+        Some samples have thus an horizontal coverage larger than 100 %.
+        Samples covering less than 20% of the whole genome are excluded. 
+        """)
+    ]
 
 
-def set_callbacks_dataset_gisaid_tab(app, session: Session):
+def get_plot_bad_bases_ratio(queries: Queries, count_samples):
+    sql_query = """
+    select count(*), ((count_n_bases + count_ambiguous_bases)::float / sequence_length * 100)::int as bad_bases_ratio
+    from {table} 
+    where finished
+    group by bad_bases_ratio
+    """.format(table=SAMPLE_GISAID_TABLE_NAME)
+    data = pd.read_sql_query(sql_query, queries.session.bind)
+    fig = px.bar(data_frame=data, x="bad_bases_ratio", y="count", log_y=True, color="count",
+                 color_continuous_scale=plotly.colors.sequential.Brwnyl)
+    fig.update_layout(
+        margin=MARGIN,
+        template=TEMPLATE,
+        yaxis={'title': "Num. of samples"},
+        xaxis={'title': None},
+        legend={'title': None}
+    )
 
-    queries = Queries(session=session)
-    figures = SampleFigures(queries)
 
-    #@app.callback(
-    #    Output(ID_ACCUMULATED_SAMPLES_GRAPH, 'children'),
-    #    Input(ID_DROPDOWN_DATA_SOURCE, 'value'),
-    #    Input(ID_DROPDOWN_COUNTRY, 'value'),
-    #    Input(ID_SLIDER_MIN_SAMPLES, 'value'),
-    #)
-    #def update_accumulated_samples_by_country(data_source, countries, min_samples):
-    #    return html.Div(children=figures.get_accumulated_samples_by_country_plot(
-    #        data_source=data_source, countries=countries, min_samples=min_samples))
+    return [
+        dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
+        dcc.Markdown("""
+        **Ratio of N and ambiguous bases (%)**
+
+        The ratio of N and ambiguous bases over the whole sequence length measures the quality of the assembly sequence.
+        {} % of samples have a ratio <= 5 %.
+        Samples with a ratio higher than 0.2 are excluded.
+        All variant calls that contain a N or an ambiguous base are filtered out.
+        """.format(round(float(data[data["bad_bases_ratio"] <= 5]["count"].sum()) / count_samples), 1))
+    ]

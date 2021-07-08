@@ -4,8 +4,8 @@ import dash_html_components as html
 import covigator
 import covigator.configuration
 from covigator.configuration import Configuration
-from covigator.dashboard.tabs.dataset_ena import get_tab_dataset_ena, set_callbacks_dataset_ena_tab
-from covigator.dashboard.tabs.dataset_gisaid import get_tab_dataset_gisaid, set_callbacks_dataset_gisaid_tab
+from covigator.dashboard.tabs.dataset_ena import get_tab_dataset_ena
+from covigator.dashboard.tabs.dataset_gisaid import get_tab_dataset_gisaid
 from covigator.dashboard.tabs.footer import get_footer
 from covigator.dashboard.tabs.overview import get_tab_overview
 from covigator.dashboard.tabs.samples import get_tab_samples, set_callbacks_samples_tab
@@ -103,8 +103,6 @@ class Dashboard:
         session = self.database.get_database_session()
         set_callbacks_variants_tab(app=app, session=session)
         set_callbacks_samples_tab(app=app, session=session)
-        set_callbacks_dataset_ena_tab(app=app, session=session)
-        set_callbacks_dataset_gisaid_tab(app=app, session=session)
         return app
 
 
