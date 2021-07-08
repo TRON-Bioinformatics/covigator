@@ -10,10 +10,11 @@ def get_footer():
             html.Div(
                 [
                     html.P(),
-                    html.P("Covigator {} © 2021 TRON Mainz. All Rights Reserved".format(covigator.VERSION)),
+                    html.P("Covigator {} © 2021 TRON gGmbH Mainz. All Rights Reserved".format(covigator.VERSION)),
+                    html.P("The CoVigator project is enabled by Intel Corporation servers."),
                     html.P()
                 ],
-                className="one-third column"
+                className="two-thirds column"
             ),
             html.Div(
                 [

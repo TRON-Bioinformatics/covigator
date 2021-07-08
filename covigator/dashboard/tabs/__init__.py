@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import dash_html_components as html
 
 TAB_STYLE = {
@@ -14,13 +16,23 @@ TAB_SELECTED_STYLE = {
 }
 MONTH_PATTERN = "%Y-%m"
 MISSING_VALUE = "-"
+COLOR_OVERVIEW_MINI_CONTAINER = "#82B1FF"
 
 
-def get_mini_container(title, value):
+def print_date(date: datetime.date):
+    return str(date) if date is not None else MISSING_VALUE
+
+
+def print_number(value):
+    return '{:,}'.format(value)
+
+
+def get_mini_container(title, value, color="#f9f9f9"):
     return html.Div(
         children=[
-            html.H6(title),
-            html.H6(value)
+            html.P(html.B(title)),
+            html.P(value)
         ],
         className="mini_container",
+        style={"background-color": color, "font-size": 16}
     )

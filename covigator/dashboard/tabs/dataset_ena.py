@@ -6,7 +6,8 @@ from sqlalchemy.orm import Session
 from covigator.dashboard.figures import VARIANT_TYPE_COLOR_MAP
 from covigator.dashboard.figures.figures import PLOTLY_CONFIG, MARGIN, TEMPLATE
 from covigator.dashboard.figures.samples import SampleFigures
-from covigator.dashboard.tabs import TAB_STYLE, TAB_SELECTED_STYLE, get_mini_container
+from covigator.dashboard.tabs import TAB_STYLE, TAB_SELECTED_STYLE, get_mini_container, COLOR_OVERVIEW_MINI_CONTAINER, \
+    print_number, print_date
 from covigator.database.model import DataSource, VariantType, SAMPLE_ENA_TABLE_NAME, JOB_ENA_TABLE_NAME, \
     VARIANT_OBSERVATION_TABLE_NAME
 from covigator.database.queries import Queries
@@ -40,8 +41,8 @@ def get_tab_dataset_ena(queries: Queries):
         selected_style=TAB_SELECTED_STYLE,
         children=[
             html.Div(id="something-ena", children=[
-                html.Div(className="two columns", children=[html.Br()]),
-                html.Div(className="eight columns", children=[
+                html.Div(className="one columns", children=[html.Br()]),
+                html.Div(className="nine columns", children=[
                     html.Br(),
                     dcc.Markdown("""
                                 The ENA dataset was downloaded using the API https://www.ebi.ac.uk/ena/portal/api/.
@@ -49,44 +50,52 @@ def get_tab_dataset_ena(queries: Queries):
                                 downloaded from the provided URLs for each sample. 
                                 FASTQ files were MD5 checked after download.
                                 All samples were the host was not human were excluded.
-                                """),
-                    html.Div(
-                        className="row container-display",
-                        children=[
-                            get_mini_container(title="No. of samples", value=count_samples),
-                            get_mini_container(title="No. of variant calls", value=count_variants),
-                            get_mini_container(title="First sample", value=date_of_first_sample),
-                            get_mini_container(title="Latest sample", value=date_of_most_recent_sample),
-                        ]
+                                """, style={"font-size": 16}),
+                    get_dataset_ena_tab_graphs(queries)
+                ]),
+                html.Div(html.Br(), className="one columns"),
+                html.Div(className="one columns", children=[
+                    html.Br(),
+                    get_mini_container(
+                        title="Samples",
+                        value=print_number(count_samples),
+                        color=COLOR_OVERVIEW_MINI_CONTAINER
+                    ),
+                    get_mini_container(
+                        title="Variant calls",
+                        value=print_number(count_variants),
+                        color=COLOR_OVERVIEW_MINI_CONTAINER
+                    ),
+                    get_mini_container(
+                        title="First sample",
+                        value=print_date(date_of_first_sample),
+                        color=COLOR_OVERVIEW_MINI_CONTAINER
+                    ),
+                    get_mini_container(
+                        title="Latest sample",
+                        value=print_date(date_of_most_recent_sample),
+                        color=COLOR_OVERVIEW_MINI_CONTAINER
                     )
                 ]),
-                html.Div(className="two columns", children=[html.Br()]),
             ]),
-            html.Div(
-                id='ena-dataset-body',
-                className="row container-display twelve columns",
-                children=[
-                    get_dataset_ena_tab_graphs(queries)
-                ])
         ]
     )
 
 
 def get_dataset_ena_tab_graphs(queries: Queries):
     return html.Div(
-        className="twelve columns",
         children=[
             html.Br(),
-            html.Div(id="something"),
-            html.Br(),
             html.Div(children=[
-                html.Div(className="two columns", children=[html.Br()]),
-                html.Div(className="four columns", children=get_plot_library_strategies(queries)),
-                html.Div(className="four columns", children=get_plot_number_reads(queries)),
-                html.Div(className="two columns", children=[html.Br()]),
-                html.Div(className="four columns", children=get_plot_coverage(queries)),
-                html.Div(className="four columns", children=get_plot_qualities(queries)),
-                #html.Div(className="four columns", children=get_plot_clonal_variants(queries)),
+                html.Div(children=get_plot_library_strategies(queries),
+                         className="six columns", style={"margin-left": 0, "margin-right": "1%", "width": "48%"}),
+                html.Div(children=get_plot_number_reads(queries),
+                         className="six columns", style={"margin-left": 0, "margin-right": "1%", "width": "48%"}),
+                html.Br(),
+                html.Div(children=get_plot_coverage(queries),
+                         className="six columns", style={"margin-left": 0, "margin-right": "1%", "width": "48%"}),
+                html.Div(children=get_plot_qualities(queries),
+                         className="six columns", style={"margin-left": 0, "margin-right": "1%", "width": "48%"}),
             ]),
         ])
 
@@ -112,8 +121,8 @@ def get_plot_library_strategies(queries: Queries):
         dcc.Markdown("""
         **Library strategies**
         
-        The number of samples for each library preparation strategy. 
-        Only Illumina samples are included, other technologies are excluded from CoVigator at the moment. 
+        The number of samples for each library preparation strategy.
+        Only Illumina samples are included, other technologies are excluded from CoVigator at the moment.
         """)
     ]
 
@@ -139,10 +148,10 @@ def get_plot_number_reads(queries: Queries):
         dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
         dcc.Markdown("""
         **Number of reads**
-        
-        The reported number of reads corresponds to the number reported in the ENA API. 
+       
+        The reported number of reads corresponds to the number reported in the ENA API.
         The number of reads after trimming corresponds to the number of reads after running fastp on the FASTQ files.
-        No samples are excluded based on the number of reads. 
+        No samples are excluded based on the number of reads.
         """)
     ]
 
@@ -167,10 +176,10 @@ def get_plot_coverage(queries: Queries):
     return [
         dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
         dcc.Markdown("""
-        **Genome coverage**
+        **Horizontal coverage (%)**
 
         The percentage of the genome covered by at least one read.
-        Samples covering less than 20 % of the genome are excluded. 
+        Samples covering less than 20 % of the genome are excluded.
         """)
     ]
 
@@ -201,7 +210,7 @@ def get_plot_qualities(queries: Queries):
         dcc.Markdown("""
         **Mean mapping quality and Base call quality**
         
-        Samples covering with either mapping quality < 10 or base call quality < 10 are excluded 
+        Samples covering with either mapping quality < 10 or base call quality < 10 are excluded
         """)
     ]
 

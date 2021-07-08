@@ -3,7 +3,8 @@ import dash_html_components as html
 import plotly
 
 from covigator.dashboard.figures.figures import PLOTLY_CONFIG, MARGIN, TEMPLATE
-from covigator.dashboard.tabs import TAB_STYLE, TAB_SELECTED_STYLE, get_mini_container
+from covigator.dashboard.tabs import TAB_STYLE, TAB_SELECTED_STYLE, get_mini_container, COLOR_OVERVIEW_MINI_CONTAINER, \
+    print_number, print_date
 from covigator.database.model import DataSource, VariantType, SAMPLE_GISAID_TABLE_NAME
 from covigator.database.queries import Queries
 import pandas as pd
@@ -23,33 +24,37 @@ def get_tab_dataset_gisaid(queries: Queries):
         selected_style=TAB_SELECTED_STYLE,
         children=[
             html.Div(id="something-gisaid", children=[
-                html.Div(className="two columns", children=[html.Br()]),
-                html.Div(className="eight columns", children=[
+                html.Div(className="one columns", children=[html.Br()]),
+                html.Div(className="nine columns", children=[
                     html.Br(),
                     dcc.Markdown("""
                         The GISAID dataset was manually downloaded from the site https://www.gisaid.org/.
                         DNA assemblies and metadata were matched together and variant calling was done after performing 
                         a global alignment to the reference genome.
-                        """),
-                    html.Div(
-                        className="row container-display",
-                        children=[
-                            get_mini_container(title="No. of samples", value=count_samples),
-                            get_mini_container(title="No. of variant calls", value=count_variants),
-                            get_mini_container(title="First sample", value=date_of_first_gisaid_sample),
-                            get_mini_container(title="Latest sample", value=date_of_most_recent_gisaid_sample),
-                        ]
-                    )
-                ]),
-                html.Div(className="two columns", children=[html.Br()]),
-            ]),
-            html.Br(),
-            html.Div(
-                id='gisaid-dataset-body',
-                className="row container-display twelve columns",
-                children=[
+                        """, style={"font-size": 16}),
                     get_dataset_gisaid_tab_graphs(queries=queries, count_samples=count_samples)
+                ]),
+                html.Div(className="one columns", children=[html.Br()]),
+                html.Div(className="one columns", children=[
+                    html.Br(),
+                    get_mini_container(
+                        title="Samples",
+                        value=print_number(count_samples),
+                        color=COLOR_OVERVIEW_MINI_CONTAINER),
+                    get_mini_container(
+                        title="Variant calls",
+                        value=print_number(count_variants),
+                        color=COLOR_OVERVIEW_MINI_CONTAINER),
+                    get_mini_container(
+                        title="First sample",
+                        value=print_date(date_of_first_gisaid_sample),
+                        color=COLOR_OVERVIEW_MINI_CONTAINER),
+                    get_mini_container(
+                        title="Latest sample",
+                        value=print_date(date_of_most_recent_gisaid_sample),
+                        color=COLOR_OVERVIEW_MINI_CONTAINER)
                 ])
+            ]),
         ]
     )
 
@@ -57,13 +62,13 @@ def get_tab_dataset_gisaid(queries: Queries):
 def get_dataset_gisaid_tab_graphs(queries: Queries, count_samples):
 
     return html.Div(
-        className="twelve columns",
         children=[
             html.Br(),
             html.Div(children=[
-                html.Div(className="two columns", children=[html.Br()]),
-                html.Div(className="four columns", children=get_plot_coverage(queries)),
-                html.Div(className="four columns", children=get_plot_bad_bases_ratio(queries, count_samples)),
+                html.Div(children=get_plot_coverage(queries),
+                         className="six columns", style={"margin-left": 0, "margin-right": "1%", "width": "48%"}),
+                html.Div(children=get_plot_bad_bases_ratio(queries, count_samples),
+                         className="six columns", style={"margin-left": 0, "margin-right": "1%", "width": "48%"}),
             ]),
         ])
 
