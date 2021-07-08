@@ -26,3 +26,13 @@ update job_gisaid_v14 set status='EXCLUDED' where run_accession in (
             cast(count_n_bases + count_ambiguous_bases as float) / sequence_length as n_ratio
         from sample_gisaid_v14)
     as counts where n_ratio > 0.2 or coverage_ratio < 0.2);
+
+-- exclude ENA samples
+update job_ena_v15 set status='EXCLUDED' where run_accession in (
+    select run_accession from (
+        select run_accession,
+            coverage as coverage_ratio,
+            mean_base_quality as bq,
+            mean_mapping_quality as mq
+        from job_ena_v15)
+    as counts where bq < 10 or mq < 10 or coverage_ratio < 20);
