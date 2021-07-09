@@ -5,6 +5,7 @@ import pandas as pd
 import plotly
 from logzero import logger
 
+from covigator.dashboard.figures import VARIANT_TYPE_COLOR_MAP
 from covigator.dashboard.figures.figures import Figures, PLOTLY_CONFIG, MARGIN, TEMPLATE
 import plotly.express as px
 import plotly.graph_objects as go
@@ -12,11 +13,6 @@ import dash_core_components as dcc
 
 from covigator.database.model import VariantType, DataSource
 
-VARIANT_TYPE_COLOR_MAP = {
-    VariantType.SNV.name: "#8da0cb",
-    VariantType.INSERTION.name: "#fc8d62",
-    VariantType.DELETION.name: "#66c2a5",
-}
 
 INDEL_TYPE_COLOR_MAP = {
     "INSERTION_INFRAME": "#fc8d62",

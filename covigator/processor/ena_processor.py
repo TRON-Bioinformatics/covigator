@@ -12,7 +12,6 @@ from covigator.database.model import JobStatus, JobEna, Sample, DataSource
 from covigator.database.database import Database
 from logzero import logger
 from dask.distributed import Client
-import os
 from covigator.processor.abstract_processor import AbstractProcessor
 from covigator.pipeline.cooccurrence_matrix import CooccurrenceMatrix
 from covigator.pipeline.downloader import Downloader
@@ -33,45 +32,22 @@ class EnaProcessor(AbstractProcessor):
         Launches all jobs and returns the futures for the final job only
         """
         # NOTE: here we set the priority of each step to ensure a depth first processing
-        future_download = self.dask_client.submit(EnaProcessor.download_job, self.config, run_accession, priority=-1)
-        future_process = self.dask_client.submit(EnaProcessor.pipeline_job, self.config, future_download, priority=2)
-        #future_delete = self.dask_client.submit(EnaProcessor.cleanup_job, self.config, future_process, priority=3)
-        future_load = self.dask_client.submit(EnaProcessor.load_job, self.config, future_process, priority=3)
-        future_cooccurrence = self.dask_client.submit(
-            EnaProcessor.cooccurrence_job, self.config, future_load, priority=4)
-
-        return future_cooccurrence
+        future = self.dask_client.submit(EnaProcessor.job, self.config, run_accession, priority=1)
+        return future
 
     @staticmethod
-    def cooccurrence_job(config: Configuration, run_accession):
+    def job(config: Configuration, run_accession):
         return EnaProcessor.run_job(
-            config, run_accession, start_status=JobStatus.LOADED, end_status=JobStatus.FINISHED,
-            error_status=JobStatus.FAILED_COOCCURRENCE, data_source=DataSource.ENA,
-            function=EnaProcessor.compute_cooccurrence)
+            config, run_accession, start_status=JobStatus.QUEUED, end_status=JobStatus.FINISHED,
+            error_status=JobStatus.FAILED_PROCESSING, data_source=DataSource.ENA,
+            function=EnaProcessor.run_all)
 
     @staticmethod
-    def load_job(config: Configuration, run_accession):
-        return EnaProcessor.run_job(
-            config, run_accession, start_status=JobStatus.PROCESSED, end_status=JobStatus.LOADED,
-            error_status=JobStatus.FAILED_LOAD, data_source=DataSource.ENA, function=EnaProcessor.load)
-
-    @staticmethod
-    def download_job(config: Configuration, run_accession):
-        return EnaProcessor.run_job(
-            config, run_accession, start_status=JobStatus.QUEUED, end_status=JobStatus.DOWNLOADED,
-            error_status=JobStatus.FAILED_DOWNLOAD, data_source=DataSource.ENA, function=EnaProcessor.download)
-
-    @staticmethod
-    def pipeline_job(config: Configuration, run_accession):
-        return EnaProcessor.run_job(
-            config, run_accession, start_status=JobStatus.DOWNLOADED, end_status=JobStatus.PROCESSED,
-            error_status=JobStatus.FAILED_PROCESSING, data_source=DataSource.ENA, function=EnaProcessor.run_pipeline)
-
-    @staticmethod
-    def cleanup_job(config: Configuration, run_accession):
-        return EnaProcessor.run_job(
-            config, run_accession, start_status=JobStatus.PROCESSED, end_status=None, error_status=None,
-            data_source=DataSource.ENA, function=EnaProcessor.delete)
+    def run_all(job: JobEna, queries: Queries, config: Configuration):
+        EnaProcessor.download(job=job, queries=queries, config=config)
+        EnaProcessor.run_pipeline(job=job, queries=queries, config=config)
+        EnaProcessor.load(job=job, queries=queries, config=config)
+        EnaProcessor.compute_cooccurrence(job=job, queries=queries, config=config)
 
     @staticmethod
     def download(job: JobEna, queries: Queries, config: Configuration):
@@ -109,13 +85,6 @@ class EnaProcessor(AbstractProcessor):
             job.coverage = float(data.coverage.loc[0])
         except Exception as e:
             raise CovigatorErrorProcessingCoverageResults(e)
-
-    @staticmethod
-    def delete(job: JobEna, queries: Queries, config: Configuration):
-        # delete FASTQ files from the file system here
-        for fastq in job.get_fastq_paths():
-            os.remove(fastq)
-        job.cleaned_at = datetime.now()
 
     @staticmethod
     def load(job: JobEna, queries: Queries, config: Configuration):

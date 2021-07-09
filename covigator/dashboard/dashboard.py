@@ -4,6 +4,8 @@ import dash_html_components as html
 import covigator
 import covigator.configuration
 from covigator.configuration import Configuration
+from covigator.dashboard.tabs.dataset_ena import get_tab_dataset_ena
+from covigator.dashboard.tabs.dataset_gisaid import get_tab_dataset_gisaid
 from covigator.dashboard.tabs.footer import get_footer
 from covigator.dashboard.tabs.overview import get_tab_overview
 from covigator.dashboard.tabs.samples import get_tab_samples, set_callbacks_samples_tab
@@ -37,10 +39,19 @@ class Dashboard:
         tab_overview = get_tab_overview(queries=queries)
         tab_samples = get_tab_samples(queries=queries)
         tab_variants = get_tab_variants(queries=queries)
+        tab_dataset_ena = get_tab_dataset_ena(queries=queries)
+        tab_dataset_gisaid = get_tab_dataset_gisaid(queries=queries)
+
         # assemble tabs in dcc.Tabs object
         # style={'margin': '0 0 0 0', 'padding-top': '2px'})
         return dcc.Tabs(
-            children=[tab_overview, tab_samples, tab_variants],
+            children=[
+                tab_overview,
+                tab_dataset_ena,
+                tab_dataset_gisaid,
+                tab_samples,
+                tab_variants
+            ],
             style={'height': '44px'}
         )
 

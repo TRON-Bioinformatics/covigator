@@ -293,8 +293,11 @@ class Queries:
     def count_deletions(self):
         return self.session.query(Variant).filter(func.length(Variant.reference) > 1).count()
 
-    def count_variant_observations(self):
-        return self.session.query(VariantObservation).count()
+    def count_variant_observations(self, source: str = None):
+        query = self.session.query(VariantObservation)
+        if source == DataSource.GISAID.name or source == DataSource.ENA.name:
+            query = query.filter(VariantObservation.source == source)
+        return query.count()
 
     def count_subclonal_variant_observations(self):
         return self.session.query(SubclonalVariantObservation).count()

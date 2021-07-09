@@ -2,7 +2,7 @@ from typing import Union
 from cyvcf2 import VCF, Variant
 import os
 import re
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, InvalidRequestError
 from sqlalchemy.orm import Session
 from covigator.database.model import Variant as CovigatorVariant, VariantObservation, Sample, \
     SubclonalVariantObservation, SampleEna, SampleGisaid, DataSource, VariantType
@@ -66,9 +66,9 @@ class VcfLoader:
                     session.merge(covigator_variant)
                     try:
                         session.commit()
-                    except IntegrityError:
+                    except (IntegrityError, InvalidRequestError):
                         # do nothing the variant was just added by another process between merge and commit
-                        pass
+                        session.rollback()
                 if variant.FILTER is None:
                     # only stores clonal high quality variants in this table
                     observed_variants.append(
