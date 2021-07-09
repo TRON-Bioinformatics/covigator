@@ -30,6 +30,8 @@ PRECOMPUTED_SUBSTITUTIONS_COUNTS_TABLE_NAME = get_table_versioned_name('precompu
 PRECOMPUTED_INDEL_LENGTH_TABLE_NAME = get_table_versioned_name('precomputed_indel_length', config=config)
 PRECOMPUTED_ANNOTATION_TABLE_NAME = get_table_versioned_name('precomputed_annotation', config=config)
 PRECOMPUTED_OCCURRENCE_TABLE_NAME = get_table_versioned_name('precomputed_top_occurrence', config=config)
+PRECOMPUTED_DN_DS_TABLE_NAME = get_table_versioned_name('precomputed_dn_ds', config=config)
+PRECOMPUTED_DN_DS_BY_DOMAIN_TABLE_NAME = get_table_versioned_name('precomputed_dn_ds_by_domain', config=config)
 JOB_STATUS_CONSTRAINT_NAME = get_table_versioned_name('job_status', config=config)
 DATA_SOURCE_CONSTRAINT_NAME = get_table_versioned_name('data_source', config=config)
 COVIGATOR_MODULE_CONSTRAINT_NAME = get_table_versioned_name('covigator_module', config=config)
@@ -591,3 +593,29 @@ class PrecomputedOccurrence(Base):
     gene_name = Column(String)
     annotation = Column(String)
     source = Column(Enum(DataSource, name=DataSource.__constraint_name__))
+
+
+class PrecomputedDnDs(Base):
+
+    __tablename__ = PRECOMPUTED_DN_DS_TABLE_NAME
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    month = Column(Date)
+    gene_name = Column(String)
+    country = Column(String)
+    source = Column(Enum(DataSource, name=DataSource.__constraint_name__))
+    dn = Column(Integer)
+    ds = Column(Integer)
+
+
+class PrecomputedDnDsByDomain(Base):
+
+    __tablename__ = PRECOMPUTED_DN_DS_BY_DOMAIN_TABLE_NAME
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    month = Column(Date)
+    domain = Column(String)
+    country = Column(String)
+    source = Column(Enum(DataSource, name=DataSource.__constraint_name__))
+    dn = Column(Integer)
+    ds = Column(Integer)

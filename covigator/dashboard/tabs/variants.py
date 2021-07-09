@@ -29,7 +29,7 @@ ID_DROPDOWN_DATA_SOURCE = "dropdown-data-source-variants-tab"
 
 def get_tab_variants(queries: Queries):
 
-    return dcc.Tab(label="Mutations",
+    return dcc.Tab(label="Recurrent mutations",
                    style=TAB_STYLE,
                    selected_style=TAB_SELECTED_STYLE,
                    children=[
