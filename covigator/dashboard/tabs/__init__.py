@@ -34,5 +34,5 @@ def get_mini_container(title, value, color="#f9f9f9"):
             html.P(value)
         ],
         className="mini_container",
-        style={"background-color": color, "font-size": 16}
+        style={"background-color": color, "font-size": 14}
     )
