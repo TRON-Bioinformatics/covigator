@@ -774,10 +774,10 @@ class Queries:
             else:
                 query = query.filter(and_(PrecomputedVariantAbundanceHistogram.bin_size == bin_size,
                                           PrecomputedVariantAbundanceHistogram.source == None))
-            histogram = pd.read_sql(query.statement, self.session.bind)[
-                ["position_bin", "count_unique_variants", "count_variant_observations"]]
+            histogram = pd.read_sql(query.statement, self.session.bind)
             if histogram.shape[0] == 0:
                 raise CovigatorDashboardMissingPrecomputedData
+            histogram = histogram[["position_bin", "count_unique_variants", "count_variant_observations"]]
         else:
             # queries for the maximum position
             maximum_position = self.session.query(func.max(Variant.position)).first()[0]
@@ -807,10 +807,15 @@ class Queries:
                                    source_filter="WHERE source='{}'".format(source) if source is not None else "")
                 binned_counts_variant_observations = pd.read_sql_query(sql_query, self.session.bind)
 
-                histogram = pd.merge(left=pd.merge(all_bins, binned_counts_variants, on="position_bin").reset_index(),
-                                     right=binned_counts_variant_observations,
-                                     on="position_bin").reset_index()
+                histogram = pd.merge(
+                    left=pd.merge(
+                        left=all_bins,
+                        right=binned_counts_variants,
+                        on="position_bin", how="left").reset_index(),
+                    right=binned_counts_variant_observations,
+                    on="position_bin", how="left").reset_index()
                 histogram.fillna(0, inplace=True)
+                histogram = histogram[["position_bin", "count_unique_variants", "count_variant_observations"]]
 
         return histogram
 
