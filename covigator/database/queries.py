@@ -81,12 +81,15 @@ class Queries:
             raise CovigatorQueryException("Bad query trying to fetch a sample")
         return sample
 
-    def get_countries(self) -> List[str]:
-        countries_ena = [c for c, in self.session.query(SampleEna.country).filter(
-            SampleEna.finished).distinct().all()]
-        countries_gisaid = [c for c, in self.session.query(SampleGisaid.country).filter(
-            SampleGisaid.finished).distinct().all()]
-        return sorted(list(set(countries_ena + countries_gisaid)))
+    def get_countries(self, source: str = None) -> List[str]:
+        countries = []
+        if source == DataSource.ENA.name or source is None:
+            countries = countries + [c for c, in self.session.query(SampleEna.country).filter(
+                SampleEna.finished).distinct().all()]
+        if source == DataSource.GISAID.name or source is None:
+            countries = countries + [c for c, in self.session.query(SampleGisaid.country).filter(
+                SampleGisaid.finished).distinct().all()]
+        return sorted(list(set(countries)))
 
     def get_variants_per_sample(self, data_source: str, genes: List[str], variant_types: List[str]):
         """
@@ -281,8 +284,8 @@ class Queries:
             count += self.session.query(SampleGisaid).filter(SampleGisaid.finished).count()
         return count
 
-    def count_countries(self):
-        return len(self.get_countries())
+    def count_countries(self, source: str = None):
+        return len(self.get_countries(source=source))
 
     def count_variants(self):
         return self.session.query(Variant).count()

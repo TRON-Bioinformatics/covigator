@@ -6,7 +6,8 @@ from covigator.database.database import get_database, Database
 from covigator.database.model import PrecomputedVariantsPerSample, PrecomputedSubstitutionsCounts, \
     PRECOMPUTED_VARIANTS_PER_SAMPLE_TABLE_NAME, VARIANT_OBSERVATION_TABLE_NAME, PrecomputedIndelLength, \
     PrecomputedAnnotation, VariantObservation, DataSource, PrecomputedOccurrence, PrecomputedDnDs, \
-    SAMPLE_ENA_TABLE_NAME, SAMPLE_GISAID_TABLE_NAME, PrecomputedDnDsByDomain
+    SAMPLE_ENA_TABLE_NAME, SAMPLE_GISAID_TABLE_NAME, PrecomputedDnDsByDomain, PrecomputedTableCounts, Variant, \
+    SubclonalVariantObservation, Sample
 from logzero import logger
 
 from covigator.database.queries import SYNONYMOUS_VARIANT, Queries
@@ -450,9 +451,57 @@ class Precomputer:
             self.session.commit()
         logger.info("Added {} entries to {}".format(len(database_rows), PrecomputedDnDsByDomain.__tablename__))
 
+    def load_table_counts(self):
+
+        queries = Queries(session=self.session)
+        count_variants = queries.count_variants()
+        count_samples = queries.count_samples()
+        count_samples_ena = queries.count_samples(source=DataSource.ENA.name)
+        count_samples_gisaid = queries.count_samples(source=DataSource.GISAID.name)
+        count_variant_observations = queries.count_variant_observations()
+        count_variant_observations_ena = queries.count_variant_observations(source=DataSource.ENA.name)
+        count_variant_observations_gisaid = queries.count_variant_observations(source=DataSource.GISAID.name)
+        count_subclonal_variant_observations = queries.count_subclonal_variant_observations()
+        count_countries = queries.count_countries()
+        count_countries_ena = queries.count_countries(source=DataSource.ENA.name)
+        count_countries_gisaid = queries.count_countries(source=DataSource.GISAID.name)
+
+        # delete all rows before starting
+        self.session.query(PrecomputedTableCounts).delete()
+        self.session.commit()
+
+        database_rows = [
+            PrecomputedTableCounts(table=Variant.__name__, count=count_variants),
+            PrecomputedTableCounts(table=VariantObservation.__name__, count=count_variant_observations),
+            PrecomputedTableCounts(
+                table=VariantObservation.__name__, count=count_variant_observations_ena,
+                factor=PrecomputedTableCounts.FACTOR_SOURCE, value=DataSource.ENA.name),
+            PrecomputedTableCounts(
+                table=VariantObservation.__name__, count=count_variant_observations_gisaid,
+                factor=PrecomputedTableCounts.FACTOR_SOURCE, value=DataSource.GISAID.name),
+            PrecomputedTableCounts(
+                table=SubclonalVariantObservation.__name__, count=count_subclonal_variant_observations),
+            PrecomputedTableCounts(table=Sample.__name__, count=count_samples),
+            PrecomputedTableCounts(table=Sample.__name__, count=count_samples_ena,
+                                   factor=PrecomputedTableCounts.FACTOR_SOURCE, value=DataSource.ENA.name),
+            PrecomputedTableCounts(table=Sample.__name__, count=count_samples_gisaid,
+                                   factor=PrecomputedTableCounts.FACTOR_SOURCE, value=DataSource.GISAID.name),
+            PrecomputedTableCounts(table=PrecomputedTableCounts.VIRTUAL_TABLE_COUNTRY, count=count_countries),
+            PrecomputedTableCounts(table=PrecomputedTableCounts.VIRTUAL_TABLE_COUNTRY, count=count_countries_ena,
+                                   factor=PrecomputedTableCounts.FACTOR_SOURCE, value=DataSource.ENA.name),
+            PrecomputedTableCounts(table=PrecomputedTableCounts.VIRTUAL_TABLE_COUNTRY, count=count_countries_gisaid,
+                                   factor=PrecomputedTableCounts.FACTOR_SOURCE, value=DataSource.GISAID.name),
+        ]
+
+        if len(database_rows) > 0:
+            self.session.add_all(database_rows)
+            self.session.commit()
+        logger.info("Added {} entries to {}".format(len(database_rows), PrecomputedTableCounts.__tablename__))
+
 
 if __name__ == '__main__':
     database = Database(initialize=True, config=Configuration())
     precomputer = Precomputer(session=database.get_database_session())
-    precomputer.load_dn_ds_by_domain()
-    precomputer.load_dn_ds()
+    #precomputer.load_dn_ds_by_domain()
+    #precomputer.load_dn_ds()
+    precomputer.load_table_counts()
