@@ -15,7 +15,7 @@ from sqlalchemy.sql.sqltypes import NullType
 from covigator.database.model import Log, DataSource, CovigatorModule, SampleEna, JobEna, JobStatus, VariantObservation, \
     Gene, Variant, VariantCooccurrence, Conservation, JobGisaid, SampleGisaid, SubclonalVariantObservation, \
     PrecomputedVariantsPerSample, PrecomputedSubstitutionsCounts, PrecomputedIndelLength, VariantType, \
-    PrecomputedAnnotation, PrecomputedOccurrence
+    PrecomputedAnnotation, PrecomputedOccurrence, PrecomputedTableCounts, Sample
 from covigator.exceptions import CovigatorQueryException
 
 SYNONYMOUS_VARIANT = "synonymous_variant"
@@ -276,19 +276,47 @@ class Queries:
                          VariantCooccurrence.variant_id_two == variant_two.variant_id)) \
             .first()
 
-    def count_samples(self, source: str = None) -> int:
+    def count_samples(self, source: str = None, cache=True) -> int:
         count = 0
-        if source is None or source == DataSource.ENA.name:
-            count += self.session.query(SampleEna).filter(SampleEna.finished).count()
-        if source is None or source == DataSource.GISAID.name:
-            count += self.session.query(SampleGisaid).filter(SampleGisaid.finished).count()
+        if cache:
+            query = self.session.query(PrecomputedTableCounts.count)
+            if source is not None:
+                query = query.filter(and_(
+                    PrecomputedTableCounts.table == Sample.__name__,
+                    PrecomputedTableCounts.factor == PrecomputedTableCounts.FACTOR_SOURCE,
+                    PrecomputedTableCounts.value == source
+                ))
+            else:
+                query = query.filter(PrecomputedTableCounts.table == Sample.__name__)
+            count = query.first().count
+        else:
+            if source is None or source == DataSource.ENA.name:
+                count += self.session.query(SampleEna).filter(SampleEna.finished).count()
+            if source is None or source == DataSource.GISAID.name:
+                count += self.session.query(SampleGisaid).filter(SampleGisaid.finished).count()
         return count
 
-    def count_countries(self, source: str = None):
-        return len(self.get_countries(source=source))
+    def count_countries(self, source: str = None, cache=True):
+        if cache:
+            query = self.session.query(PrecomputedTableCounts.count)
+            if source is not None:
+                query = query.filter(and_(
+                    PrecomputedTableCounts.table == PrecomputedTableCounts.VIRTUAL_TABLE_COUNTRY,
+                    PrecomputedTableCounts.factor == PrecomputedTableCounts.FACTOR_SOURCE,
+                    PrecomputedTableCounts.value == source
+                ))
+            else:
+                query = query.filter(PrecomputedTableCounts.table == PrecomputedTableCounts.VIRTUAL_TABLE_COUNTRY)
+            return query.first().count
+        else:
+            return len(self.get_countries(source=source))
 
-    def count_variants(self):
-        return self.session.query(Variant).count()
+    def count_variants(self, cache=True):
+        if cache:
+            return self.session.query(PrecomputedTableCounts.count) \
+                .filter(PrecomputedTableCounts.table == Variant.__name__).first().count
+        else:
+            return self.session.query(Variant).count()
 
     def count_insertions(self):
         return self.session.query(Variant).filter(func.length(Variant.alternate) > 1).count()
@@ -296,14 +324,31 @@ class Queries:
     def count_deletions(self):
         return self.session.query(Variant).filter(func.length(Variant.reference) > 1).count()
 
-    def count_variant_observations(self, source: str = None):
-        query = self.session.query(VariantObservation)
-        if source == DataSource.GISAID.name or source == DataSource.ENA.name:
-            query = query.filter(VariantObservation.source == source)
-        return query.count()
+    def count_variant_observations(self, source: str = None, cache=True):
+        if cache:
+            query = self.session.query(PrecomputedTableCounts.count)
+            if source is not None:
+                query = query.filter(and_(
+                    PrecomputedTableCounts.table == VariantObservation.__name__,
+                    PrecomputedTableCounts.factor == PrecomputedTableCounts.FACTOR_SOURCE,
+                    PrecomputedTableCounts.value == source
+                ))
+            else:
+                query = query.filter(PrecomputedTableCounts.table == VariantObservation.__name__)
+            return query.first().count
+        else:
+            query = self.session.query(VariantObservation)
+            if source == DataSource.GISAID.name or source == DataSource.ENA.name:
+                query = query.filter(VariantObservation.source == source)
+            return query.count()
 
-    def count_subclonal_variant_observations(self):
-        return self.session.query(SubclonalVariantObservation).count()
+    def count_subclonal_variant_observations(self, cache=True):
+        if cache:
+            query = self.session.query(PrecomputedTableCounts.count) \
+                .filter(PrecomputedTableCounts.table == SubclonalVariantObservation.__name__)
+            return query.first().count
+        else:
+            return self.session.query(SubclonalVariantObservation).count()
 
     def get_date_of_first_sample(self, source: DataSource = DataSource.ENA) -> date:
         """

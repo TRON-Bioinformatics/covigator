@@ -454,17 +454,17 @@ class Precomputer:
     def load_table_counts(self):
 
         queries = Queries(session=self.session)
-        count_variants = queries.count_variants()
-        count_samples = queries.count_samples()
-        count_samples_ena = queries.count_samples(source=DataSource.ENA.name)
-        count_samples_gisaid = queries.count_samples(source=DataSource.GISAID.name)
-        count_variant_observations = queries.count_variant_observations()
-        count_variant_observations_ena = queries.count_variant_observations(source=DataSource.ENA.name)
-        count_variant_observations_gisaid = queries.count_variant_observations(source=DataSource.GISAID.name)
-        count_subclonal_variant_observations = queries.count_subclonal_variant_observations()
-        count_countries = queries.count_countries()
-        count_countries_ena = queries.count_countries(source=DataSource.ENA.name)
-        count_countries_gisaid = queries.count_countries(source=DataSource.GISAID.name)
+        count_variants = queries.count_variants(cache=False)
+        count_samples = queries.count_samples(cache=False)
+        count_samples_ena = queries.count_samples(source=DataSource.ENA.name, cache=False)
+        count_samples_gisaid = queries.count_samples(source=DataSource.GISAID.name, cache=False)
+        count_variant_observations = queries.count_variant_observations(cache=False)
+        count_variant_observations_ena = queries.count_variant_observations(source=DataSource.ENA.name, cache=False)
+        count_variant_observations_gisaid = queries.count_variant_observations(source=DataSource.GISAID.name, cache=False)
+        count_subclonal_variant_observations = queries.count_subclonal_variant_observations(cache=False)
+        count_countries = queries.count_countries(cache=False)
+        count_countries_ena = queries.count_countries(source=DataSource.ENA.name, cache=False)
+        count_countries_gisaid = queries.count_countries(source=DataSource.GISAID.name, cache=False)
 
         # delete all rows before starting
         self.session.query(PrecomputedTableCounts).delete()
