@@ -32,6 +32,8 @@ PRECOMPUTED_ANNOTATION_TABLE_NAME = get_table_versioned_name('precomputed_annota
 PRECOMPUTED_OCCURRENCE_TABLE_NAME = get_table_versioned_name('precomputed_top_occurrence', config=config)
 PRECOMPUTED_DN_DS_TABLE_NAME = get_table_versioned_name('precomputed_dn_ds', config=config)
 PRECOMPUTED_DN_DS_BY_DOMAIN_TABLE_NAME = get_table_versioned_name('precomputed_dn_ds_by_domain', config=config)
+PRECOMPUTED_TABLE_COUNTS_TABLE_NAME = get_table_versioned_name('precomputed_table_counts', config=config)
+PRECOMPUTED_VARIANT_ABUNDANCE_HIST_TABLE_NAME = get_table_versioned_name('precomputed_variant_abundance_histogram', config=config)
 JOB_STATUS_CONSTRAINT_NAME = get_table_versioned_name('job_status', config=config)
 DATA_SOURCE_CONSTRAINT_NAME = get_table_versioned_name('data_source', config=config)
 COVIGATOR_MODULE_CONSTRAINT_NAME = get_table_versioned_name('covigator_module', config=config)
@@ -619,3 +621,29 @@ class PrecomputedDnDsByDomain(Base):
     source = Column(Enum(DataSource, name=DataSource.__constraint_name__))
     dn = Column(Integer)
     ds = Column(Integer)
+
+
+class PrecomputedTableCounts(Base):
+
+    __tablename__ = PRECOMPUTED_TABLE_COUNTS_TABLE_NAME
+    VIRTUAL_TABLE_COUNTRY = "Country"
+    FACTOR_SOURCE = "source"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    table = Column(String)
+    factor = Column(String)
+    value = Column(String)
+    count = Column(Integer)
+
+
+class PrecomputedVariantAbundanceHistogram(Base):
+
+    __tablename__ = PRECOMPUTED_VARIANT_ABUNDANCE_HIST_TABLE_NAME
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    position_bin = Column(Integer)
+    count_unique_variants = Column(Integer)
+    count_variant_observations = Column(Integer)
+    bin_size = Column(Integer)
+    source = Column(Enum(DataSource, name=DataSource.__constraint_name__))
+

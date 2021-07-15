@@ -1,6 +1,8 @@
 import unittest
 from itertools import combinations
 from unittest import TestCase
+
+from covigator.database.precomputed import Precomputer
 from faker import Faker
 import numpy as np
 from covigator.database.database import Database
@@ -29,9 +31,9 @@ class QueriesTests(TestCase):
             self.session.add_all([sample_ena, sample, job])
             if job.status == JobStatus.FINISHED:
                 if first_sample_date is None:
-                    first_sample_date = sample_ena.first_created
-                if sample_ena.first_created < first_sample_date:
-                    first_sample_date = sample_ena.first_created
+                    first_sample_date = sample_ena.collection_date
+                if sample_ena.collection_date < first_sample_date:
+                    first_sample_date = sample_ena.collection_date
         self.session.commit()
         observed_date = self.queries.get_date_of_first_sample()
         self.assertEqual(observed_date, first_sample_date.date())
@@ -49,9 +51,9 @@ class QueriesTests(TestCase):
             self.session.add_all([sample_ena, sample, job])
             if job.status == JobStatus.FINISHED:
                 if most_recent_sample_date is None:
-                    most_recent_sample_date = sample_ena.first_created
-                if sample_ena.first_created > most_recent_sample_date:
-                    most_recent_sample_date = sample_ena.first_created
+                    most_recent_sample_date = sample_ena.collection_date
+                if sample_ena.collection_date > most_recent_sample_date:
+                    most_recent_sample_date = sample_ena.collection_date
         self.session.commit()
         observed_date = self.queries.get_date_of_most_recent_sample()
         self.assertEqual(observed_date, most_recent_sample_date.date())
@@ -91,11 +93,13 @@ class QueriesTests(TestCase):
         self.assertIsNone(observed_date)
 
     def test_get_cooccurrence_matrix_by_gene_no_data(self):
+        Precomputer(session=self.session).load_table_counts()
         data = self.queries.get_variants_cooccurrence_by_gene(gene_name="S", test=True)
         self.assertIsNone(data)
 
     def test_get_cooccurrence_matrix_by_gene(self):
         other_variants, variants = self._mock_cooccurrence_matrix()
+        Precomputer(session=self.session).load_table_counts()
 
         data = self.queries.get_variants_cooccurrence_by_gene(gene_name="S", min_cooccurrence=1, test=True)
         self.assertIsNotNone(data)
@@ -171,7 +175,7 @@ class QueriesTests(TestCase):
     def test_get_variant_abundance_histogram(self):
 
         # gets an empty histogram
-        histogram = self.queries.get_variant_abundance_histogram()
+        histogram = self.queries.get_variant_abundance_histogram(cache=False)
         self.assertIsNone(histogram)
 
         # mocks a 100 variants
@@ -181,7 +185,7 @@ class QueriesTests(TestCase):
         self.session.commit()
 
         # gets an histogram over 100 variants without variant observations
-        histogram = self.queries.get_variant_abundance_histogram()
+        histogram = self.queries.get_variant_abundance_histogram(cache=False)
         self.assertIsNotNone(histogram)
         self.assertGreater(histogram.shape[0], 0)
         self.assertEqual(histogram.shape[1], 3)
@@ -200,7 +204,7 @@ class QueriesTests(TestCase):
         self.session.commit()
 
         # gets an histogram over 100 variants
-        histogram = self.queries.get_variant_abundance_histogram()
+        histogram = self.queries.get_variant_abundance_histogram(cache=False)
         self.assertIsNotNone(histogram)
         self.assertGreater(histogram.shape[0], 0)
         self.assertEqual(histogram.shape[1], 3)

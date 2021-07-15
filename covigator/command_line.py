@@ -149,8 +149,11 @@ def precompute_queries():
 
     database = Database(initialize=True, config=Configuration())
     precomputer = Precomputer(session=database.get_database_session())
+    logger.info("Starting precomputation...")
     precomputer.load_counts_variants_per_sample()
     precomputer.load_count_substitutions()
     precomputer.load_indel_length()
     precomputer.load_annotation()
+    precomputer.load_table_counts()
     precomputer.load_top_occurrences()
+    logger.info("Done precomputing")
