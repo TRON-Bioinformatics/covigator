@@ -293,19 +293,21 @@ class Precomputer:
 
     def load_dn_ds(self):
         sql_query_ds_ena = """
-                select count(*) as ds, date_trunc('month', s.first_created) as month, vo.gene_name, s.country 
+                select count(*) as ds, date_trunc('month', s.collection_date) as month, vo.gene_name, s.country 
                 from {variant_observation_table} as vo join {sample_ena_table} as s on vo.sample = s.run_accession 
                 where vo.source = 'ENA' and vo.annotation_highest_impact = 'synonymous_variant' 
-                group by date_trunc('month', s.first_created), vo.gene_name, s.country;
+                    and s.collection_date is not null
+                group by date_trunc('month', s.collection_date), vo.gene_name, s.country;
                 """.format(variant_observation_table=VARIANT_OBSERVATION_TABLE_NAME,
                            sample_ena_table=SAMPLE_ENA_TABLE_NAME)
         data_ds_ena = pd.read_sql_query(sql_query_ds_ena, self.session.bind)
 
         sql_query_dn_ena = """
-                select count(*) as dn, date_trunc('month', s.first_created) as month, vo.gene_name, s.country 
+                select count(*) as dn, date_trunc('month', s.collection_date) as month, vo.gene_name, s.country 
                 from {variant_observation_table} as vo join {sample_ena_table} as s on vo.sample = s.run_accession 
                 where vo.source = 'ENA' and vo.annotation_highest_impact = 'missense_variant' 
-                group by date_trunc('month', s.first_created), vo.gene_name, s.country;
+                    and s.collection_date is not null
+                group by date_trunc('month', s.collection_date), vo.gene_name, s.country;
                 """.format(variant_observation_table=VARIANT_OBSERVATION_TABLE_NAME,
                            sample_ena_table=SAMPLE_ENA_TABLE_NAME)
         data_dn_ena = pd.read_sql_query(sql_query_dn_ena, self.session.bind)
@@ -315,6 +317,7 @@ class Precomputer:
         sql_query_ds_gisaid = """
                 select count(*) as ds, date_trunc('month', s.date) as month, vo.gene_name, s.country 
                 from {variant_observation_table} as vo join {sample_gisaid_table} as s on vo.sample = s.run_accession 
+                    and s.date is not null
                 where vo.source = 'GISAID' and vo.annotation_highest_impact = 'synonymous_variant' 
                 group by date_trunc('month', s.date), vo.gene_name, s.country;
                 """.format(variant_observation_table=VARIANT_OBSERVATION_TABLE_NAME,
@@ -324,7 +327,8 @@ class Precomputer:
         sql_query_dn_gisaid = """
                 select count(*) as dn, date_trunc('month', s.date) as month, vo.gene_name, s.country 
                 from {variant_observation_table} as vo join {sample_gisaid_table} as s on vo.sample = s.run_accession 
-                where vo.source = 'GISAID' and vo.annotation_highest_impact = 'missense_variant' 
+                where vo.source = 'GISAID' and vo.annotation_highest_impact = 'missense_variant'
+                    and s.date is not null 
                 group by date_trunc('month', s.date), vo.gene_name, s.country;
                 """.format(variant_observation_table=VARIANT_OBSERVATION_TABLE_NAME,
                            sample_gisaid_table=SAMPLE_GISAID_TABLE_NAME)
@@ -369,21 +373,21 @@ class Precomputer:
 
     def load_dn_ds_by_domain(self):
         sql_query_ds_ena = """
-                select count(*) as ds, date_trunc('month', s.first_created) as month, vo.pfam_name, s.country 
+                select count(*) as ds, date_trunc('month', s.collection_date) as month, vo.pfam_name, s.country 
                 from {variant_observation_table} as vo join {sample_ena_table} as s on vo.sample = s.run_accession 
                 where vo.source = 'ENA' and vo.annotation_highest_impact = 'synonymous_variant' 
-                    and vo.pfam_name is not null
-                group by date_trunc('month', s.first_created), vo.pfam_name, s.country;
+                    and vo.pfam_name is not null and s.collection_date is not null
+                group by date_trunc('month', s.collection_date), vo.pfam_name, s.country;
                 """.format(variant_observation_table=VARIANT_OBSERVATION_TABLE_NAME,
                            sample_ena_table=SAMPLE_ENA_TABLE_NAME)
         data_ds_ena = pd.read_sql_query(sql_query_ds_ena, self.session.bind)
 
         sql_query_dn_ena = """
-                select count(*) as dn, date_trunc('month', s.first_created) as month, vo.pfam_name, s.country 
+                select count(*) as dn, date_trunc('month', s.collection_date) as month, vo.pfam_name, s.country 
                 from {variant_observation_table} as vo join {sample_ena_table} as s on vo.sample = s.run_accession 
                 where vo.source = 'ENA' and vo.annotation_highest_impact = 'missense_variant' 
-                    and vo.pfam_name is not null
-                group by date_trunc('month', s.first_created), vo.pfam_name, s.country;
+                    and vo.pfam_name is not null and s.collection_date is not null
+                group by date_trunc('month', s.collection_date), vo.pfam_name, s.country;
                 """.format(variant_observation_table=VARIANT_OBSERVATION_TABLE_NAME,
                            sample_ena_table=SAMPLE_ENA_TABLE_NAME)
         data_dn_ena = pd.read_sql_query(sql_query_dn_ena, self.session.bind)
@@ -394,7 +398,7 @@ class Precomputer:
                 select count(*) as ds, date_trunc('month', s.date) as month, vo.pfam_name, s.country 
                 from {variant_observation_table} as vo join {sample_gisaid_table} as s on vo.sample = s.run_accession 
                 where vo.source = 'GISAID' and vo.annotation_highest_impact = 'synonymous_variant' 
-                    and vo.pfam_name is not null
+                    and vo.pfam_name is not null and s.date is not null
                 group by date_trunc('month', s.date), vo.pfam_name, s.country;
                 """.format(variant_observation_table=VARIANT_OBSERVATION_TABLE_NAME,
                            sample_gisaid_table=SAMPLE_GISAID_TABLE_NAME)
@@ -404,7 +408,7 @@ class Precomputer:
                 select count(*) as dn, date_trunc('month', s.date) as month, vo.pfam_name, s.country 
                 from {variant_observation_table} as vo join {sample_gisaid_table} as s on vo.sample = s.run_accession 
                 where vo.source = 'GISAID' and vo.annotation_highest_impact = 'missense_variant' 
-                    and vo.pfam_name is not null
+                    and vo.pfam_name is not null and s.date is not null
                 group by date_trunc('month', s.date), vo.pfam_name, s.country;
                 """.format(variant_observation_table=VARIANT_OBSERVATION_TABLE_NAME,
                            sample_gisaid_table=SAMPLE_GISAID_TABLE_NAME)
@@ -449,4 +453,6 @@ class Precomputer:
 
 if __name__ == '__main__':
     database = Database(initialize=True, config=Configuration())
-    Precomputer(session=database.get_database_session()).load_dn_ds_by_domain()
+    precomputer = Precomputer(session=database.get_database_session())
+    precomputer.load_dn_ds_by_domain()
+    precomputer.load_dn_ds()
