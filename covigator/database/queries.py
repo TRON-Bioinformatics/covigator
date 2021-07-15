@@ -181,9 +181,9 @@ class Queries:
 
         if data_source is None or data_source == DataSource.ENA.name:
             query = self.session.query(
-                func.count().label("count"), SampleEna.first_created.label("date"), SampleEna.country) \
+                func.count().label("count"), SampleEna.collection_date.label("date"), SampleEna.country) \
                 .filter(SampleEna.finished) \
-                .group_by(SampleEna.first_created, SampleEna.country)
+                .group_by(SampleEna.collection_date, SampleEna.country)
             if countries:
                 query = query.filter(SampleEna.country.in_(countries))
             samples_ena = pd.read_sql(query.statement, self.session.bind).astype(
@@ -236,8 +236,8 @@ class Queries:
 
     def get_sample_months(self, pattern) -> List[datetime]:
         dates_ena = [d.strftime(pattern) for d, in
-                     self.session.query(SampleEna.first_created).filter(
-                         and_(SampleEna.finished, SampleEna.first_created.isnot(None))).distinct().all()]
+                     self.session.query(SampleEna.collection_date).filter(
+                         and_(SampleEna.finished, SampleEna.collection_date.isnot(None))).distinct().all()]
         dates_gisaid = [d.strftime(pattern) for d, in
                      self.session.query(SampleGisaid.date).filter(
                          and_(SampleGisaid.finished, SampleGisaid.date.isnot(None))).distinct().all()]
@@ -381,9 +381,9 @@ class Queries:
         Returns the date of the earliest ENA sample loaded in the database
         """
         if source == DataSource.ENA:
-            result = self.session.query(SampleEna.first_created).filter(
-                and_(SampleEna.finished, SampleEna.first_created.isnot(None))) \
-                .order_by(asc(SampleEna.first_created)).first()
+            result = self.session.query(SampleEna.collection_date).filter(
+                and_(SampleEna.finished, SampleEna.collection_date.isnot(None))) \
+                .order_by(asc(SampleEna.collection_date)).first()
         elif source == DataSource.GISAID:
             result = self.session.query(SampleGisaid.date).filter(
                 and_(SampleGisaid.finished, SampleGisaid.date.isnot(None))) \
@@ -397,9 +397,9 @@ class Queries:
         Returns the date of the latest ENA sample loaded in the database
         """
         if source == DataSource.ENA:
-            result = self.session.query(SampleEna.first_created).filter(
-                and_(SampleEna.finished, SampleEna.first_created.isnot(None))) \
-                .order_by(desc(SampleEna.first_created)).first()
+            result = self.session.query(SampleEna.collection_date).filter(
+                and_(SampleEna.finished, SampleEna.collection_date.isnot(None))) \
+                .order_by(desc(SampleEna.collection_date)).first()
         elif source == DataSource.GISAID:
             result = self.session.query(SampleGisaid.date).filter(
                 and_(SampleGisaid.finished, SampleGisaid.date.isnot(None))) \
@@ -526,10 +526,10 @@ class Queries:
         counts_ena = None
         if source is None or source == DataSource.ENA:
             query = self.session.query(
-                func.date_trunc('month', SampleEna.first_created).label("month"),
+                func.date_trunc('month', SampleEna.collection_date).label("month"),
                 func.count().label("sample_count"))\
                 .filter(SampleEna.finished) \
-                .group_by(func.date_trunc('month', SampleEna.first_created))
+                .group_by(func.date_trunc('month', SampleEna.collection_date))
             counts_ena = pd.read_sql(query.statement, self.session.bind)
         counts_gisaid = None
         if source is None or source == DataSource.GISAID:
