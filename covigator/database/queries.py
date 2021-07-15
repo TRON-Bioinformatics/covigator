@@ -16,7 +16,7 @@ from covigator.database.model import Log, DataSource, CovigatorModule, SampleEna
     Gene, Variant, VariantCooccurrence, Conservation, JobGisaid, SampleGisaid, SubclonalVariantObservation, \
     PrecomputedVariantsPerSample, PrecomputedSubstitutionsCounts, PrecomputedIndelLength, VariantType, \
     PrecomputedAnnotation, PrecomputedOccurrence, PrecomputedTableCounts, Sample, PrecomputedVariantAbundanceHistogram
-from covigator.exceptions import CovigatorQueryException
+from covigator.exceptions import CovigatorQueryException, CovigatorDashboardMissingPrecomputedData
 
 SYNONYMOUS_VARIANT = "synonymous_variant"
 
@@ -277,7 +277,6 @@ class Queries:
             .first()
 
     def count_samples(self, source: str = None, cache=True) -> int:
-        count = 0
         if cache:
             query = self.session.query(PrecomputedTableCounts.count)
             if source is not None:
@@ -291,8 +290,12 @@ class Queries:
                     PrecomputedTableCounts.table == Sample.__name__,
                     PrecomputedTableCounts.factor == None
                 ))
-            count = query.first().count
+            result = query.first()
+            if result is None:
+                raise CovigatorDashboardMissingPrecomputedData
+            count = result.count
         else:
+            count = 0
             if source is None or source == DataSource.ENA.name:
                 count += self.session.query(SampleEna).filter(SampleEna.finished).count()
             if source is None or source == DataSource.GISAID.name:
@@ -313,16 +316,24 @@ class Queries:
                     PrecomputedTableCounts.table == PrecomputedTableCounts.VIRTUAL_TABLE_COUNTRY,
                     PrecomputedTableCounts.factor == None
                 ))
-            return query.first().count
+            result = query.first()
+            if result is None:
+                raise CovigatorDashboardMissingPrecomputedData
+            count = result.count
         else:
-            return len(self.get_countries(source=source))
+            count = len(self.get_countries(source=source))
+        return count
 
     def count_variants(self, cache=True):
         if cache:
-            return self.session.query(PrecomputedTableCounts.count) \
-                .filter(PrecomputedTableCounts.table == Variant.__name__).first().count
+            result = self.session.query(PrecomputedTableCounts.count) \
+                .filter(PrecomputedTableCounts.table == Variant.__name__).first()
+            if result is None:
+                raise CovigatorDashboardMissingPrecomputedData
+            count = result.count
         else:
-            return self.session.query(Variant).count()
+            count = self.session.query(Variant).count()
+        return count
 
     def count_insertions(self):
         return self.session.query(Variant).filter(func.length(Variant.alternate) > 1).count()
@@ -344,20 +355,26 @@ class Queries:
                     PrecomputedTableCounts.table == VariantObservation.__name__,
                     PrecomputedTableCounts.factor == None
                 ))
-            return query.first().count
+            result = query.first()
+            if result is None:
+                raise CovigatorDashboardMissingPrecomputedData
+            count = result.count
         else:
             query = self.session.query(VariantObservation)
             if source == DataSource.GISAID.name or source == DataSource.ENA.name:
                 query = query.filter(VariantObservation.source == source)
-            return query.count()
+            count = query.count()
+        return count
 
     def count_subclonal_variant_observations(self, cache=True):
         if cache:
             query = self.session.query(PrecomputedTableCounts.count) \
                 .filter(PrecomputedTableCounts.table == SubclonalVariantObservation.__name__)
-            return query.first().count
+            result = query.first()
+            count = result.count
         else:
-            return self.session.query(SubclonalVariantObservation).count()
+            count = self.session.query(SubclonalVariantObservation).count()
+        return count
 
     def get_date_of_first_sample(self, source: DataSource = DataSource.ENA) -> date:
         """
@@ -759,6 +776,8 @@ class Queries:
                                           PrecomputedVariantAbundanceHistogram.source == None))
             histogram = pd.read_sql(query.statement, self.session.bind)[
                 ["position_bin", "count_unique_variants", "count_variant_observations"]]
+            if histogram.shape[0] == 0:
+                raise CovigatorDashboardMissingPrecomputedData
         else:
             # queries for the maximum position
             maximum_position = self.session.query(func.max(Variant.position)).first()[0]
