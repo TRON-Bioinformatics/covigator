@@ -135,15 +135,12 @@ Number of top occurring variants"""),
         dcc.Markdown("""**Genome view**
         
 Bin size"""),
-        dcc.Slider(
+        dcc.Dropdown(
             id=ID_SLIDER_BIN_SIZE,
-            min=5,
-            max=400,
-            step=5,
+            options=[{'label': "{} bp".format(c), 'value': str(c)} for c in [10, 50, 100, 200, 300, 400]],
             value=50,
-            dots=False,
-            marks={i: '{}'.format(i) for i in [10, 50, 100, 200, 300, 400]},
-            tooltip=dict(always_visible=False, placement="right")
+            multi=False,
+            clearable=False
         ),
         html.Br(),
         dcc.Markdown("""**Co-occurrence matrix**
@@ -223,12 +220,12 @@ def set_callbacks_variants_tab(app, session: Session):
                 children=figures.get_variants_plot(
                     gene_name=gene_name,
                     selected_variants=selected_rows,
-                    bin_size=bin_size,
+                    bin_size=int(bin_size),
                     source=source
                 ))
         else:
             plot = html.Div(
-                children=figures.get_variants_abundance_plot(bin_size=bin_size, source=source))
+                children=figures.get_variants_abundance_plot(bin_size=int(bin_size), source=source))
         return plot
 
     @app.callback(
