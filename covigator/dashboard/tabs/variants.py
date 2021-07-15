@@ -15,6 +15,7 @@ ID_SLIDER_MIN_SAMPLES = 'slider-min-samples'
 ID_SLIDER_MIN_COOCCURRENCES = 'slider-min-cooccurrences'
 ID_DROPDOWN_SIMILARITY_METRIC = 'dropdown-heatmap-metric'
 ID_SLIDER_BIN_SIZE = 'slider-bin-size'
+BIN_SIZE_VALUES = [10, 50, 100, 200, 300, 400]
 ID_DROPDOWN_DATE_RANGE_END = 'dropdown-date-range-end'
 ID_DROPDOWN_DATE_RANGE_START = 'dropdown-date-range-start'
 ID_TOP_VARIANTS_METRIC = 'dropdown-top-variants-metric'
@@ -137,7 +138,7 @@ Number of top occurring variants"""),
 Bin size"""),
         dcc.Dropdown(
             id=ID_SLIDER_BIN_SIZE,
-            options=[{'label': "{} bp".format(c), 'value': str(c)} for c in [10, 50, 100, 200, 300, 400]],
+            options=[{'label': "{} bp".format(c), 'value': str(c)} for c in BIN_SIZE_VALUES],
             value=50,
             multi=False,
             clearable=False

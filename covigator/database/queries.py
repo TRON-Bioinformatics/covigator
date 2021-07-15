@@ -15,7 +15,7 @@ from sqlalchemy.sql.sqltypes import NullType
 from covigator.database.model import Log, DataSource, CovigatorModule, SampleEna, JobEna, JobStatus, VariantObservation, \
     Gene, Variant, VariantCooccurrence, Conservation, JobGisaid, SampleGisaid, SubclonalVariantObservation, \
     PrecomputedVariantsPerSample, PrecomputedSubstitutionsCounts, PrecomputedIndelLength, VariantType, \
-    PrecomputedAnnotation, PrecomputedOccurrence, PrecomputedTableCounts, Sample
+    PrecomputedAnnotation, PrecomputedOccurrence, PrecomputedTableCounts, Sample, PrecomputedVariantAbundanceHistogram
 from covigator.exceptions import CovigatorQueryException
 
 SYNONYMOUS_VARIANT = "synonymous_variant"
@@ -287,7 +287,10 @@ class Queries:
                     PrecomputedTableCounts.value == source
                 ))
             else:
-                query = query.filter(PrecomputedTableCounts.table == Sample.__name__)
+                query = query.filter(and_(
+                    PrecomputedTableCounts.table == Sample.__name__,
+                    PrecomputedTableCounts.factor == None
+                ))
             count = query.first().count
         else:
             if source is None or source == DataSource.ENA.name:
@@ -306,7 +309,10 @@ class Queries:
                     PrecomputedTableCounts.value == source
                 ))
             else:
-                query = query.filter(PrecomputedTableCounts.table == PrecomputedTableCounts.VIRTUAL_TABLE_COUNTRY)
+                query = query.filter(and_(
+                    PrecomputedTableCounts.table == PrecomputedTableCounts.VIRTUAL_TABLE_COUNTRY,
+                    PrecomputedTableCounts.factor == None
+                ))
             return query.first().count
         else:
             return len(self.get_countries(source=source))
@@ -334,7 +340,10 @@ class Queries:
                     PrecomputedTableCounts.value == source
                 ))
             else:
-                query = query.filter(PrecomputedTableCounts.table == VariantObservation.__name__)
+                query = query.filter(and_(
+                    PrecomputedTableCounts.table == VariantObservation.__name__,
+                    PrecomputedTableCounts.factor == None
+                ))
             return query.first().count
         else:
             query = self.session.query(VariantObservation)
@@ -738,41 +747,51 @@ class Queries:
 
         return data
 
-    def get_variant_abundance_histogram(self, bin_size=50, source: str = None) -> pd.DataFrame:
-
-        # queries for the maximum position
-        maximum_position = self.session.query(func.max(Variant.position)).first()[0]
+    def get_variant_abundance_histogram(self, bin_size=50, source: str = None, cache=True) -> pd.DataFrame:
         histogram = None
-        if maximum_position is not None:
-            # builds all possible bins
-            all_bins = pd.DataFrame(data=[i*bin_size for i in range(int(maximum_position/bin_size) + 1)], columns=["position_bin"])
+        if cache:
+            query = self.session.query(PrecomputedVariantAbundanceHistogram)
+            if source is not None:
+                query = query.filter(and_(PrecomputedVariantAbundanceHistogram.bin_size == bin_size,
+                                          PrecomputedVariantAbundanceHistogram.source == source))
+            else:
+                query = query.filter(and_(PrecomputedVariantAbundanceHistogram.bin_size == bin_size,
+                                          PrecomputedVariantAbundanceHistogram.source == None))
+            histogram = pd.read_sql(query.statement, self.session.bind)[
+                ["position_bin", "count_unique_variants", "count_variant_observations"]]
+        else:
+            # queries for the maximum position
+            maximum_position = self.session.query(func.max(Variant.position)).first()[0]
+            if maximum_position is not None:
+                # builds all possible bins
+                all_bins = pd.DataFrame(data=[i*bin_size for i in range(int(maximum_position/bin_size) + 1)], columns=["position_bin"])
 
-            # counts variants over those bins
-            sql_query = """
-                    SELECT cast("position"/{bin_size} as int)*{bin_size} AS position_bin,
-                           COUNT(*) as count_unique_variants
-                    FROM {table_name}
-                    GROUP BY position_bin
-                    ORDER BY position_bin;
-                    """.format(bin_size=bin_size, table_name=Variant.__tablename__)
-            binned_counts_variants = pd.read_sql_query(sql_query, self.session.bind)
+                # counts variants over those bins
+                sql_query = """
+                        SELECT cast("position"/{bin_size} as int)*{bin_size} AS position_bin,
+                               COUNT(*) as count_unique_variants
+                        FROM {table_name}
+                        GROUP BY position_bin
+                        ORDER BY position_bin;
+                        """.format(bin_size=bin_size, table_name=Variant.__tablename__)
+                binned_counts_variants = pd.read_sql_query(sql_query, self.session.bind)
 
-            # counts variant observations over those bins
-            sql_query = """
-                    SELECT cast("position"/{bin_size} as int)*{bin_size} AS position_bin,
-                           COUNT(*) as count_variant_observations
-                    FROM {table_name}
-                    {source_filter}
-                    GROUP BY position_bin
-                    ORDER BY position_bin;
-                    """.format(bin_size=bin_size, table_name=VariantObservation.__tablename__,
-                               source_filter="WHERE source='{}'".format(source) if source is not None else "")
-            binned_counts_variant_observations = pd.read_sql_query(sql_query, self.session.bind)
+                # counts variant observations over those bins
+                sql_query = """
+                        SELECT cast("position"/{bin_size} as int)*{bin_size} AS position_bin,
+                               COUNT(*) as count_variant_observations
+                        FROM {table_name}
+                        {source_filter}
+                        GROUP BY position_bin
+                        ORDER BY position_bin;
+                        """.format(bin_size=bin_size, table_name=VariantObservation.__tablename__,
+                                   source_filter="WHERE source='{}'".format(source) if source is not None else "")
+                binned_counts_variant_observations = pd.read_sql_query(sql_query, self.session.bind)
 
-            histogram = all_bins.set_index("position_bin").join(binned_counts_variants.set_index("position_bin"))
-            histogram = histogram.join(binned_counts_variant_observations.set_index("position_bin"))
-            histogram.fillna(0, inplace=True)
-            histogram.reset_index(inplace=True)
+                histogram = pd.merge(left=pd.merge(all_bins, binned_counts_variants, on="position_bin").reset_index(),
+                                     right=binned_counts_variant_observations,
+                                     on="position_bin").reset_index()
+                histogram.fillna(0, inplace=True)
 
         return histogram
 
