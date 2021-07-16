@@ -43,7 +43,7 @@ class SampleFigures(Figures):
                 dcc.Markdown("""
                 **Most common mutation effects**
                 
-                *Ratio of non synonymous to synonymous SNVs (dN/dS): {dnds}*
+                *Ratio of non synonymous to synonymous SNVs (N/S): {dnds}*
                 """.format(dnds=round(data[data.annotation == "missense_variant"]["count"].sum() /
                                 data[data.annotation == "synonymous_variant"]["count"].sum(), 3)))
             ]
