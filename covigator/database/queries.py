@@ -15,7 +15,8 @@ from sqlalchemy.sql.sqltypes import NullType
 from covigator.database.model import Log, DataSource, CovigatorModule, SampleEna, JobEna, JobStatus, VariantObservation, \
     Gene, Variant, VariantCooccurrence, Conservation, JobGisaid, SampleGisaid, SubclonalVariantObservation, \
     PrecomputedVariantsPerSample, PrecomputedSubstitutionsCounts, PrecomputedIndelLength, VariantType, \
-    PrecomputedAnnotation, PrecomputedOccurrence, PrecomputedTableCounts, Sample, PrecomputedVariantAbundanceHistogram
+    PrecomputedAnnotation, PrecomputedOccurrence, PrecomputedTableCounts, Sample, PrecomputedVariantAbundanceHistogram, \
+    VARIANT_OBSERVATION_TABLE_NAME
 from covigator.exceptions import CovigatorQueryException, CovigatorDashboardMissingPrecomputedData
 
 SYNONYMOUS_VARIANT = "synonymous_variant"
@@ -512,15 +513,19 @@ class Queries:
         return top_occurring_variants.sort_values(by="frequency", ascending=False).head(top)
 
     def get_variant_counts_by_month(self, variant_id, source=None) -> pd.DataFrame:
-        query = self.session.query(
-            VariantObservation.variant_id,
-            func.date_trunc('month', VariantObservation.date).label("month"),
-            func.count().label("count"))\
-            .filter(and_(VariantObservation.variant_id == variant_id, VariantObservation.date.isnot(None)))
-        if source is not None:
-            query = query.filter(VariantObservation.source == source)
-        query = query.group_by(VariantObservation.variant_id, func.date_trunc('month', VariantObservation.date))
-        return pd.read_sql(query.statement, self.session.bind)
+
+        sql_query_ds_ena = """
+        select count(*) as count, variant_id, date_trunc('month', date::timestamp) as month 
+            from {variant_observation_table} 
+            where variant_id='{variant_id}' {source_filter}
+            group by variant_id, date_trunc('month', date::timestamp);
+            """.format(
+            variant_observation_table=VARIANT_OBSERVATION_TABLE_NAME,
+            variant_id=variant_id,
+            source_filter="and source='{source}'".format(source=source) if source is not None else ""
+        )
+        data = pd.read_sql_query(sql_query_ds_ena, self.session.bind)
+        return data[data.month is not None]
 
     def get_sample_counts_by_month(self, source=None) -> pd.DataFrame:
         counts_ena = None
