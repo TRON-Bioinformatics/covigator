@@ -27,10 +27,17 @@ drop table tmp_sample_v2;
 \copy job_gisaid_v12 from program 'gzip -dc job_gisaid_v12.csv.gz' csv header;
 
 -- precomputed data
-\copy precomputed_annotation_v2 from program 'gzip -dc precomputed_annotation_v14.csv.gz' csv header;
-\copy precomputed_indel_length_v2 from program 'gzip -dc precomputed_indel_length_v14.csv.gz' csv header;
-\copy precomputed_substitutions_counts_v2 from program 'gzip -dc precomputed_substitutions_counts_v14.csv.gz' csv header;
-\copy precomputed_variants_per_sample_v2 from program 'gzip -dc precomputed_variants_per_sample_v14.csv.gz' csv header;
-\copy precomputed_top_occurrence_v2 from program 'gzip -dc precomputed_top_occurrence_v14.csv.gz' csv header;
-\copy precomputed_table_counts_v14 from program 'gzip -dc precomputed_table_counts_v14.csv.gz' csv header;
-\copy precomputed_variant_abundance_histogram_v14 from program 'gzip -dc precomputed_variant_abundance_histogram_v14.csv.gz' csv header;
+delete from precomputed_annotation_v2;
+delete from precomputed_indel_length_v2;
+delete from precomputed_substitutions_counts_v2;
+delete from precomputed_variants_per_sample_v2;
+delete from precomputed_top_occurrence_v2;
+delete from precomputed_table_counts_v2;
+delete from precomputed_variant_abundance_histogram_v2;
+\copy precomputed_annotation_v2 from program 'gzip -dc /covigator/db_dump_v14_gisaid/precomputed_annotation_v14.csv.gz' csv header;
+\copy precomputed_indel_length_v2 from program 'gzip -dc /covigator/db_dump_v14_gisaid/precomputed_indel_length_v14.csv.gz' csv header;
+\copy precomputed_substitutions_counts_v2 from program 'gzip -dc /covigator/db_dump_v14_gisaid/precomputed_substitutions_counts_v14.csv.gz' csv header;
+\copy precomputed_variants_per_sample_v2 from program 'gzip -dc /covigator/db_dump_v14_gisaid/precomputed_variants_per_sample_v14.csv.gz' csv header;
+\copy precomputed_top_occurrence_v2 from program 'gzip -dc /covigator/db_dump_v14_gisaid/precomputed_top_occurrence_v14.csv.gz' csv header;
+\copy precomputed_table_counts_v2 from program 'gzip -dc /covigator/db_dump_v14_gisaid/precomputed_table_counts_v14.csv.gz' csv header;
+\copy precomputed_variant_abundance_histogram_v2 from program 'gzip -dc /covigator/db_dump_v14_gisaid/precomputed_variant_abundance_histogram_v14.csv.gz' csv header;
