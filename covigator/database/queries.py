@@ -442,7 +442,7 @@ class Queries:
                 .order_by(desc(Log.start)).first()
         return result2[0] if result2 is not None else result2
 
-    def get_top_occurring_variants(self, top, source):
+    def get_top_occurring_variants(self, top, source: str = None):
         query = self.session.query(
             VariantObservation.variant_id, VariantObservation.hgvs_p, VariantObservation.gene_name,
             VariantObservation.annotation_highest_impact, func.count().label('total')) \
@@ -455,7 +455,7 @@ class Queries:
         top_occurring_variants = pd.read_sql(query.statement, self.session.bind)
 
         # calculate frequency
-        count_samples = self.count_samples(source=source.name if source is not None else None)
+        count_samples = self.count_samples(source=source if source is not None else None)
         top_occurring_variants['frequency'] = top_occurring_variants.total.transform(
             lambda x: round(float(x) / count_samples, 3))
 
