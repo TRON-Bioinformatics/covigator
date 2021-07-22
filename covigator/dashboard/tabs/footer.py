@@ -4,7 +4,7 @@ import covigator
 
 
 def get_footer():
-    tron_logo = "/assets/tron_logo.png"
+    tron_logo = "/assets/tron_logo_no_bg.png"
     return html.Footer(
         [
             html.Br(),
