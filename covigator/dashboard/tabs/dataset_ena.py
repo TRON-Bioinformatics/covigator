@@ -38,12 +38,11 @@ def get_tab_dataset_ena(queries: Queries):
         dbc.CardBody(
             children=[
                 dcc.Markdown("""
-                            The ENA dataset was downloaded using the API https://www.ebi.ac.uk/ena/portal/api/.
-                            Metadata was downloaded from the API and the FASTQ files with the raw reads were 
-                            downloaded from the provided URLs for each sample. 
-                            FASTQ files were MD5 checked after download.
-                            All samples were the host was not human were excluded.
-                            """, style={"font-size": 16}),
+                The ENA dataset and its metadata was downloaded using the ENA Portal API 
+                (https://www.ebi.ac.uk/ena/portal/api/). FASTQ files containing the raw reads were downloaded from the
+                 provided URLs for each sample. FASTQ files were MD5 checked after download. 
+                 All non-human host samples were excluded.
+                 """, style={"font-size": 16}),
                 html.Br(),
                 html.Div(
                     html.Span(
@@ -93,7 +92,7 @@ def get_dataset_ena_tab_graphs(queries: Queries):
 def get_plot_library_strategies(queries: Queries):
     data = get_data_library_strategies(queries)
     fig = px.bar(data_frame=data, x="library_strategy", y="count", color="library_layout",
-                 color_discrete_map=LIBRARY_LAYOUT_COLOR_MAP)
+                 color_discrete_map=LIBRARY_LAYOUT_COLOR_MAP, barmode="group")
     fig.update_layout(
         margin=MARGIN,
         template=TEMPLATE,
@@ -176,7 +175,7 @@ def get_scatter_with_marginals(data, x, y, x_title, y_title):
                'domain': [0, 0.85], 'showgrid': True, 'zeroline': False, 'type': 'log'},
         xaxis={'title': x_title,
                'domain': [0, 0.85], 'showgrid': True, 'zeroline': False, 'type': 'log'},
-        legend={'title': None},
+        legend={'title': None, 'itemsizing': 'constant'},
         bargap=0,
         xaxis2={'domain': [0.85, 1], 'showgrid': False, 'zeroline': False, 'visible': False, 'showticklabels': False},
         yaxis2={'domain': [0.85, 1], 'showgrid': False, 'zeroline': False, 'visible': False, 'showticklabels': False},
@@ -228,7 +227,7 @@ def get_plot_qualities(queries: Queries):
     return [
         dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
         dcc.Markdown("""
-        **Mean mapping quality and Base call quality**
+        **Mean mapping quality (MQ) and Base Call Quality (BCQ)**
         
         Samples covering with either mapping quality < 10 or base call quality < 10 are excluded
         """)

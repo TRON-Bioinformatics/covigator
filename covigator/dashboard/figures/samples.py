@@ -15,10 +15,10 @@ from covigator.database.model import VariantType, DataSource
 
 
 INDEL_TYPE_COLOR_MAP = {
-    "INSERTION_INFRAME": "#fc8d62",
-    "DELETION_INFRAME": "#66c2a5",
-    "INSERTION_FRAMESHIFT": "#fdc4ad",
-    "DELETION_FRAMESHIFT": "#9dd8c5",
+    "INSERTION_INFRAME": "#ee6002",
+    "DELETION_INFRAME": "#09af00",
+    "INSERTION_FRAMESHIFT": "#ffddb0",
+    "DELETION_FRAMESHIFT": "#defabb",
 }
 
 
@@ -88,7 +88,8 @@ class SampleFigures(Figures):
             fig.update_layout(
                 margin=go.layout.Margin(l=0, r=40, b=0, t=30),  # we need some extra space for some labels overflowing
                 template=TEMPLATE,
-                showlegend=False,
+                legend={'title': None, 'yanchor': "bottom", 'y': 0.01, 'xanchor': "right", 'x': 0.99},
+                showlegend=True,
                 yaxis={'title': None, 'autorange': 'reversed'},
                 xaxis={'title': "num. samples"},
                 uniformtext_mode='show',

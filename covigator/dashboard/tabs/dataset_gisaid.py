@@ -80,7 +80,7 @@ def get_plot_coverage(queries: Queries):
         margin=MARGIN,
         template=TEMPLATE,
         yaxis={'title': "Num. of samples"},
-        xaxis={'title': None},
+        xaxis={'title': "Horizontal coverage (%)"},
         legend={'title': None}
     )
     return [
@@ -109,7 +109,7 @@ def get_plot_bad_bases_ratio(queries: Queries, count_samples):
         margin=MARGIN,
         template=TEMPLATE,
         yaxis={'title': "Num. of samples"},
-        xaxis={'title': None},
+        xaxis={'title': "Ratio of N and ambiguous bases (%)"},
         legend={'title': None}
     )
 
