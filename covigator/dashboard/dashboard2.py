@@ -1,4 +1,5 @@
 import dash
+import dash_core_components as dcc
 import dash_bootstrap_components as dbc
 import dash_html_components as html
 from sqlalchemy.orm import Session
@@ -46,7 +47,7 @@ class Dashboard:
                     active_tab="overview",
                     card=True,
                 )),
-            dbc.CardBody(html.Div(id="content")),
+            dbc.CardBody(dcc.Loading(id="loading-1", children=[html.Div(id="content")], type="default")),
             dbc.CardFooter(footer)
         ])
         return layout

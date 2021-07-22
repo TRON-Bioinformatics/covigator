@@ -26,6 +26,7 @@ LIBRARY_LAYOUT_COLOR_MAP = {
 }
 
 
+@functools.lru_cache()
 def get_tab_dataset_ena(queries: Queries):
 
     count_samples = queries.count_samples(source=DataSource.ENA.name)
@@ -111,7 +112,6 @@ def get_plot_library_strategies(queries: Queries):
     ]
 
 
-@functools.lru_cache()
 def get_data_library_strategies(queries):
     sql_query = """
     select count(*) as count, library_strategy, library_layout
@@ -144,7 +144,6 @@ def get_plot_number_reads(queries: Queries):
     ]
 
 
-@functools.lru_cache()
 def get_data_number_reads(queries):
     sql_query = """
     select s.run_accession as run_accession, j.num_reads as num_reads_after, s.read_count as num_reads_before, s.library_strategy
@@ -207,7 +206,6 @@ def get_plot_coverage(queries: Queries):
     ]
 
 
-@functools.lru_cache()
 def get_data_coverage(queries):
     sql_query = """
     select s.run_accession, s.library_strategy, j.coverage, j.mean_depth
@@ -237,7 +235,6 @@ def get_plot_qualities(queries: Queries):
     ]
 
 
-@functools.lru_cache()
 def get_data_qualities(queries):
     sql_query = """
     select s.run_accession, s.library_strategy, j.mean_mapping_quality, j.mean_base_quality
@@ -270,7 +267,6 @@ def get_plot_clonal_variants(queries: Queries):
     ]
 
 
-@functools.lru_cache()
 def get_data_clonal_variants(queries):
     sql_query = """
     select variant_id, vaf, dp, variant_type
