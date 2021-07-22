@@ -3,8 +3,7 @@ import dash_bootstrap_components as dbc
 import dash_html_components as html
 from covigator.dashboard.figures import VARIANT_TYPE_COLOR_MAP
 from covigator.dashboard.figures.figures import PLOTLY_CONFIG, MARGIN, TEMPLATE
-from covigator.dashboard.tabs import TAB_STYLE, TAB_SELECTED_STYLE, get_mini_container, COLOR_OVERVIEW_MINI_CONTAINER, \
-    print_number, print_date
+from covigator.dashboard.tabs import get_mini_container, print_number, print_date
 from covigator.database.model import DataSource, SAMPLE_ENA_TABLE_NAME, JOB_ENA_TABLE_NAME, \
     VARIANT_OBSERVATION_TABLE_NAME
 from covigator.database.queries import Queries
@@ -42,28 +41,29 @@ def get_tab_dataset_ena(queries: Queries):
                             FASTQ files were MD5 checked after download.
                             All samples were the host was not human were excluded.
                             """, style={"font-size": 16}),
-                html.Div(className="row flex-display", children=[
-                    get_mini_container(
-                        title="Samples",
-                        value=print_number(count_samples),
-                        color=COLOR_OVERVIEW_MINI_CONTAINER
-                    ),
-                    get_mini_container(
-                        title="Variant calls",
-                        value=print_number(count_variants),
-                        color=COLOR_OVERVIEW_MINI_CONTAINER
-                    ),
-                    get_mini_container(
-                        title="First sample",
-                        value=print_date(date_of_first_sample),
-                        color=COLOR_OVERVIEW_MINI_CONTAINER
-                    ),
-                    get_mini_container(
-                        title="Latest sample",
-                        value=print_date(date_of_most_recent_sample),
-                        color=COLOR_OVERVIEW_MINI_CONTAINER
+                html.Br(),
+                html.Div(
+                    html.Span(
+                        children=[
+                            get_mini_container(
+                                title="Samples",
+                                value=print_number(count_samples)
+                            ),
+                            get_mini_container(
+                                title="Variant calls",
+                                value=print_number(count_variants)
+                            ),
+                            get_mini_container(
+                                title="First sample",
+                                value=print_date(date_of_first_sample)
+                            ),
+                            get_mini_container(
+                                title="Latest sample",
+                                value=print_date(date_of_most_recent_sample)
+                            )
+                        ]
                     )
-                ]),
+                ),
                 get_dataset_ena_tab_graphs(queries)
             ]
         ))

@@ -6,7 +6,7 @@ import dash_table
 from dash.dependencies import Output, Input
 from sqlalchemy.orm import Session
 from covigator.dashboard.figures.variants import VariantsFigures
-from covigator.dashboard.tabs import TAB_STYLE, TAB_SELECTED_STYLE, MONTH_PATTERN
+from covigator.dashboard.tabs import MONTH_PATTERN
 from covigator.database.model import DataSource
 from covigator.database.queries import Queries
 

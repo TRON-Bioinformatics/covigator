@@ -2,7 +2,7 @@ import dash_core_components as dcc
 import dash_bootstrap_components as dbc
 import dash_html_components as html
 
-from covigator.dashboard.tabs import get_mini_container, COLOR_OVERVIEW_MINI_CONTAINER, print_number
+from covigator.dashboard.tabs import get_mini_container, print_number
 from covigator.database.queries import Queries
 
 
@@ -31,25 +31,24 @@ def get_tab_overview(queries: Queries):
                        * European Nucleotide Archive (ENA) providing raw reads in FASTQ format
                        * Global Initiative on Sharing Avian Influenza Data (GISAID) providing assemblies in FASTA format
                        """),
+                   html.Br(),
                    html.Div(
-                       className="row flex-display",
-                       children=[
-                       get_mini_container(
-                           title="Samples",
-                           value=print_number(count_samples),
-                           color=COLOR_OVERVIEW_MINI_CONTAINER
-                       ),
-                       get_mini_container(
-                           title="Countries",
-                           value=print_number(count_countries),
-                           color=COLOR_OVERVIEW_MINI_CONTAINER
-                       ),
-                       get_mini_container(
-                           title="Mutations",
-                           value=print_number(count_variants),
-                           color=COLOR_OVERVIEW_MINI_CONTAINER
-                       )
-                   ]),
+                       html.Span(
+                           children=[
+                               get_mini_container(
+                                   title="Samples",
+                                   value=print_number(count_samples)
+                               ),
+                               get_mini_container(
+                                   title="Countries",
+                                   value=print_number(count_countries)
+                               ),
+                               get_mini_container(
+                                   title="Mutations",
+                                   value=print_number(count_variants)
+                               )
+                       ])
+                   ),
                    html.Br(),
                    html.P("If you want to cite us:"),
                    html.P([

@@ -4,7 +4,6 @@ import dash_html_components as html
 from dash.dependencies import Output, Input
 from sqlalchemy.orm import Session
 from covigator.dashboard.figures.samples import SampleFigures
-from covigator.dashboard.tabs import TAB_STYLE, TAB_SELECTED_STYLE
 from covigator.database.model import DataSource, VariantType
 from covigator.database.queries import Queries
 

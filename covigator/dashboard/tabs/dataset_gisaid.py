@@ -4,9 +4,8 @@ import dash_html_components as html
 import plotly
 
 from covigator.dashboard.figures.figures import PLOTLY_CONFIG, MARGIN, TEMPLATE
-from covigator.dashboard.tabs import TAB_STYLE, TAB_SELECTED_STYLE, get_mini_container, COLOR_OVERVIEW_MINI_CONTAINER, \
-    print_number, print_date
-from covigator.database.model import DataSource, VariantType, SAMPLE_GISAID_TABLE_NAME
+from covigator.dashboard.tabs import get_mini_container, print_number, print_date
+from covigator.database.model import DataSource, SAMPLE_GISAID_TABLE_NAME
 from covigator.database.queries import Queries
 import pandas as pd
 import plotly.express as px
@@ -27,24 +26,24 @@ def get_tab_dataset_gisaid(queries: Queries):
                     DNA assemblies and metadata were matched together and variant calling was done after performing 
                     a global alignment to the reference genome.
                     """, style={"font-size": 16}),
-                html.Div(className="row flex-display", children=[
-                    get_mini_container(
-                        title="Samples",
-                        value=print_number(count_samples),
-                        color=COLOR_OVERVIEW_MINI_CONTAINER),
-                    get_mini_container(
-                        title="Variant calls",
-                        value=print_number(count_variants),
-                        color=COLOR_OVERVIEW_MINI_CONTAINER),
-                    get_mini_container(
-                        title="First sample",
-                        value=print_date(date_of_first_gisaid_sample),
-                        color=COLOR_OVERVIEW_MINI_CONTAINER),
-                    get_mini_container(
-                        title="Latest sample",
-                        value=print_date(date_of_most_recent_gisaid_sample),
-                        color=COLOR_OVERVIEW_MINI_CONTAINER)
-                    ]),
+                html.Br(),
+                html.Div(
+                    html.Span(
+                        children=[
+                            get_mini_container(
+                                title="Samples",
+                                value=print_number(count_samples)),
+                            get_mini_container(
+                                title="Variant calls",
+                                value=print_number(count_variants)),
+                            get_mini_container(
+                                title="First sample",
+                                value=print_date(date_of_first_gisaid_sample)),
+                            get_mini_container(
+                                title="Latest sample",
+                                value=print_date(date_of_most_recent_gisaid_sample))
+                            ])
+                ),
                 get_dataset_gisaid_tab_graphs(queries=queries, count_samples=count_samples)
         ])
     )
