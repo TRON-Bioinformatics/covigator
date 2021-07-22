@@ -1,9 +1,11 @@
+import functools
+
 import dash_core_components as dcc
+import dash_bootstrap_components as dbc
 import dash_html_components as html
 from dash.dependencies import Output, Input
 from sqlalchemy.orm import Session
 from covigator.dashboard.figures.samples import SampleFigures
-from covigator.dashboard.tabs import TAB_STYLE, TAB_SELECTED_STYLE
 from covigator.database.model import DataSource, VariantType
 from covigator.database.queries import Queries
 
@@ -20,21 +22,14 @@ ID_DROPDOWN_VARIANT_TYPE = 'dropdown-variant-type'
 ID_ACCUMULATED_SAMPLES_GRAPH = 'accumulated-samples-per-country'
 
 
+@functools.lru_cache()
 def get_tab_samples(queries: Queries):
-    return dcc.Tab(
-        label="Samples",
-        style=TAB_STYLE,
-        selected_style=TAB_SELECTED_STYLE,
-        children=[
-            html.Div(
-                id='ena-samples-body',
-                className="row container-display",
-                style={'overflow': 'scroll'}, # 'top': 0, 'bottom': 0, position: fixed
-                children=[
-                    get_samples_tab_left_bar(queries),
-                    get_samples_tab_graphs()
-                ])
-        ]
+    return dbc.Card(
+        dbc.CardBody(
+            children=[
+                get_samples_tab_left_bar(queries),
+                get_samples_tab_graphs()
+        ])
     )
 
 
@@ -50,7 +45,6 @@ def get_samples_tab_graphs():
                 html.Div(id=ID_VARIANTS_PER_SAMPLE_GRAPH, className="five columns"),
                 html.Div(id=ID_SUBSTITUTIONS_GRAPH, className="five columns"),
             ]),
-            #html.Br(),
             html.Div(children=[
                 html.Div(id=ID_INDEL_LENGTH_GRAPH, className="five columns"),
                 html.Div(id=ID_ANNOTATIONS_GRAPH, className="five columns"),
@@ -125,6 +119,7 @@ def set_callbacks_samples_tab(app, session: Session):
         Input(ID_DROPDOWN_DATA_SOURCE, 'value'),
         Input(ID_DROPDOWN_COUNTRY, 'value'),
         Input(ID_SLIDER_MIN_SAMPLES, 'value'),
+        suppress_callback_exceptions=True
     )
     def update_accumulated_samples_by_country(data_source, countries, min_samples):
         return html.Div(children=figures.get_accumulated_samples_by_country_plot(
@@ -134,7 +129,8 @@ def set_callbacks_samples_tab(app, session: Session):
         Output(ID_VARIANTS_PER_SAMPLE_GRAPH, 'children'),
         Input(ID_DROPDOWN_DATA_SOURCE, 'value'),
         Input(ID_DROPDOWN_GENE, 'value'),
-        Input(ID_DROPDOWN_VARIANT_TYPE, 'value')
+        Input(ID_DROPDOWN_VARIANT_TYPE, 'value'),
+        suppress_callback_exceptions=True
     )
     def update_variants_per_sample(data_source, genes, variant_types):
         return html.Div(children=figures.get_variants_per_sample_plot(
@@ -144,7 +140,8 @@ def set_callbacks_samples_tab(app, session: Session):
         Output(ID_SUBSTITUTIONS_GRAPH, 'children'),
         Input(ID_DROPDOWN_DATA_SOURCE, 'value'),
         Input(ID_DROPDOWN_GENE, 'value'),
-        Input(ID_DROPDOWN_VARIANT_TYPE, 'value')
+        Input(ID_DROPDOWN_VARIANT_TYPE, 'value'),
+        suppress_callback_exceptions=True
     )
     def update_substitutions(data_source, genes, variant_types):
         return html.Div(children=figures.get_substitutions_plot(
@@ -154,6 +151,7 @@ def set_callbacks_samples_tab(app, session: Session):
         Output(ID_INDEL_LENGTH_GRAPH, 'children'),
         Input(ID_DROPDOWN_DATA_SOURCE, 'value'),
         Input(ID_DROPDOWN_GENE, 'value'),
+        suppress_callback_exceptions=True
     )
     def update_indel_lengths(data_source, genes):
         return html.Div(children=figures.get_indels_lengths_plot(data_source=data_source, genes=genes))
@@ -162,6 +160,7 @@ def set_callbacks_samples_tab(app, session: Session):
         Output(ID_ANNOTATIONS_GRAPH, 'children'),
         Input(ID_DROPDOWN_DATA_SOURCE, 'value'),
         Input(ID_DROPDOWN_GENE, 'value'),
+        suppress_callback_exceptions=True
     )
     def update_annotation(data_source, genes):
         return html.Div(children=figures.get_annotations_plot(data_source=data_source, genes=genes))

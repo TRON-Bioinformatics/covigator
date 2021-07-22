@@ -11,14 +11,14 @@ import plotly.express as px
 import plotly.graph_objects as go
 import dash_core_components as dcc
 
-from covigator.database.model import VariantType, DataSource
+from covigator.database.model import DataSource
 
 
 INDEL_TYPE_COLOR_MAP = {
-    "INSERTION_INFRAME": "#fc8d62",
-    "DELETION_INFRAME": "#66c2a5",
-    "INSERTION_FRAMESHIFT": "#fdc4ad",
-    "DELETION_FRAMESHIFT": "#9dd8c5",
+    "INSERTION_INFRAME": "#ee6002",
+    "DELETION_INFRAME": "#09af00",
+    "INSERTION_FRAMESHIFT": "#ffddb0",
+    "DELETION_FRAMESHIFT": "#defabb",
 }
 
 
@@ -43,7 +43,7 @@ class SampleFigures(Figures):
                 dcc.Markdown("""
                 **Most common mutation effects**
                 
-                *Ratio of non synonymous to synonymous SNVs (dN/dS): {dnds}*
+                *Ratio of non synonymous to synonymous SNVs (N/S): {dnds}*
                 """.format(dnds=round(data[data.annotation == "missense_variant"]["count"].sum() /
                                 data[data.annotation == "synonymous_variant"]["count"].sum(), 3)))
             ]
@@ -88,7 +88,8 @@ class SampleFigures(Figures):
             fig.update_layout(
                 margin=go.layout.Margin(l=0, r=40, b=0, t=30),  # we need some extra space for some labels overflowing
                 template=TEMPLATE,
-                showlegend=False,
+                legend={'title': None, 'yanchor': "bottom", 'y': 0.01, 'xanchor': "right", 'x': 0.99},
+                showlegend=True,
                 yaxis={'title': None, 'autorange': 'reversed'},
                 xaxis={'title': "num. samples"},
                 uniformtext_mode='show',
@@ -132,8 +133,10 @@ class SampleFigures(Figures):
         return graph
 
     def get_accumulated_samples_by_country_plot(self, data_source: DataSource = None, countries=None, min_samples=1000):
+        logger.info("start query")
         data = self.queries.get_accumulated_samples_by_country(
             data_source=data_source, countries=countries, min_samples=min_samples)
+        logger.info("finished query")
         graph = dcc.Markdown("""**No data for the current selection**""")
         if data is not None and data.shape[0] > 0:
             countries = list(data.sort_values("cumsum", ascending=False).country.unique())

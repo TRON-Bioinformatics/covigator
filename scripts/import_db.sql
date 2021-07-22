@@ -13,7 +13,7 @@ INSERT INTO sample_v2 SELECT * FROM tmp_sample_v2 ON CONFLICT DO NOTHING;
 drop table tmp_sample_v2;
 
 \copy sample_ena_v13 from program 'gzip -dc sample_ena_v11.csv.gz' csv header;
-\copy sample_gisaid_v13(run_accession, date, host_tax_id, host, country_raw, region, country, country_alpha_2, country_alpha_3, continent, continent_alpha_2, site, site2, sequence_length, count_n_bases, count_ambiguous_bases, count_snvs, count_insertions, count_deletions) from program 'gzip -dc sample_gisaid_v12.csv.gz' csv header;
+\copy sample_gisaid_v13(run_accession, date, host_tax_id, host, country_raw, region, country, country_alpha_2, country_alpha_3, continent, continent_alpha_2, site, site2, sequence_length, count_n_bases, count_ambiguous_bases, count_snvs, count_insertions, count_deletions, finished) from program 'gzip -dc sample_gisaid_v12.csv.gz' csv header;
 
 \copy sample_v13 from program 'gzip -dc sample_v11.csv.gz' csv header;
 \copy sample_v13 from program 'gzip -dc sample_v12.csv.gz' csv header;
@@ -27,8 +27,17 @@ drop table tmp_sample_v2;
 \copy job_gisaid_v12 from program 'gzip -dc job_gisaid_v12.csv.gz' csv header;
 
 -- precomputed data
-\copy precomputed_annotation_v2 from program 'gzip -dc precomputed_annotation_v14.csv.gz' csv header;
-\copy precomputed_indel_length_v2 from program 'gzip -dc precomputed_indel_length_v14.csv.gz' csv header;
-\copy precomputed_substitutions_counts_v2 from program 'gzip -dc precomputed_substitutions_counts_v14.csv.gz' csv header;
-\copy precomputed_variants_per_sample_v2 from program 'gzip -dc precomputed_variants_per_sample_v14.csv.gz' csv header;
-\copy precomputed_top_occurrence_v2 from program 'gzip -dc precomputed_top_occurrence_v14.csv.gz' csv header;
+delete from precomputed_annotation_v2;
+delete from precomputed_indel_length_v2;
+delete from precomputed_substitutions_counts_v2;
+delete from precomputed_variants_per_sample_v2;
+delete from precomputed_top_occurrence_v2;
+delete from precomputed_table_counts_v2;
+delete from precomputed_variant_abundance_histogram_v2;
+\copy precomputed_annotation_v2 from program 'gzip -dc /covigator/db_dump_v14_gisaid/precomputed_annotation_v14.csv.gz' csv header;
+\copy precomputed_indel_length_v2 from program 'gzip -dc /covigator/db_dump_v14_gisaid/precomputed_indel_length_v14.csv.gz' csv header;
+\copy precomputed_substitutions_counts_v2 from program 'gzip -dc /covigator/db_dump_v14_gisaid/precomputed_substitutions_counts_v14.csv.gz' csv header;
+\copy precomputed_variants_per_sample_v2 from program 'gzip -dc /covigator/db_dump_v14_gisaid/precomputed_variants_per_sample_v14.csv.gz' csv header;
+\copy precomputed_top_occurrence_v2 from program 'gzip -dc /covigator/db_dump_v14_gisaid/precomputed_top_occurrence_v14.csv.gz' csv header;
+\copy precomputed_table_counts_v2 from program 'gzip -dc /covigator/db_dump_v14_gisaid/precomputed_table_counts_v14.csv.gz' csv header;
+\copy precomputed_variant_abundance_histogram_v2 from program 'gzip -dc /covigator/db_dump_v14_gisaid/precomputed_variant_abundance_histogram_v14.csv.gz' csv header;

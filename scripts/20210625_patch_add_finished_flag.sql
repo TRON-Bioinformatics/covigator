@@ -8,5 +8,6 @@ update sample_gisaid_v13 set finished=True where run_accession in (select run_ac
 update sample_ena_v13 set finished=True where run_accession in (select run_accession from job_ena_v13 where status='FINISHED');
 
 CREATE INDEX ON sample_gisaid_v13(date, country, finished);
-CREATE INDEX ON sample_ena_v13(first_created, country, finished);
-CREATE INDEX ON sample_ena_v13(first_created, country);
+CREATE INDEX ON sample_gisaid_v13(date, country);
+CREATE INDEX ON sample_ena_v13(collection_date, country, finished);
+CREATE INDEX ON sample_ena_v13(collection_date, country);

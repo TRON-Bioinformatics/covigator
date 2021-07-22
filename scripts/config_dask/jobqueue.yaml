@@ -10,7 +10,7 @@ jobqueue:
 
      #interface: null             # Network interface to use like eth0 or ib0
      #death-timeout: 60           # Number of seconds to wait if a worker can not find a scheduler
-     #local-directory: "/flash/projects/covigator/dask"       # Location of fast local storage like /scratch or $TMPDIR
+     #local-directory: "/covigator/dask"       # Location of fast local storage like /scratch or $TMPDIR
      #extra: []
 
      # SLURM resource manager options
@@ -21,8 +21,8 @@ jobqueue:
      #env-extra: []
      #job-cpu: null
      #job-mem: null
-     #job-extra: ["-A priesgof"]
-     #log-directory: "/code/covigator-0.1.0/logs"
+     #job-extra: [""]
+     #log-directory: "/covigator/logs"
    #
      # Scheduler options
      #scheduler-options: {}

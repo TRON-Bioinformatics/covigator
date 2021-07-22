@@ -1,16 +1,19 @@
+import functools
+
 import dash_core_components as dcc
+import dash_bootstrap_components as dbc
 import dash_html_components as html
 import plotly
 
 from covigator.dashboard.figures.figures import PLOTLY_CONFIG, MARGIN, TEMPLATE
-from covigator.dashboard.tabs import TAB_STYLE, TAB_SELECTED_STYLE, get_mini_container, COLOR_OVERVIEW_MINI_CONTAINER, \
-    print_number, print_date
-from covigator.database.model import DataSource, VariantType, SAMPLE_GISAID_TABLE_NAME
+from covigator.dashboard.tabs import get_mini_container, print_number, print_date
+from covigator.database.model import DataSource, SAMPLE_GISAID_TABLE_NAME
 from covigator.database.queries import Queries
 import pandas as pd
 import plotly.express as px
 
 
+@functools.lru_cache()
 def get_tab_dataset_gisaid(queries: Queries):
 
     count_samples = queries.count_samples(source=DataSource.GISAID.name)
@@ -18,44 +21,34 @@ def get_tab_dataset_gisaid(queries: Queries):
     date_of_first_gisaid_sample = queries.get_date_of_first_sample(source=DataSource.GISAID)
     date_of_most_recent_gisaid_sample = queries.get_date_of_most_recent_sample(source=DataSource.GISAID)
 
-    return dcc.Tab(
-        label="GISAID dataset",
-        style=TAB_STYLE,
-        selected_style=TAB_SELECTED_STYLE,
-        children=[
-            html.Div(id="something-gisaid", children=[
-                html.Div(className="one columns", children=[html.Br()]),
-                html.Div(className="nine columns", children=[
-                    html.Br(),
-                    dcc.Markdown("""
-                        The GISAID dataset was manually downloaded from the site https://www.gisaid.org/.
-                        DNA assemblies and metadata were matched together and variant calling was done after performing 
-                        a global alignment to the reference genome.
-                        """, style={"font-size": 16}),
-                    get_dataset_gisaid_tab_graphs(queries=queries, count_samples=count_samples)
-                ]),
-                html.Div(className="one columns", children=[html.Br()]),
-                html.Div(className="one columns", children=[
-                    html.Br(),
-                    get_mini_container(
-                        title="Samples",
-                        value=print_number(count_samples),
-                        color=COLOR_OVERVIEW_MINI_CONTAINER),
-                    get_mini_container(
-                        title="Variant calls",
-                        value=print_number(count_variants),
-                        color=COLOR_OVERVIEW_MINI_CONTAINER),
-                    get_mini_container(
-                        title="First sample",
-                        value=print_date(date_of_first_gisaid_sample),
-                        color=COLOR_OVERVIEW_MINI_CONTAINER),
-                    get_mini_container(
-                        title="Latest sample",
-                        value=print_date(date_of_most_recent_gisaid_sample),
-                        color=COLOR_OVERVIEW_MINI_CONTAINER)
-                ])
-            ]),
-        ]
+    return dbc.Card(
+        dbc.CardBody(
+            children=[
+                dcc.Markdown("""
+                    The GISAID dataset was manually downloaded from the site https://www.gisaid.org/.
+                    DNA assemblies and metadata were matched together and variant calling was done after performing 
+                    a global alignment to the reference genome.
+                    """, style={"font-size": 16}),
+                html.Br(),
+                html.Div(
+                    html.Span(
+                        children=[
+                            get_mini_container(
+                                title="Samples",
+                                value=print_number(count_samples)),
+                            get_mini_container(
+                                title="Variant calls",
+                                value=print_number(count_variants)),
+                            get_mini_container(
+                                title="First sample",
+                                value=print_date(date_of_first_gisaid_sample)),
+                            get_mini_container(
+                                title="Latest sample",
+                                value=print_date(date_of_most_recent_gisaid_sample))
+                            ])
+                ),
+                get_dataset_gisaid_tab_graphs(queries=queries, count_samples=count_samples)
+        ])
     )
 
 
@@ -87,7 +80,7 @@ def get_plot_coverage(queries: Queries):
         margin=MARGIN,
         template=TEMPLATE,
         yaxis={'title': "Num. of samples"},
-        xaxis={'title': None},
+        xaxis={'title': "Horizontal coverage (%)"},
         legend={'title': None}
     )
     return [
@@ -116,7 +109,7 @@ def get_plot_bad_bases_ratio(queries: Queries, count_samples):
         margin=MARGIN,
         template=TEMPLATE,
         yaxis={'title': "Num. of samples"},
-        xaxis={'title': None},
+        xaxis={'title': "Ratio of N and ambiguous bases (%)"},
         legend={'title': None}
     )
 

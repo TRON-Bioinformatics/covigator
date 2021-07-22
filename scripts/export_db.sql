@@ -10,7 +10,7 @@
 -- this is exporting the GISAID related tables
 \copy sample_v12 to program 'gzip > sample_v12.csv.gz' csv header;
 -- in this table we need to specifiy the columns to avoid exporting the table with the sequences which is large
-\copy sample_gisaid_v12(run_accession, date, host_tax_id, host, country_raw, region, country, country_alpha_2, country_alpha_3, continent, continent_alpha_2, site, site2, sequence_length, count_n_bases, count_ambiguous_bases, count_snvs, count_insertions, count_deletions) to program 'gzip > sample_gisaid_v12.csv.gz' csv header;
+\copy sample_gisaid_v12(run_accession, date, host_tax_id, host, country_raw, region, country, country_alpha_2, country_alpha_3, continent, continent_alpha_2, site, site2, sequence_length, count_n_bases, count_ambiguous_bases, count_snvs, count_insertions, count_deletions, finished) to program 'gzip > sample_gisaid_v12.csv.gz' csv header;
 \copy job_gisaid_v12 to program 'gzip > job_gisaid_v12.csv.gz' csv header;
 \copy variant_observation_v11 to program 'gzip > variant_observation_v11.csv.gz' csv header;
 \copy variant_v12 to program 'gzip > variant_v12.csv.gz' csv header;
@@ -25,6 +25,9 @@
 \copy precomputed_substitutions_counts_v14 to program 'gzip > precomputed_substitutions_counts_v14.csv.gz' csv header;
 \copy precomputed_variants_per_sample_v14 to program 'gzip > precomputed_variants_per_sample_v14.csv.gz' csv header;
 \copy precomputed_top_occurrence_v14 to program 'gzip > precomputed_top_occurrence_v14.csv.gz' csv header;
+\copy precomputed_table_counts_v14 to program 'gzip > precomputed_table_counts_v14.csv.gz' csv header;
+\copy precomputed_variant_abundance_histogram_v14 to program 'gzip > precomputed_variant_abundance_histogram_v14.csv.gz' csv header;
+
 
 
 

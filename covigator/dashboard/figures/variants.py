@@ -7,6 +7,7 @@ from covigator.dashboard.figures.figures import Figures, PLOTLY_CONFIG, TEMPLATE
 import plotly
 import plotly.express as px
 import plotly.graph_objects as go
+import dash_html_components as html
 import dash_core_components as dcc
 from covigator.database.model import Gene
 
@@ -553,53 +554,37 @@ class VariantsFigures(Figures):
         data = self.queries.get_mds(
             gene_name=gene_name, min_cooccurrence=min_cooccurrence, min_samples=min_samples)
 
-        traces = []
-        shapes = []
-        selected_variants = [v.get("dna_mutation") for v in (selected_variants if selected_variants else [])]
-        selected_data = data[data.variant_id.isin(selected_variants if selected_variants else [])]
-        for cluster, color in zip(data.cluster.unique(), cycle(plotly.express.colors.qualitative.Alphabet)):
-            traces.append(go.Scatter(
-                x=data[data.cluster == cluster].PC1,
-                y=data[data.cluster == cluster].PC2,
-                mode='markers',
-                showlegend=True,
-                name="Cluster {}".format(cluster) if cluster != -1 else "Unclustered",
-                text=data[data.cluster == cluster].tooltip,
-                hovertemplate='%{text}',
-                marker=dict(color=color, symbol="circle", size=7, opacity=0.8) if cluster != -1 else dict(
-                    color="grey", symbol="cross-thin-open", size=4, opacity=0.6)))
-            if selected_data[selected_data.cluster == cluster].shape[0] > 0:
-                traces.append(go.Scatter(
-                    x=selected_data[selected_data.cluster == cluster].PC1,
-                    y=selected_data[selected_data.cluster == cluster].PC2,
-                    mode='markers',
-                    showlegend=True,
-                    name="Selected variants",
-                    text=selected_data[selected_data.cluster == cluster].variant_id,
-                    hovertemplate='%{text}',
-                    marker=dict(color=color, symbol="circle", size=13, opacity=1.0) if cluster != -1 else dict(
-                        color="grey", symbol="cross-thin-open", size=10, opacity=1.0)))
+        tables = []
+        for c in data.cluster.unique():
+            tables.append(dash_table.DataTable(
+                id="cluster{}-variants-table".format(c),
+                data=data[data.cluster == c].to_dict('records'),
+                columns=[
+                    {"name": [
+                        "Cluster {} (mean Jaccard={})".format(c, data[data.cluster == c].cluster_jaccard_mean.iloc[0]),
+                        "DNA mutation"], "id": "variant_id"},
+                    {"name": ["", "Protein mutation"], "id": "hgvs_p"},
+                ],
+                fixed_columns={'headers': True, 'data': 1},
+                style_table={'overflowX': 'auto'},
+                style_cell={'minWidth': '50px', 'width': '50px', 'maxWidth': '50px'},
+                style_as_list_view=True,
+                style_header={
+                    'backgroundColor': 'rgb(230, 230, 230)',
+                    'fontWeight': 'bold'
+                },
+                sort_by=[{"column_id": "variant_id", "direction": "asc"}],
+            ))
+            tables.append(html.Br())
 
-        fig = go.Figure(
-            data=traces,
-            layout=go.Layout(
-                template=TEMPLATE,
-                margin=MARGIN,
-                height=700,
-                yaxis=dict(visible=True, tickfont={"size": 10}, showgrid=True, title="PC2"),
-                xaxis=dict(visible=True, tickfont={"size": 10}, showgrid=True, title="PC1"),
-                shapes=shapes
-            )
-        )
         return [
-            dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
+            html.Div(children=tables),
             dcc.Markdown("""
-            ***Variant clustering*** *plots the variants after applying a Multi Dimensional Scaling on the
+            ***Co-occurrence clustering*** *shows the resulting clusters from the
             co-occurrence matrix with the Jaccard index corrected with the Cohen's kappa coefficient. 
             The co-occurrence matrix is built taking into account only variants with at least {} pairwise 
-            co-occurrences and if a gene is provided only variants within that gene. 
-            Only the first two dimensions are plotted. 
-            Clustering is performed on the same co-occurrence matrix using OPTICS. 
+            co-occurrences and if a gene is provided only variants within that gene.  
+            Clustering is performed on the co-occurrence matrix using OPTICS. 
             The mimimum number of neighbours to call
             a cluster is {}.
             Variants selected in the top occurrent variants table are highlighted with a greater size in the plot.
