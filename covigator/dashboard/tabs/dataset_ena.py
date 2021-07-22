@@ -1,4 +1,4 @@
-import functools
+#import functools
 import dash_core_components as dcc
 import dash_bootstrap_components as dbc
 import dash_html_components as html
@@ -26,7 +26,7 @@ LIBRARY_LAYOUT_COLOR_MAP = {
 }
 
 
-@functools.lru_cache()
+#@functools.lru_cache()
 def get_tab_dataset_ena(queries: Queries):
 
     count_samples = queries.count_samples(source=DataSource.ENA.name)

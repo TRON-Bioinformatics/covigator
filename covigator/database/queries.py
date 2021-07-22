@@ -1,4 +1,4 @@
-import functools
+#import functools
 from datetime import date, datetime
 from typing import List, Union
 import numpy as np
@@ -174,7 +174,7 @@ class Queries:
             data = data.head(12)
         return data
 
-    @functools.lru_cache()
+    #@functools.lru_cache()
     def get_accumulated_samples_by_country(
             self, data_source: DataSource, countries: List[str], min_samples=100) -> pd.DataFrame:
         """
@@ -279,7 +279,7 @@ class Queries:
                          VariantCooccurrence.variant_id_two == variant_two.variant_id)) \
             .first()
 
-    @functools.lru_cache()
+    #@functools.lru_cache()
     def count_samples(self, source: str = None, cache=True) -> int:
         if cache:
             query = self.session.query(PrecomputedTableCounts.count)
@@ -306,7 +306,7 @@ class Queries:
                 count += self.session.query(SampleGisaid).filter(SampleGisaid.finished).count()
         return count
 
-    @functools.lru_cache()
+    #@functools.lru_cache()
     def count_countries(self, source: str = None, cache=True):
         if cache:
             query = self.session.query(PrecomputedTableCounts.count)
@@ -329,7 +329,7 @@ class Queries:
             count = len(self.get_countries(source=source))
         return count
 
-    @functools.lru_cache()
+    #@functools.lru_cache()
     def count_variants(self, cache=True):
         if cache:
             result = self.session.query(PrecomputedTableCounts.count) \
@@ -341,15 +341,15 @@ class Queries:
             count = self.session.query(Variant).count()
         return count
 
-    @functools.lru_cache()
+    #@functools.lru_cache()
     def count_insertions(self):
         return self.session.query(Variant).filter(func.length(Variant.alternate) > 1).count()
 
-    @functools.lru_cache()
+    #@functools.lru_cache()
     def count_deletions(self):
         return self.session.query(Variant).filter(func.length(Variant.reference) > 1).count()
 
-    @functools.lru_cache()
+    #@functools.lru_cache()
     def count_variant_observations(self, source: str = None, cache=True):
         if cache:
             query = self.session.query(PrecomputedTableCounts.count)
@@ -375,7 +375,7 @@ class Queries:
             count = query.count()
         return count
 
-    @functools.lru_cache()
+    #@functools.lru_cache()
     def count_subclonal_variant_observations(self, cache=True):
         if cache:
             query = self.session.query(PrecomputedTableCounts.count) \
@@ -386,7 +386,7 @@ class Queries:
             count = self.session.query(SubclonalVariantObservation).count()
         return count
 
-    @functools.lru_cache()
+    #@functools.lru_cache()
     def get_date_of_first_sample(self, source: DataSource = DataSource.ENA) -> date:
         """
         Returns the date of the earliest ENA sample loaded in the database
@@ -403,7 +403,7 @@ class Queries:
             raise CovigatorQueryException("No valid data source for query of first sample")
         return result[0] if result is not None else result
 
-    @functools.lru_cache()
+    #@functools.lru_cache()
     def get_date_of_most_recent_sample(self, source: DataSource = DataSource.ENA) -> date:
         """
         Returns the date of the latest ENA sample loaded in the database
@@ -674,7 +674,7 @@ class Queries:
 
         return full_matrix
 
-    @functools.lru_cache()
+    #@functools.lru_cache()
     def get_mds(self, gene_name, min_cooccurrence, min_samples) -> pd.DataFrame:
 
         variant_one = aliased(Variant)

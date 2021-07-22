@@ -1,4 +1,4 @@
-import functools
+#import functools
 
 import dash_core_components as dcc
 import dash_bootstrap_components as dbc
@@ -8,7 +8,7 @@ from covigator.dashboard.tabs import get_mini_container, print_number
 from covigator.database.queries import Queries
 
 
-@functools.lru_cache()
+#@functools.lru_cache()
 def get_tab_overview(queries: Queries):
 
     count_samples = queries.count_samples()
