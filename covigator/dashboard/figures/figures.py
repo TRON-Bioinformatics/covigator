@@ -4,7 +4,8 @@ import plotly.graph_objects as go
 
 PLOTLY_CONFIG = {
     'displaylogo': False,
-    'displayModeBar': False
+    'displayModeBar': False,
+    'modeBarButtonsToRemove': ['zoom', 'pan', 'select', 'zoomIn', 'zoomOut', 'autoScale', 'resetScale', 'lasso2d']
 }
 MARGIN = go.layout.Margin(l=0, r=0, b=0, t=30)
 TEMPLATE = "plotly_white"

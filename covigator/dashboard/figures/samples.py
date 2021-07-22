@@ -11,7 +11,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import dash_core_components as dcc
 
-from covigator.database.model import VariantType, DataSource
+from covigator.database.model import DataSource
 
 
 INDEL_TYPE_COLOR_MAP = {
