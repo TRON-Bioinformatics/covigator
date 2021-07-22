@@ -1,3 +1,4 @@
+import functools
 import dash_core_components as dcc
 import dash_bootstrap_components as dbc
 import dash_html_components as html
@@ -9,6 +10,7 @@ from covigator.database.model import DataSource, SAMPLE_ENA_TABLE_NAME, JOB_ENA_
 from covigator.database.queries import Queries
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objs as go
 
 
 LIBRARY_STRATEGY_COLOR_MAP = {
@@ -88,12 +90,7 @@ def get_dataset_ena_tab_graphs(queries: Queries):
 
 
 def get_plot_library_strategies(queries: Queries):
-    sql_query = """
-    select count(*) as count, library_strategy, library_layout
-    from {table} 
-    where finished
-    group by library_strategy, library_layout""".format(table=SAMPLE_ENA_TABLE_NAME)
-    data = pd.read_sql_query(sql_query, queries.session.bind)
+    data = get_data_library_strategies(queries)
     fig = px.bar(data_frame=data, x="library_strategy", y="count", color="library_layout",
                  color_discrete_map=LIBRARY_LAYOUT_COLOR_MAP)
     fig.update_layout(
@@ -114,23 +111,27 @@ def get_plot_library_strategies(queries: Queries):
     ]
 
 
-def get_plot_number_reads(queries: Queries):
+@functools.lru_cache()
+def get_data_library_strategies(queries):
     sql_query = """
-    select s.run_accession as run_accession, j.num_reads as num_reads_after, s.read_count as num_reads_before, s.library_strategy
-    from {samples_table} as s join {jobs_table} as j on s.run_accession = j.run_accession 
-    where s.finished""".format(samples_table=SAMPLE_ENA_TABLE_NAME, jobs_table=JOB_ENA_TABLE_NAME)
+    select count(*) as count, library_strategy, library_layout
+    from {table} 
+    where finished
+    group by library_strategy, library_layout""".format(table=SAMPLE_ENA_TABLE_NAME)
     data = pd.read_sql_query(sql_query, queries.session.bind)
-    fig = px.scatter(data_frame=data, x="num_reads_after", y="num_reads_before", color="library_strategy",
-                     opacity=0.5, hover_name="run_accession", log_y=True, log_x=True,
-                     marginal_x='box', marginal_y='box',
-                     color_discrete_map=LIBRARY_STRATEGY_COLOR_MAP)
-    fig.update_layout(
-        margin=MARGIN,
-        template=TEMPLATE,
-        yaxis={'title': "Reported num. of reads"},
-        xaxis={'title': "Num. of reads after trimming"},
-        legend={'title': None}
-    )
+    return data
+
+
+def get_plot_number_reads(queries: Queries):
+    data = get_data_number_reads(queries)
+
+    fig = get_scatter_with_marginals(
+        data=data,
+        x="num_reads_after",
+        y="num_reads_before",
+        x_title="Num. of reads after trimming",
+        y_title="Reported num. of reads")
+
     return [
         dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
         dcc.Markdown("""
@@ -143,23 +144,58 @@ def get_plot_number_reads(queries: Queries):
     ]
 
 
-def get_plot_coverage(queries: Queries):
+@functools.lru_cache()
+def get_data_number_reads(queries):
     sql_query = """
-    select s.run_accession, s.library_strategy, j.coverage, j.mean_depth
-    from {table} as s join {jobs_table} as j on s.run_accession = j.run_accession 
-    where finished""".format(table=SAMPLE_ENA_TABLE_NAME, jobs_table=JOB_ENA_TABLE_NAME)
+    select s.run_accession as run_accession, j.num_reads as num_reads_after, s.read_count as num_reads_before, s.library_strategy
+    from {samples_table} as s join {jobs_table} as j on s.run_accession = j.run_accession 
+    where s.finished""".format(samples_table=SAMPLE_ENA_TABLE_NAME, jobs_table=JOB_ENA_TABLE_NAME)
     data = pd.read_sql_query(sql_query, queries.session.bind)
-    fig = px.scatter(data_frame=data, color="library_strategy", y="coverage", x="mean_depth",
-                     log_x=True, log_y=True, opacity=0.5, hover_name="run_accession",
-                     marginal_x='box', marginal_y='box',
-                     color_discrete_map=LIBRARY_STRATEGY_COLOR_MAP)
-    fig.update_layout(
-        margin=MARGIN,
+    return data
+
+
+def get_scatter_with_marginals(data, x, y, x_title, y_title):
+    fig = go.FigureWidget()
+    for k, v in LIBRARY_STRATEGY_COLOR_MAP.items():
+        fig.add_scattergl(
+            x=data[data.library_strategy == k][x],
+            y=data[data.library_strategy == k][y],
+            mode='markers',
+            marker=dict(color=v),
+            name=k,
+            opacity=0.5,
+            hovertext=data[data.library_strategy == k].run_accession
+        )
+        fig.add_box(x=data[data.library_strategy == k][x], yaxis='y2', marker=dict(color=v),
+                    showlegend=False)
+        fig.add_box(y=data[data.library_strategy == k][y], xaxis='x2', marker=dict(color=v),
+                    showlegend=False)
+    fig.layout = dict(
         template=TEMPLATE,
-        yaxis={'title': "Genome coverage (%)"},
-        xaxis={'title': "Mean depth of coverage"},
-        legend={'title': None}
+        margin=MARGIN,
+        yaxis={'title': y_title,
+               'domain': [0, 0.85], 'showgrid': True, 'zeroline': False, 'type': 'log'},
+        xaxis={'title': x_title,
+               'domain': [0, 0.85], 'showgrid': True, 'zeroline': False, 'type': 'log'},
+        legend={'title': None},
+        bargap=0,
+        xaxis2={'domain': [0.85, 1], 'showgrid': False, 'zeroline': False, 'visible': False, 'showticklabels': False},
+        yaxis2={'domain': [0.85, 1], 'showgrid': False, 'zeroline': False, 'visible': False, 'showticklabels': False},
+        hovermode='closest',
     )
+    return fig
+
+
+def get_plot_coverage(queries: Queries):
+    data = get_data_coverage(queries)
+
+    fig = get_scatter_with_marginals(
+        data=data,
+        x="mean_depth",
+        y="coverage",
+        x_title="Mean depth of coverage",
+        y_title="Genome coverage (%)")
+
     return [
         dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
         dcc.Markdown("""
@@ -171,27 +207,26 @@ def get_plot_coverage(queries: Queries):
     ]
 
 
-def get_plot_qualities(queries: Queries):
+@functools.lru_cache()
+def get_data_coverage(queries):
     sql_query = """
-    select s.run_accession, s.library_strategy, j.mean_mapping_quality, j.mean_base_quality
+    select s.run_accession, s.library_strategy, j.coverage, j.mean_depth
     from {table} as s join {jobs_table} as j on s.run_accession = j.run_accession 
     where finished""".format(table=SAMPLE_ENA_TABLE_NAME, jobs_table=JOB_ENA_TABLE_NAME)
     data = pd.read_sql_query(sql_query, queries.session.bind)
-    #fig_mq = px.box(data_frame=data, color="library_strategy", y="mean_mapping_quality",
-    #                color_discrete_map=LIBRARY_STRATEGY_COLOR_MAP)
-    #fig_bcq = px.box(data_frame=data, color="library_strategy", y="mean_base_quality",
-    #                   color_discrete_map=LIBRARY_STRATEGY_COLOR_MAP)
-    fig = px.scatter(data_frame=data, color="library_strategy", y="mean_mapping_quality", x="mean_base_quality",
-                     log_x=True, log_y=True, opacity=0.5, hover_name="run_accession",
-                     marginal_x='box', marginal_y='box',
-                     color_discrete_map=LIBRARY_STRATEGY_COLOR_MAP)
-    fig.update_layout(
-        margin=MARGIN,
-        template=TEMPLATE,
-        yaxis={'title': "Mean MQ"},
-        xaxis={'title': "Mean BCQ"},
-        legend={'title': None}
-    )
+    return data
+
+
+def get_plot_qualities(queries: Queries):
+    data = get_data_qualities(queries)
+
+    fig = get_scatter_with_marginals(
+        data=data,
+        x="mean_base_quality",
+        y="mean_mapping_quality",
+        x_title="Mean BCQ",
+        y_title="Mean MQ")
+
     return [
         dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
         dcc.Markdown("""
@@ -202,12 +237,18 @@ def get_plot_qualities(queries: Queries):
     ]
 
 
-def get_plot_clonal_variants(queries: Queries):
+@functools.lru_cache()
+def get_data_qualities(queries):
     sql_query = """
-    select variant_id, vaf, dp, variant_type
-    from {table} 
-    where source='ENA'""".format(table=VARIANT_OBSERVATION_TABLE_NAME)
+    select s.run_accession, s.library_strategy, j.mean_mapping_quality, j.mean_base_quality
+    from {table} as s join {jobs_table} as j on s.run_accession = j.run_accession 
+    where finished""".format(table=SAMPLE_ENA_TABLE_NAME, jobs_table=JOB_ENA_TABLE_NAME)
     data = pd.read_sql_query(sql_query, queries.session.bind)
+    return data
+
+
+def get_plot_clonal_variants(queries: Queries):
+    data = get_data_clonal_variants(queries)
     fig = px.scatter(data_frame=data, color="variant_type", y="vaf", x="dp",
                      log_x=True, log_y=True, opacity=0.5, hover_name="variant_id",
                      marginal_x='box', marginal_y='box',
@@ -227,6 +268,16 @@ def get_plot_clonal_variants(queries: Queries):
         Variants with VAF >= 0.8 are considered clonal 
         """)
     ]
+
+
+@functools.lru_cache()
+def get_data_clonal_variants(queries):
+    sql_query = """
+    select variant_id, vaf, dp, variant_type
+    from {table} 
+    where source='ENA'""".format(table=VARIANT_OBSERVATION_TABLE_NAME)
+    data = pd.read_sql_query(sql_query, queries.session.bind)
+    return data
 
 
 def get_dataset_ena_tab_left_bar(queries: Queries):

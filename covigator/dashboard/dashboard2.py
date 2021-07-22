@@ -3,7 +3,6 @@ import dash_bootstrap_components as dbc
 import dash_html_components as html
 from sqlalchemy.orm import Session
 from dash.dependencies import Input, Output
-
 import covigator
 import covigator.configuration
 from covigator.configuration import Configuration
