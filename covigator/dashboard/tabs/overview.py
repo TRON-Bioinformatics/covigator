@@ -105,7 +105,7 @@ def get_tab_overview(queries: Queries):
 
 
 def get_header():
-    logo = "/assets/CoVigator_logo_txt_nobg.png"
+    logo = "/assets/CoVigator_logo_txt_reg_no_bg.png"
     return html.Div(
             [
                 html.Div(
