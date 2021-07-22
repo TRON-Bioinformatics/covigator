@@ -117,6 +117,7 @@ def set_callbacks_samples_tab(app, session: Session):
         Input(ID_DROPDOWN_DATA_SOURCE, 'value'),
         Input(ID_DROPDOWN_COUNTRY, 'value'),
         Input(ID_SLIDER_MIN_SAMPLES, 'value'),
+        suppress_callback_exceptions=True
     )
     def update_accumulated_samples_by_country(data_source, countries, min_samples):
         return html.Div(children=figures.get_accumulated_samples_by_country_plot(
@@ -127,6 +128,7 @@ def set_callbacks_samples_tab(app, session: Session):
         Input(ID_DROPDOWN_DATA_SOURCE, 'value'),
         Input(ID_DROPDOWN_GENE, 'value'),
         Input(ID_DROPDOWN_VARIANT_TYPE, 'value'),
+        suppress_callback_exceptions=True
     )
     def update_variants_per_sample(data_source, genes, variant_types):
         return html.Div(children=figures.get_variants_per_sample_plot(
@@ -137,6 +139,7 @@ def set_callbacks_samples_tab(app, session: Session):
         Input(ID_DROPDOWN_DATA_SOURCE, 'value'),
         Input(ID_DROPDOWN_GENE, 'value'),
         Input(ID_DROPDOWN_VARIANT_TYPE, 'value'),
+        suppress_callback_exceptions=True
     )
     def update_substitutions(data_source, genes, variant_types):
         return html.Div(children=figures.get_substitutions_plot(
@@ -146,6 +149,7 @@ def set_callbacks_samples_tab(app, session: Session):
         Output(ID_INDEL_LENGTH_GRAPH, 'children'),
         Input(ID_DROPDOWN_DATA_SOURCE, 'value'),
         Input(ID_DROPDOWN_GENE, 'value'),
+        suppress_callback_exceptions=True
     )
     def update_indel_lengths(data_source, genes):
         return html.Div(children=figures.get_indels_lengths_plot(data_source=data_source, genes=genes))
@@ -154,6 +158,7 @@ def set_callbacks_samples_tab(app, session: Session):
         Output(ID_ANNOTATIONS_GRAPH, 'children'),
         Input(ID_DROPDOWN_DATA_SOURCE, 'value'),
         Input(ID_DROPDOWN_GENE, 'value'),
+        suppress_callback_exceptions=True
     )
     def update_annotation(data_source, genes):
         return html.Div(children=figures.get_annotations_plot(data_source=data_source, genes=genes))

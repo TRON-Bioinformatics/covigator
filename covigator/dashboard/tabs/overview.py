@@ -102,7 +102,7 @@ def get_header():
                 ),
                 html.Div(className="one column"),
                 html.Div(
-                    [html.Div([html.H1("Monitoring SARS-Cov-2 mutations")], style={"text-align": "left"})],
+                    [html.Div([html.H1("Monitoring SARS-CoV-2 mutations")], style={"text-align": "left"})],
                     id="title",
                 ),
             ],

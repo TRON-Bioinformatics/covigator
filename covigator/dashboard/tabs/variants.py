@@ -195,6 +195,7 @@ def set_callbacks_variants_tab(app, session: Session):
         Input(ID_DROPDOWN_DATE_RANGE_END, 'value'),
         Input(ID_TOP_VARIANTS_METRIC, 'value'),
         Input(ID_DROPDOWN_DATA_SOURCE, 'value'),
+        suppress_callback_exceptions=True
     )
     def update_top_occurring_variants(top_variants, gene_name, date_range_start, date_range_end, metric, source):
         return html.Div(children=figures.get_top_occurring_variants_plot(
@@ -208,6 +209,7 @@ def set_callbacks_variants_tab(app, session: Session):
         Input(ID_TOP_OCCURRING_VARIANTS_TABLE, "derived_virtual_selected_rows"),
         Input(ID_SLIDER_BIN_SIZE, 'value'),
         Input(ID_DROPDOWN_DATA_SOURCE, 'value'),
+        suppress_callback_exceptions=True
     )
     def update_needle_plot(gene_name, rows, selected_rows_indices, bin_size, source):
         if gene_name is not None:
@@ -227,6 +229,7 @@ def set_callbacks_variants_tab(app, session: Session):
     @app.callback(
         Output(ID_DROPDOWN_DATE_RANGE_END_DIV, 'children'),
         Input(ID_DROPDOWN_DATE_RANGE_START, 'value'),
+        suppress_callback_exceptions=True
     )
     def update_dropdown_end_date(start_date):
         today = datetime.now()
@@ -248,6 +251,7 @@ def set_callbacks_variants_tab(app, session: Session):
         Input(ID_DROPDOWN_SIMILARITY_METRIC, 'value'),
         Input(ID_SLIDER_MIN_COOCCURRENCES, 'value'),
         Input(ID_DROPDOWN_DATA_SOURCE, 'value'),
+        suppress_callback_exceptions=True
     )
     def update_cooccurrence_heatmap(gene_name, rows, selected_rows_indices, metric, min_occurrences, source):
         if source != DataSource.ENA.name:
@@ -271,6 +275,7 @@ def set_callbacks_variants_tab(app, session: Session):
         Input(ID_SLIDER_MIN_COOCCURRENCES, 'value'),
         Input(ID_SLIDER_MIN_SAMPLES, 'value'),
         Input(ID_DROPDOWN_DATA_SOURCE, 'value'),
+        suppress_callback_exceptions=True
     )
     def update_variants_mds(gene_name, rows, selected_rows_indices, min_cooccurrence, min_samples, source):
         if source != DataSource.ENA.name:

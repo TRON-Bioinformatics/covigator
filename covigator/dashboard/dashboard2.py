@@ -35,18 +35,20 @@ class Dashboard:
     def serve_layout(self):
         logger.info("Serving layout")
         footer = get_footer()
-        layout = html.Div([
-            dbc.Tabs([
-                dbc.Tab(label="Overview", tab_id=OVERVIEW_TAB_ID),
-                dbc.Tab(label="ENA dataset", tab_id=ENA_DATASET_TAB_ID),
-                dbc.Tab(label="GISAID dataset", tab_id=GISAID_DATASET_TAB_ID),
-                dbc.Tab(label="Samples", tab_id=SAMPLES_TAB_ID),
-                dbc.Tab(label="Recurrent variants", tab_id=VARIANTS_TAB_ID)],
-                id="tabs",
-                active_tab="overview",
-            ),
-            html.Div(id="content"),
-            footer
+        layout = dbc.Card([
+            dbc.CardHeader(
+                dbc.Tabs([
+                    dbc.Tab(label="Overview", tab_id=OVERVIEW_TAB_ID),
+                    dbc.Tab(label="ENA dataset", tab_id=ENA_DATASET_TAB_ID),
+                    dbc.Tab(label="GISAID dataset", tab_id=GISAID_DATASET_TAB_ID),
+                    dbc.Tab(label="Samples", tab_id=SAMPLES_TAB_ID),
+                    dbc.Tab(label="Recurrent variants", tab_id=VARIANTS_TAB_ID)],
+                    id="tabs",
+                    active_tab="overview",
+                    card=True,
+                )),
+            dbc.CardBody(html.Div(id="content")),
+            dbc.CardFooter(footer)
         ])
         return layout
 
@@ -67,12 +69,13 @@ class Dashboard:
             name=__name__,
             title="CoVigator",
             external_stylesheets=[dbc.themes.BOOTSTRAP],
+            suppress_callback_exceptions=True,
             meta_tags=[
                 # A description of the app, used by e.g.
                 # search engines when displaying search results.
                 {
                     'name': 'description',
-                    'content': 'CoVigator - monitoring Sars-Cov-2 mutations'
+                    'content': 'CoVigator - monitoring SARS-CoV-2 mutations'
                 },
                 # A tag that tells Internet Explorer (IE)
                 # to use the latest renderer version available
@@ -120,10 +123,6 @@ def set_callbacks(app, session: Session):
         elif at == VARIANTS_TAB_ID:
             return get_tab_variants(queries=queries)
         return html.P("This shouldn't ever be displayed...")
-
-
-
-
 
 
 def main(debug=False):
