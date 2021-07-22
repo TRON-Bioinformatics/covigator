@@ -1,4 +1,4 @@
-import functools
+#import functools
 
 import dash_core_components as dcc
 import dash_bootstrap_components as dbc
@@ -22,7 +22,7 @@ ID_DROPDOWN_VARIANT_TYPE = 'dropdown-variant-type'
 ID_ACCUMULATED_SAMPLES_GRAPH = 'accumulated-samples-per-country'
 
 
-@functools.lru_cache()
+#@functools.lru_cache()
 def get_tab_samples(queries: Queries):
     return dbc.Card(
         dbc.CardBody(
