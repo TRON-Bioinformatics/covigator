@@ -1,5 +1,3 @@
-from datetime import datetime
-
 import dash_core_components as dcc
 import dash_html_components as html
 
@@ -19,11 +17,34 @@ def get_tab_overview(queries: Queries):
                    selected_style=TAB_SELECTED_STYLE,
                    children=[
                        html.Div(className="one columns", children=[html.Br()]),
-                       html.Div(className="nine columns", children=[
+                       html.Div(className="ten columns", children=[
                            html.Br(),
                            get_header(),
                            html.Div(
                                children=[
+                                   html.Div(
+                                       className="row flex-display",
+                                       children=[
+                                       get_mini_container(
+                                           title="Samples",
+                                           value=print_number(count_samples),
+                                           color=COLOR_OVERVIEW_MINI_CONTAINER,
+                                           font_size=16
+                                       ),
+                                       get_mini_container(
+                                           title="Countries",
+                                           value=print_number(count_countries),
+                                           color=COLOR_OVERVIEW_MINI_CONTAINER,
+                                           font_size=16
+                                       ),
+                                       get_mini_container(
+                                           title="Mutations",
+                                           value=print_number(count_variants),
+                                           color=COLOR_OVERVIEW_MINI_CONTAINER,
+                                           font_size=16
+                                       )
+                                   ]),
+                                   html.Br(),
                                    html.P("Human infections with SARS-CoV-2 are spreading globally since the beginning of 2020, "
                                           "necessitating preventive or therapeutic strategies and first steps towards an end to "
                                           "this pandemic were done with the approval of the first mRNA vaccines against SARS-CoV-2. "
@@ -80,29 +101,6 @@ def get_tab_overview(queries: Queries):
                            html.Br(),
                            html.Br(),
                        ]),
-                       html.Div(html.Br(), className="one columns"),
-                       html.Div(className="one columns", children=[
-                           html.Br(),
-                           html.Br(),
-                           html.Br(),
-                           html.Br(),
-                           html.Br(),
-                           get_mini_container(
-                               title="Samples",
-                               value=print_number(count_samples),
-                               color=COLOR_OVERVIEW_MINI_CONTAINER
-                           ),
-                           get_mini_container(
-                               title="Countries",
-                               value=print_number(count_countries),
-                               color=COLOR_OVERVIEW_MINI_CONTAINER
-                           ),
-                           get_mini_container(
-                               title="Unique mutations",
-                               value=print_number(count_variants),
-                               color=COLOR_OVERVIEW_MINI_CONTAINER
-                           )
-                       ]),
                    ])
 
 
@@ -112,17 +110,15 @@ def get_header():
             [
                 html.Div(
                     [html.Img(src=logo, id="covigator-logo",
-                              style={"height": "100px", "width": "auto", "margin-bottom": "25px",},)
+                              style={"height": "100px", "width": "auto", "margin-bottom": "10px"},)
                     ],
-                    className="one-third column",
                 ),
+                html.Div(className="one column"),
                 html.Div(
-                    [html.Div([html.H1("Monitoring SARS-Cov-2 mutations")], style={"text-align": "center"})],
-                    className="two column",
+                    [html.Div([html.H1("Monitoring SARS-Cov-2 mutations")], style={"text-align": "left"})],
                     id="title",
                 ),
             ],
             id="header",
             className="row flex-display",
-            style={"margin-bottom": "25px"},
         )

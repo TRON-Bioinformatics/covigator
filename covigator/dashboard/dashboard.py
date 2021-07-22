@@ -31,7 +31,8 @@ class Dashboard:
             tabs = self.get_tabs(queries)
             # , style={'margin-top': '0px', 'padding-top': '0px'})
             layout = html.Div(
-                children=[tabs, footer]
+                children=[tabs, footer],
+                style={'margin-bottom': '5px', 'padding-bottom': '5px'}
             )
         return layout
 

@@ -4,29 +4,31 @@ import covigator
 
 
 def get_footer():
+    tron_logo = "/assets/tron_logo.png"
     return html.Footer(
         [
             html.Br(),
             html.Div(
-                [
-                    html.P(),
-                    html.P("Covigator {} © 2021 TRON gGmbH Mainz. All Rights Reserved".format(covigator.VERSION)),
-                    html.P("The CoVigator project is enabled by Intel Corporation servers."),
-                    html.P()
-                ],
-                className="two-thirds column"
-            ),
-            html.Div(
-                [
-                    html.P(),
-                    html.P([html.A("DATA PROTECTION", href="https://tron-mainz.de/data-protection/"), " | ",
-                            html.A("IMPRINT", href="https://tron-mainz.de/imprint/")]),
-                    html.P()
-                ],
-                className="one-third column"
+                className="row flex-display",
+                children=[
+                    html.Div(className="one column"),
+                    html.Div(
+                        [
+                            html.Br(),
+                            html.P("CoVigator {} © 2021 TRON. All Rights Reserved".format(covigator.VERSION)),
+                            html.Img(src=tron_logo, id="tron-logo"),
+                            html.P("The CoVigator project is enabled by Intel Corporation servers."),
+                            html.Br(),
+                            html.P([
+                                html.A("DATA PROTECTION", href="https://tron-mainz.de/data-protection/"), " | ",
+                                html.A("IMPRINT", href="https://tron-mainz.de/imprint/")]),
+                        ],
+                        className="ten columns",
+                    ),
+                    html.Div(className="one column"),
+                ]
             ),
             html.Br(),
         ],
         # this bit makes sure the footer sticks at the bottom
-        style={"position": "relative", "bottom": "0", "width": "100%", "overflow": "hidden",
-               "height": "100px"})
+        style={"position": "relative", "bottom": "0", "width": "100%", "overflow": "hidden"})  # "height": "100px"})

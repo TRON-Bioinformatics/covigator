@@ -27,12 +27,12 @@ def print_number(value):
     return '{:,}'.format(value)
 
 
-def get_mini_container(title, value, color="#f9f9f9"):
+def get_mini_container(title, value, color="#f9f9f9", font_size=14):
     return html.Div(
         children=[
             html.P(html.B(title)),
             html.P(value)
         ],
-        className="mini_container",
-        style={"background-color": color, "font-size": 14}
+        className="mini_container two columns",
+        style={"background-color": color, "font-size": font_size}
     )
