@@ -674,6 +674,7 @@ class Queries:
 
         return full_matrix
 
+    @functools.lru_cache()
     def get_mds(self, gene_name, min_cooccurrence, min_samples) -> pd.DataFrame:
 
         variant_one = aliased(Variant)
@@ -741,15 +742,8 @@ class Queries:
         logger.info("Clustering...")
         clusters = OPTICS(min_samples=min_samples, max_eps=1.4).fit_predict(distance_matrix_with_ids.data)
 
-        logger.info("Dimensionality reduction...")
-        dimensionality_reduction_model = MDS(
-            n_components=2, random_state=123, dissimilarity='precomputed', n_init=1, max_iter=10)  # this two values make computation faster
-        coords = dimensionality_reduction_model.fit_transform(distance_matrix_with_ids.data)
-
         logger.info("Building clustering dataframe...")
-        data = pd.DataFrame(coords, columns=["PC1", "PC2"])
-        data["cluster"] = clusters
-        data["variant_id"] = distance_matrix_with_ids.ids
+        data = pd.DataFrame({'variant_id': distance_matrix_with_ids.ids, 'cluster': clusters})
 
         logger.info("Annotate with HGVS.p ...")
         annotations = pd.concat([
@@ -758,12 +752,9 @@ class Queries:
             sparse_matrix.loc[:, ["variant_id_two", "hgvs_p_two"]].rename(
                 columns={"variant_id_two": "variant_id", "hgvs_p_two": "hgvs_p"})])
         data = pd.merge(left=data, right=annotations, on="variant_id", how="left")
-        data["tooltip"] = data[["variant_id", "hgvs_p"]].apply(
-            lambda x: "<b>{}</b><br>Variant: {}".format(x[1], x[0]), axis=1)
 
         logger.info("Annotate with cluster mean Jaccard index...")
         data["cluster_jaccard_mean"] = 1.0
-        data["cluster_members"] = 0
         for c in data.cluster.unique():
             variants_in_cluster = data[data.cluster == c].variant_id.unique()
             data.cluster_jaccard_mean = np.where(data.cluster == c, sparse_matrix_with_diagonal[
@@ -771,14 +762,12 @@ class Queries:
                 (sparse_matrix.variant_id_two.isin(variants_in_cluster)) &
                 (sparse_matrix.variant_id_one != sparse_matrix.variant_id_two)
             ].jaccard_dissimilarity.mean(), data.cluster_jaccard_mean)
-            data.cluster_members = np.where(data.cluster == c, variants_in_cluster.size, data.cluster_members)
 
-        logger.info("Compose tooltip...")
-        data["tooltip"] = data[["variant_id", "hgvs_p", "cluster_jaccard_mean", "cluster_members"]].apply(
-            lambda x: "<b>{}</b><br>Variant: {}<br>Jaccard mean in cluster:{}<br>Members in cluster: {}".format(
-                x[1], x[0], round(1 - x[2], 3), x[3]), axis=1)
+        data.cluster_jaccard_mean = data.cluster_jaccard_mean.transform(lambda x: round(x, 3))
 
-        return data
+        data = data.set_index("variant_id").drop_duplicates().reset_index().sort_values("cluster")
+
+        return data[data.cluster != -1].loc[:, ["cluster", "variant_id", "hgvs_p", "cluster_jaccard_mean"]]
 
     def get_variant_abundance_histogram(self, bin_size=50, source: str = None, cache=True) -> pd.DataFrame:
         histogram = None

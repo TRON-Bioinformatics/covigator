@@ -111,14 +111,13 @@ Number of top occurring variants"""),
         html.Br(),
         dcc.Markdown("""Select a start and end date"""),
         html.Div(children=[
-            html.Div(
-                dcc.Dropdown(
-                    id=ID_DROPDOWN_DATE_RANGE_START,
-                    options=[{'label': c, 'value': c} for c in months],
-                    value=oneyearago_formatted,
-                    multi=False,
-                    clearable=False
-                ), className="six column"),
+            dcc.Dropdown(
+                id=ID_DROPDOWN_DATE_RANGE_START,
+                options=[{'label': c, 'value': c} for c in months],
+                value=oneyearago_formatted,
+                multi=False,
+                clearable=False
+            ),
             html.Div(
                 id=ID_DROPDOWN_DATE_RANGE_END_DIV,
                 children=dcc.Dropdown(
@@ -127,8 +126,7 @@ Number of top occurring variants"""),
                     value=today_formatted,
                     multi=False,
                     clearable=False
-                ), className="six column"),
-        ], className="row container-display"),
+                ))]),
         html.Br(),
         dcc.Markdown("""**Genome view**
         
@@ -197,7 +195,6 @@ def set_callbacks_variants_tab(app, session: Session):
         Input(ID_DROPDOWN_DATE_RANGE_END, 'value'),
         Input(ID_TOP_VARIANTS_METRIC, 'value'),
         Input(ID_DROPDOWN_DATA_SOURCE, 'value'),
-        suppress_callback_exceptions=True
     )
     def update_top_occurring_variants(top_variants, gene_name, date_range_start, date_range_end, metric, source):
         return html.Div(children=figures.get_top_occurring_variants_plot(
@@ -211,7 +208,6 @@ def set_callbacks_variants_tab(app, session: Session):
         Input(ID_TOP_OCCURRING_VARIANTS_TABLE, "derived_virtual_selected_rows"),
         Input(ID_SLIDER_BIN_SIZE, 'value'),
         Input(ID_DROPDOWN_DATA_SOURCE, 'value'),
-        suppress_callback_exceptions=True
     )
     def update_needle_plot(gene_name, rows, selected_rows_indices, bin_size, source):
         if gene_name is not None:
@@ -231,7 +227,6 @@ def set_callbacks_variants_tab(app, session: Session):
     @app.callback(
         Output(ID_DROPDOWN_DATE_RANGE_END_DIV, 'children'),
         Input(ID_DROPDOWN_DATE_RANGE_START, 'value'),
-        suppress_callback_exceptions=True
     )
     def update_dropdown_end_date(start_date):
         today = datetime.now()
@@ -253,13 +248,16 @@ def set_callbacks_variants_tab(app, session: Session):
         Input(ID_DROPDOWN_SIMILARITY_METRIC, 'value'),
         Input(ID_SLIDER_MIN_COOCCURRENCES, 'value'),
         Input(ID_DROPDOWN_DATA_SOURCE, 'value'),
-        suppress_callback_exceptions=True
     )
     def update_cooccurrence_heatmap(gene_name, rows, selected_rows_indices, metric, min_occurrences, source):
         if source != DataSource.ENA.name:
             plot = html.Div(
                 children=[dcc.Markdown(
                     """**The cooccurrence heatmap is currently only available for the ENA dataset**""")])
+        elif gene_name is None:
+            plot = html.Div(
+                children=[dcc.Markdown(
+                    """**Please, select a gene to explore the cooccurrence heatmap**""")])
         else:
             selected_rows = [rows[s] for s in selected_rows_indices] if selected_rows_indices else None
             plot = html.Div(children=figures.get_cooccurrence_heatmap(
@@ -277,13 +275,16 @@ def set_callbacks_variants_tab(app, session: Session):
         Input(ID_SLIDER_MIN_COOCCURRENCES, 'value'),
         Input(ID_SLIDER_MIN_SAMPLES, 'value'),
         Input(ID_DROPDOWN_DATA_SOURCE, 'value'),
-        suppress_callback_exceptions=True
     )
     def update_variants_mds(gene_name, rows, selected_rows_indices, min_cooccurrence, min_samples, source):
         if source != DataSource.ENA.name:
             plot = html.Div(children=
                             [dcc.Markdown(
                                 """**The variants clustering is currently only available for the ENA dataset**""")])
+        elif gene_name is None:
+            plot = html.Div(
+                children=[dcc.Markdown(
+                    """**Please, select a gene to explore the cooccurrence clusters**""")])
         else:
             selected_rows = [rows[s] for s in selected_rows_indices] if selected_rows_indices else None
             plot = html.Div(children=figures.get_variants_clustering(
@@ -291,4 +292,5 @@ def set_callbacks_variants_tab(app, session: Session):
                 selected_variants=selected_rows,
                 min_cooccurrence=min_cooccurrence,
                 min_samples=min_samples))
+            #plot = None
         return plot
