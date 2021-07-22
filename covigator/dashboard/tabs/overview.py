@@ -97,9 +97,6 @@ def get_tab_overview(queries: Queries):
                                    html.Br(),
                                ],
                                style={"text-align": "left", "font-size": 16}),
-                           html.Br(),
-                           html.Br(),
-                           html.Br(),
                        ]),
                    ])
 
