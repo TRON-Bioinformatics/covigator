@@ -1,4 +1,5 @@
 import dash_core_components as dcc
+import dash_bootstrap_components as dbc
 import dash_html_components as html
 from dash.dependencies import Output, Input
 from sqlalchemy.orm import Session
@@ -21,20 +22,12 @@ ID_ACCUMULATED_SAMPLES_GRAPH = 'accumulated-samples-per-country'
 
 
 def get_tab_samples(queries: Queries):
-    return dcc.Tab(
-        label="Samples",
-        style=TAB_STYLE,
-        selected_style=TAB_SELECTED_STYLE,
-        children=[
-            html.Div(
-                id='ena-samples-body',
-                className="row container-display",
-                style={'overflow': 'scroll'}, # 'top': 0, 'bottom': 0, position: fixed
-                children=[
-                    get_samples_tab_left_bar(queries),
-                    get_samples_tab_graphs()
-                ])
-        ]
+    return dbc.Card(
+        dbc.CardBody(
+            children=[
+                get_samples_tab_left_bar(queries),
+                get_samples_tab_graphs()
+        ])
     )
 
 
@@ -134,7 +127,7 @@ def set_callbacks_samples_tab(app, session: Session):
         Output(ID_VARIANTS_PER_SAMPLE_GRAPH, 'children'),
         Input(ID_DROPDOWN_DATA_SOURCE, 'value'),
         Input(ID_DROPDOWN_GENE, 'value'),
-        Input(ID_DROPDOWN_VARIANT_TYPE, 'value')
+        Input(ID_DROPDOWN_VARIANT_TYPE, 'value'),
     )
     def update_variants_per_sample(data_source, genes, variant_types):
         return html.Div(children=figures.get_variants_per_sample_plot(
@@ -144,7 +137,7 @@ def set_callbacks_samples_tab(app, session: Session):
         Output(ID_SUBSTITUTIONS_GRAPH, 'children'),
         Input(ID_DROPDOWN_DATA_SOURCE, 'value'),
         Input(ID_DROPDOWN_GENE, 'value'),
-        Input(ID_DROPDOWN_VARIANT_TYPE, 'value')
+        Input(ID_DROPDOWN_VARIANT_TYPE, 'value'),
     )
     def update_substitutions(data_source, genes, variant_types):
         return html.Div(children=figures.get_substitutions_plot(

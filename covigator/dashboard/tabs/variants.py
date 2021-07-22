@@ -1,5 +1,6 @@
 from datetime import timedelta, datetime
 import dash_core_components as dcc
+import dash_bootstrap_components as dbc
 import dash_html_components as html
 import dash_table
 from dash.dependencies import Output, Input
@@ -30,19 +31,13 @@ ID_DROPDOWN_DATA_SOURCE = "dropdown-data-source-variants-tab"
 
 def get_tab_variants(queries: Queries):
 
-    return dcc.Tab(label="Recurrent mutations",
-                   style=TAB_STYLE,
-                   selected_style=TAB_SELECTED_STYLE,
-                   children=[
-                       html.Div(
-                           id='needleplot-body',
-                           className="row container-display",
-                           style={'overflow': 'scroll'}, # 'top': 0, 'bottom': 0, position: fixed
-                           children=[
-                               get_variants_tab_left_bar(queries=queries),
-                               get_variants_tab_graphs()
-                           ]),
-                   ])
+    return dbc.Card(
+        dbc.CardBody(
+            children=[
+                get_variants_tab_left_bar(queries=queries),
+                get_variants_tab_graphs()
+            ])
+    )
 
 
 def get_variants_tab_graphs():
@@ -199,7 +194,7 @@ def set_callbacks_variants_tab(app, session: Session):
         Input(ID_DROPDOWN_DATE_RANGE_START, 'value'),
         Input(ID_DROPDOWN_DATE_RANGE_END, 'value'),
         Input(ID_TOP_VARIANTS_METRIC, 'value'),
-        Input(ID_DROPDOWN_DATA_SOURCE, 'value')
+        Input(ID_DROPDOWN_DATA_SOURCE, 'value'),
     )
     def update_top_occurring_variants(top_variants, gene_name, date_range_start, date_range_end, metric, source):
         return html.Div(children=figures.get_top_occurring_variants_plot(
@@ -212,7 +207,7 @@ def set_callbacks_variants_tab(app, session: Session):
         Input(ID_TOP_OCCURRING_VARIANTS_TABLE, "derived_virtual_data"),
         Input(ID_TOP_OCCURRING_VARIANTS_TABLE, "derived_virtual_selected_rows"),
         Input(ID_SLIDER_BIN_SIZE, 'value'),
-        Input(ID_DROPDOWN_DATA_SOURCE, 'value')
+        Input(ID_DROPDOWN_DATA_SOURCE, 'value'),
     )
     def update_needle_plot(gene_name, rows, selected_rows_indices, bin_size, source):
         if gene_name is not None:
@@ -231,7 +226,8 @@ def set_callbacks_variants_tab(app, session: Session):
 
     @app.callback(
         Output(ID_DROPDOWN_DATE_RANGE_END_DIV, 'children'),
-        Input(ID_DROPDOWN_DATE_RANGE_START, 'value'))
+        Input(ID_DROPDOWN_DATE_RANGE_START, 'value'),
+    )
     def update_dropdown_end_date(start_date):
         today = datetime.now()
         today_formatted = today.strftime(MONTH_PATTERN)
@@ -251,7 +247,7 @@ def set_callbacks_variants_tab(app, session: Session):
         Input(ID_TOP_OCCURRING_VARIANTS_TABLE, "derived_virtual_selected_rows"),
         Input(ID_DROPDOWN_SIMILARITY_METRIC, 'value'),
         Input(ID_SLIDER_MIN_COOCCURRENCES, 'value'),
-        Input(ID_DROPDOWN_DATA_SOURCE, 'value')
+        Input(ID_DROPDOWN_DATA_SOURCE, 'value'),
     )
     def update_cooccurrence_heatmap(gene_name, rows, selected_rows_indices, metric, min_occurrences, source):
         if source != DataSource.ENA.name:
@@ -274,7 +270,7 @@ def set_callbacks_variants_tab(app, session: Session):
         Input(ID_TOP_OCCURRING_VARIANTS_TABLE, "derived_virtual_selected_rows"),
         Input(ID_SLIDER_MIN_COOCCURRENCES, 'value'),
         Input(ID_SLIDER_MIN_SAMPLES, 'value'),
-        Input(ID_DROPDOWN_DATA_SOURCE, 'value')
+        Input(ID_DROPDOWN_DATA_SOURCE, 'value'),
     )
     def update_variants_mds(gene_name, rows, selected_rows_indices, min_cooccurrence, min_samples, source):
         if source != DataSource.ENA.name:

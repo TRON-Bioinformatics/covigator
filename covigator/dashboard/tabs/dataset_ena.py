@@ -1,4 +1,5 @@
 import dash_core_components as dcc
+import dash_bootstrap_components as dbc
 import dash_html_components as html
 from covigator.dashboard.figures import VARIANT_TYPE_COLOR_MAP
 from covigator.dashboard.figures.figures import PLOTLY_CONFIG, MARGIN, TEMPLATE
@@ -31,50 +32,41 @@ def get_tab_dataset_ena(queries: Queries):
     date_of_first_sample = queries.get_date_of_first_sample(source=DataSource.ENA)
     date_of_most_recent_sample = queries.get_date_of_most_recent_sample(source=DataSource.ENA)
 
-    return dcc.Tab(
-        label="ENA dataset",
-        style=TAB_STYLE,
-        selected_style=TAB_SELECTED_STYLE,
-        children=[
-            html.Div(id="something-ena", children=[
-                html.Div(className="one columns", children=[html.Br()]),
-                html.Div(className="ten columns", children=[
-                    html.Br(),
-                    dcc.Markdown("""
-                                The ENA dataset was downloaded using the API https://www.ebi.ac.uk/ena/portal/api/.
-                                Metadata was downloaded from the API and the FASTQ files with the raw reads were 
-                                downloaded from the provided URLs for each sample. 
-                                FASTQ files were MD5 checked after download.
-                                All samples were the host was not human were excluded.
-                                """, style={"font-size": 16}),
-                    html.Div(className="row flex-display", children=[
-                        get_mini_container(
-                            title="Samples",
-                            value=print_number(count_samples),
-                            color=COLOR_OVERVIEW_MINI_CONTAINER
-                        ),
-                        get_mini_container(
-                            title="Variant calls",
-                            value=print_number(count_variants),
-                            color=COLOR_OVERVIEW_MINI_CONTAINER
-                        ),
-                        get_mini_container(
-                            title="First sample",
-                            value=print_date(date_of_first_sample),
-                            color=COLOR_OVERVIEW_MINI_CONTAINER
-                        ),
-                        get_mini_container(
-                            title="Latest sample",
-                            value=print_date(date_of_most_recent_sample),
-                            color=COLOR_OVERVIEW_MINI_CONTAINER
-                        )
-                    ]),
-                    get_dataset_ena_tab_graphs(queries)
+    return dbc.Card(
+        dbc.CardBody(
+            children=[
+                dcc.Markdown("""
+                            The ENA dataset was downloaded using the API https://www.ebi.ac.uk/ena/portal/api/.
+                            Metadata was downloaded from the API and the FASTQ files with the raw reads were 
+                            downloaded from the provided URLs for each sample. 
+                            FASTQ files were MD5 checked after download.
+                            All samples were the host was not human were excluded.
+                            """, style={"font-size": 16}),
+                html.Div(className="row flex-display", children=[
+                    get_mini_container(
+                        title="Samples",
+                        value=print_number(count_samples),
+                        color=COLOR_OVERVIEW_MINI_CONTAINER
+                    ),
+                    get_mini_container(
+                        title="Variant calls",
+                        value=print_number(count_variants),
+                        color=COLOR_OVERVIEW_MINI_CONTAINER
+                    ),
+                    get_mini_container(
+                        title="First sample",
+                        value=print_date(date_of_first_sample),
+                        color=COLOR_OVERVIEW_MINI_CONTAINER
+                    ),
+                    get_mini_container(
+                        title="Latest sample",
+                        value=print_date(date_of_most_recent_sample),
+                        color=COLOR_OVERVIEW_MINI_CONTAINER
+                    )
                 ]),
-                html.Div(html.Br(), className="one columns"),
-            ]),
-        ]
-    )
+                get_dataset_ena_tab_graphs(queries)
+            ]
+        ))
 
 
 def get_dataset_ena_tab_graphs(queries: Queries):
