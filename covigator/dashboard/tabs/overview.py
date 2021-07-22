@@ -22,42 +22,39 @@ def get_tab_overview(queries: Queries):
                            get_header(),
                            html.Div(
                                children=[
+                                   html.P(
+                                       "Human infections with SARS-CoV-2 are spreading globally since the beginning of 2020, "
+                                       "necessitating preventive or therapeutic strategies and first steps towards an end to "
+                                       "this pandemic were done with the approval of the first mRNA vaccines against SARS-CoV-2. "
+                                       "We want to provide an interactive view on different types of mutations that can be "
+                                       "incorporated in global efforts to sustainably prevent or treat infections. Thus, we "
+                                       "envision to help guiding global vaccine design efforts to overcome the threats of this "
+                                       "pandemic."),
+                                   dcc.Markdown("""
+                                       CoVigator loads publicly available SARS-CoV-2 DNA sequences from two systems: 
+
+                                       * European Nucleotide Archive (ENA) providing raw reads in FASTQ format
+                                       * Global Initiative on Sharing Avian Influenza Data (GISAID) providing assemblies in FASTA format
+                                       """),
                                    html.Div(
                                        className="row flex-display",
                                        children=[
                                        get_mini_container(
                                            title="Samples",
                                            value=print_number(count_samples),
-                                           color=COLOR_OVERVIEW_MINI_CONTAINER,
-                                           font_size=16
+                                           color=COLOR_OVERVIEW_MINI_CONTAINER
                                        ),
                                        get_mini_container(
                                            title="Countries",
                                            value=print_number(count_countries),
-                                           color=COLOR_OVERVIEW_MINI_CONTAINER,
-                                           font_size=16
+                                           color=COLOR_OVERVIEW_MINI_CONTAINER
                                        ),
                                        get_mini_container(
                                            title="Mutations",
                                            value=print_number(count_variants),
-                                           color=COLOR_OVERVIEW_MINI_CONTAINER,
-                                           font_size=16
+                                           color=COLOR_OVERVIEW_MINI_CONTAINER
                                        )
                                    ]),
-                                   html.Br(),
-                                   html.P("Human infections with SARS-CoV-2 are spreading globally since the beginning of 2020, "
-                                          "necessitating preventive or therapeutic strategies and first steps towards an end to "
-                                          "this pandemic were done with the approval of the first mRNA vaccines against SARS-CoV-2. "
-                                          "We want to provide an interactive view on different types of mutations that can be "
-                                          "incorporated in global efforts to sustainably prevent or treat infections. Thus, we "
-                                          "envision to help guiding global vaccine design efforts to overcome the threats of this "
-                                          "pandemic."),
-                                   dcc.Markdown("""
-                                   CoVigator loads publicly available SARS-CoV-2 DNA sequences from two systems: 
-                                   
-                                   * European Nucleotide Archive (ENA) providing raw reads in FASTQ format
-                                   * Global Initiative on Sharing Avian Influenza Data (GISAID) providing assemblies in FASTA format
-                                   """),
                                    html.Br(),
                                    html.P("If you want to cite us:"),
                                    html.P([

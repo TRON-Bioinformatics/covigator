@@ -45,15 +45,19 @@ class Dashboard:
 
         # assemble tabs in dcc.Tabs object
         # style={'margin': '0 0 0 0', 'padding-top': '2px'})
-        return dcc.Tabs(
-            children=[
-                tab_overview,
-                tab_dataset_ena,
-                tab_dataset_gisaid,
-                tab_samples,
-                tab_variants
-            ],
-            style={'height': '44px'}
+        return html.Div(
+            className="row flex-display",
+            children=dcc.Tabs(
+                children=[
+                    tab_overview,
+                    tab_dataset_ena,
+                    tab_dataset_gisaid,
+                    tab_samples,
+                    tab_variants
+                ],
+                mobile_breakpoint=0,
+                style={'height': '44px'}
+            )
         )
 
     def start_dashboard(self, debug=False):

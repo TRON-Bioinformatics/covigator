@@ -25,35 +25,34 @@ def get_tab_dataset_gisaid(queries: Queries):
         children=[
             html.Div(id="something-gisaid", children=[
                 html.Div(className="one columns", children=[html.Br()]),
-                html.Div(className="nine columns", children=[
+                html.Div(className="ten columns", children=[
                     html.Br(),
                     dcc.Markdown("""
                         The GISAID dataset was manually downloaded from the site https://www.gisaid.org/.
                         DNA assemblies and metadata were matched together and variant calling was done after performing 
                         a global alignment to the reference genome.
                         """, style={"font-size": 16}),
+                    html.Div(className="row flex-display", children=[
+                        get_mini_container(
+                            title="Samples",
+                            value=print_number(count_samples),
+                            color=COLOR_OVERVIEW_MINI_CONTAINER),
+                        get_mini_container(
+                            title="Variant calls",
+                            value=print_number(count_variants),
+                            color=COLOR_OVERVIEW_MINI_CONTAINER),
+                        get_mini_container(
+                            title="First sample",
+                            value=print_date(date_of_first_gisaid_sample),
+                            color=COLOR_OVERVIEW_MINI_CONTAINER),
+                        get_mini_container(
+                            title="Latest sample",
+                            value=print_date(date_of_most_recent_gisaid_sample),
+                            color=COLOR_OVERVIEW_MINI_CONTAINER)
+                        ]),
                     get_dataset_gisaid_tab_graphs(queries=queries, count_samples=count_samples)
                 ]),
                 html.Div(className="one columns", children=[html.Br()]),
-                html.Div(className="one columns", children=[
-                    html.Br(),
-                    get_mini_container(
-                        title="Samples",
-                        value=print_number(count_samples),
-                        color=COLOR_OVERVIEW_MINI_CONTAINER),
-                    get_mini_container(
-                        title="Variant calls",
-                        value=print_number(count_variants),
-                        color=COLOR_OVERVIEW_MINI_CONTAINER),
-                    get_mini_container(
-                        title="First sample",
-                        value=print_date(date_of_first_gisaid_sample),
-                        color=COLOR_OVERVIEW_MINI_CONTAINER),
-                    get_mini_container(
-                        title="Latest sample",
-                        value=print_date(date_of_most_recent_gisaid_sample),
-                        color=COLOR_OVERVIEW_MINI_CONTAINER)
-                ])
             ]),
         ]
     )
