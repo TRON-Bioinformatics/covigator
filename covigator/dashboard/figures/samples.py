@@ -132,8 +132,10 @@ class SampleFigures(Figures):
         return graph
 
     def get_accumulated_samples_by_country_plot(self, data_source: DataSource = None, countries=None, min_samples=1000):
+        logger.info("start query")
         data = self.queries.get_accumulated_samples_by_country(
             data_source=data_source, countries=countries, min_samples=min_samples)
+        logger.info("finished query")
         graph = dcc.Markdown("""**No data for the current selection**""")
         if data is not None and data.shape[0] > 0:
             countries = list(data.sort_values("cumsum", ascending=False).country.unique())

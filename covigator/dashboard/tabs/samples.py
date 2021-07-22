@@ -45,7 +45,6 @@ def get_samples_tab_graphs():
                 html.Div(id=ID_VARIANTS_PER_SAMPLE_GRAPH, className="five columns"),
                 html.Div(id=ID_SUBSTITUTIONS_GRAPH, className="five columns"),
             ]),
-            #html.Br(),
             html.Div(children=[
                 html.Div(id=ID_INDEL_LENGTH_GRAPH, className="five columns"),
                 html.Div(id=ID_ANNOTATIONS_GRAPH, className="five columns"),
