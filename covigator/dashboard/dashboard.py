@@ -112,17 +112,21 @@ def set_callbacks(app, session: Session):
 
     @app.callback(Output("content", "children"), [Input("tabs", "active_tab")])
     def switch_tab(at):
-        if at == OVERVIEW_TAB_ID:
-            return get_tab_overview(queries=queries)
-        elif at == ENA_DATASET_TAB_ID:
-            return get_tab_dataset_ena(queries=queries)
-        elif at == GISAID_DATASET_TAB_ID:
-            return get_tab_dataset_gisaid(queries=queries)
-        elif at == SAMPLES_TAB_ID:
-            return get_tab_samples(queries=queries)
-        elif at == VARIANTS_TAB_ID:
-            return get_tab_variants(queries=queries)
-        return html.P("This shouldn't ever be displayed...")
+        logger.info("Changing tab...")
+        try:
+            if at == OVERVIEW_TAB_ID:
+                return get_tab_overview(queries=queries)
+            elif at == ENA_DATASET_TAB_ID:
+                return get_tab_dataset_ena(queries=queries)
+            elif at == GISAID_DATASET_TAB_ID:
+                return get_tab_dataset_gisaid(queries=queries)
+            elif at == SAMPLES_TAB_ID:
+                return get_tab_samples(queries=queries)
+            elif at == VARIANTS_TAB_ID:
+                return get_tab_variants(queries=queries)
+            return html.P("This shouldn't ever be displayed...")
+        except Exception as e:
+            logger.exception(e)
 
 
 def main(debug=False):

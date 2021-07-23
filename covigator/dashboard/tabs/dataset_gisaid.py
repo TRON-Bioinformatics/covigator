@@ -1,4 +1,4 @@
-#import functools
+import functools
 
 import dash_core_components as dcc
 import dash_bootstrap_components as dbc
@@ -13,7 +13,7 @@ import pandas as pd
 import plotly.express as px
 
 
-#@functools.lru_cache()
+@functools.lru_cache()
 def get_tab_dataset_gisaid(queries: Queries):
 
     count_samples = queries.count_samples(source=DataSource.GISAID.name)
