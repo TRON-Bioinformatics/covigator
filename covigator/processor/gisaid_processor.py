@@ -24,15 +24,20 @@ class GisaidProcessor(AbstractProcessor):
 
     def _process_run(self, run_accession: str):
         # NOTE: here we set the priority of each step to ensure a depth first processing
-        future_process = self.dask_client.submit(
-            GisaidProcessor.run_job, self.config, run_accession, JobStatus.QUEUED, JobStatus.PROCESSED,
-            JobStatus.FAILED_PROCESSING, DataSource.GISAID, GisaidProcessor.run_pipeline,
-            priority=1)
-        future_load = self.dask_client.submit(
-            GisaidProcessor.run_job, self.config, future_process, JobStatus.PROCESSED, JobStatus.FINISHED,
-            JobStatus.FAILED_LOAD, DataSource.GISAID, GisaidProcessor.load,
-            priority=2)
-        return future_load
+        future = self.dask_client.submit(GisaidProcessor.job, self.config, run_accession, priority=1)
+        return future
+
+    @staticmethod
+    def job(config: Configuration, run_accession):
+        return GisaidProcessor.run_job(
+            config, run_accession, start_status=JobStatus.QUEUED, end_status=JobStatus.FINISHED,
+            error_status=JobStatus.FAILED_PROCESSING, data_source=DataSource.GISAID,
+            function=GisaidProcessor.run_all)
+
+    @staticmethod
+    def run_all(job: JobGisaid, queries: Queries, config: Configuration):
+        GisaidProcessor.run_pipeline(job=job, queries=queries, config=config)
+        GisaidProcessor.load(job=job, queries=queries, config=config)
 
     @staticmethod
     def run_pipeline(job: JobGisaid, queries: Queries, config: Configuration):

@@ -1,3 +1,4 @@
+import functools
 from datetime import date, datetime
 from typing import List, Union
 import numpy as np
@@ -6,7 +7,6 @@ from scipy.spatial.distance import squareform
 from logzero import logger
 from skbio.stats.distance import DissimilarityMatrix
 from sklearn.cluster import OPTICS
-from sklearn.manifold import MDS
 from sqlalchemy import and_, desc, asc, func, String, DateTime, cast
 from sqlalchemy.engine.default import DefaultDialect
 from sqlalchemy.orm import Session, aliased
@@ -15,8 +15,9 @@ from sqlalchemy.sql.sqltypes import NullType
 from covigator.database.model import Log, DataSource, CovigatorModule, SampleEna, JobEna, JobStatus, VariantObservation, \
     Gene, Variant, VariantCooccurrence, Conservation, JobGisaid, SampleGisaid, SubclonalVariantObservation, \
     PrecomputedVariantsPerSample, PrecomputedSubstitutionsCounts, PrecomputedIndelLength, VariantType, \
-    PrecomputedAnnotation, PrecomputedOccurrence
-from covigator.exceptions import CovigatorQueryException
+    PrecomputedAnnotation, PrecomputedOccurrence, PrecomputedTableCounts, Sample, PrecomputedVariantAbundanceHistogram, \
+    VARIANT_OBSERVATION_TABLE_NAME
+from covigator.exceptions import CovigatorQueryException, CovigatorDashboardMissingPrecomputedData
 
 SYNONYMOUS_VARIANT = "synonymous_variant"
 
@@ -81,12 +82,15 @@ class Queries:
             raise CovigatorQueryException("Bad query trying to fetch a sample")
         return sample
 
-    def get_countries(self) -> List[str]:
-        countries_ena = [c for c, in self.session.query(SampleEna.country).filter(
-            SampleEna.finished).distinct().all()]
-        countries_gisaid = [c for c, in self.session.query(SampleGisaid.country).filter(
-            SampleGisaid.finished).distinct().all()]
-        return sorted(list(set(countries_ena + countries_gisaid)))
+    def get_countries(self, source: str = None) -> List[str]:
+        countries = []
+        if source == DataSource.ENA.name or source is None:
+            countries = countries + [c for c, in self.session.query(SampleEna.country).filter(
+                SampleEna.finished).distinct().all()]
+        if source == DataSource.GISAID.name or source is None:
+            countries = countries + [c for c, in self.session.query(SampleGisaid.country).filter(
+                SampleGisaid.finished).distinct().all()]
+        return sorted(list(set(countries)))
 
     def get_variants_per_sample(self, data_source: str, genes: List[str], variant_types: List[str]):
         """
@@ -169,6 +173,7 @@ class Queries:
             data = data.head(12)
         return data
 
+    @functools.lru_cache()
     def get_accumulated_samples_by_country(
             self, data_source: DataSource, countries: List[str], min_samples=100) -> pd.DataFrame:
         """
@@ -178,9 +183,9 @@ class Queries:
 
         if data_source is None or data_source == DataSource.ENA.name:
             query = self.session.query(
-                func.count().label("count"), SampleEna.first_created.label("date"), SampleEna.country) \
+                func.count().label("count"), SampleEna.collection_date.label("date"), SampleEna.country) \
                 .filter(SampleEna.finished) \
-                .group_by(SampleEna.first_created, SampleEna.country)
+                .group_by(SampleEna.collection_date, SampleEna.country)
             if countries:
                 query = query.filter(SampleEna.country.in_(countries))
             samples_ena = pd.read_sql(query.statement, self.session.bind).astype(
@@ -233,8 +238,8 @@ class Queries:
 
     def get_sample_months(self, pattern) -> List[datetime]:
         dates_ena = [d.strftime(pattern) for d, in
-                     self.session.query(SampleEna.first_created).filter(
-                         and_(SampleEna.finished, SampleEna.first_created.isnot(None))).distinct().all()]
+                     self.session.query(SampleEna.collection_date).filter(
+                         and_(SampleEna.finished, SampleEna.collection_date.isnot(None))).distinct().all()]
         dates_gisaid = [d.strftime(pattern) for d, in
                      self.session.query(SampleGisaid.date).filter(
                          and_(SampleGisaid.finished, SampleGisaid.date.isnot(None))).distinct().all()]
@@ -273,40 +278,122 @@ class Queries:
                          VariantCooccurrence.variant_id_two == variant_two.variant_id)) \
             .first()
 
-    def count_samples(self, source: str = None) -> int:
-        count = 0
-        if source is None or source == DataSource.ENA.name:
-            count += self.session.query(SampleEna).filter(SampleEna.finished).count()
-        if source is None or source == DataSource.GISAID.name:
-            count += self.session.query(SampleGisaid).filter(SampleGisaid.finished).count()
+    @functools.lru_cache()
+    def count_samples(self, source: str = None, cache=True) -> int:
+        if cache:
+            query = self.session.query(PrecomputedTableCounts.count)
+            if source is not None:
+                query = query.filter(and_(
+                    PrecomputedTableCounts.table == Sample.__name__,
+                    PrecomputedTableCounts.factor == PrecomputedTableCounts.FACTOR_SOURCE,
+                    PrecomputedTableCounts.value == source
+                ))
+            else:
+                query = query.filter(and_(
+                    PrecomputedTableCounts.table == Sample.__name__,
+                    PrecomputedTableCounts.factor == None
+                ))
+            result = query.first()
+            if result is None:
+                raise CovigatorDashboardMissingPrecomputedData
+            count = result.count
+        else:
+            count = 0
+            if source is None or source == DataSource.ENA.name:
+                count += self.session.query(SampleEna).filter(SampleEna.finished).count()
+            if source is None or source == DataSource.GISAID.name:
+                count += self.session.query(SampleGisaid).filter(SampleGisaid.finished).count()
         return count
 
-    def count_countries(self):
-        return len(self.get_countries())
+    @functools.lru_cache()
+    def count_countries(self, source: str = None, cache=True):
+        if cache:
+            query = self.session.query(PrecomputedTableCounts.count)
+            if source is not None:
+                query = query.filter(and_(
+                    PrecomputedTableCounts.table == PrecomputedTableCounts.VIRTUAL_TABLE_COUNTRY,
+                    PrecomputedTableCounts.factor == PrecomputedTableCounts.FACTOR_SOURCE,
+                    PrecomputedTableCounts.value == source
+                ))
+            else:
+                query = query.filter(and_(
+                    PrecomputedTableCounts.table == PrecomputedTableCounts.VIRTUAL_TABLE_COUNTRY,
+                    PrecomputedTableCounts.factor == None
+                ))
+            result = query.first()
+            if result is None:
+                raise CovigatorDashboardMissingPrecomputedData
+            count = result.count
+        else:
+            count = len(self.get_countries(source=source))
+        return count
 
-    def count_variants(self):
-        return self.session.query(Variant).count()
+    @functools.lru_cache()
+    def count_variants(self, cache=True):
+        if cache:
+            result = self.session.query(PrecomputedTableCounts.count) \
+                .filter(PrecomputedTableCounts.table == Variant.__name__).first()
+            if result is None:
+                raise CovigatorDashboardMissingPrecomputedData
+            count = result.count
+        else:
+            count = self.session.query(Variant).count()
+        return count
 
+    @functools.lru_cache()
     def count_insertions(self):
         return self.session.query(Variant).filter(func.length(Variant.alternate) > 1).count()
 
+    @functools.lru_cache()
     def count_deletions(self):
         return self.session.query(Variant).filter(func.length(Variant.reference) > 1).count()
 
-    def count_variant_observations(self):
-        return self.session.query(VariantObservation).count()
+    @functools.lru_cache()
+    def count_variant_observations(self, source: str = None, cache=True):
+        if cache:
+            query = self.session.query(PrecomputedTableCounts.count)
+            if source is not None:
+                query = query.filter(and_(
+                    PrecomputedTableCounts.table == VariantObservation.__name__,
+                    PrecomputedTableCounts.factor == PrecomputedTableCounts.FACTOR_SOURCE,
+                    PrecomputedTableCounts.value == source
+                ))
+            else:
+                query = query.filter(and_(
+                    PrecomputedTableCounts.table == VariantObservation.__name__,
+                    PrecomputedTableCounts.factor == None
+                ))
+            result = query.first()
+            if result is None:
+                raise CovigatorDashboardMissingPrecomputedData
+            count = result.count
+        else:
+            query = self.session.query(VariantObservation)
+            if source == DataSource.GISAID.name or source == DataSource.ENA.name:
+                query = query.filter(VariantObservation.source == source)
+            count = query.count()
+        return count
 
-    def count_subclonal_variant_observations(self):
-        return self.session.query(SubclonalVariantObservation).count()
+    @functools.lru_cache()
+    def count_subclonal_variant_observations(self, cache=True):
+        if cache:
+            query = self.session.query(PrecomputedTableCounts.count) \
+                .filter(PrecomputedTableCounts.table == SubclonalVariantObservation.__name__)
+            result = query.first()
+            count = result.count
+        else:
+            count = self.session.query(SubclonalVariantObservation).count()
+        return count
 
+    @functools.lru_cache()
     def get_date_of_first_sample(self, source: DataSource = DataSource.ENA) -> date:
         """
         Returns the date of the earliest ENA sample loaded in the database
         """
         if source == DataSource.ENA:
-            result = self.session.query(SampleEna.first_created).filter(
-                and_(SampleEna.finished, SampleEna.first_created.isnot(None))) \
-                .order_by(asc(SampleEna.first_created)).first()
+            result = self.session.query(SampleEna.collection_date).filter(
+                and_(SampleEna.finished, SampleEna.collection_date.isnot(None))) \
+                .order_by(asc(SampleEna.collection_date)).first()
         elif source == DataSource.GISAID:
             result = self.session.query(SampleGisaid.date).filter(
                 and_(SampleGisaid.finished, SampleGisaid.date.isnot(None))) \
@@ -315,14 +402,15 @@ class Queries:
             raise CovigatorQueryException("No valid data source for query of first sample")
         return result[0] if result is not None else result
 
+    @functools.lru_cache()
     def get_date_of_most_recent_sample(self, source: DataSource = DataSource.ENA) -> date:
         """
         Returns the date of the latest ENA sample loaded in the database
         """
         if source == DataSource.ENA:
-            result = self.session.query(SampleEna.first_created).filter(
-                and_(SampleEna.finished, SampleEna.first_created.isnot(None))) \
-                .order_by(desc(SampleEna.first_created)).first()
+            result = self.session.query(SampleEna.collection_date).filter(
+                and_(SampleEna.finished, SampleEna.collection_date.isnot(None))) \
+                .order_by(desc(SampleEna.collection_date)).first()
         elif source == DataSource.GISAID:
             result = self.session.query(SampleGisaid.date).filter(
                 and_(SampleGisaid.finished, SampleGisaid.date.isnot(None))) \
@@ -365,7 +453,7 @@ class Queries:
                 .order_by(desc(Log.start)).first()
         return result2[0] if result2 is not None else result2
 
-    def get_top_occurring_variants(self, top, source):
+    def get_top_occurring_variants(self, top, source: str = None):
         query = self.session.query(
             VariantObservation.variant_id, VariantObservation.hgvs_p, VariantObservation.gene_name,
             VariantObservation.annotation_highest_impact, func.count().label('total')) \
@@ -378,7 +466,7 @@ class Queries:
         top_occurring_variants = pd.read_sql(query.statement, self.session.bind)
 
         # calculate frequency
-        count_samples = self.count_samples(source=source.name if source is not None else None)
+        count_samples = self.count_samples(source=source if source is not None else None)
         top_occurring_variants['frequency'] = top_occurring_variants.total.transform(
             lambda x: round(float(x) / count_samples, 3))
 
@@ -435,24 +523,28 @@ class Queries:
         return top_occurring_variants.sort_values(by="frequency", ascending=False).head(top)
 
     def get_variant_counts_by_month(self, variant_id, source=None) -> pd.DataFrame:
-        query = self.session.query(
-            VariantObservation.variant_id,
-            func.date_trunc('month', VariantObservation.date).label("month"),
-            func.count().label("count"))\
-            .filter(and_(VariantObservation.variant_id == variant_id, VariantObservation.date.isnot(None)))
-        if source is not None:
-            query = query.filter(VariantObservation.source == source)
-        query = query.group_by(VariantObservation.variant_id, func.date_trunc('month', VariantObservation.date))
-        return pd.read_sql(query.statement, self.session.bind)
+
+        sql_query_ds_ena = """
+        select count(*) as count, variant_id, date_trunc('month', date::timestamp) as month 
+            from {variant_observation_table} 
+            where variant_id='{variant_id}' {source_filter}
+            group by variant_id, date_trunc('month', date::timestamp);
+            """.format(
+            variant_observation_table=VARIANT_OBSERVATION_TABLE_NAME,
+            variant_id=variant_id,
+            source_filter="and source='{source}'".format(source=source) if source is not None else ""
+        )
+        data = pd.read_sql_query(sql_query_ds_ena, self.session.bind)
+        return data[data.month is not None]
 
     def get_sample_counts_by_month(self, source=None) -> pd.DataFrame:
         counts_ena = None
         if source is None or source == DataSource.ENA:
             query = self.session.query(
-                func.date_trunc('month', SampleEna.first_created).label("month"),
+                func.date_trunc('month', SampleEna.collection_date).label("month"),
                 func.count().label("sample_count"))\
                 .filter(SampleEna.finished) \
-                .group_by(func.date_trunc('month', SampleEna.first_created))
+                .group_by(func.date_trunc('month', SampleEna.collection_date))
             counts_ena = pd.read_sql(query.statement, self.session.bind)
         counts_gisaid = None
         if source is None or source == DataSource.GISAID:
@@ -581,6 +673,7 @@ class Queries:
 
         return full_matrix
 
+    @functools.lru_cache()
     def get_mds(self, gene_name, min_cooccurrence, min_samples) -> pd.DataFrame:
 
         variant_one = aliased(Variant)
@@ -648,15 +741,8 @@ class Queries:
         logger.info("Clustering...")
         clusters = OPTICS(min_samples=min_samples, max_eps=1.4).fit_predict(distance_matrix_with_ids.data)
 
-        logger.info("Dimensionality reduction...")
-        dimensionality_reduction_model = MDS(
-            n_components=2, random_state=123, dissimilarity='precomputed', n_init=1, max_iter=10)  # this two values make computation faster
-        coords = dimensionality_reduction_model.fit_transform(distance_matrix_with_ids.data)
-
         logger.info("Building clustering dataframe...")
-        data = pd.DataFrame(coords, columns=["PC1", "PC2"])
-        data["cluster"] = clusters
-        data["variant_id"] = distance_matrix_with_ids.ids
+        data = pd.DataFrame({'variant_id': distance_matrix_with_ids.ids, 'cluster': clusters})
 
         logger.info("Annotate with HGVS.p ...")
         annotations = pd.concat([
@@ -665,12 +751,9 @@ class Queries:
             sparse_matrix.loc[:, ["variant_id_two", "hgvs_p_two"]].rename(
                 columns={"variant_id_two": "variant_id", "hgvs_p_two": "hgvs_p"})])
         data = pd.merge(left=data, right=annotations, on="variant_id", how="left")
-        data["tooltip"] = data[["variant_id", "hgvs_p"]].apply(
-            lambda x: "<b>{}</b><br>Variant: {}".format(x[1], x[0]), axis=1)
 
         logger.info("Annotate with cluster mean Jaccard index...")
         data["cluster_jaccard_mean"] = 1.0
-        data["cluster_members"] = 0
         for c in data.cluster.unique():
             variants_in_cluster = data[data.cluster == c].variant_id.unique()
             data.cluster_jaccard_mean = np.where(data.cluster == c, sparse_matrix_with_diagonal[
@@ -678,50 +761,65 @@ class Queries:
                 (sparse_matrix.variant_id_two.isin(variants_in_cluster)) &
                 (sparse_matrix.variant_id_one != sparse_matrix.variant_id_two)
             ].jaccard_dissimilarity.mean(), data.cluster_jaccard_mean)
-            data.cluster_members = np.where(data.cluster == c, variants_in_cluster.size, data.cluster_members)
 
-        logger.info("Compose tooltip...")
-        data["tooltip"] = data[["variant_id", "hgvs_p", "cluster_jaccard_mean", "cluster_members"]].apply(
-            lambda x: "<b>{}</b><br>Variant: {}<br>Jaccard mean in cluster:{}<br>Members in cluster: {}".format(
-                x[1], x[0], round(1 - x[2], 3), x[3]), axis=1)
+        data.cluster_jaccard_mean = data.cluster_jaccard_mean.transform(lambda x: round(x, 3))
 
-        return data
+        data = data.set_index("variant_id").drop_duplicates().reset_index().sort_values("cluster")
 
-    def get_variant_abundance_histogram(self, bin_size=50, source: str = None) -> pd.DataFrame:
+        return data[data.cluster != -1].loc[:, ["cluster", "variant_id", "hgvs_p", "cluster_jaccard_mean"]]
 
-        # queries for the maximum position
-        maximum_position = self.session.query(func.max(Variant.position)).first()[0]
+    def get_variant_abundance_histogram(self, bin_size=50, source: str = None, cache=True) -> pd.DataFrame:
         histogram = None
-        if maximum_position is not None:
-            # builds all possible bins
-            all_bins = pd.DataFrame(data=[i*bin_size for i in range(int(maximum_position/bin_size) + 1)], columns=["position_bin"])
+        if cache:
+            query = self.session.query(PrecomputedVariantAbundanceHistogram)
+            if source is not None:
+                query = query.filter(and_(PrecomputedVariantAbundanceHistogram.bin_size == bin_size,
+                                          PrecomputedVariantAbundanceHistogram.source == source))
+            else:
+                query = query.filter(and_(PrecomputedVariantAbundanceHistogram.bin_size == bin_size,
+                                          PrecomputedVariantAbundanceHistogram.source == None))
+            histogram = pd.read_sql(query.statement, self.session.bind)
+            if histogram.shape[0] == 0:
+                raise CovigatorDashboardMissingPrecomputedData
+            histogram = histogram[["position_bin", "count_unique_variants", "count_variant_observations"]]
+        else:
+            # queries for the maximum position
+            maximum_position = self.session.query(func.max(Variant.position)).first()[0]
+            if maximum_position is not None:
+                # builds all possible bins
+                all_bins = pd.DataFrame(data=[i*bin_size for i in range(int(maximum_position/bin_size) + 1)], columns=["position_bin"])
 
-            # counts variants over those bins
-            sql_query = """
-                    SELECT cast("position"/{bin_size} as int)*{bin_size} AS position_bin,
-                           COUNT(*) as count_unique_variants
-                    FROM {table_name}
-                    GROUP BY position_bin
-                    ORDER BY position_bin;
-                    """.format(bin_size=bin_size, table_name=Variant.__tablename__)
-            binned_counts_variants = pd.read_sql_query(sql_query, self.session.bind)
+                # counts variants over those bins
+                sql_query = """
+                        SELECT cast("position"/{bin_size} as int)*{bin_size} AS position_bin,
+                               COUNT(*) as count_unique_variants
+                        FROM {table_name}
+                        GROUP BY position_bin
+                        ORDER BY position_bin;
+                        """.format(bin_size=bin_size, table_name=Variant.__tablename__)
+                binned_counts_variants = pd.read_sql_query(sql_query, self.session.bind)
 
-            # counts variant observations over those bins
-            sql_query = """
-                    SELECT cast("position"/{bin_size} as int)*{bin_size} AS position_bin,
-                           COUNT(*) as count_variant_observations
-                    FROM {table_name}
-                    {source_filter}
-                    GROUP BY position_bin
-                    ORDER BY position_bin;
-                    """.format(bin_size=bin_size, table_name=VariantObservation.__tablename__,
-                               source_filter="WHERE source='{}'".format(source) if source is not None else "")
-            binned_counts_variant_observations = pd.read_sql_query(sql_query, self.session.bind)
+                # counts variant observations over those bins
+                sql_query = """
+                        SELECT cast("position"/{bin_size} as int)*{bin_size} AS position_bin,
+                               COUNT(*) as count_variant_observations
+                        FROM {table_name}
+                        {source_filter}
+                        GROUP BY position_bin
+                        ORDER BY position_bin;
+                        """.format(bin_size=bin_size, table_name=VariantObservation.__tablename__,
+                                   source_filter="WHERE source='{}'".format(source) if source is not None else "")
+                binned_counts_variant_observations = pd.read_sql_query(sql_query, self.session.bind)
 
-            histogram = all_bins.set_index("position_bin").join(binned_counts_variants.set_index("position_bin"))
-            histogram = histogram.join(binned_counts_variant_observations.set_index("position_bin"))
-            histogram.fillna(0, inplace=True)
-            histogram.reset_index(inplace=True)
+                histogram = pd.merge(
+                    left=pd.merge(
+                        left=all_bins,
+                        right=binned_counts_variants,
+                        on="position_bin", how="left").reset_index(),
+                    right=binned_counts_variant_observations,
+                    on="position_bin", how="left").reset_index()
+                histogram.fillna(0, inplace=True)
+                histogram = histogram[["position_bin", "count_unique_variants", "count_variant_observations"]]
 
         return histogram
 

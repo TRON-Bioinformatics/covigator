@@ -12,8 +12,10 @@ from covigator.exceptions import CovigatorExcludedSampleTooEarlyDateException
 from covigator.misc.compression import compress_sequence
 from covigator.misc.country_parser import CountryParser
 
-
-
+THRESHOLD_NON_VALID_BASES_RATIO = 0.2
+THRESHOLD_GENOME_COVERAGE = 0.2
+CHROMOSOME = "MN908947.3"
+GENOME_LENGTH = 29903
 BATCH_SIZE = 1000
 
 
@@ -29,6 +31,8 @@ class GisaidAccessor:
         assert self.database is not None, "Empty database"
 
         self.excluded_by_host = 0
+        self.excluded_by_horizontal_coverage = 0
+        self.excluded_by_non_valid_bases_ratio = 0
         self.excluded_existing = 0
         self.excluded_by_date = 0
         self.included = 0
@@ -111,6 +115,19 @@ class GisaidAccessor:
                 self.excluded_by_host += 1
                 continue
 
+            sequence_length = len(record.seq)
+            if float(sequence_length) / GENOME_LENGTH < THRESHOLD_GENOME_COVERAGE:
+                num_samples += 1
+                self.excluded_by_horizontal_coverage += 1
+                continue
+
+            count_n_bases = record.seq.count("N")
+            count_ambiguous_bases = sum([record.seq.count(b) for b in "RYWSMKHBVD"])
+            if float(count_n_bases + count_ambiguous_bases) / sequence_length > THRESHOLD_NON_VALID_BASES_RATIO:
+                num_samples += 1
+                self.excluded_by_non_valid_bases_ratio += 1
+                continue
+
             sample_gisaid = SampleGisaid(
                 run_accession=identifier,
                 date=metadata[2],
@@ -125,10 +142,10 @@ class GisaidAccessor:
                 continent_alpha_2=None,
                 site=None,
                 site2=None,
-                sequence={"MN908947.3": compress_sequence(record.seq)},
-                sequence_length=len(record.seq),
-                count_n_bases=record.seq.count("N"),
-                count_ambiguous_bases=sum([record.seq.count(b) for b in "RYWSMKHBVD"])
+                sequence={CHROMOSOME: compress_sequence(record.seq)},
+                sequence_length=sequence_length,
+                count_n_bases=count_n_bases,
+                count_ambiguous_bases=count_ambiguous_bases
             )
             try:
                 self._parse_country(sample_gisaid)
@@ -194,6 +211,8 @@ class GisaidAccessor:
         logger.info("Included new runs = {}".format(self.included))
         logger.info("Excluded already existing runs = {}".format(self.excluded_existing))
         logger.info("Excluded non human host = {}".format(self.excluded_by_host))
+        logger.info("Excluded by low horizontal coverage = {}".format(self.excluded_by_horizontal_coverage))
+        logger.info("Excluded by high non valid bases ratio = {}".format(self.excluded_by_non_valid_bases_ratio))
 
     def _write_execution_log(self, session: Session):
         end_time = datetime.now()
@@ -208,7 +227,9 @@ class GisaidAccessor:
                 "excluded": {
                     "existing": self.excluded_existing,
                     "excluded_by_host": self.excluded_by_host,
-                    "excluded_by_date": self.excluded_by_date
+                    "excluded_by_date": self.excluded_by_date,
+                    "excluded_by_horizontal_coverage": self.excluded_by_horizontal_coverage,
+                    "excluded_by_non_valid_bases_ratio": self.excluded_by_non_valid_bases_ratio
                 }
             }
         ))

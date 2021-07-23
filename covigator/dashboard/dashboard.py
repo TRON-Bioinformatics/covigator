@@ -1,16 +1,27 @@
 import dash
 import dash_core_components as dcc
+import dash_bootstrap_components as dbc
 import dash_html_components as html
+from sqlalchemy.orm import Session
+from dash.dependencies import Input, Output
 import covigator
 import covigator.configuration
 from covigator.configuration import Configuration
+from covigator.dashboard.tabs.dataset_ena import get_tab_dataset_ena
+from covigator.dashboard.tabs.dataset_gisaid import get_tab_dataset_gisaid
 from covigator.dashboard.tabs.footer import get_footer
 from covigator.dashboard.tabs.overview import get_tab_overview
 from covigator.dashboard.tabs.samples import get_tab_samples, set_callbacks_samples_tab
 from covigator.dashboard.tabs.variants import get_tab_variants, set_callbacks_variants_tab
-from covigator.database.database import session_scope, get_database
+from covigator.database.database import get_database
 from logzero import logger
 from covigator.database.queries import Queries
+
+VARIANTS_TAB_ID = "variants"
+SAMPLES_TAB_ID = "samples"
+GISAID_DATASET_TAB_ID = "gisaid-dataset"
+ENA_DATASET_TAB_ID = "ena-dataset"
+OVERVIEW_TAB_ID = "overview"
 
 
 class Dashboard:
@@ -23,26 +34,61 @@ class Dashboard:
 
     def serve_layout(self):
         logger.info("Serving layout")
-        with session_scope(database=self.database) as session:
-            queries = Queries(session=session)
-            footer = get_footer()
-            tabs = self.get_tabs(queries)
-            # , style={'margin-top': '0px', 'padding-top': '0px'})
-            layout = html.Div(
-                children=[tabs, footer]
-            )
-        return layout
+        footer = get_footer()
+        layout = html.Div(children=[
+            dbc.Navbar([
 
-    def get_tabs(self, queries: Queries):
-        tab_overview = get_tab_overview(queries=queries)
-        tab_samples = get_tab_samples(queries=queries)
-        tab_variants = get_tab_variants(queries=queries)
-        # assemble tabs in dcc.Tabs object
-        # style={'margin': '0 0 0 0', 'padding-top': '2px'})
-        return dcc.Tabs(
-            children=[tab_overview, tab_samples, tab_variants],
-            style={'height': '44px'}
-        )
+                # Use row and col to control vertical alignment of logo / brand
+                dbc.Row(
+                    [
+                        dbc.Col(html.A(html.Img(
+                            src="/assets/CoVigator_logo_txt_reg_no_bg.png", height="25px"),
+                            href="https://covigator.tron-mainz.de/"), className="ml-2"
+                        )
+                    ],
+                    align="center",
+                    no_gutters=True,
+                ),
+                dbc.Row(
+                    [
+                        dbc.Col(html.A(html.Img(
+                            src="/assets/tron_logo_without_text.png", height="22px"),
+                            href="https://tron-mainz.de"), className="ml-2"),
+                        dbc.Col(html.Br(), className="ml-2"),
+                        dbc.Col(html.A(html.Img(
+                            src="https://github.githubassets.com/images/modules/logos_page/Octocat.png", height="25px"),
+                            href="https://github.com/TRON-bioinformatics/covigator"), className="ml-2"),
+                        dbc.Col(html.Br(), className="ml-2"),
+
+                    ],
+                    align="center",
+                    justify="end",
+                    no_gutters=True,
+                    style={'float': 'right', 'position': 'absolute', 'right': 0, 'text-align': 'right'}
+                )
+            ],
+                color="white",
+                dark=False,
+            ),
+            dbc.Card([
+                dbc.CardHeader(
+                    children=[
+                        dbc.Tabs([
+                            dbc.Tab(label="Overview", tab_id=OVERVIEW_TAB_ID),
+                            dbc.Tab(label="ENA dataset", tab_id=ENA_DATASET_TAB_ID),
+                            dbc.Tab(label="GISAID dataset", tab_id=GISAID_DATASET_TAB_ID),
+                            dbc.Tab(label="Samples", tab_id=SAMPLES_TAB_ID),
+                            dbc.Tab(label="Recurrent variants", tab_id=VARIANTS_TAB_ID)],
+                            id="tabs",
+                            active_tab="overview",
+                            card=True),
+
+                    ]),
+                dbc.CardBody(dcc.Loading(id="loading-1", children=[html.Div(id="content")], type="default")),
+                dbc.CardFooter(footer)
+            ])
+        ])
+        return layout
 
     def start_dashboard(self, debug=False):
         try:
@@ -60,12 +106,14 @@ class Dashboard:
         app = dash.Dash(
             name=__name__,
             title="CoVigator",
+            external_stylesheets=[dbc.themes.BOOTSTRAP],
+            suppress_callback_exceptions=True,
             meta_tags=[
                 # A description of the app, used by e.g.
                 # search engines when displaying search results.
                 {
                     'name': 'description',
-                    'content': 'CoVigator - monitoring Sars-Cov-2 mutations'
+                    'content': 'CoVigator - monitoring SARS-CoV-2 mutations'
                 },
                 # A tag that tells Internet Explorer (IE)
                 # to use the latest renderer version available
@@ -90,9 +138,33 @@ class Dashboard:
         # Warning pass the layout as a function, do not call it otherwise the application will serve a static dataset
         app.layout = self.serve_layout
         session = self.database.get_database_session()
+        set_callbacks(app=app, session=session)
         set_callbacks_variants_tab(app=app, session=session)
         set_callbacks_samples_tab(app=app, session=session)
         return app
+
+
+def set_callbacks(app, session: Session):
+
+    queries = Queries(session=session)
+
+    @app.callback(Output("content", "children"), [Input("tabs", "active_tab")])
+    def switch_tab(at):
+        logger.info("Changing tab...")
+        try:
+            if at == OVERVIEW_TAB_ID:
+                return get_tab_overview(queries=queries)
+            elif at == ENA_DATASET_TAB_ID:
+                return get_tab_dataset_ena(queries=queries)
+            elif at == GISAID_DATASET_TAB_ID:
+                return get_tab_dataset_gisaid(queries=queries)
+            elif at == SAMPLES_TAB_ID:
+                return get_tab_samples(queries=queries)
+            elif at == VARIANTS_TAB_ID:
+                return get_tab_variants(queries=queries)
+            return html.P("This shouldn't ever be displayed...")
+        except Exception as e:
+            logger.exception(e)
 
 
 def main(debug=False):

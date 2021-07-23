@@ -42,3 +42,7 @@ class CovigatorExcludedSampleNarrowCoverage(Exception):
 
 class CovigatorExcludedSampleBadQualityReads(Exception):
     pass
+
+
+class CovigatorDashboardMissingPrecomputedData(Exception):
+    pass
