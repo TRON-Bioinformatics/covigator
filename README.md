@@ -1,27 +1,57 @@
-![CoVigator logo](covigator/dashboard/assets/CoVigator_logo_txt_nobg.png "CoVigator logo")
+![CoVigator logo](covigator/dashboard/assets/CoVigator_logo_txt_reg_no_bg.png "CoVigator logo")
 
 -----------------
 
-# CoVigator: Sars-CoV-2 navigator
+# CoVigator: monitoring SARS-CoV-2 mutations
 
 [![License](https://img.shields.io/badge/license-MIT-green)](https://opensource.org/licenses/MIT)
-[![Powered by NumFOCUS](https://img.shields.io/badge/powered%20by-Nextflow-orange.svg?style=flat&colorA=E1523D&colorB=007D8A)](https://www.nextflow.io/)
+[![Powered by Dash](https://img.shields.io/badge/powered%20by-Dash-orange.svg?style=flat&colorA=E1523D&colorB=007D8A)](https://dash.plotly.com/)
+
+Human infections with SARS-CoV-2 are spreading globally since the beginning of 2020, necessitating preventive or 
+therapeutic strategies and first steps towards an end to this pandemic were done with the approval of the first mRNA 
+vaccines against SARS-CoV-2. We want to provide an interactive view on different types of mutations that can be 
+incorporated in global efforts to sustainably prevent or treat infections. Thus, we envision to help guiding global 
+vaccine design efforts to overcome the threats of this pandemic.
 
 CoVigator is a monitoring system for SARS-CoV-2 which integrates a full variant calling pipeline, 
-a database that stores all relevant information about mutations in Sars-Cov-2, a dashboard to enable visual analytics
+a database that stores all relevant information about mutations in SARS-CoV-2, a dashboard to enable visual analytics
 and finally an Application Programming Interface to make the data programmatically available.
 
-For full details on the variant calling pipeline go to 
+CoVigator loads publicly available SARS-CoV-2 DNA sequences from two systems:
+
+* European Nucleotide Archive (ENA) providing raw reads in FASTQ format
+* Global Initiative on Sharing Avian Influenza Data (GISAID) providing assemblies in FASTA format
+
+The dashboard is implemented in the popular visualization framework Dash ![https://dash.plotly.com/](https://dash.plotly.com/). 
+The computation is distributed through our cluster with a library of similar name and popularity Dask ![https://dask.org/](https://dask.org/).
+The analysis pipeline is implemented in the Nextflow framework ![https://www.nextflow.io/](https://www.nextflow.io/), for full details go to 
 ![https://github.com/TRON-Bioinformatics/covigator-ngs-pipeline](https://github.com/TRON-Bioinformatics/covigator-ngs-pipeline).
 
+![CoVigator sample accumulation](covigator/dashboard/assets/screenshot_samples_by_country.png "CoVigator sample accumulation")
+  Figure 1: Sample accumulation by country
+
+![CoVigator gene S view](covigator/dashboard/assets/screenshot_gene_view.png "CoVigator gene S view")
+  Figure 1: Most frequent mutations in the spike gene
+
+
+The CoVigator project was developed at the Biomarker Development Center at 
+TRON (Translational Oncology at the University Medical Center of the Johannes Gutenberg University gGmbH). 
+The project was kindly supported by Intel´s Pandemic Response Technology Initiative ![https://newsroom.intel.com/tag/pandemic-response-technology-initiative](https://newsroom.intel.com/tag/pandemic-response-technology-initiative).
+
+If you want to cite us:
+
+* Schrörs, B., Gudimella, R., Bukur, T., Rösler, T., Löwer, M., & Sahin, U. (2021). Large-scale analysis of SARS-CoV-2 spike-glycoprotein mutants demonstrates the need for continuous screening of virus isolates. BioRxiv, 2021.02.04.429765. ![https://doi.org/10.1101/2021.02.04.429765](https://doi.org/10.1101/2021.02.04.429765)
+
+## System architecture
+
 The system architecture has the following components:
-- **Database**: all other modules need access to the database
-- **Accessor**: queries external systems (ie: ENA and GISAID) for new samples and stores all necessary raw data and 
+- **Database**: data storage
+- **Accessor**: queries external systems (ie: ENA and GISAID) for new samples and registers all necessary raw data and 
   metadata to be analysed
 - **Processor**: reads data from new samples and process it through a workflow with multiple steps to generate the 
   analysis ready data
 - **Dashboard**: a web application reading data from the database and presenting through tables and visualizations
-- **API**: a set of REST endpoints that make the data available
+- **API**: a set of REST endpoints that make the data available (TODO)
 
 ![Covigator system design](docs/resources/system_design.png "Covigator system design")
 
@@ -223,7 +253,7 @@ Increases the count of every pairwise combination of variants within the new sam
 It stores the cooccurrence matrix in one single table indexed by two variants. Only the lower diagonal is stored.
 
 
-## References
+## Reference data
 
 - DNA reference: ftp://ftp.ensemblgenomes.org/pub/viruses/fasta/sars_cov_2/dna/Sars_cov_2.ASM985889v3.dna.toplevel.fa.gz
 - Peptides reference: ftp://ftp.ensemblgenomes.org/pub/viruses/fasta/sars_cov_2/pep/Sars_cov_2.ASM985889v3.pep.all.fa.gz
