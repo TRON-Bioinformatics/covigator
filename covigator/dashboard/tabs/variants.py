@@ -1,4 +1,4 @@
-#import functools
+import functools
 from datetime import timedelta, datetime
 import dash_core_components as dcc
 import dash_bootstrap_components as dbc
@@ -30,7 +30,7 @@ ID_TOP_OCCURRING_VARIANTS_TABLE = 'top-occurring-variants-table'
 ID_DROPDOWN_DATA_SOURCE = "dropdown-data-source-variants-tab"
 
 
-#@functools.lru_cache()
+@functools.lru_cache()
 def get_tab_variants(queries: Queries):
 
     return dbc.Card(
