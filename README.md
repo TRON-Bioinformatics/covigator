@@ -34,7 +34,7 @@ The analysis pipeline is implemented in the Nextflow framework ![https://www.nex
   Figure 1: Sample accumulation by country
 
 ![CoVigator gene S view](covigator/dashboard/assets/screenshot_gene_view.png "CoVigator gene S view")
-  Figure 1: Most frequent mutations in the spike gene
+  Figure 2: Most frequent mutations in the spike gene
 
 
 The CoVigator project was developed at the Biomarker Development Center at 
