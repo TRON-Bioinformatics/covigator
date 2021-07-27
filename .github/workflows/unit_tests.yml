@@ -16,5 +16,6 @@ jobs:
     - name: Build, install and run unit tests
       run: |
         python setup.py bdist_wheel
+        pip install numpy==1.21.0
         pip install dist/covigator*.whl
         python -m unittest discover covigator.tests.unit_tests
