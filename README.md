@@ -4,8 +4,11 @@
 
 # CoVigator: monitoring SARS-CoV-2 mutations
 
-[![License](https://img.shields.io/badge/license-MIT-green)](https://opensource.org/licenses/MIT)
+[![PyPI version](https://badge.fury.io/py/covigator.svg)](https://badge.fury.io/py/covigator)
+[![Run unit tests](https://github.com/TRON-Bioinformatics/covigator/actions/workflows/unit_tests.yml/badge.svg?branch=main)](https://github.com/TRON-Bioinformatics/covigator/actions/workflows/unit_tests.yml)
 [![Powered by Dash](https://img.shields.io/badge/powered%20by-Dash-orange.svg?style=flat&colorA=E1523D&colorB=007D8A)](https://dash.plotly.com/)
+[![License](https://img.shields.io/badge/license-MIT-green)](https://opensource.org/licenses/MIT)
+
 
 Human infections with SARS-CoV-2 are spreading globally since the beginning of 2020, necessitating preventive or 
 therapeutic strategies and first steps towards an end to this pandemic were done with the approval of the first mRNA 
