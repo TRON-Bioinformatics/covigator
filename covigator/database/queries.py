@@ -386,6 +386,39 @@ class Queries:
         return count
 
     @functools.lru_cache()
+    def count_unique_subclonal_variant(self, cache=True):
+        if cache:
+            query = self.session.query(PrecomputedTableCounts.count) \
+                .filter(PrecomputedTableCounts.table == SubclonalVariantObservation.__name__ + "_unique")
+            result = query.first()
+            count = result.count
+        else:
+            count = self.session.query(SubclonalVariantObservation)\
+                .distinct(SubclonalVariantObservation.variant_id).count()
+        return count
+
+    def count_unique_only_subclonal_variant(self, cache=True):
+        if cache:
+            query = self.session.query(PrecomputedTableCounts.count) \
+                .filter(PrecomputedTableCounts.table == SubclonalVariantObservation.__name__ + "_unique_only_subclonal")
+            result = query.first()
+            count = result.count
+        else:
+            sql_query = """
+                    SELECT COUNT(*) as count from (
+                        select distinct variant_id 
+                        from {subclonal_variants_table}
+                        where variant_id not in (
+                            select distinct variant_id from {variant_observations_table} where source='ENA'
+                        )
+                        and vaf >= 0.03
+                    ) as variants""".format(
+                subclonal_variants_table=SubclonalVariantObservation.__tablename__,
+                variant_observations_table=VariantObservation.__tablename__)
+            count = int(pd.read_sql_query(sql_query, self.session.bind)["count"][0])
+        return count
+
+    @functools.lru_cache()
     def get_date_of_first_sample(self, source: DataSource = DataSource.ENA) -> date:
         """
         Returns the date of the earliest ENA sample loaded in the database

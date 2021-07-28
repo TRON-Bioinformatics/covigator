@@ -3,7 +3,7 @@ import colorlover
 import dash_table
 import numpy as np
 import re
-from covigator.dashboard.figures.figures import Figures, PLOTLY_CONFIG, TEMPLATE, MARGIN
+from covigator.dashboard.figures.figures import Figures, PLOTLY_CONFIG, TEMPLATE, MARGIN, STYLES_STRIPPED, STYLE_HEADER
 import plotly
 import plotly.express as px
 import plotly.graph_objects as go
@@ -94,11 +94,6 @@ class VariantsFigures(Figures):
             styles_counts = self.discrete_background_color_bins(data, columns=included_month_colums)
             styles_total_count = self.discrete_background_color_bins(data, columns=["total"], colors="Reds")
             styles_frequency = self._get_table_style_by_af()
-            styles_striped = [{
-                'if': {'row_index': 'odd'},
-                'backgroundColor': 'rgb(248, 248, 248)'
-            }]
-
             month_columns = [{'name': ["", i], 'id': i} for i in data.columns if i.startswith("20")]
             month_columns[0]['name'][0] = 'Monthly counts' if metric == "count" else 'Monthly frequencies'
 
@@ -114,7 +109,7 @@ class VariantsFigures(Figures):
                             {"name": ["", "Frequency"], "id": "frequency"},
                             {"name": ["", "Count"], "id": "total"},
                         ] + month_columns,
-                style_data_conditional=styles_striped + styles_counts + styles_frequency + styles_total_count,
+                style_data_conditional=STYLES_STRIPPED + styles_counts + styles_frequency + styles_total_count,
                 style_cell_conditional=[
                     {
                         'if': {'column_id': c},
@@ -123,10 +118,7 @@ class VariantsFigures(Figures):
                 ],
                 style_table={'overflowX': 'auto'},
                 style_as_list_view=True,
-                style_header={
-                    'backgroundColor': 'rgb(230, 230, 230)',
-                    'fontWeight': 'bold'
-                },
+                style_header=STYLE_HEADER,
                 sort_by=[{"column_id": "frequency", "direction": "desc"}],
                 row_selectable='multi'
             )

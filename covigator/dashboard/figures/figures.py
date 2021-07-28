@@ -10,6 +10,15 @@ PLOTLY_CONFIG = {
 MARGIN = go.layout.Margin(l=0, r=0, b=0, t=30)
 TEMPLATE = "plotly_white"
 
+STYLES_STRIPPED = [{
+                'if': {'row_index': 'odd'},
+                'backgroundColor': 'rgb(248, 248, 248)'
+            }]
+STYLE_HEADER = {
+                'backgroundColor': 'rgb(230, 230, 230)',
+                'fontWeight': 'bold'
+            }
+
 
 class Figures:
 
