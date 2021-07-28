@@ -5,7 +5,7 @@ import numpy as np
 import dash_core_components as dcc
 import dash_table
 from sqlalchemy.orm import Session
-from covigator.dashboard.figures.figures import Figures, MARGIN, TEMPLATE, PLOTLY_CONFIG
+from covigator.dashboard.figures.figures import Figures, MARGIN, TEMPLATE, PLOTLY_CONFIG, STYLES_STRIPPED, STYLE_HEADER
 from covigator.database.model import SubclonalVariantObservation, VariantObservation, SampleEna
 from covigator.exceptions import CovigatorQueryException
 import plotly.express as px
@@ -128,6 +128,28 @@ class SubclonalVariantsQueries:
 
         return filled_table
 
+    def get_top_cooccurring_clonal_variants(self, variant_id, min_vaf, gene_name):
+        sql_query = """
+        select count(*) as count_samples, variant_id, hgvs_p, gene_name, annotation_highest_impact
+        from {variant_observations_table}
+        where sample in (
+            select sample 
+            from {subclonal_variant_observations_table} 
+            where variant_id='{variant_id}' and vaf >= {min_vaf}
+            )
+        {where_gene}
+        group by variant_id, hgvs_p, gene_name, annotation_highest_impact
+        order by count_samples desc
+        limit 10
+        """.format(
+            variant_id=variant_id,
+            min_vaf=min_vaf,
+            variant_observations_table=VariantObservation.__tablename__,
+            subclonal_variant_observations_table=SubclonalVariantObservation.__tablename__,
+            where_gene="and gene_name = '{}'".format(gene_name) if gene_name else ""
+        )
+        return pd.read_sql_query(sql_query, self.session.bind)
+
 
 class SubclonalVariantsFigures(Figures):
 
@@ -168,10 +190,7 @@ class SubclonalVariantsFigures(Figures):
             #styles_counts = self.discrete_background_color_bins(data, columns=included_month_colums)
             #styles_total_count = self.discrete_background_color_bins(data, columns=["total"], colors="Reds")
             #styles_frequency = self._get_table_style_by_af()
-            styles_striped = [{
-                'if': {'row_index': 'odd'},
-                'backgroundColor': 'rgb(248, 248, 248)'
-            }]
+
 
             if order_by == "score":
                 ordered_data = unique_subclonal_variants.sort_values("score", ascending=True)
@@ -201,7 +220,7 @@ class SubclonalVariantsFigures(Figures):
                             {"name": ["IQR VAF"], "id": "iqr_vaf"},
                             {"name": ["Score"], "id": "score"},
                         ],
-                style_data_conditional=styles_striped,
+                style_data_conditional=STYLES_STRIPPED,
                 style_cell_conditional=[
                     {
                         'if': {'column_id': c},
@@ -209,10 +228,7 @@ class SubclonalVariantsFigures(Figures):
                     } for c in ['gene_name', 'pfam_description', 'variant_id', 'hgvs_p', 'annotation_highest_impact']
                 ],
                 style_as_list_view=True,
-                style_header={
-                    'backgroundColor': 'rgb(230, 230, 230)',
-                    'fontWeight': 'bold'
-                },
+                style_header=STYLE_HEADER,
                 row_selectable='single',
                 css=[{'selector': '.dash-cell div.dash-cell-value',
                       'rule': 'display: inline; white-space: inherit; overflow: inherit; text-overflow: inherit;'}],
@@ -268,7 +284,6 @@ class SubclonalVariantsFigures(Figures):
                       hover_data=["count_samples"],
                       color_discrete_sequence=px.colors.qualitative.Light24)
 
-        #fig = px.bar(data_frame=data, x="country", y="count_samples", color_discrete_sequence=["#969696"])
         fig.update_layout(
             margin=MARGIN,
             template=TEMPLATE,
@@ -279,4 +294,40 @@ class SubclonalVariantsFigures(Figures):
         return [
             dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
             dcc.Markdown("""**Country distribution for {}**""".format(variant_id))
+        ]
+
+    def get_cooccurring_clonal_variants(self, variant_id, min_vaf, gene_name):
+        data = SubclonalVariantsQueries(session=self.queries.session).get_top_cooccurring_clonal_variants(
+            variant_id=variant_id, min_vaf=min_vaf, gene_name=gene_name)
+
+        fig = dash_table.DataTable(
+            id='top-cooccurring-clonal-variants-table',
+            data=data.to_dict('records'),
+            columns=[
+                {"name": ["Gene"], "id": "gene_name"},
+                {"name": ["DNA mutation"], "id": "variant_id"},
+                {"name": ["Protein mutation"], "id": "hgvs_p"},
+                {"name": ["Effect"], "id": "annotation_highest_impact"},
+                {"name": ["Count"], "id": "count_samples"},
+            ],
+            style_data_conditional=STYLES_STRIPPED,
+            style_cell_conditional=[
+                {
+                    'if': {'column_id': c},
+                    'textAlign': 'left'
+                } for c in ['gene_name', 'variant_id', 'hgvs_p', 'annotation_highest_impact']
+            ],
+            style_as_list_view=True,
+            style_header=STYLE_HEADER,
+            css=[{'selector': '.dash-cell div.dash-cell-value',
+                  'rule': 'display: inline; white-space: inherit; overflow: inherit; text-overflow: inherit;'}],
+            style_table={'overflowX': 'auto'},
+            style_data={'whiteSpace': 'normal', 'height': 'auto'},
+            style_cell={'maxWidth': '100px'},
+        )
+
+        return [
+            fig,
+            dcc.Markdown("""**Top 10 cooccurring clonal variants with intrahost variant {variant_id}**
+                    """.format(variant_id=variant_id))
         ]

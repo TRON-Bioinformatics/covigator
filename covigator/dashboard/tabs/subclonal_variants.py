@@ -9,6 +9,8 @@ from sqlalchemy.orm import Session
 from covigator.dashboard.figures.subclonal_variants import SubclonalVariantsFigures
 from covigator.database.queries import Queries
 
+TOP_COOCCURRING_CLONAL_VARIANTS = 'top-cooccurring-clonal-variants-table'
+
 ID_HIST_LIBRARY_STRATEGY = "id-hist-library-strategy"
 ID_HIST_COUNTRIES = "id-hist-countries"
 
@@ -43,6 +45,9 @@ def get_subclonal_variants_tab_graphs():
         html.Div(id=ID_HIST_LIBRARY_STRATEGY,
                  className="five columns", style={"margin-left": 0, "margin-right": "1%", "width": "48%"}),
         html.Div(id=ID_HIST_COUNTRIES,
+                 className="five columns", style={"margin-left": 0, "margin-right": "1%", "width": "48%"}),
+        html.Br(),
+        html.Div(id=TOP_COOCCURRING_CLONAL_VARIANTS,
                  className="five columns", style={"margin-left": 0, "margin-right": "1%", "width": "48%"}),
     ], className="ten columns", style={'overflow': 'scroll', "height": "900px"}, )
 
@@ -139,5 +144,22 @@ def set_callbacks_subclonal_variants_tab(app, session: Session):
             variant_id = data[selected_rows[0]].get("variant_id")
             plot = html.Div(
                 children=figures.get_hist_countries(variant_id=variant_id, min_vaf=min_vaf),
+            )
+        return plot
+
+    @app.callback(
+        Output(TOP_COOCCURRING_CLONAL_VARIANTS, 'children'),
+        Input(ID_SLIDER_SUBCLONAL_VARIANTS_VAF, 'value'),
+        Input(ID_DROPDOWN_GENE_SUBCLONAL_VARIANTS, 'value'),
+        Input(ID_TOP_OCCURRING_SUBCLONAL_VARIANTS_TABLE, "derived_virtual_data"),
+        Input(ID_TOP_OCCURRING_SUBCLONAL_VARIANTS_TABLE, "derived_virtual_selected_rows")
+    )
+    def update_cooccurring_clonal_variants(min_vaf, gene_name, data, selected_rows):
+        plot = None
+        if selected_rows:
+            variant_id = data[selected_rows[0]].get("variant_id")
+            plot = html.Div(
+                children=figures.get_cooccurring_clonal_variants(variant_id=variant_id, min_vaf=min_vaf,
+                                                                 gene_name=gene_name),
             )
         return plot
