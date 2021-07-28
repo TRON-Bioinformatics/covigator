@@ -9,6 +9,9 @@ from sqlalchemy.orm import Session
 from covigator.dashboard.figures.subclonal_variants import SubclonalVariantsFigures
 from covigator.database.queries import Queries
 
+ID_HIST_LIBRARY_STRATEGY = "id-hist-library-strategy"
+ID_HIST_COUNTRIES = "id-hist-countries"
+
 ID_DROPDOWN_ORDER_BY = "id-combobox-order-by"
 
 ID_DROPDOWN_GENE_SUBCLONAL_VARIANTS = 'dropdown-gene-subclonal-variants'
@@ -37,6 +40,10 @@ def get_subclonal_variants_tab_graphs():
         html.Div(id=ID_TOP_OCCURRING_SUBCLONAL_VARIANTS,
                  children=dash_table.DataTable(id=ID_TOP_OCCURRING_SUBCLONAL_VARIANTS_TABLE)),
         html.Br(),
+        html.Div(id=ID_HIST_LIBRARY_STRATEGY,
+                 className="five columns", style={"margin-left": 0, "margin-right": "1%", "width": "48%"}),
+        html.Div(id=ID_HIST_COUNTRIES,
+                 className="five columns", style={"margin-left": 0, "margin-right": "1%", "width": "48%"}),
     ], className="ten columns", style={'overflow': 'scroll', "height": "900px"}, )
 
 
@@ -104,3 +111,33 @@ def set_callbacks_subclonal_variants_tab(app, session: Session):
     def update_top_occurring_variants(min_vaf, gene_name, top, order_by):
         return html.Div(children=figures.get_top_occurring_subclonal_variants_plot(
             min_vaf=min_vaf, gene_name=gene_name, top=top, order_by=order_by))
+
+    @app.callback(
+        Output(ID_HIST_LIBRARY_STRATEGY, 'children'),
+        Input(ID_SLIDER_SUBCLONAL_VARIANTS_VAF, 'value'),
+        Input(ID_TOP_OCCURRING_SUBCLONAL_VARIANTS_TABLE, "derived_virtual_data"),
+        Input(ID_TOP_OCCURRING_SUBCLONAL_VARIANTS_TABLE, "derived_virtual_selected_rows")
+    )
+    def update_hist_library_strategy(min_vaf, data, selected_rows):
+        plot = None
+        if selected_rows:
+            variant_id = data[selected_rows[0]].get("variant_id")
+            plot = html.Div(
+                children=figures.get_hist_library_strategy(variant_id=variant_id, min_vaf=min_vaf),
+            )
+        return plot
+
+    @app.callback(
+        Output(ID_HIST_COUNTRIES, 'children'),
+        Input(ID_SLIDER_SUBCLONAL_VARIANTS_VAF, 'value'),
+        Input(ID_TOP_OCCURRING_SUBCLONAL_VARIANTS_TABLE, "derived_virtual_data"),
+        Input(ID_TOP_OCCURRING_SUBCLONAL_VARIANTS_TABLE, "derived_virtual_selected_rows")
+    )
+    def update_hist_countries(min_vaf, data, selected_rows):
+        plot = None
+        if selected_rows:
+            variant_id = data[selected_rows[0]].get("variant_id")
+            plot = html.Div(
+                children=figures.get_hist_countries(variant_id=variant_id, min_vaf=min_vaf),
+            )
+        return plot

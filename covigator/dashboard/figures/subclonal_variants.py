@@ -5,9 +5,10 @@ import numpy as np
 import dash_core_components as dcc
 import dash_table
 from sqlalchemy.orm import Session
-from covigator.dashboard.figures.figures import Figures
+from covigator.dashboard.figures.figures import Figures, MARGIN, TEMPLATE, PLOTLY_CONFIG
 from covigator.database.model import SubclonalVariantObservation, VariantObservation, SampleEna
 from covigator.exceptions import CovigatorQueryException
+import plotly.express as px
 
 
 class SubclonalVariantsQueries:
@@ -69,6 +70,63 @@ class SubclonalVariantsQueries:
             order_by=order_by_clause
         )
         return pd.read_sql_query(sql_query, self.session.bind)
+
+    def get_count_samples_by_library_stratgey(self, variant_id, min_vaf):
+        sql_query = """
+        select count(*) as count_samples, library_strategy 
+        from {samples_ena_table}
+        where run_accession in (
+            select sample 
+            from {subclonal_variant_observations_table} 
+            where variant_id='{variant_id}' and vaf >= {min_vaf}
+            )
+        group by library_strategy
+        """.format(
+            variant_id=variant_id,
+            min_vaf=min_vaf,
+            samples_ena_table=SampleEna.__tablename__,
+            subclonal_variant_observations_table=SubclonalVariantObservation.__tablename__
+        )
+        return pd.read_sql_query(sql_query, self.session.bind)
+
+    def get_count_samples_by_country(self, variant_id, min_vaf):
+        sql_query = """
+        select count(*) as count_samples, country, collection_date as date
+        from {samples_ena_table}
+        where run_accession in (
+            select sample 
+            from {subclonal_variant_observations_table} 
+            where variant_id='{variant_id}' and vaf >= {min_vaf}
+            )
+        group by country, collection_date
+        """.format(
+            variant_id=variant_id,
+            min_vaf=min_vaf,
+            samples_ena_table=SampleEna.__tablename__,
+            subclonal_variant_observations_table=SubclonalVariantObservation.__tablename__
+        )
+        data = pd.read_sql_query(sql_query, self.session.bind).astype(
+                {'date': 'datetime64', 'count_samples': 'float64'})
+
+        data['cumsum'] = data.sort_values("date").groupby(['country'])['count_samples'].cumsum()
+        dates = data.date[~data.date.isna()].sort_values().unique()
+        countries = data[(~data.country.isna())].sort_values("cumsum", ascending=False).country.unique()
+
+        empty_table = pd.DataFrame(
+            index=pd.MultiIndex.from_product([dates, countries], names=["date", "country"]))
+        empty_table["count_samples"] = 0
+
+        # adds values into empty table
+        filled_table = pd.merge(
+            left=empty_table.reset_index(),
+            right=data.loc[:, ["date", "country", "count_samples"]],
+            on=["date", "country"],
+            how='left',
+            suffixes=("_x", "_y")).fillna(0)
+        filled_table["count_samples"] = filled_table.count_samples_x + filled_table.count_samples_y
+        filled_table['cumsum'] = filled_table.groupby(['country'])['count_samples'].cumsum()
+
+        return filled_table
 
 
 class SubclonalVariantsFigures(Figures):
@@ -178,4 +236,47 @@ class SubclonalVariantsFigures(Figures):
             by the ConsHMM conservation score, by the median VAF or by a joint score using the count of observations 
             and the conservation scores (ie: *ln(count observations) x conservation score*).
                             """)
+        ]
+
+    def get_hist_library_strategy(self, variant_id, min_vaf):
+
+        data = SubclonalVariantsQueries(session=self.queries.session).get_count_samples_by_library_stratgey(
+            variant_id=variant_id, min_vaf=min_vaf)
+        fig = px.bar(data_frame=data, x="library_strategy", y="count_samples", color_discrete_sequence=["#969696"])
+        fig.update_layout(
+            margin=MARGIN,
+            template=TEMPLATE,
+            yaxis={'title': "Num. of samples"},
+            xaxis={'title': None},
+            legend={'title': None}
+        )
+        return [
+            dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
+            dcc.Markdown("""**Library strategies distribution for {}**""".format(variant_id))
+        ]
+
+    def get_hist_countries(self, variant_id, min_vaf):
+
+        data = SubclonalVariantsQueries(session=self.queries.session).get_count_samples_by_country(
+            variant_id=variant_id, min_vaf=min_vaf)
+
+        countries = list(data.sort_values("cumsum", ascending=False).country.unique())
+        fig = px.area(data, x="date", y="cumsum", color="country",
+                      category_orders={
+                          "country": countries[::-1]},
+                      labels={"cumsum": "num. samples", "count_samples": "increment"},
+                      hover_data=["count_samples"],
+                      color_discrete_sequence=px.colors.qualitative.Light24)
+
+        #fig = px.bar(data_frame=data, x="country", y="count_samples", color_discrete_sequence=["#969696"])
+        fig.update_layout(
+            margin=MARGIN,
+            template=TEMPLATE,
+            yaxis={'title': "Num. of samples"},
+            xaxis={'title': None},
+            legend={'title': None}
+        )
+        return [
+            dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
+            dcc.Markdown("""**Country distribution for {}**""".format(variant_id))
         ]
