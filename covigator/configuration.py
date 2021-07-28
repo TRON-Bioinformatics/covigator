@@ -10,6 +10,7 @@ class Configuration:
     # file system storage
     ENV_COVIGATOR_STORAGE_FOLDER = "COVIGATOR_STORAGE_FOLDER"
     ENV_COVIGATOR_TEMP_FOLDER = "COVIGATOR_TEMP_FOLDER"
+    ENV_COVIGATOR_DOWNLOAD_CONTENT_FOLDER = "COVIGATOR_DOWNLOAD_CONTENT_FOLDER"
     # database
     ENV_COVIGATOR_DB_PORT = "COVIGATOR_DB_PORT"
     ENV_COVIGATOR_DB_PASSWORD = "COVIGATOR_DB_PASSWORD"
@@ -43,6 +44,7 @@ class Configuration:
     def __init__(self):
         # local storage
         self.storage_folder = os.getenv(self.ENV_COVIGATOR_STORAGE_FOLDER, "/data/covigator")
+        self.content_folder = os.getenv(self.ENV_COVIGATOR_DOWNLOAD_CONTENT_FOLDER)
 
         # database
         self.db_host = os.getenv(self.ENV_COVIGATOR_DB_HOST, "0.0.0.0")

@@ -9,6 +9,7 @@ import covigator.configuration
 from covigator.configuration import Configuration
 from covigator.dashboard.tabs.dataset_ena import get_tab_dataset_ena
 from covigator.dashboard.tabs.dataset_gisaid import get_tab_dataset_gisaid
+from covigator.dashboard.tabs.download import set_callbacks_download_tab, get_tab_download
 from covigator.dashboard.tabs.footer import get_footer
 from covigator.dashboard.tabs.overview import get_tab_overview
 from covigator.dashboard.tabs.samples import get_tab_samples, set_callbacks_samples_tab
@@ -18,6 +19,7 @@ from covigator.database.database import get_database
 from logzero import logger
 from covigator.database.queries import Queries
 
+DOWNLOAD_TAB_ID = "download"
 SUBCLONAL_VARIANTS_TAB_ID = "subclonal-variants"
 VARIANTS_TAB_ID = "variants"
 SAMPLES_TAB_ID = "samples"
@@ -81,7 +83,8 @@ class Dashboard:
                             dbc.Tab(label="GISAID dataset", tab_id=GISAID_DATASET_TAB_ID),
                             dbc.Tab(label="Samples", tab_id=SAMPLES_TAB_ID),
                             dbc.Tab(label="Recurrent clonal variants", tab_id=VARIANTS_TAB_ID),
-                            dbc.Tab(label="Intrahost variants", tab_id=SUBCLONAL_VARIANTS_TAB_ID)],
+                            dbc.Tab(label="Intrahost variants", tab_id=SUBCLONAL_VARIANTS_TAB_ID),
+                            dbc.Tab(label="Download data", tab_id=DOWNLOAD_TAB_ID)],
                             id="tabs",
                             active_tab="overview",
                             card=True),
@@ -141,14 +144,15 @@ class Dashboard:
         # Warning pass the layout as a function, do not call it otherwise the application will serve a static dataset
         app.layout = self.serve_layout
         session = self.database.get_database_session()
-        set_callbacks(app=app, session=session)
+        set_callbacks(app=app, session=session, content_folder=self.config.content_folder)
         set_callbacks_variants_tab(app=app, session=session)
         set_callbacks_samples_tab(app=app, session=session)
         set_callbacks_subclonal_variants_tab(app=app, session=session)
+        set_callbacks_download_tab(app=app, content_folder=self.config.content_folder)
         return app
 
 
-def set_callbacks(app, session: Session):
+def set_callbacks(app, session: Session, content_folder):
 
     queries = Queries(session=session)
 
@@ -168,6 +172,8 @@ def set_callbacks(app, session: Session):
                 return get_tab_variants(queries=queries)
             elif at == SUBCLONAL_VARIANTS_TAB_ID:
                 return get_tab_subclonal_variants(queries=queries)
+            elif at == DOWNLOAD_TAB_ID:
+                return get_tab_download(content_folder=content_folder)
             return html.P("This shouldn't ever be displayed...")
         except Exception as e:
             logger.exception(e)
