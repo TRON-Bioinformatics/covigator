@@ -3,6 +3,7 @@ import dash_core_components as dcc
 import dash_bootstrap_components as dbc
 import dash_html_components as html
 import dash_table
+from covigator.dashboard.tabs import get_mini_container, print_number
 from dash.dependencies import Output, Input
 from sqlalchemy.orm import Session
 
@@ -31,13 +32,49 @@ def get_tab_subclonal_variants(queries: Queries):
         dbc.CardBody(
             children=[
                 get_subclonal_variants_tab_left_bar(queries=queries),
-                get_subclonal_variants_tab_graphs()
+                get_subclonal_variants_tab_graphs(queries)
             ])
     )
 
 
-def get_subclonal_variants_tab_graphs():
+def get_subclonal_variants_tab_graphs(queries):
+
+    count_subclonal_variant_observations = queries.count_subclonal_variant_observations()
+    count_unique_subclonal_variant = queries.count_unique_subclonal_variant()
+    count_unique_only_subclonal_variant = queries.count_unique_only_subclonal_variant()
+
     return html.Div(children=[
+        dcc.Markdown("""
+                        LoFreq variant calls with a VAF lower than 80 % are considered intrahost variants. 
+                        All variant calls with a higher VAF are considered clonal.
+                        Intrahost variants can only be detected in the ENA dataset.
+                        The dataset of intrahost variants is enriched for false positive calls due to the lower 
+                        Variant Allele Frequency (VAF). (Lythgoe, 2021) and (Valesano, 2021) reported that SARS-CoV-2 
+                        intrahost variant calls with a VAF below 2 % and 3 % respectively had not enough quality; 
+                        although the variant calling methods differ between them and with CoVigator.
+
+                        Here we provide a tool to explore those intrahost variants that have not been observed 
+                        as clonal variants.
+                         """, style={"font-size": 16}),
+        html.Br(),
+        html.Div(
+            html.Span(
+                children=[
+                    get_mini_container(
+                        title="Unique variants",
+                        value=print_number(count_unique_subclonal_variant)
+                    ),
+                    get_mini_container(
+                        title="Only subclonal variants",
+                        value=print_number(count_unique_only_subclonal_variant)
+                    ),
+                    get_mini_container(
+                        title="Variant calls",
+                        value=print_number(count_subclonal_variant_observations)
+                    ),
+                ]
+            )
+        ),
         html.Br(),
         html.Div(id=ID_TOP_OCCURRING_SUBCLONAL_VARIANTS,
                  children=dash_table.DataTable(id=ID_TOP_OCCURRING_SUBCLONAL_VARIANTS_TABLE)),

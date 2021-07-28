@@ -186,12 +186,6 @@ class SubclonalVariantsFigures(Figures):
 
             unique_subclonal_variants.reset_index(inplace=True)
 
-            # set the styles of the cells
-            #styles_counts = self.discrete_background_color_bins(data, columns=included_month_colums)
-            #styles_total_count = self.discrete_background_color_bins(data, columns=["total"], colors="Reds")
-            #styles_frequency = self._get_table_style_by_af()
-
-
             if order_by == "score":
                 ordered_data = unique_subclonal_variants.sort_values("score", ascending=True)
             elif order_by == "count":
@@ -242,16 +236,13 @@ class SubclonalVariantsFigures(Figures):
             dcc.Markdown("""
             **Variants only observed as intrahost variants**
                             
-            Intrahost variants are detected in the ENA dataset as variant calls with a VAF lower than 80 %; 
-            all variant calls with a higher VAF are considered clonal.
-            This table shows those intrahost variants that have not been observed as clonal variants. 
-            Assuming that this subset of intrahost variants have evolved separately within each host some of this
-            variants may recur within patients due to positive selection and hence may be in risk of becoming 
-            clonal variants.
             The list of intrahost variants can be prioritised by the count of observations, 
             by the ConsHMM conservation score, by the median VAF or by a joint score using the count of observations 
             and the conservation scores (ie: *ln(count observations) x conservation score*).
-                            """)
+            The variant calls can be filtered by VAF.
+            
+            Select any of the variants to explore further details about that particular variant.
+            """)
         ]
 
     def get_hist_library_strategy(self, variant_id, min_vaf):
@@ -308,7 +299,7 @@ class SubclonalVariantsFigures(Figures):
                 {"name": ["DNA mutation"], "id": "variant_id"},
                 {"name": ["Protein mutation"], "id": "hgvs_p"},
                 {"name": ["Effect"], "id": "annotation_highest_impact"},
-                {"name": ["Count"], "id": "count_samples"},
+                {"name": ["Count samples"], "id": "count_samples"},
             ],
             style_data_conditional=STYLES_STRIPPED,
             style_cell_conditional=[
@@ -328,6 +319,6 @@ class SubclonalVariantsFigures(Figures):
 
         return [
             fig,
-            dcc.Markdown("""**Top 10 cooccurring clonal variants with intrahost variant {variant_id}**
+            dcc.Markdown("""**Top 10 co-occurring clonal variants with the intrahost variant {variant_id}**
                     """.format(variant_id=variant_id))
         ]

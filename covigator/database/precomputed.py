@@ -442,6 +442,8 @@ class Precomputer:
         count_variant_observations_ena = self.queries.count_variant_observations(source=DataSource.ENA.name, cache=False)
         count_variant_observations_gisaid = self.queries.count_variant_observations(source=DataSource.GISAID.name, cache=False)
         count_subclonal_variant_observations = self.queries.count_subclonal_variant_observations(cache=False)
+        count_subclonal_variant_unique = self.queries.count_unique_subclonal_variant(cache=False)
+        count_subclonal_variant_unique_only_subclonal = self.queries.count_unique_only_subclonal_variant(cache=False)
         count_countries = self.queries.count_countries(cache=False)
         count_countries_ena = self.queries.count_countries(source=DataSource.ENA.name, cache=False)
         count_countries_gisaid = self.queries.count_countries(source=DataSource.GISAID.name, cache=False)
@@ -461,6 +463,11 @@ class Precomputer:
                 factor=PrecomputedTableCounts.FACTOR_SOURCE, value=DataSource.GISAID.name),
             PrecomputedTableCounts(
                 table=SubclonalVariantObservation.__name__, count=count_subclonal_variant_observations),
+            PrecomputedTableCounts(
+                table=SubclonalVariantObservation.__name__ + "_unique", count=count_subclonal_variant_unique),
+            PrecomputedTableCounts(
+                table=SubclonalVariantObservation.__name__ + "_unique_only_subclonal",
+                count=count_subclonal_variant_unique_only_subclonal),
             PrecomputedTableCounts(table=Sample.__name__, count=count_samples),
             PrecomputedTableCounts(table=Sample.__name__, count=count_samples_ena,
                                    factor=PrecomputedTableCounts.FACTOR_SOURCE, value=DataSource.ENA.name),
@@ -529,5 +536,5 @@ if __name__ == '__main__':
     precomputer = Precomputer(session=database.get_database_session())
     #precomputer.load_dn_ds_by_domain()
     #precomputer.load_dn_ds()
-    #precomputer.load_table_counts()
-    precomputer.load_variant_abundance_histogram()
+    precomputer.load_table_counts()
+    #precomputer.load_variant_abundance_histogram()
