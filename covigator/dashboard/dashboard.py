@@ -12,11 +12,13 @@ from covigator.dashboard.tabs.dataset_gisaid import get_tab_dataset_gisaid
 from covigator.dashboard.tabs.footer import get_footer
 from covigator.dashboard.tabs.overview import get_tab_overview
 from covigator.dashboard.tabs.samples import get_tab_samples, set_callbacks_samples_tab
+from covigator.dashboard.tabs.subclonal_variants import get_tab_subclonal_variants, set_callbacks_subclonal_variants_tab
 from covigator.dashboard.tabs.variants import get_tab_variants, set_callbacks_variants_tab
 from covigator.database.database import get_database
 from logzero import logger
 from covigator.database.queries import Queries
 
+SUBCLONAL_VARIANTS_TAB_ID = "subclonal-variants"
 VARIANTS_TAB_ID = "variants"
 SAMPLES_TAB_ID = "samples"
 GISAID_DATASET_TAB_ID = "gisaid-dataset"
@@ -78,7 +80,8 @@ class Dashboard:
                             dbc.Tab(label="ENA dataset", tab_id=ENA_DATASET_TAB_ID),
                             dbc.Tab(label="GISAID dataset", tab_id=GISAID_DATASET_TAB_ID),
                             dbc.Tab(label="Samples", tab_id=SAMPLES_TAB_ID),
-                            dbc.Tab(label="Recurrent variants", tab_id=VARIANTS_TAB_ID)],
+                            dbc.Tab(label="Recurrent variants", tab_id=VARIANTS_TAB_ID),
+                            dbc.Tab(label="Subclonal variants", tab_id=SUBCLONAL_VARIANTS_TAB_ID)],
                             id="tabs",
                             active_tab="overview",
                             card=True),
@@ -141,6 +144,7 @@ class Dashboard:
         set_callbacks(app=app, session=session)
         set_callbacks_variants_tab(app=app, session=session)
         set_callbacks_samples_tab(app=app, session=session)
+        set_callbacks_subclonal_variants_tab(app=app, session=session)
         return app
 
 
@@ -162,6 +166,8 @@ def set_callbacks(app, session: Session):
                 return get_tab_samples(queries=queries)
             elif at == VARIANTS_TAB_ID:
                 return get_tab_variants(queries=queries)
+            elif at == SUBCLONAL_VARIANTS_TAB_ID:
+                return get_tab_subclonal_variants(queries=queries)
             return html.P("This shouldn't ever be displayed...")
         except Exception as e:
             logger.exception(e)
