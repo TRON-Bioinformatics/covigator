@@ -20,6 +20,8 @@ CoVigator is a monitoring system for SARS-CoV-2 which integrates a full variant 
 a database that stores all relevant information about mutations in SARS-CoV-2, a dashboard to enable visual analytics
 and finally an Application Programming Interface to make the data programmatically available.
 
+https://covigator.tron-mainz.de/
+
 CoVigator loads publicly available SARS-CoV-2 DNA sequences from two systems:
 
 * European Nucleotide Archive (ENA) providing raw reads in FASTQ format
