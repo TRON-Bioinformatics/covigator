@@ -568,7 +568,7 @@ class Queries:
             source_filter="and source='{source}'".format(source=source) if source is not None else ""
         )
         data = pd.read_sql_query(sql_query_ds_ena, self.session.bind)
-        return data[data.month is not None]
+        return data[~data.month.isna()]
 
     def get_sample_counts_by_month(self, source=None) -> pd.DataFrame:
         counts_ena = None
