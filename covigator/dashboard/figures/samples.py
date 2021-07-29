@@ -108,18 +108,14 @@ class SampleFigures(Figures):
     def get_variants_per_sample_plot(
             self, data_source: str = None, genes: List[str] = None, variant_types: List[str] = None):
 
-        logger.info("start query")
         data = self.queries.get_variants_per_sample(data_source=data_source, genes=genes, variant_types=variant_types)
-        logger.info("finished query")
         graph = dcc.Markdown("""**No data for the current selection**""")
         if data is not None and data.shape[0] > 0:
-            logger.info("start preparing data")
             counts = np.repeat(data.number_mutations, data["count"])
             median = round(np.median(counts), 3)
             third_quartile = np.percentile(counts, 75)
             first_quartile = np.percentile(counts, 25)
             extreme_threshold = median + (3 * (third_quartile - first_quartile))
-            logger.info("finished preparing data")
             fig = px.bar(data[data.number_mutations < extreme_threshold],
                          x="number_mutations",
                          y='count',
@@ -136,7 +132,6 @@ class SampleFigures(Figures):
                 yaxis={'title': None},
                 xaxis={'title': "num. samples"},
             )
-            logger.info("created plot")
 
             graph = [
                 dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
