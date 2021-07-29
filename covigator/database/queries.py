@@ -568,25 +568,28 @@ class Queries:
             source_filter="and source='{source}'".format(source=source) if source is not None else ""
         )
         data = pd.read_sql_query(sql_query_ds_ena, self.session.bind)
+        data['month'] = pd.to_datetime(data['month'], utc=True)
         return data[~data.month.isna()]
 
     def get_sample_counts_by_month(self, source=None) -> pd.DataFrame:
         counts_ena = None
-        if source is None or source == DataSource.ENA:
+        if source is None or source == DataSource.ENA.name:
             query = self.session.query(
                 func.date_trunc('month', SampleEna.collection_date).label("month"),
                 func.count().label("sample_count"))\
                 .filter(SampleEna.finished) \
                 .group_by(func.date_trunc('month', SampleEna.collection_date))
             counts_ena = pd.read_sql(query.statement, self.session.bind)
+            counts_ena['month'] = pd.to_datetime(counts_ena['month'], utc=True)
         counts_gisaid = None
-        if source is None or source == DataSource.GISAID:
+        if source is None or source == DataSource.GISAID.name:
             query = self.session.query(
                 func.date_trunc('month', SampleGisaid.date).label("month"),
                 func.count().label("sample_count"))\
                 .filter(SampleGisaid.finished) \
                 .group_by(func.date_trunc('month', SampleGisaid.date))
             counts_gisaid = pd.read_sql(query.statement, self.session.bind)
+            counts_gisaid['month'] = pd.to_datetime(counts_gisaid['month'], utc=True)
         if counts_gisaid is None:
             # NOTE: setting index and then resetting is necessary to get the date column in the right dtype
             counts = counts_ena
