@@ -118,8 +118,12 @@ class SampleFigures(Figures):
             median = round(np.median(counts), 3)
             third_quartile = np.percentile(counts, 75)
             first_quartile = np.percentile(counts, 25)
+            extreme_threshold = median + (3 * (third_quartile - first_quartile))
             logger.info("finished preparing data")
-            fig = px.bar(data, x="number_mutations", y='count', color="variant_type",
+            fig = px.bar(data[data.number_mutations < extreme_threshold],
+                         x="number_mutations",
+                         y='count',
+                         color="variant_type",
                          color_discrete_map=VARIANT_TYPE_COLOR_MAP)
             fig.add_vline(x=median, line_width=2, line_dash="dash", line_color='grey',
                           annotation_text="median", annotation_position="top right")
