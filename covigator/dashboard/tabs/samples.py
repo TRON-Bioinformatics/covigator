@@ -91,7 +91,8 @@ def get_samples_tab_left_bar(queries: Queries):
                 step=100,
                 value=100,
                 dots=False,
-                tooltip=dict(always_visible=True, placement="right")
+                marks={i: '{}'.format(i) for i in [0, 2500, 5000, 7500, 10000]},
+                tooltip=dict(always_visible=False, placement="right")
             ),
             html.Br(),
             dcc.Markdown("""**Mutations per sample and top mutations**"""),
