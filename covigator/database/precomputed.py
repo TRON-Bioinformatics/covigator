@@ -217,7 +217,8 @@ class Precomputer:
         try:
             top_occurring_variants_ena = self.queries.get_top_occurring_variants(
                 top=NUMBER_TOP_OCCURRENCES, source=DataSource.ENA.name)
-        except ValueError:
+        except ValueError as e:
+            logger.exception(e)
             logger.error("No top occurrences for ENA data")
 
         top_occurring_variants_gisaid = None
@@ -536,5 +537,6 @@ if __name__ == '__main__':
     precomputer = Precomputer(session=database.get_database_session())
     #precomputer.load_dn_ds_by_domain()
     #precomputer.load_dn_ds()
-    precomputer.load_table_counts()
+    #precomputer.load_table_counts()
     #precomputer.load_variant_abundance_histogram()
+    precomputer.load_top_occurrences()
