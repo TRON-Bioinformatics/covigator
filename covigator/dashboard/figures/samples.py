@@ -108,18 +108,31 @@ class SampleFigures(Figures):
     def get_variants_per_sample_plot(
             self, data_source: str = None, genes: List[str] = None, variant_types: List[str] = None):
 
+        logger.info("start query")
         data = self.queries.get_variants_per_sample(data_source=data_source, genes=genes, variant_types=variant_types)
+        logger.info("finished query")
         graph = dcc.Markdown("""**No data for the current selection**""")
         if data is not None and data.shape[0] > 0:
+            logger.info("start preparing data")
             counts = np.repeat(data.number_mutations, data["count"])
-            fig = px.violin(y=counts, orientation='v', box=True, color_discrete_sequence=["grey"])
+            median = round(np.median(counts), 3)
+            third_quartile = np.percentile(counts, 75)
+            first_quartile = np.percentile(counts, 25)
+            logger.info("finished preparing data")
+            fig = px.bar(data, x="number_mutations", y='count', color="variant_type",
+                         color_discrete_map=VARIANT_TYPE_COLOR_MAP)
+            fig.add_vline(x=median, line_width=2, line_dash="dash", line_color='grey',
+                          annotation_text="median", annotation_position="top right")
+            fig.add_vrect(x0=first_quartile, x1=third_quartile,
+                          fillcolor="grey", opacity=0.25, line_width=0)
             fig.update_layout(
                 margin=MARGIN,
                 template=TEMPLATE,
                 legend={'traceorder': 'normal', 'title': None},
-                yaxis={'title': "num. mutations"},
-                xaxis={'title': None},
+                yaxis={'title': None},
+                xaxis={'title': "num. samples"},
             )
+            logger.info("created plot")
 
             graph = [
                 dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
@@ -127,16 +140,13 @@ class SampleFigures(Figures):
                         **Mutations per sample**
 
                         *Median: {median} (IQR: {iqr})*
-                        """.format(median=round(np.median(counts), 3),
-                                   iqr=round(np.percentile(counts, 75) - np.percentile(counts, 25), 3)))
+                        """.format(median=median, iqr=third_quartile - first_quartile))
             ]
         return graph
 
     def get_accumulated_samples_by_country_plot(self, data_source: DataSource = None, countries=None, min_samples=1000):
-        logger.info("start query")
         data = self.queries.get_accumulated_samples_by_country(
             data_source=data_source, countries=countries, min_samples=min_samples)
-        logger.info("finished query")
         graph = dcc.Markdown("""**No data for the current selection**""")
         if data is not None and data.shape[0] > 0:
             countries = list(data.sort_values("cumsum", ascending=False).country.unique())
