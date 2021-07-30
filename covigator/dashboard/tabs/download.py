@@ -4,6 +4,7 @@ import dash_html_components as html
 from flask import send_from_directory
 import dash_bootstrap_components as dbc
 import dash_core_components as dcc
+from logzero import logger
 
 
 def get_tab_download(content_folder):
@@ -11,9 +12,7 @@ def get_tab_download(content_folder):
         dbc.CardBody(
             children=[
                 dcc.Markdown("""
-                    ** Download the raw CoVigator data**
-                     
-                    Every file has a suffix with the version of the form `_v12` and corresponds to a table in our database. 
+                    ** Download the raw CoVigator data** 
                     
                     * `variant_observation` contains the variant calls from both ENA and GISAID
                     * `subclonal_variant_observation` contains the variant calls from ENA with a VAF < 80 %
@@ -45,7 +44,8 @@ def get_downloadable_files(content_folder):
     else:
         return html.Div(
             children=dbc.ListGroup(
-                [dbc.ListGroupItem(filename, href="/download/{}".format(urlquote(filename))) for filename in files]))
+                [dbc.ListGroupItem(html.A(filename, href="/download/{}".format(urlquote(filename)),  target="_blank"))
+                 for filename in files]))
 
 
 def set_callbacks_download_tab(app, content_folder):
@@ -53,4 +53,5 @@ def set_callbacks_download_tab(app, content_folder):
     @app.server.route("/download/<path:path>")
     def download(path):
         """Serve a file from the upload directory."""
+        logger.info("hey")
         return send_from_directory(content_folder, path, as_attachment=True)

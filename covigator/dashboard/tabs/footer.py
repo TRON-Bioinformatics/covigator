@@ -1,4 +1,3 @@
-import dash_core_components
 import dash_html_components as html
 import dash_core_components as dcc
 
@@ -13,7 +12,7 @@ def get_footer():
                 children=[
                     html.Br(),
                     html.P("CoVigator {} © 2021 TRON. All Rights Reserved".format(covigator.VERSION)),
-                    html.A(html.Img(src=tron_logo, id="tron-logo"), href="https://tron-mainz.de"),
+                    html.A(html.Img(src=tron_logo, id="tron-logo"), href="https://tron-mainz.de",  target="_blank"),
                     html.Br(),
                     dcc.Markdown("""
                     TRON is an independent biopharmaceutical non-profit translational research organization pursuing 
@@ -31,18 +30,20 @@ def get_footer():
                     solution was funded in part by """,
                         html.A(
                             "Intel’s Pandemic Response Technology Initiative",
-                            href="https://newsroom.intel.com/news/intel-commits-technology-response-combat-coronavirus/"),
+                            href="https://newsroom.intel.com/news/intel-commits-technology-response-combat-coronavirus/",
+                            target="_blank"),
                         """. For more 
                     information about healthcare solutions from Intel, visit intel.com/healthcare. For more 
                     information about Intel’s COVID-19 response, visit """,
                         html.A(
                             "intel.com/COVID-19",
-                            href="https://www.intel.com/content/www/us/en/corporate-responsibility/covid-19-response.html"),
+                            href="https://www.intel.com/content/www/us/en/corporate-responsibility/covid-19-response.html",
+                            target="_blank"),
                         "."
                         ]),
                     html.P([
-                        html.A("DATA PROTECTION", href="https://tron-mainz.de/data-protection/"), " | ",
-                        html.A("IMPRINT", href="https://tron-mainz.de/imprint/")])
+                        html.A("DATA PROTECTION", href="https://tron-mainz.de/data-protection/",  target="_blank"), " | ",
+                        html.A("IMPRINT", href="https://tron-mainz.de/imprint/",  target="_blank")])
                 ],
                 # this bit makes sure the footer sticks at the bottom
                 #style={"position": "relative", "bottom": "0", "width": "100%", "overflow": "hidden", "height": "120px"}

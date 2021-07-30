@@ -62,7 +62,7 @@ def get_tab_overview(queries: Queries):
                        style={"font-style": "italic", "margin-left": "50px"}),
                    html.P(
                        html.A("https://doi.org/10.1101/2021.02.04.429765",
-                              href="https://doi.org/10.1101/2021.02.04.429765"),
+                              href="https://doi.org/10.1101/2021.02.04.429765",  target="_blank"),
                        style={"text-indent": "50px"}
                    ),
 
@@ -73,7 +73,7 @@ def get_tab_overview(queries: Queries):
                            "It is open sourced under the MIT license, see the repository for "
                            "more details ",
                            html.A("https://github.com/TRON-Bioinformatics/covigator-ngs-pipeline",
-                                  href="https://github.com/TRON-Bioinformatics/covigator-ngs-pipeline"),
+                                  href="https://github.com/TRON-Bioinformatics/covigator-ngs-pipeline",  target="_blank"),
                            "."]),
                    html.Br(),
                    html.P("If you would like to cite the pipeline:"),
@@ -85,7 +85,7 @@ def get_tab_overview(queries: Queries):
                    ], style={"font-style": "italic", "margin-left": "50px"}),
                    html.P(
                        html.A("http://doi.org/10.5281/zenodo.5082444",
-                              href="http://doi.org/10.5281/zenodo.5082444"),
+                              href="http://doi.org/10.5281/zenodo.5082444",  target="_blank"),
                        style={"text-indent": "50px"}
                    ),
                    html.Br(),
