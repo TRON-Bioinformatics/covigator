@@ -57,11 +57,11 @@ class Dashboard:
                     [
                         dbc.Col(html.A(html.Img(
                             src="/assets/tron_logo_without_text.png", height="22px"),
-                            href="https://tron-mainz.de"), className="ml-2"),
+                            href="https://tron-mainz.de",  target="_blank"), className="ml-2"),
                         dbc.Col(html.Br(), className="ml-2"),
                         dbc.Col(html.A(html.Img(
                             src="https://github.githubassets.com/images/modules/logos_page/Octocat.png", height="25px"),
-                            href="https://github.com/TRON-bioinformatics/covigator"), className="ml-2"),
+                            href="https://github.com/TRON-bioinformatics/covigator",  target="_blank"), className="ml-2"),
                         dbc.Col(html.Br(), className="ml-2"),
 
                     ],
