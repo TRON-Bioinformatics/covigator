@@ -14,6 +14,13 @@ variables:
     POSTGRES_DB: test_db
     POSTGRES_USER: test_user
     POSTGRES_PASSWORD: test_pass
+    POSTGRES_HOST_AUTH_METHOD: trust
+    # configure postgres for CoVigator
+    COVIGATOR_DB_NAME: test_db
+    COVIGATOR_DB_USER: test_user
+    COVIGATOR_DB_PASSWORD: test_pass
+    COVIGATOR_DB_PORT: 5432
+    COVIGATOR_DB_HOST: postgres
 
 # Pip's cache doesn't store the python packages
 # https://pip.pypa.io/en/stable/reference/pip_install/#caching
@@ -48,7 +55,7 @@ check_version_changes:
     - if git diff origin/develop -- covigator/__init__.py | grep VERSION; then exit 0; else echo "Version needs to be increased!"; exit -1; fi
   except:
     - develop
-    - master
+    - main
 
 run_test:
   stage: test
