@@ -6,8 +6,8 @@ from covigator.database.database import Database
 from covigator.database.model import PrecomputedVariantsPerSample, PrecomputedSubstitutionsCounts, \
     VARIANT_OBSERVATION_TABLE_NAME, PrecomputedIndelLength, \
     PrecomputedAnnotation, VariantObservation, DataSource, PrecomputedOccurrence, PrecomputedDnDs, \
-    SAMPLE_ENA_TABLE_NAME, SAMPLE_GISAID_TABLE_NAME, PrecomputedDnDsByDomain, PrecomputedTableCounts, Variant, \
-    SubclonalVariantObservation, Sample, PrecomputedVariantAbundanceHistogram
+    SAMPLE_ENA_TABLE_NAME, SAMPLE_GISAID_TABLE_NAME, PrecomputedTableCounts, Variant, \
+    SubclonalVariantObservation, Sample, PrecomputedVariantAbundanceHistogram, RegionType
 from logzero import logger
 
 from covigator.database.queries import Queries
@@ -20,6 +20,16 @@ class Precomputer:
     def __init__(self, session: Session):
         self.session = session
         self.queries = Queries(session=self.session)
+
+    def precompute(self):
+        self.load_table_counts()
+        self.load_variant_abundance_histogram()
+        self.load_counts_variants_per_sample()
+        self.load_count_substitutions()
+        self.load_indel_length()
+        self.load_annotation()
+        self.load_top_occurrences()
+        self.load_dn_ds()
 
     def load_counts_variants_per_sample(self):
 
@@ -275,50 +285,19 @@ class Precomputer:
         )
 
     def load_dn_ds(self):
-        sql_query_ds_ena = """
-                select count(*) as ds, date_trunc('month', s.collection_date) as month, vo.gene_name, s.country 
-                from {variant_observation_table} as vo join {sample_ena_table} as s on vo.sample = s.run_accession 
-                where vo.source = 'ENA' and vo.annotation_highest_impact = 'synonymous_variant' 
-                    and s.collection_date is not null
-                group by date_trunc('month', s.collection_date), vo.gene_name, s.country;
-                """.format(variant_observation_table=VARIANT_OBSERVATION_TABLE_NAME,
-                           sample_ena_table=SAMPLE_ENA_TABLE_NAME)
-        data_ds_ena = pd.read_sql_query(sql_query_ds_ena, self.session.bind)
+        data_s_ena = self._count_variant_observations_by_source_and_annotation(
+            source=DataSource.ENA, annotation='synonymous_variant').rename(columns={'count': 's'})
+        data_ns_ena = self._count_variant_observations_by_source_and_annotation(
+            source=DataSource.ENA, annotation='missense_variant').rename(columns={'count': 'ns'})
+        data_s_gisaid = self._count_variant_observations_by_source_and_annotation(
+            source=DataSource.GISAID, annotation='synonymous_variant').rename(columns={'count': 's'})
+        data_ns_gisaid = self._count_variant_observations_by_source_and_annotation(
+            source=DataSource.GISAID, annotation='missense_variant').rename(columns={'count': 'ns'})
 
-        sql_query_dn_ena = """
-                select count(*) as dn, date_trunc('month', s.collection_date) as month, vo.gene_name, s.country 
-                from {variant_observation_table} as vo join {sample_ena_table} as s on vo.sample = s.run_accession 
-                where vo.source = 'ENA' and vo.annotation_highest_impact = 'missense_variant' 
-                    and s.collection_date is not null
-                group by date_trunc('month', s.collection_date), vo.gene_name, s.country;
-                """.format(variant_observation_table=VARIANT_OBSERVATION_TABLE_NAME,
-                           sample_ena_table=SAMPLE_ENA_TABLE_NAME)
-        data_dn_ena = pd.read_sql_query(sql_query_dn_ena, self.session.bind)
-
-        data_ena = pd.merge(left=data_ds_ena, right=data_dn_ena, on=["month", "gene_name", "country"], how='outer').fillna(0)
-
-        sql_query_ds_gisaid = """
-                select count(*) as ds, date_trunc('month', s.date) as month, vo.gene_name, s.country 
-                from {variant_observation_table} as vo join {sample_gisaid_table} as s on vo.sample = s.run_accession 
-                    and s.date is not null
-                where vo.source = 'GISAID' and vo.annotation_highest_impact = 'synonymous_variant' 
-                group by date_trunc('month', s.date), vo.gene_name, s.country;
-                """.format(variant_observation_table=VARIANT_OBSERVATION_TABLE_NAME,
-                           sample_gisaid_table=SAMPLE_GISAID_TABLE_NAME)
-        data_ds_gisaid = pd.read_sql_query(sql_query_ds_gisaid, self.session.bind)
-
-        sql_query_dn_gisaid = """
-                select count(*) as dn, date_trunc('month', s.date) as month, vo.gene_name, s.country 
-                from {variant_observation_table} as vo join {sample_gisaid_table} as s on vo.sample = s.run_accession 
-                where vo.source = 'GISAID' and vo.annotation_highest_impact = 'missense_variant'
-                    and s.date is not null 
-                group by date_trunc('month', s.date), vo.gene_name, s.country;
-                """.format(variant_observation_table=VARIANT_OBSERVATION_TABLE_NAME,
-                           sample_gisaid_table=SAMPLE_GISAID_TABLE_NAME)
-        data_dn_gisaid = pd.read_sql_query(sql_query_dn_gisaid, self.session.bind)
-
-        data_gisaid = pd.merge(left=data_ds_gisaid, right=data_dn_gisaid, on=["month", "gene_name", "country"],
-                            how='outer').fillna(0)
+        data_ena = pd.merge(
+            left=data_s_ena, right=data_ns_ena, on=["month", "gene_name", "country"], how='outer').fillna(0)
+        data_gisaid = pd.merge(
+            left=data_s_gisaid, right=data_ns_gisaid, on=["month", "gene_name", "country"], how='outer').fillna(0)
 
         # delete all rows before starting
         self.session.query(PrecomputedDnDs).delete()
@@ -326,112 +305,60 @@ class Precomputer:
 
         database_rows = []
         if data_ena is not None:
-            for index, row in data_ena.iterrows():
-                # add entries per gene
-                database_rows.append(PrecomputedDnDs(
-                    month=row["month"],
-                    gene_name=row["gene_name"],
-                    country=row["country"],
-                    dn=row["dn"],
-                    ds=row["ds"],
-                    source=DataSource.ENA
-                ))
+            database_rows.extend(self._dn_ds_to_rows_by_source(data=data_ena, source=DataSource.ENA))
         if data_gisaid is not None:
-            for index, row in data_gisaid.iterrows():
-                # add entries per gene
-                database_rows.append(PrecomputedDnDs(
-                    month=row["month"],
-                    gene_name=row["gene_name"],
-                    country=row["country"],
-                    dn=row["dn"],
-                    ds=row["ds"],
-                    source=DataSource.GISAID
-                ))
+            database_rows.extend(self._dn_ds_to_rows_by_source(data=data_gisaid, source=DataSource.GISAID))
 
         if len(database_rows) > 0:
             self.session.add_all(database_rows)
             self.session.commit()
         logger.info("Added {} entries to {}".format(len(database_rows), PrecomputedDnDs.__tablename__))
 
-
-    def load_dn_ds_by_domain(self):
-        sql_query_ds_ena = """
-                select count(*) as ds, date_trunc('month', s.collection_date) as month, vo.pfam_name, s.country 
-                from {variant_observation_table} as vo join {sample_ena_table} as s on vo.sample = s.run_accession 
-                where vo.source = 'ENA' and vo.annotation_highest_impact = 'synonymous_variant' 
-                    and vo.pfam_name is not null and s.collection_date is not null
-                group by date_trunc('month', s.collection_date), vo.pfam_name, s.country;
-                """.format(variant_observation_table=VARIANT_OBSERVATION_TABLE_NAME,
-                           sample_ena_table=SAMPLE_ENA_TABLE_NAME)
-        data_ds_ena = pd.read_sql_query(sql_query_ds_ena, self.session.bind)
-
-        sql_query_dn_ena = """
-                select count(*) as dn, date_trunc('month', s.collection_date) as month, vo.pfam_name, s.country 
-                from {variant_observation_table} as vo join {sample_ena_table} as s on vo.sample = s.run_accession 
-                where vo.source = 'ENA' and vo.annotation_highest_impact = 'missense_variant' 
-                    and vo.pfam_name is not null and s.collection_date is not null
-                group by date_trunc('month', s.collection_date), vo.pfam_name, s.country;
-                """.format(variant_observation_table=VARIANT_OBSERVATION_TABLE_NAME,
-                           sample_ena_table=SAMPLE_ENA_TABLE_NAME)
-        data_dn_ena = pd.read_sql_query(sql_query_dn_ena, self.session.bind)
-
-        data_ena = pd.merge(left=data_ds_ena, right=data_dn_ena, on=["month", "pfam_name", "country"], how='outer').fillna(0)
-
-        sql_query_ds_gisaid = """
-                select count(*) as ds, date_trunc('month', s.date) as month, vo.pfam_name, s.country 
-                from {variant_observation_table} as vo join {sample_gisaid_table} as s on vo.sample = s.run_accession 
-                where vo.source = 'GISAID' and vo.annotation_highest_impact = 'synonymous_variant' 
-                    and vo.pfam_name is not null and s.date is not null
-                group by date_trunc('month', s.date), vo.pfam_name, s.country;
-                """.format(variant_observation_table=VARIANT_OBSERVATION_TABLE_NAME,
-                           sample_gisaid_table=SAMPLE_GISAID_TABLE_NAME)
-        data_ds_gisaid = pd.read_sql_query(sql_query_ds_gisaid, self.session.bind)
-
-        sql_query_dn_gisaid = """
-                select count(*) as dn, date_trunc('month', s.date) as month, vo.pfam_name, s.country 
-                from {variant_observation_table} as vo join {sample_gisaid_table} as s on vo.sample = s.run_accession 
-                where vo.source = 'GISAID' and vo.annotation_highest_impact = 'missense_variant' 
-                    and vo.pfam_name is not null and s.date is not null
-                group by date_trunc('month', s.date), vo.pfam_name, s.country;
-                """.format(variant_observation_table=VARIANT_OBSERVATION_TABLE_NAME,
-                           sample_gisaid_table=SAMPLE_GISAID_TABLE_NAME)
-        data_dn_gisaid = pd.read_sql_query(sql_query_dn_gisaid, self.session.bind)
-
-        data_gisaid = pd.merge(left=data_ds_gisaid, right=data_dn_gisaid, on=["month", "pfam_name", "country"],
-                            how='outer').fillna(0)
-
-        # delete all rows before starting
-        self.session.query(PrecomputedDnDs).delete()
-        self.session.commit()
-
+    def _dn_ds_to_rows_by_source(self, data, source: DataSource):
+        coding_region_ns = {}
+        coding_region_s = {}
         database_rows = []
-        if data_ena is not None:
-            for index, row in data_ena.iterrows():
-                # add entries per gene
-                database_rows.append(PrecomputedDnDsByDomain(
-                    month=row["month"],
-                    domain=row["pfam_name"],
-                    country=row["country"],
-                    dn=row["dn"],
-                    ds=row["ds"],
-                    source=DataSource.ENA
-                ))
-        if data_gisaid is not None:
-            for index, row in data_gisaid.iterrows():
-                # add entries per gene
-                database_rows.append(PrecomputedDnDsByDomain(
-                    month=row["month"],
-                    domain=row["pfam_name"],
-                    country=row["country"],
-                    dn=row["dn"],
-                    ds=row["ds"],
-                    source=DataSource.GISAID
-                ))
+        for index, row in data.iterrows():
+            # add entries per gene
+            month = row['month']
+            country = row['country']
+            ns = row["ns"]
+            s = row["s"]
+            database_rows.append(PrecomputedDnDs(
+                month=month,
+                region_type=RegionType.GENE,
+                region_name=row["gene_name"],
+                country=country,
+                ns=ns,
+                s=s,
+                source=source
+            ))
+            coding_region_ns[(month, country)] = coding_region_ns.get(month, 0) + ns
+            coding_region_s[(month, country)] = coding_region_s.get(month, 0) + s
+        for month, country in coding_region_ns.keys():
+            database_rows.append(PrecomputedDnDs(
+                month=month,
+                region_type=RegionType.CODING_REGION,
+                country=country,
+                ns=coding_region_ns.get(month),
+                s=coding_region_s.get(month),
+                source=source
+            ))
+        return database_rows
 
-        if len(database_rows) > 0:
-            self.session.add_all(database_rows)
-            self.session.commit()
-        logger.info("Added {} entries to {}".format(len(database_rows), PrecomputedDnDsByDomain.__tablename__))
+    def _count_variant_observations_by_source_and_annotation(self, source: DataSource, annotation: str):
+        sql_query = """
+                select count(*) as count, date_trunc('month', s.collection_date) as month, vo.gene_name, s.country 
+                from {variant_observation_table} as vo join {sample_ena_table} as s on vo.sample = s.run_accession 
+                where vo.source = {source} and vo.annotation_highest_impact = {annotation} 
+                    and s.collection_date is not null
+                group by date_trunc('month', s.collection_date), vo.gene_name, s.country;
+                """.format(variant_observation_table=VARIANT_OBSERVATION_TABLE_NAME,
+                           sample_ena_table=SAMPLE_ENA_TABLE_NAME,
+                           source=source.name,
+                           annotation=annotation)
+        data = pd.read_sql_query(sql_query, self.session.bind)
+        return data
 
     def load_table_counts(self):
 
@@ -535,7 +462,6 @@ class Precomputer:
 if __name__ == '__main__':
     database = Database(initialize=True, config=Configuration())
     precomputer = Precomputer(session=database.get_database_session())
-    #precomputer.load_dn_ds_by_domain()
     #precomputer.load_dn_ds()
     #precomputer.load_table_counts()
     #precomputer.load_variant_abundance_histogram()

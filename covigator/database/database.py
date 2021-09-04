@@ -17,8 +17,8 @@ class Database:
     def __init__(self, config: Configuration = None, test=False, verbose=False, initialize=False):
         self.config = config
         if test:
-            # creates a SQLite in memory database for testing purposes
-            db_uri = 'sqlite://'
+            # connects to the test postgres in the CI environment
+            db_uri = "postgresql+psycopg2://%s:%s@%s/%s" % ("test_user", "test_pass", "localhost", "test_db")
             self.engine: Engine = create_engine(db_uri, echo=verbose)
             initialize = True   # does not make sense not to initialize the DB in the test environment
         else:

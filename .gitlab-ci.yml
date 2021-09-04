@@ -1,10 +1,19 @@
 image: python:3.8-buster
 
+
+services:
+  - postgres
+
+
 # Change pip's cache directory to be inside the project directory since we can
 # only cache local items.
 variables:
     PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
     VENV_CACHE_DIR: "$CI_PROJECT_DIR/venv"
+    # Configure postgres service (https://hub.docker.com/_/postgres/)
+    POSTGRES_DB: test_db
+    POSTGRES_USER: test_user
+    POSTGRES_PASSWORD: test_pass
 
 # Pip's cache doesn't store the python packages
 # https://pip.pypa.io/en/stable/reference/pip_install/#caching
