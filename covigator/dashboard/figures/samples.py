@@ -116,31 +116,33 @@ class SampleFigures(Figures):
             third_quartile = np.percentile(counts, 75)
             first_quartile = np.percentile(counts, 25)
             extreme_threshold = median + (3 * (third_quartile - first_quartile))
-            fig = px.bar(data[data.number_mutations < extreme_threshold],
-                         x="number_mutations",
-                         y='count',
-                         color="variant_type",
-                         color_discrete_map=VARIANT_TYPE_COLOR_MAP)
-            fig.add_vline(x=median, line_width=2, line_dash="dash", line_color='grey',
-                          annotation_text="median", annotation_position="top right")
-            fig.add_vrect(x0=first_quartile, x1=third_quartile,
-                          fillcolor="grey", opacity=0.25, line_width=0)
-            fig.update_layout(
-                margin=MARGIN,
-                template=TEMPLATE,
-                legend={'traceorder': 'normal', 'title': None},
-                yaxis={'title': None},
-                xaxis={'title': "num. samples"},
-            )
+            filtered_data = data[data.number_mutations <= extreme_threshold]
+            if filtered_data.shape[0] > 0:
+                fig = px.bar(filtered_data,
+                             x="number_mutations",
+                             y='count',
+                             color="variant_type",
+                             color_discrete_map=VARIANT_TYPE_COLOR_MAP)
+                fig.add_vline(x=median, line_width=2, line_dash="dash", line_color='grey',
+                              annotation_text="median", annotation_position="top right")
+                fig.add_vrect(x0=first_quartile, x1=third_quartile,
+                              fillcolor="grey", opacity=0.25, line_width=0)
+                fig.update_layout(
+                    margin=MARGIN,
+                    template=TEMPLATE,
+                    legend={'traceorder': 'normal', 'title': None},
+                    yaxis={'title': None},
+                    xaxis={'title': "num. samples"},
+                )
 
-            graph = [
-                dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
-                dcc.Markdown("""
-                        **Mutations per sample**
-
-                        *Median: {median} (IQR: {iqr})*
-                        """.format(median=median, iqr=third_quartile - first_quartile))
-            ]
+                graph = [
+                    dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
+                    dcc.Markdown("""
+                            **Mutations per sample**
+    
+                            *Median: {median} (IQR: {iqr})*
+                            """.format(median=median, iqr=third_quartile - first_quartile))
+                ]
         return graph
 
     def get_accumulated_samples_by_country_plot(self, data_source: DataSource = None, countries=None, min_samples=1000):
