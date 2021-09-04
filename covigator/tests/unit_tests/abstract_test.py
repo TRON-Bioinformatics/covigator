@@ -33,8 +33,9 @@ class AbstractTest(TestCase):
         try:
             meta = MetaData()
             meta.drop_all(bind=self.session)
-        except:
+        except Exception as e:
             logger.error("Error cleaning the database")
+            logger.exception(e)
         #for table in reversed(meta.sorted_tables):
         #    self.session.execute(table.delete())
         #self.session.commit()
