@@ -8,6 +8,19 @@ from covigator.tests.unit_tests.faked_objects import FakeConfiguration
 
 class AbstractTest(TestCase):
 
+    @classmethod
+    def setUpClass(cls):
+        """On inherited classes, run our `setUp` method"""
+        # Inspired via http://stackoverflow.com/questions/1323455/python-unit-test-with-base-and-sub-class/17696807#17696807
+        if cls is not AbstractTest and cls.setUp is not AbstractTest.setUp:
+            orig_setUp = cls.setUp
+
+            def setUpOverride(self, *args, **kwargs):
+                AbstractTest.setUp(self)
+                return orig_setUp(self, *args, **kwargs)
+
+            cls.setUp = setUpOverride
+
     def setUp(self) -> None:
         self.config = FakeConfiguration()
         self.database = Database(test=True, config=self.config)
