@@ -1,5 +1,6 @@
 from unittest import TestCase
 from faker import Faker
+from logzero import logger
 from sqlalchemy import MetaData
 
 from covigator.database.database import Database
@@ -28,8 +29,13 @@ class AbstractTest(TestCase):
         self.faker = Faker()
 
     def tearDown(self) -> None:
-        meta = MetaData()
-        for table in reversed(meta.sorted_tables):
-            self.session.execute(table.delete())
-        self.session.commit()
+        logger.info("Cleaning the database")
+        try:
+            meta = MetaData()
+            meta.drop_all(bind=self.session)
+        except:
+            logger.error("Error cleaning the database")
+        #for table in reversed(meta.sorted_tables):
+        #    self.session.execute(table.delete())
+        #self.session.commit()
 
