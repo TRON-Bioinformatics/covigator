@@ -32,7 +32,7 @@ class AbstractTest(TestCase):
         logger.info("Cleaning the database")
         try:
             meta = MetaData()
-            meta.drop_all(bind=self.session)
+            meta.drop_all(bind=self.database)
         except Exception as e:
             logger.error("Error cleaning the database")
             logger.exception(e)
