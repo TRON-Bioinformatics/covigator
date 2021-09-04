@@ -1,27 +1,17 @@
-from unittest import TestCase
 from dask.distributed import Client
-
-from covigator.configuration import Configuration
-from covigator.database.database import Database
 from covigator.database.model import Log, DataSource, CovigatorModule
 from covigator.processor.ena_processor import EnaProcessor
-from faker import Faker
 from covigator.processor.gisaid_processor import GisaidProcessor
-from covigator.tests.unit_tests.faked_objects import FakeConfiguration
+from covigator.tests.unit_tests.abstract_test import AbstractTest
 
 
-class ProcessorTests(TestCase):
+class ProcessorTests(AbstractTest):
 
     def setUp(self) -> None:
-        # intialise database
-        config = FakeConfiguration()
-        self.database = Database(test=True, config=config)
-        self.session = self.database.get_database_session()
         self.ena_processor = EnaProcessor(
-            database=self.database, dask_client=Client(n_workers=int(1), threads_per_worker=1), config=config)
+            database=self.database, dask_client=Client(n_workers=int(1), threads_per_worker=1), config=self.config)
         self.gisaid_processor = GisaidProcessor(
-            database=self.database, dask_client=Client(n_workers=int(1), threads_per_worker=1), config=config)
-        self.faker = Faker()
+            database=self.database, dask_client=Client(n_workers=int(1), threads_per_worker=1), config=self.config)
 
     def test_no_ena_jobs(self):
         self.ena_processor.process()

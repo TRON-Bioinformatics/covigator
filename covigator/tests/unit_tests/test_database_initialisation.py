@@ -1,15 +1,11 @@
-from unittest import TestCase
 from covigator.database.database import Database
 from covigator.database.model import Gene, get_table_versioned_name, Variant, Conservation
 import pandas as pd
 from covigator.configuration import Configuration
-from covigator.tests.unit_tests.faked_objects import FakeConfiguration
+from covigator.tests.unit_tests.abstract_test import AbstractTest
 
 
-class DatabaseInitialisationTests(TestCase):
-
-    def setUp(self) -> None:
-        self.config = FakeConfiguration()
+class DatabaseInitialisationTests(AbstractTest):
 
     def test_genes_table_initialisation(self):
         database = Database(test=True, config=self.config)

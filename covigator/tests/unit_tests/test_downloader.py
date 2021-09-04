@@ -1,18 +1,14 @@
 import unittest
-from unittest import TestCase
-
-from covigator.configuration import Configuration
 from covigator.database.model import SampleEna
 from covigator.pipeline.downloader import Downloader, CovigatorMD5CheckSumError
 import os
+from covigator.tests.unit_tests.abstract_test import AbstractTest
 
-from covigator.tests.unit_tests.faked_objects import FakeConfiguration
 
-
-class DownloaderTest(TestCase):
+class DownloaderTest(AbstractTest):
 
     def setUp(self) -> None:
-        self.downloader = Downloader(config=FakeConfiguration())
+        self.downloader = Downloader(config=self.config)
 
     @unittest.skip
     def test_download_ena_run_with_bad_md5(self):

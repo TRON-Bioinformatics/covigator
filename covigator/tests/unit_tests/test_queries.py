@@ -1,26 +1,19 @@
 import unittest
 from itertools import combinations
-from unittest import TestCase
-
 from covigator.database.precomputed import Precomputer
 from faker import Faker
 import numpy as np
-from covigator.database.database import Database
 from covigator.database.model import JobStatus, DataSource, Sample, Gene
 from covigator.database.queries import Queries
-from covigator.tests.unit_tests.faked_objects import FakeConfiguration
+from covigator.tests.unit_tests.abstract_test import AbstractTest
 from covigator.tests.unit_tests.mocked import get_mocked_ena_sample, get_mocked_log, get_mocked_variant, \
     get_mocked_variant_cooccurrence, get_mocked_variant_observation
 
 
-class QueriesTests(TestCase):
+class QueriesTests(AbstractTest):
 
     def setUp(self) -> None:
-        # intialise database
-        self.database = Database(test=True, verbose=True, config=FakeConfiguration())
-        self.session = self.database.get_database_session()
         self.queries = Queries(session=self.session)
-        self.faker = Faker()
 
     def test_get_date_of_first_ena_sample(self):
         first_sample_date = None

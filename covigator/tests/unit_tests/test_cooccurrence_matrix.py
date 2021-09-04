@@ -1,41 +1,32 @@
-from unittest import TestCase
-
-from faker import Faker
-
-from covigator.configuration import Configuration
-from covigator.database.database import Database
 from covigator.database.model import Sample, VariantCooccurrence
 from covigator.pipeline.cooccurrence_matrix import CooccurrenceMatrix
-from covigator.tests.unit_tests.faked_objects import FakeConfiguration
+from covigator.tests.unit_tests.abstract_test import AbstractTest
 from covigator.tests.unit_tests.mocked import get_mocked_ena_sample, get_mocked_variant, get_mocked_variant_observation
 
 
-class CooccurrenceMatrixTests(TestCase):
+class CooccurrenceMatrixTests(AbstractTest):
 
     NUM_UNIQUE_VARIANTS = 10
     NUM_SAMPLES = 10
     NUM_VARIANT_OBSERVATIONS_PER_SAMPLE = 5
 
     def setUp(self) -> None:
-        self.config = FakeConfiguration()
-        self.session = Database(test=True, config=self.config).get_database_session()
-        faker = Faker()
         # mocks some unique variants
-        self.mocked_variants = [get_mocked_variant(faker) for _ in range(self.NUM_UNIQUE_VARIANTS)]
+        self.mocked_variants = [get_mocked_variant(self.faker) for _ in range(self.NUM_UNIQUE_VARIANTS)]
         self.session.add_all(self.mocked_variants)
         self.session.commit()
 
         variant_observations = []
         self.samples = []
         for _ in range(self.NUM_SAMPLES):
-            sample_ena, sample, job = get_mocked_ena_sample(faker)
+            sample_ena, sample, job = get_mocked_ena_sample(self.faker)
             self.session.add(sample)
             self.session.add(sample_ena)
             self.session.add(job)
             self.session.commit()
             self.samples.append(sample)
             # mocks observed variants
-            for vo in faker.random_elements(
+            for vo in self.faker.random_elements(
                     self.mocked_variants, length=self.NUM_VARIANT_OBSERVATIONS_PER_SAMPLE, unique=True):
                 variant_observations.append(get_mocked_variant_observation(sample, vo))
             self.session.add_all(variant_observations)
