@@ -4,6 +4,11 @@ from logzero import logger
 from sqlalchemy import MetaData
 
 from covigator.database.database import Database
+from covigator.database.model import VariantCooccurrence, SampleEna, Sample, JobEna, JobGisaid, VariantObservation, \
+    SampleGisaid, SubclonalVariantObservation, Variant, PrecomputedVariantAbundanceHistogram, PrecomputedTableCounts, \
+    PrecomputedDnDs, PrecomputedOccurrence, PrecomputedAnnotation, PrecomputedIndelLength, \
+    PrecomputedSubstitutionsCounts, PrecomputedVariantsPerSample, Log
+from covigator.pipeline.cooccurrence_matrix import CooccurrenceMatrix
 from covigator.tests.unit_tests.faked_objects import FakeConfiguration
 
 
@@ -30,13 +35,33 @@ class AbstractTest(TestCase):
 
     def tearDown(self) -> None:
         logger.info("Cleaning the database")
+        self._clean_test_database()
+
+    def _clean_test_database(self):
         try:
-            meta = MetaData()
-            meta.drop_all(bind=self.database.engine)
+            self._clean_table(VariantObservation)
+            self._clean_table(SubclonalVariantObservation)
+            self._clean_table(Sample)
+            self._clean_table(JobEna)
+            self._clean_table(JobGisaid)
+            self._clean_table(SampleEna)
+            self._clean_table(SampleGisaid)
+            self._clean_table(VariantCooccurrence)
+            self._clean_table(Variant)
+            self._clean_table(PrecomputedVariantsPerSample)
+            self._clean_table(PrecomputedSubstitutionsCounts)
+            self._clean_table(PrecomputedIndelLength)
+            self._clean_table(PrecomputedAnnotation)
+            self._clean_table(PrecomputedOccurrence)
+            self._clean_table(PrecomputedDnDs)
+            self._clean_table(PrecomputedTableCounts)
+            self._clean_table(PrecomputedVariantAbundanceHistogram)
+            self._clean_table(Log)
         except Exception as e:
             logger.error("Error cleaning the database")
             logger.exception(e)
-        #for table in reversed(meta.sorted_tables):
-        #    self.session.execute(table.delete())
-        #self.session.commit()
+
+    def _clean_table(self, clazz):
+        self.session.query(clazz).delete()
+        self.session.commit()
 

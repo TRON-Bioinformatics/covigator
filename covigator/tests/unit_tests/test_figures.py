@@ -5,7 +5,7 @@ from covigator.database.model import VariantType
 from covigator.database.precomputed import Precomputer
 from covigator.database.queries import Queries
 from covigator.tests.unit_tests.abstract_test import AbstractTest
-from covigator.tests.unit_tests.mocked import get_mocked_ena_sample, mock_samples_and_variants
+from covigator.tests.unit_tests.mocked import get_mocked_ena_sample, mock_samples_and_variants, mock_samples
 
 
 class FiguresTests(AbstractTest):
@@ -16,10 +16,7 @@ class FiguresTests(AbstractTest):
 
     def test_samples_by_country(self):
         # populates the ENA samples tables
-        for _ in range(100):
-            sample_ena, sample, job = get_mocked_ena_sample(faker=self.faker)
-            self.session.add_all([sample_ena, sample, job])
-        self.session.commit()
+        mock_samples(faker=self.faker, session=self.session, num_samples=100)
         figure = self.sample_figures.get_accumulated_samples_by_country_plot(min_samples=0)
         self.assertIsNotNone(figure)
         self.assertTrue(len(figure) == 2)

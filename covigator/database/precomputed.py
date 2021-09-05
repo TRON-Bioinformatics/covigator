@@ -350,7 +350,7 @@ class Precomputer:
         sql_query = """
                 select count(*) as count, date_trunc('month', s.collection_date) as month, vo.gene_name, s.country 
                 from {variant_observation_table} as vo join {sample_ena_table} as s on vo.sample = s.run_accession 
-                where vo.source = {source} and vo.annotation_highest_impact = {annotation} 
+                where vo.source = '{source}' and vo.annotation_highest_impact = '{annotation}' 
                     and s.collection_date is not null
                 group by date_trunc('month', s.collection_date), vo.gene_name, s.country;
                 """.format(variant_observation_table=VARIANT_OBSERVATION_TABLE_NAME,

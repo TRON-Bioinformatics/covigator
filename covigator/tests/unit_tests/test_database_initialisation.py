@@ -31,9 +31,9 @@ class DatabaseInitialisationTests(AbstractTest):
     def test_versioned_tables(self):
         config = Configuration()
         config.db_table_version = "_v1"
-        self.assertEqual("gene_v1", get_table_versioned_name(Gene.__table__.name, config=config))
+        self.assertEqual("gene_v1", get_table_versioned_name('gene', config=config))
         config.db_table_version = "_v2"
-        self.assertEqual("variant_v2", get_table_versioned_name(Variant.__table__.name, config=config))
+        self.assertEqual("variant_v2", get_table_versioned_name('variant', config=config))
 
     def test_conservation_loader(self):
         database = Database(test=True, config=self.config)

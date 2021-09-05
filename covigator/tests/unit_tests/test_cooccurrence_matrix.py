@@ -20,8 +20,10 @@ class CooccurrenceMatrixTests(AbstractTest):
         self.samples = []
         for _ in range(self.NUM_SAMPLES):
             sample_ena, sample, job = get_mocked_ena_sample(self.faker)
-            self.session.add(sample)
             self.session.add(sample_ena)
+            self.session.commit()
+            self.session.add(sample)
+            self.session.commit()
             self.session.add(job)
             self.session.commit()
             self.samples.append(sample)
