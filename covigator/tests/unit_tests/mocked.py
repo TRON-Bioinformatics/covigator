@@ -3,13 +3,15 @@ from itertools import combinations
 from typing import Tuple
 from faker import Faker
 from sqlalchemy.orm import Session
-
 from covigator.database.model import SampleEna, Sample, DataSource, JobEna, JobStatus, Log, CovigatorModule, Variant, \
     VariantObservation, VariantCooccurrence, VariantType
 from Bio.Alphabet.IUPAC import IUPACData
 
 
 def get_mocked_variant(faker: Faker, chromosome=None, gene_name=None) -> Variant:
+    if gene_name is None:
+        gene_name = faker.random_choices(
+            ["S", "N", "E", "M", "ORF3a", "ORF1ab", "ORF7b", "ORF10", "ORF6", "ORF8", "ORF7a"], length=1)[0]
     variant = Variant(
         chromosome=chromosome if chromosome else faker.bothify(text="chr##"),
         position=faker.random_int(min=1, max=30000),
