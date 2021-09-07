@@ -55,6 +55,7 @@ class Gene(Base):
     name = Column(String)
     start = Column(Integer, index=True)
     end = Column(Integer)
+    ratio_synonymous_non_synonymous = Column(Float)
     data = Column(JSON)
 
     def get_pfam_domains(self):
