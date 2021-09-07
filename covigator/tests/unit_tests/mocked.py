@@ -3,15 +3,22 @@ from itertools import combinations
 from typing import Tuple
 from faker import Faker
 from sqlalchemy.orm import Session
+
+from covigator import MISSENSE_VARIANT, SYNONYMOUS_VARIANT, INFRAME_INSERTION, INFRAME_DELETION
 from covigator.database.model import SampleEna, Sample, DataSource, JobEna, JobStatus, Log, CovigatorModule, Variant, \
     VariantObservation, VariantCooccurrence, VariantType
 from Bio.Alphabet.IUPAC import IUPACData
 
 
+MOCKED_GENES = ["S", "N", "E", "M", "ORF3a", "ORF1ab", "ORF7b", "ORF10", "ORF6", "ORF8", "ORF7a"]
+
+
 def get_mocked_variant(faker: Faker, chromosome=None, gene_name=None) -> Variant:
     if gene_name is None:
         gene_name = faker.random_choices(
-            ["S", "N", "E", "M", "ORF3a", "ORF1ab", "ORF7b", "ORF10", "ORF6", "ORF8", "ORF7a"], length=1)[0]
+            MOCKED_GENES, length=1)[0]
+    annotation = faker.random_choices(
+            [MISSENSE_VARIANT, SYNONYMOUS_VARIANT, INFRAME_DELETION, INFRAME_INSERTION], length=1)[0]
     variant = Variant(
         chromosome=chromosome if chromosome else faker.bothify(text="chr##"),
         position=faker.random_int(min=1, max=30000),
@@ -25,7 +32,8 @@ def get_mocked_variant(faker: Faker, chromosome=None, gene_name=None) -> Variant
             faker.random_int(min=1, max=500),
             faker.random_choices(list(IUPACData.protein_letters_1to3.values()), length=1)[0]
         ),
-        annotation=faker.random_choices(["non_synonymous", "inframe_deletion", "inframe_insertion"], length=1)[0]
+        annotation=annotation,
+        annotation_highest_impact=annotation
     )
     variant.variant_id = variant.get_variant_id()
     return variant
@@ -40,7 +48,11 @@ def get_mocked_variant_observation(sample: Sample, variant: Variant, faker=Faker
         position=variant.position,
         reference=variant.reference,
         alternate=variant.alternate,
-        variant_type=VariantType.SNV)
+        variant_type=VariantType.SNV,
+        annotation=variant.annotation,
+        annotation_highest_impact=variant.annotation_highest_impact,
+        gene_name=variant.gene_name
+    )
 
 
 def get_mocked_ena_sample(faker: Faker, job_status=JobStatus.FINISHED) -> Tuple[SampleEna, Sample, JobEna]:

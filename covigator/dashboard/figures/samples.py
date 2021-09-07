@@ -5,6 +5,7 @@ import pandas as pd
 import plotly
 from logzero import logger
 
+from covigator import MISSENSE_VARIANT
 from covigator.dashboard.figures import VARIANT_TYPE_COLOR_MAP
 from covigator.dashboard.figures.figures import Figures, PLOTLY_CONFIG, MARGIN, TEMPLATE
 import plotly.express as px
@@ -44,8 +45,8 @@ class SampleFigures(Figures):
                 **Most common mutation effects**
                 
                 *Ratio of non synonymous to synonymous SNVs (N/S): {dnds}*
-                """.format(dnds=round(data[data.annotation == "missense_variant"]["count"].sum() /
-                                data[data.annotation == "synonymous_variant"]["count"].sum(), 3)))
+                """.format(dnds=round(data[data.annotation == MISSENSE_VARIANT]["count"].sum() /
+                                data[data.annotation == SYNONYMOUS_VARIANT]["count"].sum(), 3)))
             ]
         return graph
 

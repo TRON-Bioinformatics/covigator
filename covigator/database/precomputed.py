@@ -1,5 +1,7 @@
 import pandas as pd
 from sqlalchemy.orm import Session
+
+from covigator import SYNONYMOUS_VARIANT, MISSENSE_VARIANT
 from covigator.configuration import Configuration
 from covigator.dashboard.tabs.variants import BIN_SIZE_VALUES
 from covigator.database.database import Database
@@ -286,13 +288,13 @@ class Precomputer:
 
     def load_dn_ds(self):
         data_s_ena = self._count_variant_observations_by_source_and_annotation(
-            source=DataSource.ENA, annotation='synonymous_variant').rename(columns={'count': 's'})
+            source=DataSource.ENA, annotation=SYNONYMOUS_VARIANT).rename(columns={'count': 's'})
         data_ns_ena = self._count_variant_observations_by_source_and_annotation(
-            source=DataSource.ENA, annotation='missense_variant').rename(columns={'count': 'ns'})
+            source=DataSource.ENA, annotation=MISSENSE_VARIANT).rename(columns={'count': 'ns'})
         data_s_gisaid = self._count_variant_observations_by_source_and_annotation(
-            source=DataSource.GISAID, annotation='synonymous_variant').rename(columns={'count': 's'})
+            source=DataSource.GISAID, annotation=SYNONYMOUS_VARIANT).rename(columns={'count': 's'})
         data_ns_gisaid = self._count_variant_observations_by_source_and_annotation(
-            source=DataSource.GISAID, annotation='missense_variant').rename(columns={'count': 'ns'})
+            source=DataSource.GISAID, annotation=MISSENSE_VARIANT).rename(columns={'count': 'ns'})
 
         data_ena = pd.merge(
             left=data_s_ena, right=data_ns_ena, on=["month", "gene_name", "country"], how='outer').fillna(0)
@@ -333,15 +335,15 @@ class Precomputer:
                 s=s,
                 source=source
             ))
-            coding_region_ns[(month, country)] = coding_region_ns.get(month, 0) + ns
-            coding_region_s[(month, country)] = coding_region_s.get(month, 0) + s
+            coding_region_ns[(month, country)] = coding_region_ns.get((month, country), 0) + ns
+            coding_region_s[(month, country)] = coding_region_s.get((month, country), 0) + s
         for month, country in coding_region_ns.keys():
             database_rows.append(PrecomputedDnDs(
                 month=month,
                 region_type=RegionType.CODING_REGION,
                 country=country,
-                ns=coding_region_ns.get(month),
-                s=coding_region_s.get(month),
+                ns=coding_region_ns.get((month, country), 0),
+                s=coding_region_s.get((month, country), 0),
                 source=source
             ))
         return database_rows

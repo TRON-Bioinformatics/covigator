@@ -1,4 +1,6 @@
 import unittest
+
+from covigator import SYNONYMOUS_VARIANT
 from covigator.database.precomputed import Precomputer
 from covigator.database.model import JobStatus, DataSource, Sample, Gene
 from covigator.database.queries import Queries
@@ -89,7 +91,7 @@ class QueriesTests(AbstractTest):
 
         data = self.queries.get_variants_cooccurrence_by_gene(gene_name="S", min_cooccurrence=1, test=True)
         self.assertIsNotNone(data)
-        num_unique_variants = len(set([v.variant_id for v in variants]))
+        num_unique_variants = len(set([v.variant_id for v in variants if v.annotation != SYNONYMOUS_VARIANT]))
         self.assertEqual(data.shape[0], num_unique_variants * num_unique_variants)
         self.assertEqual(data.shape[1], 7)
         self.assertGreaterEqual(data[data["count"] > 0].shape[0], len(variants))

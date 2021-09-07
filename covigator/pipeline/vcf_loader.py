@@ -4,6 +4,8 @@ import os
 import re
 from sqlalchemy.exc import IntegrityError, InvalidRequestError
 from sqlalchemy.orm import Session
+
+from covigator import MISSENSE_VARIANT
 from covigator.database.model import Variant as CovigatorVariant, VariantObservation, Sample, \
     SubclonalVariantObservation, SampleEna, SampleGisaid, DataSource, VariantType
 from covigator.database.queries import Queries
@@ -122,7 +124,7 @@ class VcfLoader:
                 covigator_variant.cdna_pos_length = values[11].strip()
                 covigator_variant.cds_pos_length = values[12].strip()
                 covigator_variant.aa_pos_length = values[13].strip()
-                if covigator_variant.annotation == "missense_variant":
+                if covigator_variant.annotation == MISSENSE_VARIANT:
                     hgvs_pattern = re.compile(r"^p\.([a-zA-Z]{1,3})([0-9]+)([a-zA-Z]{1,3})$")
                     match = hgvs_pattern.match(covigator_variant.hgvs_p)
                     if match:
