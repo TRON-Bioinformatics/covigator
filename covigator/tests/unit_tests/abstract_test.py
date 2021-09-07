@@ -32,6 +32,7 @@ class AbstractTest(TestCase):
         self.database = Database(test=True, config=self.config)
         self.session = self.database.get_database_session()
         self.faker = Faker()
+        self._clean_test_database()
 
     def tearDown(self) -> None:
         logger.info("Cleaning the database")
