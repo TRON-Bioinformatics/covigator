@@ -37,6 +37,7 @@ PRECOMPUTED_VARIANT_ABUNDANCE_HIST_TABLE_NAME = get_table_versioned_name('precom
 JOB_STATUS_CONSTRAINT_NAME = get_table_versioned_name('job_status', config=config)
 DATA_SOURCE_CONSTRAINT_NAME = get_table_versioned_name('data_source', config=config)
 COVIGATOR_MODULE_CONSTRAINT_NAME = get_table_versioned_name('covigator_module', config=config)
+REGION_TYPE_CONSTRAINT_NAME = get_table_versioned_name('region_type', config=config)
 VARIANT_TYPE_CONSTRAINT_NAME = get_table_versioned_name('variant_type', config=config)
 SEPARATOR = ";"
 
@@ -54,6 +55,7 @@ class Gene(Base):
     name = Column(String)
     start = Column(Integer, index=True)
     end = Column(Integer)
+    ratio_synonymous_non_synonymous = Column(Float)
     data = Column(JSON)
 
     def get_pfam_domains(self):
@@ -597,30 +599,28 @@ class PrecomputedOccurrence(Base):
     source = Column(Enum(DataSource, name=DataSource.__constraint_name__))
 
 
+class RegionType(enum.Enum):
+
+    __constraint_name__ = REGION_TYPE_CONSTRAINT_NAME
+
+    GENE = 1
+    DOMAIN = 2
+    CODING_REGION=3
+
+
 class PrecomputedDnDs(Base):
 
     __tablename__ = PRECOMPUTED_DN_DS_TABLE_NAME
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     month = Column(Date)
-    gene_name = Column(String)
+    region_type = Column(Enum(RegionType, name=RegionType.__constraint_name__))
+    region_name = Column(String)
     country = Column(String)
     source = Column(Enum(DataSource, name=DataSource.__constraint_name__))
-    dn = Column(Integer)
-    ds = Column(Integer)
-
-
-class PrecomputedDnDsByDomain(Base):
-
-    __tablename__ = PRECOMPUTED_DN_DS_BY_DOMAIN_TABLE_NAME
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    month = Column(Date)
-    domain = Column(String)
-    country = Column(String)
-    source = Column(Enum(DataSource, name=DataSource.__constraint_name__))
-    dn = Column(Integer)
-    ds = Column(Integer)
+    ns = Column(Integer)
+    s = Column(Integer)
+    dn_ds = Column(Float)
 
 
 class PrecomputedTableCounts(Base):

@@ -1,0 +1,13 @@
+[
+  {"name": "S", "ratio_synonymous_non_synonymous": 0.283720930232558},
+  {"name": "ORF3a", "ratio_synonymous_non_synonymous": 0.28625},
+  {"name": "E", "ratio_synonymous_non_synonymous": 0.3375},
+  {"name": "M", "ratio_synonymous_non_synonymous": 0.306},
+  {"name": "ORF6", "ratio_synonymous_non_synonymous": 0.2425},
+  {"name": "ORF7a", "ratio_synonymous_non_synonymous": 0.294411764705882},
+  {"name": "ORF8", "ratio_synonymous_non_synonymous": 0.268421052631579},
+  {"name": "N", "ratio_synonymous_non_synonymous": 0.298018867924528},
+  {"name": "ORF10", "ratio_synonymous_non_synonymous": 0.266666666666667},
+  {"name": "ORF1ab", "ratio_synonymous_non_synonymous": 0.2759921},
+  {"name": "coding_region", "ratio_synonymous_non_synonymous": 0.28181367690783}
+]

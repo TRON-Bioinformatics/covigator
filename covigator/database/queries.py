@@ -12,14 +12,13 @@ from sqlalchemy.engine.default import DefaultDialect
 from sqlalchemy.orm import Session, aliased
 from sqlalchemy.sql.sqltypes import NullType
 
+from covigator import SYNONYMOUS_VARIANT
 from covigator.database.model import Log, DataSource, CovigatorModule, SampleEna, JobEna, JobStatus, VariantObservation, \
     Gene, Variant, VariantCooccurrence, Conservation, JobGisaid, SampleGisaid, SubclonalVariantObservation, \
     PrecomputedVariantsPerSample, PrecomputedSubstitutionsCounts, PrecomputedIndelLength, VariantType, \
     PrecomputedAnnotation, PrecomputedOccurrence, PrecomputedTableCounts, Sample, PrecomputedVariantAbundanceHistogram, \
     VARIANT_OBSERVATION_TABLE_NAME
 from covigator.exceptions import CovigatorQueryException, CovigatorDashboardMissingPrecomputedData
-
-SYNONYMOUS_VARIANT = "synonymous_variant"
 
 
 class Queries:
@@ -248,7 +247,7 @@ class Queries:
     def get_gene(self, gene_name: str):
         return self.session.query(Gene).filter(Gene.name == gene_name).first()
 
-    def get_genes(self):
+    def get_genes(self) -> List[Gene]:
         return self.session.query(Gene).order_by(Gene.start).all()
 
     def get_non_synonymous_variants_by_region(self, start, end, source) -> pd.DataFrame:

@@ -1,32 +1,11 @@
 from datetime import date
-from unittest import TestCase
-
 from sqlalchemy import and_
-
-from covigator.accessor.ena_accessor import EnaAccessor
-from covigator.configuration import Configuration
-from covigator.database.database import Database
 from covigator.database.model import SampleEna, Sample, JobEna, Log, DataSource, CovigatorModule
-from covigator.tests import SARS_COV_2_TAXID, HOMO_SAPIENS_TAXID
-from covigator.tests.unit_tests.faked_objects import FakeConfiguration
+from covigator.tests.unit_tests.abstract_test import AbstractTest
+from covigator.tests.unit_tests.faked_objects import FakeEnaAccessor
 
 
-class FakeEnaAccessor(EnaAccessor):
-
-    def __init__(self, results, database=None):
-        # uses an in memory database or the one provided
-        super().__init__(tax_id=SARS_COV_2_TAXID, host_tax_id=HOMO_SAPIENS_TAXID,
-                         database=database if database else Database(test=True, config=Configuration()))
-        self.results = results
-
-    def _get_ena_runs_page(self, offset):
-        return self.results
-
-
-class EnaAccessorTests(TestCase):
-
-    def setUp(self) -> None:
-        self.config = FakeConfiguration()
+class EnaAccessorTests(AbstractTest):
 
     def test_filtering_by_library_strategies(self):
         ena_accessor = FakeEnaAccessor([
@@ -176,7 +155,6 @@ class EnaAccessorTests(TestCase):
         self.assertEqual(ena_accessor.excluded, 0)
 
     def test_filtering_data_already_in_db(self):
-        database = Database(test=True, config=self.config)
         ena_accessor = FakeEnaAccessor(results=[
             {"run_accession": "ERR4080483",
              "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
@@ -199,7 +177,7 @@ class EnaAccessorTests(TestCase):
              "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/005/ERR4080485/ERR4080485_1.fastq.gz",
              "fastq_md5": "4de269d2b5831e1c5175586af694d21e",
              "host_tax_id": "9606"}
-        ], database=database)
+        ], database=self.database)
         ena_accessor.access()
         self.assertEqual(ena_accessor.included, 3)
         self.assertEqual(ena_accessor.excluded, 0)
@@ -226,13 +204,12 @@ class EnaAccessorTests(TestCase):
              "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/005/ERR4080485/ERR4080485_1.fastq.gz",
              "fastq_md5": "4de269d2b5831e1c5175586af694d21e",
              "host_tax_id": "9606"}
-        ], database=database)
+        ], database=self.database)
         ena_accessor.access()
         self.assertEqual(ena_accessor.included, 1)
         self.assertEqual(ena_accessor.excluded_existing, 2)
 
     def test_country_parsing(self):
-        database = Database(test=True, config=self.config)
         ena_accessor = FakeEnaAccessor(results=[
             {"run_accession": "ERR4080483",
              "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
@@ -281,11 +258,11 @@ class EnaAccessorTests(TestCase):
              "fastq_md5": "4de269d2b5831e1c5175586af694d21e",
              "host_tax_id": "9606",
              "country": "Jupiter"}
-        ], database=database)
+        ], database=self.database)
         ena_accessor.access()
         self.assertEqual(ena_accessor.included, 6)
         self.assertEqual(ena_accessor.excluded, 0)
-        session = database.get_database_session()
+        session = self.database.get_database_session()
         run = session.query(SampleEna).filter(SampleEna.run_accession == "ERR4080483").first()
         self.assertEqual(run.country_raw, "england")
         self.assertEqual(run.country, "United Kingdom")
@@ -330,7 +307,6 @@ class EnaAccessorTests(TestCase):
         self.assertEqual(run.continent, "None")
 
     def test_dates_parsing(self):
-        database = Database(test=True, config=self.config)
         ena_accessor = FakeEnaAccessor(results=[
             {"run_accession": "ERR4080483",
              "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
@@ -360,11 +336,11 @@ class EnaAccessorTests(TestCase):
              "host_tax_id": "9606",
              "first_created": "blah",
              "collection_date": "blah"}
-        ], database=database)
+        ], database=self.database)
         ena_accessor.access()
         self.assertEqual(ena_accessor.included, 3)
         self.assertEqual(ena_accessor.excluded, 0)
-        session = database.get_database_session()
+        session = self.database.get_database_session()
 
         run = session.query(SampleEna).filter(SampleEna.run_accession == "ERR4080483").first()
         self.assertEqual(run.collection_date, date.fromisoformat("2019-12-31"))
@@ -379,7 +355,6 @@ class EnaAccessorTests(TestCase):
         self.assertIsNone(run.first_created)
 
     def test_numeric_values(self):
-        database = Database(test=True, config=self.config)
         ena_accessor = FakeEnaAccessor(results=[
             {"run_accession": "ERR4080483",
              "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
@@ -419,11 +394,11 @@ class EnaAccessorTests(TestCase):
              "base_count": "1",
              "nominal_length": "1"
              }
-        ], database=database)
+        ], database=self.database)
         ena_accessor.access()
         self.assertEqual(ena_accessor.included, 3)
         self.assertEqual(ena_accessor.excluded, 0)
-        session = database.get_database_session()
+        session = self.database.get_database_session()
 
         run = session.query(SampleEna).filter(SampleEna.run_accession == "ERR4080483").first()
         self.assertIsNone(run.lat)
@@ -447,7 +422,6 @@ class EnaAccessorTests(TestCase):
         self.assertEqual(run.base_count, 1)
 
     def test_sample_and_job_loading(self):
-        database = Database(test=True, config=self.config)
         ena_accessor = FakeEnaAccessor(results=[
             {"run_accession": "ERR4080483",
              "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
@@ -473,11 +447,11 @@ class EnaAccessorTests(TestCase):
              "fastq_md5": "4de269d2b5831e1c5175586af694d21e",
              "host_tax_id": "9606"
              }
-        ], database=database)
+        ], database=self.database)
         ena_accessor.access()
         self.assertEqual(ena_accessor.included, 3)
         self.assertEqual(ena_accessor.excluded, 0)
-        session = database.get_database_session()
+        session = self.database.get_database_session()
 
         self._assert_entities_from_accessor(session, "ERR4080483")
         self._assert_entities_from_accessor(session, "ERR4080484")
@@ -491,7 +465,6 @@ class EnaAccessorTests(TestCase):
         self.assertEqual(session.query(JobEna).filter(JobEna.run_accession == identifier).count(), 1)
 
     def test_writing_logs(self):
-        database = Database(test=True, config=self.config)
         ena_accessor = FakeEnaAccessor(results=[
             {"run_accession": "ERR4080483",
              "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
@@ -517,10 +490,10 @@ class EnaAccessorTests(TestCase):
              "fastq_md5": "4de269d2b5831e1c5175586af694d21e",
              "host_tax_id": "9606"
              }
-        ], database=database)
+        ], database=self.database)
         ena_accessor.access()
 
-        session = database.get_database_session()
+        session = self.database.get_database_session()
         self.assertEqual(session.query(Log).count(), 1)
         log = session.query(Log).first()
         self.assertIsNotNone(log.start)

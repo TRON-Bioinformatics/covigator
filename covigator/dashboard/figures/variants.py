@@ -3,6 +3,9 @@ import colorlover
 import dash_table
 import numpy as np
 import re
+
+from covigator import MISSENSE_VARIANT, DISRUPTIVE_INFRAME_DELETION, CONSERVATIVE_INFRAME_DELETION, \
+    CONSERVATIVE_INFRAME_INSERTION, DISRUPTIVE_INFRAME_INSERTION
 from covigator.dashboard.figures.figures import Figures, PLOTLY_CONFIG, TEMPLATE, MARGIN, STYLES_STRIPPED, STYLE_HEADER
 import plotly
 import plotly.express as px
@@ -367,26 +370,26 @@ class VariantsFigures(Figures):
             main_xaxis = 'x'
 
             variants_traces = []
-            missense_variants = variants[variants.annotation == "missense_variant"]
+            missense_variants = variants[variants.annotation == MISSENSE_VARIANT]
             if missense_variants.shape[0] > 0:
                 variants_traces.append(self._get_variants_scatter(
                     missense_variants, name="missense variants", symbol=MISSENSE_VARIANT_SYMBOL, xaxis=main_xaxis))
 
             deletion_variants = variants[variants.annotation.isin(
-                ["disruptive_inframe_deletion", "conservative_inframe_deletion"])]
+                [DISRUPTIVE_INFRAME_DELETION, CONSERVATIVE_INFRAME_DELETION])]
             if deletion_variants.shape[0] > 0:
                 variants_traces.append(self._get_variants_scatter(
                     deletion_variants, name="inframe deletions", symbol=DELETION_SYMBOL, xaxis=main_xaxis))
 
             insertion_variants = variants[variants.annotation.isin(
-                ["disruptive_inframe_insertion", "conservative_inframe_insertion"])]
+                [DISRUPTIVE_INFRAME_INSERTION, CONSERVATIVE_INFRAME_INSERTION])]
             if insertion_variants.shape[0] > 0:
                 variants_traces.append(self._get_variants_scatter(
                     insertion_variants, name="inframe insertions", symbol=INSERTION_SYMBOL, xaxis=main_xaxis))
 
             other_variants = variants[~variants.annotation.isin([
-                "missense_variant", "disruptive_inframe_deletion", "conservative_inframe_deletion",
-                "disruptive_inframe_insertion", "conservative_inframe_insertion"])]
+                MISSENSE_VARIANT, DISRUPTIVE_INFRAME_DELETION, CONSERVATIVE_INFRAME_DELETION,
+                DISRUPTIVE_INFRAME_INSERTION, CONSERVATIVE_INFRAME_DELETION])]
             if other_variants.shape[0] > 0:
                 variants_traces.append(self._get_variants_scatter(
                     other_variants, name="other variants", symbol=OTHER_VARIANT_SYMBOL, xaxis=main_xaxis))

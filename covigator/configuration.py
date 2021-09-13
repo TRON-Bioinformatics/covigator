@@ -38,6 +38,7 @@ class Configuration:
     # references
     ENV_COVIGATOR_REF_FASTA = "COVIGATOR_REF_FASTA"
     ENV_COVIGATOR_GENE_ANNOTATIONS = "COVIGATOR_GENE_ANNOTATIONS"
+    ENV_COVIGATOR_GENE_DN_DS_ANNOTATIONS = "COVIGATOR_GENE_DN_DS_ANNOTATIONS"
     # dask
     ENV_COVIGATOR_DASK_PORT = "COVIGATOR_DASK_PORT"
 
@@ -75,6 +76,7 @@ class Configuration:
         # references
         self.reference_genome = os.getenv(self.ENV_COVIGATOR_REF_FASTA)
         self.reference_gene_annotations = os.getenv(self.ENV_COVIGATOR_GENE_ANNOTATIONS)
+        self.reference_gene_dn_ds_annotations = os.getenv(self.ENV_COVIGATOR_GENE_DN_DS_ANNOTATIONS)
 
         self.nextflow = os.getenv(self.ENV_COVIGATOR_NEXTFLOW, "nextflow")
         self.workflow = os.getenv(self.ENV_COVIGATOR_WORKFLOW, "tron-bioinformatics/covigator-ngs-pipeline -r v0.3.0")
