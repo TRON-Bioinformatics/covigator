@@ -1,6 +1,6 @@
 from sqlalchemy import and_, func
 
-from covigator.database.model import PrecomputedDnDs, RegionType
+from covigator.database.model import PrecomputedDnDs, RegionType, DataSource
 from covigator.database.precomputed import Precomputer
 from covigator.tests.unit_tests.abstract_test import AbstractTest
 from covigator.tests.unit_tests.mocked import mock_samples_and_variants, MOCKED_GENES
@@ -19,6 +19,18 @@ class TestPrecomputer(AbstractTest):
                 self.session.query(PrecomputedDnDs).filter(
                     and_(PrecomputedDnDs.region_type == RegionType.GENE.name, PrecomputedDnDs.region_name == g)).count(),
                 0)
+            self.assertGreater(
+                self.session.query(PrecomputedDnDs).filter(
+                    and_(PrecomputedDnDs.region_type == RegionType.GENE.name,
+                         PrecomputedDnDs.region_name == g,
+                         PrecomputedDnDs.source == DataSource.ENA.name)).count(),
+                0)
+            self.assertGreater(
+                self.session.query(PrecomputedDnDs).filter(
+                    and_(PrecomputedDnDs.region_type == RegionType.GENE.name,
+                         PrecomputedDnDs.region_name == g,
+                         PrecomputedDnDs.source == DataSource.GISAID.name)).count(),
+                0)
             self.assertEqual(
                 self.session.query(PrecomputedDnDs).filter(
                     and_(PrecomputedDnDs.region_type != RegionType.GENE.name, PrecomputedDnDs.region_name == g)).count(),
@@ -26,6 +38,14 @@ class TestPrecomputer(AbstractTest):
         self.assertGreater(
             self.session.query(PrecomputedDnDs).filter(
                 and_(PrecomputedDnDs.region_type == RegionType.CODING_REGION.name)).count(), 0)
+        self.assertGreater(
+            self.session.query(PrecomputedDnDs).filter(
+                and_(PrecomputedDnDs.region_type == RegionType.CODING_REGION.name,
+                     PrecomputedDnDs.source == DataSource.ENA.name)).count(), 0)
+        self.assertGreater(
+            self.session.query(PrecomputedDnDs).filter(
+                and_(PrecomputedDnDs.region_type == RegionType.CODING_REGION.name,
+                     PrecomputedDnDs.source == DataSource.GISAID.name)).count(), 0)
 
         s_genes = self.session.query(func.sum(PrecomputedDnDs.s)).filter(
             PrecomputedDnDs.region_type == RegionType.GENE.name).scalar()

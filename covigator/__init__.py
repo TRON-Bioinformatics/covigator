@@ -1,4 +1,5 @@
-VERSION = "0.4.0.dev1"
+VERSION = "0.4.0.dev2"
+
 MISSENSE_VARIANT = "missense_variant"
 SYNONYMOUS_VARIANT = "synonymous_variant"
 INFRAME_DELETION = "inframe_deletion"
