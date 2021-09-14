@@ -369,13 +369,14 @@ class Precomputer:
 
     def _count_variant_observations_by_source_and_annotation(self, source: DataSource, annotation: str):
         sql_query = """
-                select count(*) as count, date_trunc('month', s.collection_date) as month, vo.gene_name, s.country 
-                from {variant_observation_table} as vo join {sample_ena_table} as s on vo.sample = s.run_accession 
+                select count(*) as count, date_trunc('month', s.{date_field}) as month, vo.gene_name, s.country 
+                from {variant_observation_table} as vo join {sample_table} as s on vo.sample = s.run_accession 
                 where vo.source = '{source}' and vo.annotation_highest_impact = '{annotation}' 
-                    and s.collection_date is not null
-                group by date_trunc('month', s.collection_date), vo.gene_name, s.country;
+                    and s.{date_field} is not null
+                group by date_trunc('month', s.{date_field}), vo.gene_name, s.country;
                 """.format(variant_observation_table=VARIANT_OBSERVATION_TABLE_NAME,
-                           sample_ena_table=SAMPLE_ENA_TABLE_NAME,
+                           sample_table=SAMPLE_ENA_TABLE_NAME if source == DataSource.ENA else SAMPLE_GISAID_TABLE_NAME,
+                           date_field="collection_date" if source == DataSource.ENA else "date",
                            source=source.name,
                            annotation=annotation)
         data = pd.read_sql_query(sql_query, self.session.bind)
