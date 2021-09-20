@@ -30,14 +30,14 @@ jobs:
     - name: Build, install and run unit tests
       env:
         # The hostname used to communicate with the PostgreSQL service container
-        #POSTGRES_HOST: postgres
+        POSTGRES_HOST: localhost
+        POSTGRES_PORT: ${{ job.services.postgres.ports[5432] }}
         # The default PostgreSQL port
-        #POSTGRES_PORT: 5432
         COVIGATOR_DB_NAME: postgres
         COVIGATOR_DB_USER: postgres
         COVIGATOR_DB_PASSWORD: postgres
         COVIGATOR_DB_PORT: ${{ job.services.postgres.ports[5432] }}
-        COVIGATOR_DB_HOST: postgres
+        COVIGATOR_DB_HOST: localhost
       run: |
         python setup.py bdist_wheel
         pip install numpy==1.21.0
