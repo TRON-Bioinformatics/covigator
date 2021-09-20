@@ -10,21 +10,15 @@ jobs:
     services:
       # Label used to access the service container
       postgres:
-        # Docker Hub image
-        image: postgres
-        # Provide the password for postgres
+        image: postgres:10.8
         env:
+          POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          #POSTGRES_DB: test_db
-          #POSTGRES_USER: test_user
-          #POSTGRES_PASSWORD: test_pass
-          #POSTGRES_HOST_AUTH_METHOD: trust
-        # Set health checks to wait until postgres has started
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        # needed because the postgres container does not provide a healthcheck
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
 
     steps:
     - uses: actions/checkout@v2
@@ -36,13 +30,13 @@ jobs:
     - name: Build, install and run unit tests
       env:
         # The hostname used to communicate with the PostgreSQL service container
-        POSTGRES_HOST: postgres
+        #POSTGRES_HOST: postgres
         # The default PostgreSQL port
-        POSTGRES_PORT: 5432
+        #POSTGRES_PORT: 5432
         COVIGATOR_DB_NAME: postgres
         COVIGATOR_DB_USER: postgres
         COVIGATOR_DB_PASSWORD: postgres
-        COVIGATOR_DB_PORT: 5432
+        COVIGATOR_DB_PORT: ${{ job.services.postgres.ports[5432] }}
         COVIGATOR_DB_HOST: postgres
       run: |
         python setup.py bdist_wheel
