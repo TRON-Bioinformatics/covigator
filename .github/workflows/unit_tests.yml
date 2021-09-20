@@ -6,6 +6,25 @@ jobs:
   test:
     runs-on: ubuntu-20.04
 
+    # Service containers to run with `container-job`
+    services:
+      # Label used to access the service container
+      postgres:
+        # Docker Hub image
+        image: postgres
+        # Provide the password for postgres
+        env:
+          POSTGRES_DB: test_db
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_pass
+          POSTGRES_HOST_AUTH_METHOD: trust
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
     - uses: actions/checkout@v2
     - uses: actions/setup-python@v2
@@ -14,6 +33,12 @@ jobs:
         python -m pip install --upgrade pip
         pip install setuptools wheel
     - name: Build, install and run unit tests
+      env:
+        COVIGATOR_DB_NAME: test_db
+        COVIGATOR_DB_USER: test_user
+        COVIGATOR_DB_PASSWORD: test_pass
+        COVIGATOR_DB_PORT: 5432
+        COVIGATOR_DB_HOST: postgres
       run: |
         python setup.py bdist_wheel
         pip install numpy==1.21.0
