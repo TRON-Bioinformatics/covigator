@@ -440,23 +440,26 @@ class Precomputer:
         histograms = []
         for bin_size in BIN_SIZE_VALUES:
             histogram = self.queries.get_variant_abundance_histogram(bin_size=bin_size, cache=False)
-            histogram["bin_size"] = bin_size
-            histogram["source"] = None
-            histograms.append(histogram)
+            if histogram is not None:
+                histogram["bin_size"] = bin_size
+                histogram["source"] = None
+                histograms.append(histogram)
 
         for bin_size in BIN_SIZE_VALUES:
             histogram = self.queries.get_variant_abundance_histogram(
                 bin_size=bin_size, source=DataSource.ENA.name, cache=False)
-            histogram["bin_size"] = bin_size
-            histogram["source"] = DataSource.ENA
-            histograms.append(histogram)
+            if histogram is not None:
+                histogram["bin_size"] = bin_size
+                histogram["source"] = DataSource.ENA
+                histograms.append(histogram)
 
         for bin_size in BIN_SIZE_VALUES:
             histogram = self.queries.get_variant_abundance_histogram(
                 bin_size=bin_size, source=DataSource.GISAID.name, cache=False)
-            histogram["bin_size"] = bin_size
-            histogram["source"] = DataSource.GISAID
-            histograms.append(histogram)
+            if histogram is not None:
+                histogram["bin_size"] = bin_size
+                histogram["source"] = DataSource.GISAID
+                histograms.append(histogram)
 
         # delete all rows before starting
         self.session.query(PrecomputedVariantAbundanceHistogram).delete()

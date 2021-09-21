@@ -511,20 +511,21 @@ class Queries:
         variant_counts_by_month = []
         for _, variant in top_occurring_variants.iterrows():
             variant_counts_by_month.append(self.get_variant_counts_by_month(variant.variant_id, source=source))
-        top_occurring_variants_by_month = pd.concat(variant_counts_by_month)
-        # get total count of samples per month to calculate the frequency by month
-        sample_counts_by_month = self.get_sample_counts_by_month(source=source)
-        top_occurring_variants_by_month = pd.merge(
-            left=top_occurring_variants_by_month, right=sample_counts_by_month, how="left", on="month")
-        top_occurring_variants_by_month["frequency_by_month"] = \
-            (top_occurring_variants_by_month["count"] / top_occurring_variants_by_month["sample_count"]). \
-                transform(lambda x: round(x, 3))
-        # join both tables with total counts and counts per month
-        top_occurring_variants = pd.merge(
-            left=top_occurring_variants, right=top_occurring_variants_by_month, on="variant_id", how="left")
-        # format the month column appropriately
-        top_occurring_variants.month = top_occurring_variants.month.transform(
-            lambda d: "{}-{:02d}".format(d.year, int(d.month)))
+        if len(variant_counts_by_month) > 1:
+            top_occurring_variants_by_month = pd.concat(variant_counts_by_month)
+            # get total count of samples per month to calculate the frequency by month
+            sample_counts_by_month = self.get_sample_counts_by_month(source=source)
+            top_occurring_variants_by_month = pd.merge(
+                left=top_occurring_variants_by_month, right=sample_counts_by_month, how="left", on="month")
+            top_occurring_variants_by_month["frequency_by_month"] = \
+                (top_occurring_variants_by_month["count"] / top_occurring_variants_by_month["sample_count"]). \
+                    transform(lambda x: round(x, 3))
+            # join both tables with total counts and counts per month
+            top_occurring_variants = pd.merge(
+                left=top_occurring_variants, right=top_occurring_variants_by_month, on="variant_id", how="left")
+            # format the month column appropriately
+            top_occurring_variants.month = top_occurring_variants.month.transform(
+                lambda d: "{}-{:02d}".format(d.year, int(d.month)))
         return top_occurring_variants
 
     def get_top_occurring_variants_precomputed(self, top=10, gene_name=None, metric="count", source=None) -> pd.DataFrame:
