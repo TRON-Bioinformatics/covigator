@@ -13,4 +13,5 @@ logs
 .ipynb_checkpoints
 .nextflow.log*
 .nextflow
+data
 

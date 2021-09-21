@@ -1,7 +1,8 @@
 #!/bin/bash
 
+source $1
+output=$2
 
-output=$1
 version=$COVIGATOR_TABLE_VERSION
 pg_uri=postgresql://$COVIGATOR_DB_USER:$COVIGATOR_DB_PASSWORD@$COVIGATOR_DB_HOST:$COVIGATOR_DB_PORT/$COVIGATOR_DB_NAME
 
