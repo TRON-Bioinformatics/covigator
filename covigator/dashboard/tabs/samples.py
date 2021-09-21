@@ -20,6 +20,7 @@ ID_DROPDOWN_GENE = 'dropdown-gene-overall-mutations'
 ID_DROPDOWN_GENE2 = 'dropdown-gene-overall-mutations2'
 ID_DROPDOWN_VARIANT_TYPE = 'dropdown-variant-type'
 ID_ACCUMULATED_SAMPLES_GRAPH = 'accumulated-samples-per-country'
+ID_DN_DS_GRAPH = 'dn_ds_graph'
 
 
 @functools.lru_cache()
@@ -40,6 +41,8 @@ def get_samples_tab_graphs():
         children=[
             html.Br(),
             html.Div(id=ID_ACCUMULATED_SAMPLES_GRAPH),
+            html.Br(),
+            html.Div(id=ID_DN_DS_GRAPH),
             html.Br(),
             html.Div(children=[
                 html.Div(id=ID_VARIANTS_PER_SAMPLE_GRAPH, className="five columns"),
@@ -74,7 +77,6 @@ def get_samples_tab_left_bar(queries: Queries):
                 multi=True
             ),
             html.Br(),
-            dcc.Markdown("""**Accumulated samples by country**"""),
             dcc.Markdown("""Select one or more countries"""),
             dcc.Dropdown(
                 id=ID_DROPDOWN_COUNTRY,
@@ -83,6 +85,7 @@ def get_samples_tab_left_bar(queries: Queries):
                 multi=True
             ),
             html.Br(),
+            dcc.Markdown("""**Accumulated samples by country**"""),
             dcc.Markdown("""Minimum number of samples per country"""),
             dcc.Slider(
                 id=ID_SLIDER_MIN_SAMPLES,
@@ -125,6 +128,17 @@ def set_callbacks_samples_tab(app, session: Session):
     def update_accumulated_samples_by_country(data_source, countries, min_samples):
         return html.Div(children=figures.get_accumulated_samples_by_country_plot(
             data_source=data_source, countries=countries, min_samples=min_samples))
+
+    @app.callback(
+        Output(ID_DN_DS_GRAPH, 'children'),
+        Input(ID_DROPDOWN_DATA_SOURCE, 'value'),
+        Input(ID_DROPDOWN_COUNTRY, 'value'),
+        Input(ID_DROPDOWN_GENE, 'value'),
+        suppress_callback_exceptions=True
+    )
+    def update_dn_ds_graph(data_source, countries, genes):
+        return html.Div(children=figures.get_dnds_by_gene_plot(
+            data_source=data_source, countries=countries, genes=genes))
 
     @app.callback(
         Output(ID_VARIANTS_PER_SAMPLE_GRAPH, 'children'),

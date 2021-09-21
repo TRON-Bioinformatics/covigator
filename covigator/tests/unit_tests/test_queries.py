@@ -2,11 +2,11 @@ import unittest
 
 from covigator import SYNONYMOUS_VARIANT
 from covigator.database.precomputed import Precomputer
-from covigator.database.model import JobStatus, DataSource, Sample, Gene
+from covigator.database.model import JobStatus, DataSource, Sample, Gene, RegionType
 from covigator.database.queries import Queries
 from covigator.tests.unit_tests.abstract_test import AbstractTest
 from covigator.tests.unit_tests.mocked import get_mocked_ena_sample, get_mocked_log, get_mocked_variant, \
-    get_mocked_variant_observation, mock_samples, mock_cooccurrence_matrix
+    get_mocked_variant_observation, mock_samples, mock_cooccurrence_matrix, mock_samples_and_variants
 
 
 class QueriesTests(AbstractTest):
@@ -214,3 +214,38 @@ class QueriesTests(AbstractTest):
         self.assertGreater(count_jobs_in_queue_gisaid, 0)
 
         self.assertEqual(count_jobs_in_queue_ena + count_jobs_in_queue_gisaid, 50)
+
+    def test_get_dnds_table(self):
+        mock_samples_and_variants(session=self.session, faker=self.faker, num_samples=100)
+        precomputer = Precomputer(session=self.session)
+        precomputer.load_dn_ds()
+
+        data = self.queries.get_dnds_table()
+        self._assert_dnds_table(data)
+
+        data = self.queries.get_dnds_table(source=DataSource.ENA.name)
+        self._assert_dnds_table(data)
+        self.assertEqual(data[data.source != DataSource.ENA].shape[0], 0)      # no entries to other source
+
+        data = self.queries.get_dnds_table(source=DataSource.GISAID.name)
+        self._assert_dnds_table(data)
+        self.assertEqual(data[data.source != DataSource.GISAID].shape[0], 0)  # no entries to other source
+
+        countries = list(data.country.unique())[0:2]
+        data = self.queries.get_dnds_table(countries=countries)
+        self._assert_dnds_table(data)
+        self.assertEqual(data[~data.country.isin(countries)].shape[0], 0)  # no entries to other country
+
+        genes = list(data.region_name.unique())[0:2]
+        data = self.queries.get_dnds_table(genes=genes)
+        self._assert_dnds_table(data)
+        self.assertEqual(data[~data.region_name.isin(genes)].shape[0], 0)  # no entries to other country
+
+    def _assert_dnds_table(self, data):
+        self.assertIsNotNone(data)
+        self.assertGreater(data.shape[0], 0)
+        self.assertEqual(data.shape[1], 9)
+        self.assertEqual(data[data.region_type != RegionType.GENE].shape[0], 0)  # all entries to a gene
+        self.assertEqual(data[data.country.isna()].shape[0], 0)  # no empty countries
+        self.assertEqual(data[data.month.isna()].shape[0], 0)  # no empty months
+        self.assertEqual(data[data.region_name.isna()].shape[0], 0)  # no empty gene

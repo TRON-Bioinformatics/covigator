@@ -5,7 +5,7 @@ import pandas as pd
 import plotly
 from logzero import logger
 
-from covigator import MISSENSE_VARIANT
+from covigator import MISSENSE_VARIANT, SYNONYMOUS_VARIANT
 from covigator.dashboard.figures import VARIANT_TYPE_COLOR_MAP
 from covigator.dashboard.figures.figures import Figures, PLOTLY_CONFIG, MARGIN, TEMPLATE
 import plotly.express as px
@@ -157,7 +157,7 @@ class SampleFigures(Figures):
                               "country": countries[::-1]},
                           labels={"cumsum": "num. samples", "count": "increment"},
                           hover_data=["count"],
-                          color_discrete_sequence=px.colors.qualitative.Light24)
+                          color_discrete_sequence=px.colors.qualitative.Alphabet)
             fig.update_layout(
                 margin=MARGIN,
                 template=TEMPLATE,
@@ -180,5 +180,40 @@ class SampleFigures(Figures):
                 """.format(len(top_countries_tooltip),
                            ", ".join(top_countries_tooltip),
                            min_samples))
+            ]
+        return graph
+
+    def get_dnds_by_gene_plot(
+            self, data_source: DataSource = None, countries: List[str] =None, genes: List[str] = None):
+
+        data = self.queries.get_dnds_table(
+            source=data_source, countries=countries, genes=genes)
+        graph = dcc.Markdown("""**No data for the current selection**""")
+        if data is not None and data.shape[0] > 0:
+
+            genes_ratios = self.queries.get_genes_synonymous_to_non_synonymous_ratio()
+
+            # prepares the data and calculates the dN/dS
+            data_to_plot = data.groupby(["month", "region_name"]).sum().reset_index().sort_values("month")
+            data_to_plot = pd.merge(left=data_to_plot, right=genes_ratios, left_on="region_name", right_on="name")
+            data_to_plot["dn_ds"] = data_to_plot.ratio_synonymous_non_synonymous / (data_to_plot.s / data_to_plot.ns)
+
+            fig = px.line(data_to_plot, x='month', y='dn_ds', color='region_name',
+                          symbol='region_name', line_dash='region_name', line_dash_sequence=['dash'],
+                          labels={"dn_ds": "dN/dS", "region_name": "gene"},
+                          hover_data=["region_name", "dn_ds"],
+                          color_discrete_sequence=px.colors.sequential.turbid)
+            fig.update_layout(
+                margin=MARGIN,
+                template=TEMPLATE,
+                #legend={'traceorder': 'reversed', 'title': None},
+                xaxis={'title': None},
+            )
+
+            graph = [
+                dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
+                dcc.Markdown("""
+                **dN/dS by gene**
+                """)
             ]
         return graph

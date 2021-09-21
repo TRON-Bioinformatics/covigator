@@ -5,7 +5,7 @@ from covigator.database.model import VariantType
 from covigator.database.precomputed import Precomputer
 from covigator.database.queries import Queries
 from covigator.tests.unit_tests.abstract_test import AbstractTest
-from covigator.tests.unit_tests.mocked import get_mocked_ena_sample, mock_samples_and_variants, mock_samples
+from covigator.tests.unit_tests.mocked import mock_samples_and_variants, mock_samples
 
 
 class FiguresTests(AbstractTest):
@@ -58,3 +58,15 @@ class FiguresTests(AbstractTest):
     def test_needle_plot_no_data(self):
         figure = self.variants_figures.get_variants_plot(gene_name="S", selected_variants=None, bin_size=50)
         self.assertIsInstance(figure, Markdown)
+
+    def test_dn_ds_plot(self):
+        figure = self.sample_figures.get_dnds_by_gene_plot()
+        self.assertIsInstance(figure, Markdown)
+
+        mock_samples_and_variants(session=self.session, faker=self.faker, num_samples=100)
+        precomputer = Precomputer(session=self.session)
+        precomputer.load_dn_ds()
+        figure = self.sample_figures.get_dnds_by_gene_plot()
+        self.assertIsInstance(figure, list)
+        self.assertIsInstance(figure[0], Graph)
+        self.assertIsInstance(figure[1], Markdown)

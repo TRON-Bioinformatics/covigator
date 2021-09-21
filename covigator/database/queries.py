@@ -17,7 +17,7 @@ from covigator.database.model import Log, DataSource, CovigatorModule, SampleEna
     Gene, Variant, VariantCooccurrence, Conservation, JobGisaid, SampleGisaid, SubclonalVariantObservation, \
     PrecomputedVariantsPerSample, PrecomputedSubstitutionsCounts, PrecomputedIndelLength, VariantType, \
     PrecomputedAnnotation, PrecomputedOccurrence, PrecomputedTableCounts, Sample, PrecomputedVariantAbundanceHistogram, \
-    VARIANT_OBSERVATION_TABLE_NAME
+    VARIANT_OBSERVATION_TABLE_NAME, PrecomputedDnDs, RegionType
 from covigator.exceptions import CovigatorQueryException, CovigatorDashboardMissingPrecomputedData
 
 
@@ -511,20 +511,21 @@ class Queries:
         variant_counts_by_month = []
         for _, variant in top_occurring_variants.iterrows():
             variant_counts_by_month.append(self.get_variant_counts_by_month(variant.variant_id, source=source))
-        top_occurring_variants_by_month = pd.concat(variant_counts_by_month)
-        # get total count of samples per month to calculate the frequency by month
-        sample_counts_by_month = self.get_sample_counts_by_month(source=source)
-        top_occurring_variants_by_month = pd.merge(
-            left=top_occurring_variants_by_month, right=sample_counts_by_month, how="left", on="month")
-        top_occurring_variants_by_month["frequency_by_month"] = \
-            (top_occurring_variants_by_month["count"] / top_occurring_variants_by_month["sample_count"]). \
-                transform(lambda x: round(x, 3))
-        # join both tables with total counts and counts per month
-        top_occurring_variants = pd.merge(
-            left=top_occurring_variants, right=top_occurring_variants_by_month, on="variant_id", how="left")
-        # format the month column appropriately
-        top_occurring_variants.month = top_occurring_variants.month.transform(
-            lambda d: "{}-{:02d}".format(d.year, int(d.month)))
+        if len(variant_counts_by_month) > 1:
+            top_occurring_variants_by_month = pd.concat(variant_counts_by_month)
+            # get total count of samples per month to calculate the frequency by month
+            sample_counts_by_month = self.get_sample_counts_by_month(source=source)
+            top_occurring_variants_by_month = pd.merge(
+                left=top_occurring_variants_by_month, right=sample_counts_by_month, how="left", on="month")
+            top_occurring_variants_by_month["frequency_by_month"] = \
+                (top_occurring_variants_by_month["count"] / top_occurring_variants_by_month["sample_count"]). \
+                    transform(lambda x: round(x, 3))
+            # join both tables with total counts and counts per month
+            top_occurring_variants = pd.merge(
+                left=top_occurring_variants, right=top_occurring_variants_by_month, on="variant_id", how="left")
+            # format the month column appropriately
+            top_occurring_variants.month = top_occurring_variants.month.transform(
+                lambda d: "{}-{:02d}".format(d.year, int(d.month)))
         return top_occurring_variants
 
     def get_top_occurring_variants_precomputed(self, top=10, gene_name=None, metric="count", source=None) -> pd.DataFrame:
@@ -873,6 +874,23 @@ class Queries:
                            where="WHERE start >= {start} and start <= {end}".format(start=start, end=end)
                            if start is not None and end is not None else "")
         return pd.read_sql_query(sql_query, self.session.bind)
+
+    def get_dnds_table(self, source: DataSource = None, countries=None, genes=None) -> pd.DataFrame:
+        # counts variants over those bins
+        query = self.session.query(PrecomputedDnDs).filter(PrecomputedDnDs.region_type == RegionType.GENE)
+
+        if source is not None:
+            query = query.filter(PrecomputedDnDs.source == source)
+        if countries is not None and len(countries) > 0:
+            query = query.filter(PrecomputedDnDs.country.in_(countries))
+        if genes is not None and len(genes) > 0:
+            query = query.filter(PrecomputedDnDs.region_name.in_(genes))
+
+        return pd.read_sql(query.statement, self.session.bind)
+
+    def get_genes_synonymous_to_non_synonymous_ratio(self) -> pd.DataFrame:
+        query = self.session.query(Gene.name, Gene.ratio_synonymous_non_synonymous)
+        return pd.read_sql(query.statement, self.session.bind)
 
     def _print_query(self, query):
         class StringLiteral(String):

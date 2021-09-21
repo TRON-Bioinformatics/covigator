@@ -1,9 +1,5 @@
 venv
-prototypes/venv
-prototypes/.ipynb_checkpoints
-prototypes/references
-prototypes/gisaid
-prototypes/ena
+references
 *.backup
 build
 dist
@@ -15,7 +11,7 @@ covigator.egg-info
 *.lock
 logs
 .ipynb_checkpoints
-data
 .nextflow.log*
 .nextflow
+data
 
