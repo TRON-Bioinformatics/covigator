@@ -77,7 +77,6 @@ def get_samples_tab_left_bar(queries: Queries):
                 multi=True
             ),
             html.Br(),
-            dcc.Markdown("""**Accumulated samples by country**"""),
             dcc.Markdown("""Select one or more countries"""),
             dcc.Dropdown(
                 id=ID_DROPDOWN_COUNTRY,
@@ -86,6 +85,7 @@ def get_samples_tab_left_bar(queries: Queries):
                 multi=True
             ),
             html.Br(),
+            dcc.Markdown("""**Accumulated samples by country**"""),
             dcc.Markdown("""Minimum number of samples per country"""),
             dcc.Slider(
                 id=ID_SLIDER_MIN_SAMPLES,

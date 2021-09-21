@@ -157,7 +157,7 @@ class SampleFigures(Figures):
                               "country": countries[::-1]},
                           labels={"cumsum": "num. samples", "count": "increment"},
                           hover_data=["count"],
-                          color_discrete_sequence=px.colors.qualitative.Light24)
+                          color_discrete_sequence=px.colors.qualitative.Alphabet)
             fig.update_layout(
                 margin=MARGIN,
                 template=TEMPLATE,
@@ -198,10 +198,11 @@ class SampleFigures(Figures):
             data_to_plot = pd.merge(left=data_to_plot, right=genes_ratios, left_on="region_name", right_on="name")
             data_to_plot["dn_ds"] = data_to_plot.ratio_synonymous_non_synonymous / (data_to_plot.s / data_to_plot.ns)
 
-            fig = px.line(data_to_plot, x='month', y='dn_ds', color='region_name', symbol='region_name',
+            fig = px.line(data_to_plot, x='month', y='dn_ds', color='region_name',
+                          symbol='region_name', line_dash='region_name', line_dash_sequence=['dash'],
                           labels={"dn_ds": "dN/dS", "region_name": "gene"},
                           hover_data=["region_name", "dn_ds"],
-                          color_discrete_sequence=px.colors.qualitative.Light24)
+                          color_discrete_sequence=px.colors.sequential.turbid)
             fig.update_layout(
                 margin=MARGIN,
                 template=TEMPLATE,
