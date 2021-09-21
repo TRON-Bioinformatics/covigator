@@ -5,7 +5,7 @@ import pandas as pd
 import plotly
 from logzero import logger
 
-from covigator import MISSENSE_VARIANT
+from covigator import MISSENSE_VARIANT, SYNONYMOUS_VARIANT
 from covigator.dashboard.figures import VARIANT_TYPE_COLOR_MAP
 from covigator.dashboard.figures.figures import Figures, PLOTLY_CONFIG, MARGIN, TEMPLATE
 import plotly.express as px

@@ -880,7 +880,7 @@ class Queries:
         query = self.session.query(PrecomputedDnDs).filter(PrecomputedDnDs.region_type == RegionType.GENE)
 
         if source is not None:
-            query = query.filter(PrecomputedDnDs.source == source.name)
+            query = query.filter(PrecomputedDnDs.source == source)
         if countries is not None and len(countries) > 0:
             query = query.filter(PrecomputedDnDs.country.in_(countries))
         if genes is not None and len(genes) > 0:

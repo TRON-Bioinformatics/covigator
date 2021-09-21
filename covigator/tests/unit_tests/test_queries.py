@@ -223,11 +223,11 @@ class QueriesTests(AbstractTest):
         data = self.queries.get_dnds_table()
         self._assert_dnds_table(data)
 
-        data = self.queries.get_dnds_table(source=DataSource.ENA)
+        data = self.queries.get_dnds_table(source=DataSource.ENA.name)
         self._assert_dnds_table(data)
         self.assertEqual(data[data.source != DataSource.ENA].shape[0], 0)      # no entries to other source
 
-        data = self.queries.get_dnds_table(source=DataSource.GISAID)
+        data = self.queries.get_dnds_table(source=DataSource.GISAID.name)
         self._assert_dnds_table(data)
         self.assertEqual(data[data.source != DataSource.GISAID].shape[0], 0)  # no entries to other source
 
