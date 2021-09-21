@@ -48,14 +48,14 @@ class Configuration:
         self.content_folder = os.getenv(self.ENV_COVIGATOR_DOWNLOAD_CONTENT_FOLDER)
 
         # database
-        self.db_host = os.getenv(self.ENV_COVIGATOR_DB_HOST, "0.0.0.0")
+        self.db_host = os.getenv(self.ENV_COVIGATOR_DB_HOST, "localhost")
         self.db_name = os.getenv(self.ENV_COVIGATOR_DB_NAME, "covigator")
         self.db_user = os.getenv(self.ENV_COVIGATOR_DB_USER, "covigator")
         self.db_password = os.getenv(self.ENV_COVIGATOR_DB_PASSWORD, "covigator")
         self.db_port = os.getenv(self.ENV_COVIGATOR_DB_PORT, "5432")
         self.db_pool_size = int(os.getenv(self.ENV_COVIGATOR_DB_POOL_SIZE, 5))
         self.db_max_overflow = int(os.getenv(self.ENV_COVIGATOR_DB_MAX_OVERFLOW, 10))
-        self.db_table_version = os.environ.get(self.ENV_COVIGATOR_TABLE_VERSION, "")
+        self.db_table_version = os.environ.get(self.ENV_COVIGATOR_TABLE_VERSION, "_test")
         self.force_pipeline = os.environ.get(self.ENV_COVIGATOR_FORCE_PIPELINE, False)
 
         # dashboard

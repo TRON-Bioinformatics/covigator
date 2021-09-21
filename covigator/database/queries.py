@@ -17,7 +17,7 @@ from covigator.database.model import Log, DataSource, CovigatorModule, SampleEna
     Gene, Variant, VariantCooccurrence, Conservation, JobGisaid, SampleGisaid, SubclonalVariantObservation, \
     PrecomputedVariantsPerSample, PrecomputedSubstitutionsCounts, PrecomputedIndelLength, VariantType, \
     PrecomputedAnnotation, PrecomputedOccurrence, PrecomputedTableCounts, Sample, PrecomputedVariantAbundanceHistogram, \
-    VARIANT_OBSERVATION_TABLE_NAME
+    VARIANT_OBSERVATION_TABLE_NAME, PrecomputedDnDs, RegionType
 from covigator.exceptions import CovigatorQueryException, CovigatorDashboardMissingPrecomputedData
 
 
@@ -874,6 +874,23 @@ class Queries:
                            where="WHERE start >= {start} and start <= {end}".format(start=start, end=end)
                            if start is not None and end is not None else "")
         return pd.read_sql_query(sql_query, self.session.bind)
+
+    def get_dnds_table(self, source: DataSource = None, countries=None, genes=None) -> pd.DataFrame:
+        # counts variants over those bins
+        query = self.session.query(PrecomputedDnDs).filter(PrecomputedDnDs.region_type == RegionType.GENE)
+
+        if source is not None:
+            query = query.filter(PrecomputedDnDs.source == source.name)
+        if countries is not None and len(countries) > 0:
+            query = query.filter(PrecomputedDnDs.country.in_(countries))
+        if genes is not None and len(genes) > 0:
+            query = query.filter(PrecomputedDnDs.region_name.in_(genes))
+
+        return pd.read_sql(query.statement, self.session.bind)
+
+    def get_genes_synonymous_to_non_synonymous_ratio(self) -> pd.DataFrame:
+        query = self.session.query(Gene.name, Gene.ratio_synonymous_non_synonymous)
+        return pd.read_sql(query.statement, self.session.bind)
 
     def _print_query(self, query):
         class StringLiteral(String):
