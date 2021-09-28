@@ -42,7 +42,7 @@ class Configuration:
     # dask
     ENV_COVIGATOR_DASK_PORT = "COVIGATOR_DASK_PORT"
 
-    def __init__(self):
+    def __init__(self, verbose=True):
         # local storage
         self.storage_folder = os.getenv(self.ENV_COVIGATOR_STORAGE_FOLDER, "/data/covigator")
         self.content_folder = os.getenv(self.ENV_COVIGATOR_DOWNLOAD_CONTENT_FOLDER)
@@ -89,7 +89,8 @@ class Configuration:
         # NOTE: the defaults are already set in the workflow config
         self.temp_folder = os.getenv(self.ENV_COVIGATOR_TEMP_FOLDER, "/data/covigator-tmp")
 
-        self.log_configuration()
+        if verbose:
+            self.log_configuration()
 
     def log_configuration(self):
         logger.info("Configuration")
