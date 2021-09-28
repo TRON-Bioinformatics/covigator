@@ -1,5 +1,6 @@
 import abc
 import traceback
+from contextlib import suppress
 from datetime import datetime
 from typing import Callable
 import typing as typing
@@ -33,50 +34,36 @@ class AbstractProcessor:
         session = self.database.get_database_session()
         queries = Queries(session)
         count = 0
-        count_correct = 0
         try:
             futures = []
             while True:
-                job = queries.find_first_pending_job(self.data_source)
-                if not job:
+                # queries 100 jobs every time to make sending to queue faster
+                jobs = queries.find_first_pending_jobs(self.data_source, n=1000)
+                if jobs is None or len(jobs) == 0:
                     logger.info("No more jobs to process after sending {} runs to process".format(count))
                     break
+                for job in jobs:
+                    # it has to update the status before doing anything so this processor does not read it again
+                    job.status = JobStatus.QUEUED
+                    job.queued_at = datetime.now()
+                    session.commit()
 
-                # it has to update the status before doing anything so this processor does not read it again
-                job.status = JobStatus.QUEUED
-                job.queued_at = datetime.now()
-                session.commit()
+                    # sends the run for processing
+                    future = self._process_run(run_accession=job.run_accession)
+                    futures.append(future)
+                    count += 1
+                    if count % 1000 == 0:
+                        logger.info("Sent {} jobs for processing...".format(count))
 
-                # sends the run for processing
-                future = self._process_run(run_accession=job.run_accession)
-                futures.append(future)
-                count += 1
-                if count % 100 == 0:
-                    logger.info("Sent count jobs for processing...")
+                    # waits for a batch to finish
+                    if len(futures) >= self.config.batch_size:
+                        # waits for a batch to finish before sending more
+                        self._wait_for_batch(futures)
+                        futures = []
 
-                if len(futures) > self.config.batch_size:
-                    # waits for a batch to finish before sending more
-                    logger.info("Waiting for a batch of {} jobs...".format(len(futures)))
-                    #self.dask_client.gather(futures=futures, errors='skip', direct=False)
-                    for batch in as_completed(futures, with_results=True).batches():
-                        for future, result in batch:
-                            if result is not None:
-                                logger.info("Processed sample {}".format(result))
-                                count_correct += 1
-                    logger.info("Batch processed with {} correct jobs".format(count_correct))
-                    count_correct = 0
-                    futures = []
-
-            # waits for all to finish
+            # waits for the last batch to finish
             if len(futures) > 0:
-                logger.info("Waiting a batch of {} jobs...".format(len(futures)))
-                #self.dask_client.gather(futures=futures, errors='skip', direct=False)
-                for batch in as_completed(futures, with_results=True).batches():
-                    for future, result in batch:
-                        if result is not None:
-                            logger.info("Processed sample {}".format(result))
-                            count_correct += 1
-                logger.info("Last batch processed with {} correct jobs".format(count_correct))
+                self._wait_for_batch(futures)
             logger.info("Processor finished!")
         except Exception as e:
             logger.exception(e)
@@ -84,14 +71,24 @@ class AbstractProcessor:
             self.error_message = self._get_traceback_from_exception(e)
             self.has_error = True
         finally:
-            logger.info("Shutting down cluster and database session...")
+            logger.info("Logging execution stats...")
             self._write_execution_log(session, count, data_source=self.data_source)
-            try:
+            logger.info("Shutting down cluster and database session...")
+            with suppress(Exception):
                 self.dask_client.shutdown()
                 session.close()
-            except Exception as e:
-                logger.error("Error shutting down the dask client: {}".format(str(e)))
             logger.info("Finished processor")
+
+    def _wait_for_batch(self, futures):
+        count_correct = 0
+        logger.info("Waiting for a batch of {} jobs...".format(len(futures)))
+        # self.dask_client.gather(futures=futures, errors='skip', direct=False)
+        for batch in as_completed(futures, with_results=True).batches():
+            for future, result in batch:
+                if result is not None:
+                    logger.info("Processed sample {}".format(result))
+                    count_correct += 1
+        logger.info("Batch processed with {} correct jobs".format(count_correct))
 
     @staticmethod
     def run_job(config: Configuration, run_accession: str, start_status: JobStatus, end_status: JobStatus,
