@@ -51,6 +51,8 @@ class AbstractProcessor:
                 future = self._process_run(run_accession=job.run_accession)
                 futures.append(future)
                 count += 1
+                if count % 100 == 0:
+                    logger.info("Sent count jobs for processing...")
 
                 if len(futures) > self.config.batch_size:
                     # waits for a batch to finish before sending more
@@ -84,8 +86,11 @@ class AbstractProcessor:
         finally:
             logger.info("Shutting down cluster and database session...")
             self._write_execution_log(session, count, data_source=self.data_source)
-            self.dask_client.shutdown()
-            session.close()
+            try:
+                self.dask_client.shutdown()
+                session.close()
+            except Exception as e:
+                logger.error("Error shutting down the dask client: {}".format(str(e)))
             logger.info("Finished processor")
 
     @staticmethod
