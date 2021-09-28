@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Callable
 import typing as typing
 from dask.distributed import Client
-from dask.distributed import wait
+from distributed import fire_and_forget, as_completed
 from sqlalchemy.orm import Session
 from logzero import logger
 import covigator
@@ -33,6 +33,7 @@ class AbstractProcessor:
         session = self.database.get_database_session()
         queries = Queries(session)
         count = 0
+        count_correct = 0
         try:
             futures = []
             while True:
@@ -47,17 +48,33 @@ class AbstractProcessor:
                 session.commit()
 
                 # sends the run for processing
-                futures.append(self._process_run(run_accession=job.run_accession))
+                future = self._process_run(run_accession=job.run_accession)
+                futures.append(future)
                 count += 1
 
                 if len(futures) > self.config.batch_size:
                     # waits for a batch to finish before sending more
-                    self.dask_client.gather(futures=futures)
+                    logger.info("Waiting for a batch of {} jobs...".format(len(futures)))
+                    #self.dask_client.gather(futures=futures, errors='skip', direct=False)
+                    for batch in as_completed(futures, with_results=True).batches():
+                        for future, result in batch:
+                            if result is not None:
+                                logger.info("Processed sample {}".format(result))
+                                count_correct += 1
+                    logger.info("Batch processed with {} correct jobs".format(count_correct))
+                    count_correct = 0
                     futures = []
 
             # waits for all to finish
             if len(futures) > 0:
-                wait(futures)
+                logger.info("Waiting a batch of {} jobs...".format(len(futures)))
+                #self.dask_client.gather(futures=futures, errors='skip', direct=False)
+                for batch in as_completed(futures, with_results=True).batches():
+                    for future, result in batch:
+                        if result is not None:
+                            logger.info("Processed sample {}".format(result))
+                            count_correct += 1
+                logger.info("Last batch processed with {} correct jobs".format(count_correct))
             logger.info("Processor finished!")
         except Exception as e:
             logger.exception(e)
@@ -65,6 +82,7 @@ class AbstractProcessor:
             self.error_message = self._get_traceback_from_exception(e)
             self.has_error = True
         finally:
+            logger.info("Shutting down cluster and database session...")
             self._write_execution_log(session, count, data_source=self.data_source)
             self.dask_client.shutdown()
             session.close()
