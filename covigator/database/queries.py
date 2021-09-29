@@ -47,27 +47,27 @@ class Queries:
         else:
             raise ValueError("Bad data source {}".format(data_source))
 
-    def find_first_pending_job(self, data_source: DataSource) -> Union[JobEna, JobGisaid]:
+    def find_first_pending_jobs(self, data_source: DataSource, n=100) -> List[Union[JobEna, JobGisaid]]:
         if data_source == DataSource.ENA:
             return self.session.query(JobEna) \
                 .filter(JobEna.status == JobStatus.PENDING) \
                 .order_by(JobEna.created_at.desc()) \
-                .first()
+                .limit(n) \
+                .all()
         elif data_source == DataSource.GISAID:
             return self.session.query(JobGisaid) \
                 .filter(JobGisaid.status == JobStatus.PENDING) \
                 .order_by(JobGisaid.created_at.desc()) \
-                .first()
+                .limit(n) \
+                .all()
         else:
             raise ValueError("Bad data source {}".format(data_source))
 
     def count_jobs_in_queue(self, data_source):
         if data_source == DataSource.ENA:
-            count = self.session.query(JobEna).filter(JobEna.status.in_((
-                JobStatus.QUEUED, JobStatus.DOWNLOADED, JobStatus.PROCESSED, JobStatus.LOADED))).count()
+            count = self.session.query(JobEna).filter(JobEna.status == JobStatus.QUEUED).count()
         elif data_source == DataSource.GISAID:
-            count = self.session.query(JobGisaid).filter(JobGisaid.status.in_((
-                JobStatus.QUEUED, JobStatus.DOWNLOADED, JobStatus.PROCESSED, JobStatus.LOADED))).count()
+            count = self.session.query(JobGisaid).filter(JobGisaid.status == JobStatus.QUEUED).count()
         else:
             raise ValueError("Bad data source {}".format(data_source))
         return count

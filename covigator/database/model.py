@@ -72,17 +72,10 @@ class JobStatus(enum.Enum):
 
     PENDING = 1
     QUEUED = 2
-    DOWNLOADED = 3
-    PROCESSED = 4
-    LOADED = 5
-    FAILED_DOWNLOAD = 6
-    FAILED_PROCESSING = 7
-    FAILED_LOAD = 8
-    COOCCURRENCE = 9
-    FAILED_COOCCURRENCE = 10
-    FINISHED = 11
-    HOLD = 12
-    EXCLUDED = 13
+    FAILED_PROCESSING = 3
+    FINISHED = 4
+    HOLD = 5
+    EXCLUDED = 6
 
 
 class DataSource(enum.Enum):

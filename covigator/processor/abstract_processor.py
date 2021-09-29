@@ -1,10 +1,13 @@
 import abc
+import os
+import time
 import traceback
+from contextlib import suppress
 from datetime import datetime
 from typing import Callable
 import typing as typing
 from dask.distributed import Client
-from dask.distributed import wait
+from distributed import fire_and_forget, as_completed
 from sqlalchemy.orm import Session
 from logzero import logger
 import covigator
@@ -27,48 +30,64 @@ class AbstractProcessor:
         assert self.database is not None, "Empty database"
         self.dask_client = dask_client
         assert self.dask_client is not None, "Empty dask client"
+        self.session = self.database.get_database_session()
+        self.queries = Queries(self.session)
 
     def process(self):
         logger.info("Starting processor")
-        session = self.database.get_database_session()
-        queries = Queries(session)
         count = 0
+        count_batch = 0
         try:
-            futures = []
             while True:
-                job = queries.find_first_pending_job(self.data_source)
-                if not job:
+                # queries 100 jobs every time to make sending to queue faster
+                jobs = self.queries.find_first_pending_jobs(self.data_source, n=1000)
+                if jobs is None or len(jobs) == 0:
                     logger.info("No more jobs to process after sending {} runs to process".format(count))
                     break
+                for job in jobs:
+                    # it has to update the status before doing anything so this processor does not read it again
+                    job.status = JobStatus.QUEUED
+                    job.queued_at = datetime.now()
+                    self.session.commit()
 
-                # it has to update the status before doing anything so this processor does not read it again
-                job.status = JobStatus.QUEUED
-                job.queued_at = datetime.now()
-                session.commit()
+                    # sends the run for processing
+                    future = self._process_run(run_accession=job.run_accession)
+                    fire_and_forget(future)
+                    count += 1
+                    count_batch += 1
+                    if count % 1000 == 0:
+                        logger.info("Sent {} jobs for processing...".format(count))
 
-                # sends the run for processing
-                futures.append(self._process_run(run_accession=job.run_accession))
-                count += 1
+                    # waits for a batch to finish
+                    if count_batch >= self.config.batch_size:
+                        # waits for a batch to finish before sending more
+                        self._wait_for_batch()
+                        count_batch = 0
 
-                if len(futures) > self.config.batch_size:
-                    # waits for a batch to finish before sending more
-                    self.dask_client.gather(futures=futures)
-                    futures = []
-
-            # waits for all to finish
-            if len(futures) > 0:
-                wait(futures)
+            # waits for the last batch to finish
+            if count_batch > 0:
+                self._wait_for_batch()
             logger.info("Processor finished!")
         except Exception as e:
             logger.exception(e)
-            session.rollback()
+            self.session.rollback()
             self.error_message = self._get_traceback_from_exception(e)
             self.has_error = True
         finally:
-            self._write_execution_log(session, count, data_source=self.data_source)
-            self.dask_client.shutdown()
-            session.close()
+            logger.info("Logging execution stats...")
+            self._write_execution_log(count, data_source=self.data_source)
+            logger.info("Shutting down cluster and database session...")
+            with suppress(Exception):
+                self.dask_client.shutdown()
+                self.session.close()
             logger.info("Finished processor")
+
+    def _wait_for_batch(self):
+        logger.info("Waiting for a batch of jobs...")
+        while (count_pending_jobs := self.queries.count_jobs_in_queue(data_source=self.data_source)) > 0:
+            logger.info("Waiting for {} pending jobs".format(count_pending_jobs))
+            time.sleep(60)
+        logger.info("Batch finished")
 
     @staticmethod
     def run_job(config: Configuration, run_accession: str, start_status: JobStatus, end_status: JobStatus,
@@ -111,9 +130,9 @@ class AbstractProcessor:
     def _process_run(self, run_accession: str):
         pass
 
-    def _write_execution_log(self, session: Session, count, data_source: DataSource):
+    def _write_execution_log(self, count, data_source: DataSource):
         end_time = datetime.now()
-        session.add(Log(
+        self.session.add(Log(
             start=self.start_time,
             end=end_time,
             source=data_source,
@@ -124,7 +143,7 @@ class AbstractProcessor:
                 "processed": count
             }
         ))
-        session.commit()
+        self.session.commit()
 
     @staticmethod
     def _get_traceback_from_exception(e):
