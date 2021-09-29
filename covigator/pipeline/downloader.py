@@ -46,7 +46,9 @@ class Downloader:
         local_filename = url.split('/')[-1]
         # NOTE: sample folder date/run_accession
         local_folder = os.path.join(
-            self.storage_folder, sample.collection_date.strftime("%Y%m%d"), sample.run_accession)
+            self.storage_folder,
+            sample.collection_date.strftime("%Y%m%d") if sample.collection_date is not None else "nodate",
+            sample.run_accession)
         local_full_path = os.path.join(local_folder, local_filename)
         # avoids downloading the same files over and over
         if not os.path.exists(local_full_path):
