@@ -1,5 +1,8 @@
 from datetime import date, datetime
+from json import JSONDecodeError
+
 import requests
+from requests import Response
 from sqlalchemy.orm import Session
 
 from covigator.accessor import MINIMUM_DATE
@@ -106,7 +109,7 @@ class EnaAccessor:
                     finished = True
                 offset += len(list_runs)
                 if offset > 1000000:
-                    raise CovigatorException("Reached an offset greater than 1,000,000 which ENA API does not support")
+                    logger.warning("Reached an offset greater than 1,000,000 which ENA API does not support")
         except Exception as e:
             logger.exception(e)
             session.rollback()
@@ -119,19 +122,20 @@ class EnaAccessor:
             logger.info("Finished ENA accessor")
 
     def _get_ena_runs_page(self, offset):
-        return self.get_with_retries(
-            "{url_base}/search?result=read_run&"
-            "query=tax_eq({tax_id})&"
-            "limit={page_size}&"
-            "offset={offset}&"
-            "fields={fields}&"
-            "format=json".format(
-                url_base=self.ENA_API_URL_BASE,
-                tax_id=self.tax_id,
-                page_size=self.PAGE_SIZE,
-                offset=offset,
-                fields=",".join(self.ENA_FIELDS)
-            )).json()
+        response : Response = self.get_with_retries("{url_base}/search?result=read_run&" \
+                                        "query=tax_eq({tax_id})&" \
+                                        "limit={page_size}&" \
+                                        "offset={offset}&" \
+                                        "fields={fields}&" \
+                                        "format=json".format(url_base=self.ENA_API_URL_BASE, tax_id=self.tax_id,
+                                                             page_size=self.PAGE_SIZE, offset=offset,
+                                                             fields=",".join(self.ENA_FIELDS)))
+        try:
+            json = response.json()
+        except JSONDecodeError as e:
+            logger.error("Response content: {}".format(response.content))
+            raise e
+        return json
 
     def _process_runs(self, list_runs, existing_sample_ids, session: Session):
 
