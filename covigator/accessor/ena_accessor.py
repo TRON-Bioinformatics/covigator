@@ -16,7 +16,7 @@ NUMBER_RETRIES = 5
 class EnaAccessor:
 
     ENA_API_URL_BASE = "https://www.ebi.ac.uk/ena/portal/api"
-    PAGE_SIZE = 100000
+    PAGE_SIZE = 1000000
     # see https://www.ebi.ac.uk/ena/portal/api/returnFields?result=read_run&format=json for all possible fields
     ENA_FIELDS = [
         # data on run
