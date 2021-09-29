@@ -41,7 +41,7 @@ class Pipeline:
                 nextflow=self.config.nextflow,
                 fastq1=fastq1,
                 fastq2="--fastq2 " + fastq2 if fastq2 else "",
-                output_folder=self.config.storage_folder,
+                output_folder=sample_data_folder,
                 name=run_accession,
                 work_folder=self.config.temp_folder,
                 workflow=self.config.workflow,

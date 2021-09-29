@@ -54,7 +54,7 @@ class GisaidPipeline:
                       "-profile conda -offline -work-dir {work_folder} -with-trace {trace_file}".format(
                 nextflow=self.config.nextflow,
                 fasta=input_fasta,
-                output_folder=self.config.storage_folder,
+                output_folder=sample_data_folder,
                 name=sample_name,
                 work_folder=self.config.temp_folder,
                 workflow=self.config.workflow,
