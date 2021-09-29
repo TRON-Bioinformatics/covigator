@@ -3,7 +3,7 @@ import requests
 from sqlalchemy.orm import Session
 
 from covigator.accessor import MINIMUM_DATE
-from covigator.exceptions import CovigatorExcludedSampleTooEarlyDateException
+from covigator.exceptions import CovigatorExcludedSampleTooEarlyDateException, CovigatorException
 from covigator.misc import backoff_retrier
 from covigator.database.model import SampleEna, JobEna, Sample, DataSource, Log, CovigatorModule
 from covigator.database.database import Database
@@ -16,7 +16,7 @@ NUMBER_RETRIES = 5
 class EnaAccessor:
 
     ENA_API_URL_BASE = "https://www.ebi.ac.uk/ena/portal/api"
-    PAGE_SIZE = 1000
+    PAGE_SIZE = 100000
     # see https://www.ebi.ac.uk/ena/portal/api/returnFields?result=read_run&format=json for all possible fields
     ENA_FIELDS = [
         # data on run
@@ -105,6 +105,8 @@ class EnaAccessor:
                 if len(list_runs) < self.PAGE_SIZE or (self.maximum is not None and self.included >= self.maximum):
                     finished = True
                 offset += len(list_runs)
+                if offset > 1000000:
+                    raise CovigatorException("Reached an offset greater than 1,000,000 which ENA API does not support")
         except Exception as e:
             logger.exception(e)
             session.rollback()
