@@ -1,48 +1,52 @@
 
 
-class CovigatorDatabaseConnectionException(Exception):
+class CovigatorException(Exception):
     pass
 
 
-class CovigatorPipelineError(Exception):
+class CovigatorDatabaseConnectionException(CovigatorException):
     pass
 
 
-class CovigatorDashBoardInitialisationError(Exception):
+class CovigatorPipelineError(CovigatorException):
     pass
 
 
-class CovigatorExcludedAssemblySequence(Exception):
+class CovigatorDashBoardInitialisationError(CovigatorException):
     pass
 
 
-class CovigatorNotSupportedVariant(Exception):
+class CovigatorExcludedAssemblySequence(CovigatorException):
     pass
 
 
-class CovigatorQueryException(Exception):
+class CovigatorNotSupportedVariant(CovigatorException):
     pass
 
 
-class CovigatorExcludedSampleTooEarlyDateException(Exception):
+class CovigatorQueryException(CovigatorException):
     pass
 
 
-class CovigatorExcludedSampleTooManyMutations(Exception):
+class CovigatorExcludedSampleTooEarlyDateException(CovigatorException):
     pass
 
 
-class CovigatorErrorProcessingCoverageResults(Exception):
+class CovigatorExcludedSampleTooManyMutations(CovigatorException):
     pass
 
 
-class CovigatorExcludedSampleNarrowCoverage(Exception):
+class CovigatorErrorProcessingCoverageResults(CovigatorException):
     pass
 
 
-class CovigatorExcludedSampleBadQualityReads(Exception):
+class CovigatorExcludedSampleNarrowCoverage(CovigatorException):
     pass
 
 
-class CovigatorDashboardMissingPrecomputedData(Exception):
+class CovigatorExcludedSampleBadQualityReads(CovigatorException):
+    pass
+
+
+class CovigatorDashboardMissingPrecomputedData(CovigatorException):
     pass
