@@ -33,5 +33,5 @@ class FakeEnaAccessor(EnaAccessor):
                          database=database if database else Database(test=True, config=Configuration()))
         self.results = results
 
-    def _get_ena_runs_page(self, offset):
+    def _get_ena_runs_page(self):
         return self.results
