@@ -17,7 +17,7 @@ from covigator.database.model import Log, DataSource, CovigatorModule, SampleEna
     Gene, Variant, VariantCooccurrence, Conservation, JobGisaid, SampleGisaid, SubclonalVariantObservation, \
     PrecomputedVariantsPerSample, PrecomputedSubstitutionsCounts, PrecomputedIndelLength, VariantType, \
     PrecomputedAnnotation, PrecomputedOccurrence, PrecomputedTableCounts, Sample, PrecomputedVariantAbundanceHistogram, \
-    VARIANT_OBSERVATION_TABLE_NAME, PrecomputedDnDs, RegionType
+    VARIANT_OBSERVATION_TABLE_NAME, PrecomputedDnDs, RegionType, Domain
 from covigator.exceptions import CovigatorQueryException, CovigatorDashboardMissingPrecomputedData
 
 
@@ -247,11 +247,17 @@ class Queries:
                          and_(SampleGisaid.finished, SampleGisaid.date.isnot(None))).distinct().all()]
         return sorted(set(dates_ena + dates_gisaid))
 
-    def get_gene(self, gene_name: str):
+    def get_gene(self, gene_name: str) -> Gene:
         return self.session.query(Gene).filter(Gene.name == gene_name).first()
 
     def get_genes(self) -> List[Gene]:
         return self.session.query(Gene).order_by(Gene.start).all()
+
+    def get_domains(self) -> List[Domain]:
+        return self.session.query(Domain).order_by(and_(Domain.gene_name, Domain.start)).all()
+
+    def get_domains_by_gene(self, gene_name: str) -> Domain:
+        return self.session.query(Domain).filter(Domain.gene_name == gene_name).first()
 
     def get_non_synonymous_variants_by_region(self, start, end, source) -> pd.DataFrame:
         query = self.session.query(VariantObservation.position,

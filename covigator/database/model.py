@@ -14,6 +14,7 @@ def get_table_versioned_name(basename, config: Configuration):
 
 config = Configuration()
 GENE_TABLE_NAME = get_table_versioned_name('gene', config=config)
+DOMAIN_TABLE_NAME = get_table_versioned_name('domain', config=config)
 LOG_TABLE_NAME = get_table_versioned_name('log', config=config)
 VARIANT_COOCCURRENCE_TABLE_NAME = get_table_versioned_name('variant_cooccurrence', config=config)
 VARIANT_OBSERVATION_TABLE_NAME = get_table_versioned_name('variant_observation', config=config)
@@ -55,13 +56,23 @@ class Gene(Base):
     name = Column(String)
     start = Column(Integer, index=True)
     end = Column(Integer)
-    ratio_synonymous_non_synonymous = Column(Float)
-    data = Column(JSON)
+    fraction_synonymous = Column(Float)
+    fraction_non_synonymous = Column(Float)
 
-    def get_pfam_domains(self):
-        protein_features = self.data.get("transcripts", [])[0].get("translations", [])[0].get("protein_features")
-        pfam_protein_features = [f for f in protein_features if f.get("dbname") == "Pfam"]
-        return sorted(pfam_protein_features, key=lambda d: int(d.get("start")))
+
+class Domain(Base):
+    """
+    This table holds the Pfam domains for the genes
+    """
+    __tablename__ = DOMAIN_TABLE_NAME
+
+    name = Column(String, primary_key=True)
+    start = Column(Integer, index=True)
+    end = Column(Integer)
+    fraction_synonymous = Column(Float)
+    fraction_non_synonymous = Column(Float)
+    gene_identifier = Column(ForeignKey("{}.identifier".format(Gene.__tablename__)))
+    gene_name = Column(String)
 
 
 class JobStatus(enum.Enum):

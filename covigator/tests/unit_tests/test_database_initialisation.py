@@ -14,7 +14,6 @@ class DatabaseInitialisationTests(AbstractTest):
         for g in session.query(Gene).all():
             self.assertIsNotNone(g.identifier)
             self.assertIsNotNone(g.name)
-            self.assertTrue(g.data is not None or g.sequence is not None)
 
     def test_genes_table_initialisation_not_twice(self):
         database = Database(test=True, config=self.config)
