@@ -11,7 +11,7 @@ from covigator.exceptions import CovigatorExcludedAssemblySequence
 from covigator.misc.compression import decompress_sequence
 from covigator.pipeline.runner import run_command
 
-MINIMUM_SEQUENCE_SIZE = 1000
+MINIMUM_SEQUENCE_SIZE = 5980    # 20 % of the genome, 29903 bp
 
 
 class GisaidPipeline:

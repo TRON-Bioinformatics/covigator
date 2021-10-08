@@ -58,8 +58,7 @@ class EnaAccessor:
     INCLUDED_LIBRARY_STRATEGIES = [
         "WGA",
         "WGS",
-        "Targeted-Capture",
-        "RNA-Seq"
+        "Targeted-Capture"
     ]
 
     def __init__(self, tax_id: str, host_tax_id: str, database: Database, maximum=None):

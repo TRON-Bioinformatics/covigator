@@ -8,6 +8,7 @@ from covigator.database.model import VariantCooccurrence, SampleEna, Sample, Job
     SampleGisaid, SubclonalVariantObservation, Variant, PrecomputedVariantAbundanceHistogram, PrecomputedTableCounts, \
     PrecomputedDnDs, PrecomputedOccurrence, PrecomputedAnnotation, PrecomputedIndelLength, \
     PrecomputedSubstitutionsCounts, PrecomputedVariantsPerSample, Log
+from covigator.database.queries import Queries
 from covigator.pipeline.cooccurrence_matrix import CooccurrenceMatrix
 from covigator.tests.unit_tests.faked_objects import FakeConfiguration
 
@@ -31,6 +32,7 @@ class AbstractTest(TestCase):
         self.config = FakeConfiguration()
         self.database = Database(test=True, config=self.config)
         self.session = self.database.get_database_session()
+        self.queries = Queries(session=self.session)
         self.faker = Faker()
         self._clean_test_database()
 

@@ -509,3 +509,31 @@ class EnaAccessorTests(AbstractTest):
         self.assertIsInstance(data.get("excluded").get("platform"), dict)
         self.assertIsInstance(data.get("excluded").get("library_strategy"), dict)
         self.assertIsInstance(data.get("excluded").get("host"), dict)
+
+    def test_excluding_rnaseq_samples(self):
+        ena_accessor = FakeEnaAccessor([
+            {"run_accession": "ERR4080483",
+             "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
+             "instrument_platform": "ILLUMINA",
+             "library_strategy": "RNA-Seq",
+             "fastq_ftp": "",
+             "fastq_md5": "a91a9dfa2f7008e13a7ce9767aa9aaf3",
+             "host_tax_id": "9606"},
+            {"run_accession": "ERR4080484",
+             "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
+             "instrument_platform": "RNA-Seq",
+             "library_strategy": "WGS",
+             "fastq_ftp": None,
+             "fastq_md5": "c57fef34933cbbec2e9e08867f3c664c",
+             "host_tax_id": "9606"},
+            {"run_accession": "ERR4080485",
+             "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
+             "instrument_platform": "RNA-Seq",
+             "library_strategy": "WGS",
+             "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/005/ERR4080485/ERR4080485_1.fastq.gz",
+             "fastq_md5": "4de269d2b5831e1c5175586af694d21e",
+             "host_tax_id": "9606"}
+        ])
+        ena_accessor.access()
+        self.assertEqual(ena_accessor.included, 0)
+        self.assertEqual(ena_accessor.excluded, 3)
