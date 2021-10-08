@@ -16,6 +16,9 @@ from covigator.configuration import Configuration
 from covigator.database.database import Database, session_scope
 from covigator.database.model import Log, DataSource, CovigatorModule, JobStatus, JobEna, JobGisaid
 from covigator.database.queries import Queries
+from covigator.exceptions import CovigatorExcludedAssemblySequence, CovigatorExcludedSampleTooEarlyDateException, \
+    CovigatorExcludedSampleTooManyMutations, CovigatorExcludedSampleNarrowCoverage, \
+    CovigatorExcludedSampleBadQualityReads
 
 
 class AbstractProcessor:
@@ -76,8 +79,8 @@ class AbstractProcessor:
         finally:
             logger.info("Logging execution stats...")
             self._write_execution_log(count, data_source=self.data_source)
-            logger.info("Waits a minute to let the cluster")
-            time.sleep(60)
+            logger.info("Waits 30 secs to let the cluster tidy up things...")
+            time.sleep(30)
             logger.info("Shutting down cluster and database session...")
             with suppress(Exception):
                 self.dask_client.shutdown()
@@ -117,6 +120,16 @@ class AbstractProcessor:
                     else:
                         logger.warning("Expected ENA job {} in status {}".format(run_accession, start_status))
                         run_accession = None
+            except (CovigatorExcludedAssemblySequence,
+                    CovigatorExcludedSampleTooEarlyDateException,
+                    CovigatorExcludedSampleTooManyMutations,
+                    CovigatorExcludedSampleNarrowCoverage,
+                    CovigatorExcludedSampleBadQualityReads) as e:
+                # captures exclusion cases
+                AbstractProcessor._log_error_in_job(
+                    config=config, run_accession=run_accession, exception=e, status=JobStatus.EXCLUDED,
+                    data_source=data_source)
+                run_accession = None
             except Exception as e:
                 # captures any possible exception happening, but logs it in the DB
                 if error_status is not None:

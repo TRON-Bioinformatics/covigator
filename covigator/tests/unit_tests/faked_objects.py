@@ -1,9 +1,17 @@
 import os
 import pkg_resources
+from dask.distributed import Client
+from logzero import logger
+
 import covigator
 from covigator.accessor.ena_accessor import EnaAccessor
 from covigator.configuration import Configuration
 from covigator.database.database import Database
+from covigator.database.model import DataSource, JobStatus, JobEna, JobGisaid
+from covigator.database.queries import Queries
+from covigator.exceptions import CovigatorExcludedSampleTooManyMutations
+from covigator.processor.abstract_processor import AbstractProcessor
+from covigator.processor.ena_processor import EnaProcessor
 from covigator.tests import SARS_COV_2_TAXID, HOMO_SAPIENS_TAXID
 
 
@@ -35,3 +43,84 @@ class FakeEnaAccessor(EnaAccessor):
 
     def _get_ena_runs_page(self):
         return self.results
+
+
+class FakeEnaProcessor(AbstractProcessor):
+
+    def __init__(self, database: Database, dask_client: Client, config: Configuration):
+        logger.info("Initialising ENA processor")
+        super().__init__(database, dask_client, DataSource.ENA, config)
+
+    def _process_run(self, run_accession: str):
+        """
+        Launches all jobs and returns the futures for the final job only
+        """
+        # NOTE: here we set the priority of each step to ensure a depth first processing
+        future = self.dask_client.submit(FakeEnaProcessor.job, self.config, run_accession, priority=1)
+        return future
+
+    @staticmethod
+    def job(config: Configuration, run_accession):
+        return FakeEnaProcessor.run_job(
+            config, run_accession, start_status=JobStatus.QUEUED, end_status=JobStatus.FINISHED,
+            error_status=JobStatus.FAILED_PROCESSING, data_source=DataSource.ENA,
+            function=FakeEnaProcessor.run_all
+    )
+
+    @staticmethod
+    def run_all(job: JobEna, queries: Queries, config: Configuration):
+        logger.info("Job processed!")
+
+
+class FakeEnaProcessorExcludingSamples(AbstractProcessor):
+
+    def __init__(self, database: Database, dask_client: Client, config: Configuration):
+        logger.info("Initialising ENA processor")
+        super().__init__(database, dask_client, DataSource.ENA, config)
+
+    def _process_run(self, run_accession: str):
+        """
+        Launches all jobs and returns the futures for the final job only
+        """
+        # NOTE: here we set the priority of each step to ensure a depth first processing
+        future = self.dask_client.submit(FakeEnaProcessorExcludingSamples.job, self.config, run_accession, priority=1)
+        return future
+
+    @staticmethod
+    def job(config: Configuration, run_accession):
+        return FakeEnaProcessorExcludingSamples.run_job(
+            config, run_accession, start_status=JobStatus.QUEUED, end_status=JobStatus.FINISHED,
+            error_status=JobStatus.FAILED_PROCESSING, data_source=DataSource.ENA,
+            function=FakeEnaProcessorExcludingSamples.run_all
+        )
+
+    @staticmethod
+    def run_all(job: JobEna, queries: Queries, config: Configuration):
+        raise CovigatorExcludedSampleTooManyMutations("Exclude em'all")
+
+
+class FakeGisaidProcessor(AbstractProcessor):
+
+    def __init__(self, database: Database, dask_client: Client, config: Configuration):
+        logger.info("Initialising GISAID processor")
+        super().__init__(database, dask_client, DataSource.GISAID, config)
+
+    def _process_run(self, run_accession: str):
+        """
+        Launches all jobs and returns the futures for the final job only
+        """
+        # NOTE: here we set the priority of each step to ensure a depth first processing
+        future = self.dask_client.submit(FakeGisaidProcessor.job, self.config, run_accession, priority=1)
+        return future
+
+    @staticmethod
+    def job(config: Configuration, run_accession):
+        return FakeGisaidProcessor.run_job(
+            config, run_accession, start_status=JobStatus.QUEUED, end_status=JobStatus.FINISHED,
+            error_status=JobStatus.FAILED_PROCESSING, data_source=DataSource.GISAID,
+            function=FakeGisaidProcessor.run_all
+    )
+
+    @staticmethod
+    def run_all(job: JobGisaid, queries: Queries, config: Configuration):
+        logger.info("Job processed!")

@@ -64,10 +64,13 @@ class Queries:
             raise ValueError("Bad data source {}".format(data_source))
 
     def count_jobs_in_queue(self, data_source):
+        return self.count_jobs_by_status(data_source=data_source, status=JobStatus.QUEUED)
+
+    def count_jobs_by_status(self, data_source: DataSource, status: JobStatus):
         if data_source == DataSource.ENA:
-            count = self.session.query(JobEna).filter(JobEna.status == JobStatus.QUEUED).count()
+            count = self.session.query(JobEna).filter(JobEna.status == status).count()
         elif data_source == DataSource.GISAID:
-            count = self.session.query(JobGisaid).filter(JobGisaid.status == JobStatus.QUEUED).count()
+            count = self.session.query(JobGisaid).filter(JobGisaid.status == status).count()
         else:
             raise ValueError("Bad data source {}".format(data_source))
         return count
