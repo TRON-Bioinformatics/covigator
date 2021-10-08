@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 from sqlalchemy.orm import Session
 from typing import List, Dict
@@ -297,11 +298,6 @@ class Precomputer:
         data_ns_gisaid = self._count_variant_observations_by_source_and_annotation(
             source=DataSource.GISAID, annotation=MISSENSE_VARIANT).rename(columns={'count': 'ns'})
 
-        genes = self.queries.get_genes()
-        genes_ratios = {}
-        for g in genes:
-            genes_ratios[g.name] = g.ratio_synonymous_non_synonymous
-
         data_ena = pd.merge(
             left=data_s_ena, right=data_ns_ena, on=["month", "gene_name", "country"], how='outer').fillna(0)
         data_gisaid = pd.merge(
@@ -314,17 +310,17 @@ class Precomputer:
         database_rows = []
         if data_ena is not None:
             database_rows.extend(self._dn_ds_to_rows_by_source(
-                data=data_ena, source=DataSource.ENA, genes_ratios=genes_ratios))
+                data=data_ena, source=DataSource.ENA))
         if data_gisaid is not None:
             database_rows.extend(self._dn_ds_to_rows_by_source(
-                data=data_gisaid, source=DataSource.GISAID, genes_ratios=genes_ratios))
+                data=data_gisaid, source=DataSource.GISAID))
 
         if len(database_rows) > 0:
             self.session.add_all(database_rows)
             self.session.commit()
         logger.info("Added {} entries to {}".format(len(database_rows), PrecomputedDnDs.__tablename__))
 
-    def _dn_ds_to_rows_by_source(self, data, source: DataSource, genes_ratios: Dict):
+    def _dn_ds_to_rows_by_source(self, data, source: DataSource):
         coding_region_ns = {}
         coding_region_s = {}
         database_rows = []
@@ -335,7 +331,6 @@ class Precomputer:
             ns = row["ns"]
             s = row["s"]
             gene_name = row["gene_name"]
-            gene_ratio = genes_ratios.get(gene_name)
             database_rows.append(PrecomputedDnDs(
                 month=month,
                 region_type=RegionType.GENE,
@@ -343,8 +338,6 @@ class Precomputer:
                 country=country,
                 ns=ns,
                 s=s,
-                # this computes Ts/Tns / s/ns
-                dn_ds=self._calculate_dn_ds(gene_ratio, ns, s),
                 source=source
             ))
             coding_region_ns[(month, country)] = coding_region_ns.get((month, country), 0) + ns
@@ -356,16 +349,9 @@ class Precomputer:
                 country=country,
                 ns=coding_region_ns.get((month, country), 0),
                 s=coding_region_s.get((month, country), 0),
-                dn_ds=0.0,
                 source=source
             ))
         return database_rows
-
-    def _calculate_dn_ds(self, gene_ratio, ns, s):
-        dn_ds = None
-        if gene_ratio is not None and ns is not None and ns > 0 and s is not None and s > 0:
-            dn_ds = gene_ratio / (s / ns)
-        return dn_ds
 
     def _count_variant_observations_by_source_and_annotation(self, source: DataSource, annotation: str):
         sql_query = """

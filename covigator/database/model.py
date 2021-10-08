@@ -624,7 +624,6 @@ class PrecomputedDnDs(Base):
     source = Column(Enum(DataSource, name=DataSource.__constraint_name__))
     ns = Column(Integer)
     s = Column(Integer)
-    dn_ds = Column(Float)
 
 
 class PrecomputedTableCounts(Base):

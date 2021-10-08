@@ -253,6 +253,9 @@ class Queries:
     def get_genes(self) -> List[Gene]:
         return self.session.query(Gene).order_by(Gene.start).all()
 
+    def get_genes_df(self) -> pd.DataFrame:
+        return pd.read_sql(self.session.query(Gene).order_by(Gene.start).statement, self.session.bind)
+
     def get_domains(self) -> List[Domain]:
         return self.session.query(Domain).order_by(and_(Domain.gene_name, Domain.start)).all()
 
@@ -895,10 +898,6 @@ class Queries:
         if genes is not None and len(genes) > 0:
             query = query.filter(PrecomputedDnDs.region_name.in_(genes))
 
-        return pd.read_sql(query.statement, self.session.bind)
-
-    def get_genes_synonymous_to_non_synonymous_ratio(self) -> pd.DataFrame:
-        query = self.session.query(Gene.name, Gene.ratio_synonymous_non_synonymous)
         return pd.read_sql(query.statement, self.session.bind)
 
     def _print_query(self, query):
