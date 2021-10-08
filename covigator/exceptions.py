@@ -16,10 +16,6 @@ class CovigatorDashBoardInitialisationError(CovigatorException):
     pass
 
 
-class CovigatorExcludedAssemblySequence(CovigatorException):
-    pass
-
-
 class CovigatorNotSupportedVariant(CovigatorException):
     pass
 
@@ -28,25 +24,33 @@ class CovigatorQueryException(CovigatorException):
     pass
 
 
-class CovigatorExcludedSampleTooEarlyDateException(CovigatorException):
-    pass
-
-
-class CovigatorExcludedSampleTooManyMutations(CovigatorException):
-    pass
-
-
 class CovigatorErrorProcessingCoverageResults(CovigatorException):
     pass
 
 
-class CovigatorExcludedSampleNarrowCoverage(CovigatorException):
-    pass
-
-
-class CovigatorExcludedSampleBadQualityReads(CovigatorException):
-    pass
-
-
 class CovigatorDashboardMissingPrecomputedData(CovigatorException):
+    pass
+
+
+class CovigatorExcludedSampleException(CovigatorException):
+    pass
+
+
+class CovigatorExcludedAssemblySequence(CovigatorExcludedSampleException):
+    pass
+
+
+class CovigatorExcludedSampleTooEarlyDateException(CovigatorExcludedSampleException):
+    pass
+
+
+class CovigatorExcludedSampleTooManyMutations(CovigatorExcludedSampleException):
+    pass
+
+
+class CovigatorExcludedSampleNarrowCoverage(CovigatorExcludedSampleException):
+    pass
+
+
+class CovigatorExcludedSampleBadQualityReads(CovigatorExcludedSampleException):
     pass

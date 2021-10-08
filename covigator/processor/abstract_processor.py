@@ -1,5 +1,4 @@
 import abc
-import os
 import time
 import traceback
 from contextlib import suppress
@@ -7,8 +6,7 @@ from datetime import datetime
 from typing import Callable
 import typing as typing
 from dask.distributed import Client
-from distributed import fire_and_forget, as_completed
-from sqlalchemy.orm import Session
+from distributed import fire_and_forget
 from logzero import logger
 import covigator
 import covigator.configuration
@@ -16,9 +14,7 @@ from covigator.configuration import Configuration
 from covigator.database.database import Database, session_scope
 from covigator.database.model import Log, DataSource, CovigatorModule, JobStatus, JobEna, JobGisaid
 from covigator.database.queries import Queries
-from covigator.exceptions import CovigatorExcludedAssemblySequence, CovigatorExcludedSampleTooEarlyDateException, \
-    CovigatorExcludedSampleTooManyMutations, CovigatorExcludedSampleNarrowCoverage, \
-    CovigatorExcludedSampleBadQualityReads
+from covigator.exceptions import CovigatorExcludedSampleException
 
 
 class AbstractProcessor:
@@ -120,11 +116,7 @@ class AbstractProcessor:
                     else:
                         logger.warning("Expected ENA job {} in status {}".format(run_accession, start_status))
                         run_accession = None
-            except (CovigatorExcludedAssemblySequence,
-                    CovigatorExcludedSampleTooEarlyDateException,
-                    CovigatorExcludedSampleTooManyMutations,
-                    CovigatorExcludedSampleNarrowCoverage,
-                    CovigatorExcludedSampleBadQualityReads) as e:
+            except CovigatorExcludedSampleException as e:
                 # captures exclusion cases
                 AbstractProcessor._log_error_in_job(
                     config=config, run_accession=run_accession, exception=e, status=JobStatus.EXCLUDED,
