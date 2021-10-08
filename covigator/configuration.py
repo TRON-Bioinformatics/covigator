@@ -34,7 +34,9 @@ class Configuration:
     ENV_COVIGATOR_WORKFLOW_CPUS = "COVIGATOR_WORKFLOW_CPUS"
     ENV_COVIGATOR_WORKFLOW_MEMORY = "COVIGATOR_WORKFLOW_MEMORY"
     ENV_COVIGATOR_BATCH_SIZE = "COVIGATOR_BATCH_SIZE"
-
+    ENV_COVIGATOR_MAX_SNVS = "COVIGATOR_MAX_SNVS"
+    ENV_COVIGATOR_MAX_INSERTIONS = "COVIGATOR_MAX_INSERTIONS"
+    ENV_COVIGATOR_MAX_DELETIONS = "COVIGATOR_MAX_DELETIONS"
     # references
     ENV_COVIGATOR_REF_FASTA = "COVIGATOR_REF_FASTA"
     ENV_COVIGATOR_GENE_ANNOTATIONS = "COVIGATOR_GENE_ANNOTATIONS"
@@ -78,19 +80,28 @@ class Configuration:
         self.reference_gene_annotations = os.getenv(self.ENV_COVIGATOR_GENE_ANNOTATIONS)
         self.reference_gene_dn_ds_annotations = os.getenv(self.ENV_COVIGATOR_GENE_DN_DS_ANNOTATIONS)
 
+        # pipeline
         self.nextflow = os.getenv(self.ENV_COVIGATOR_NEXTFLOW, "nextflow")
         self.workflow = os.getenv(self.ENV_COVIGATOR_WORKFLOW, "tron-bioinformatics/covigator-ngs-pipeline -r v0.3.0")
         self.workflow_cpus = os.getenv(self.ENV_COVIGATOR_WORKFLOW_CPUS, "1")
         self.workflow_memory = os.getenv(self.ENV_COVIGATOR_WORKFLOW_MEMORY, "3g")
-        try:
-            self.batch_size = int(os.getenv(self.ENV_COVIGATOR_BATCH_SIZE, "1000"))
-        except ValueError as e:
-            raise CovigatorDashBoardInitialisationError("The batch size needs to be a numeric value. " + str(e))
+        self.batch_size = self.load_numeric_value(variable=self.ENV_COVIGATOR_BATCH_SIZE, default=1000)
+        self.max_snvs = self.load_numeric_value(variable=self.ENV_COVIGATOR_MAX_SNVS, default=76)
+        self.max_insertions = self.load_numeric_value(variable=self.ENV_COVIGATOR_MAX_INSERTIONS, default=10)
+        self.max_deletions = self.load_numeric_value(variable=self.ENV_COVIGATOR_MAX_DELETIONS, default=10)
+
         # NOTE: the defaults are already set in the workflow config
         self.temp_folder = os.getenv(self.ENV_COVIGATOR_TEMP_FOLDER, "/data/covigator-tmp")
 
         if verbose:
             self.log_configuration()
+
+    def load_numeric_value(self, variable, default):
+        try:
+            value = int(os.getenv(variable, default))
+        except ValueError as e:
+            raise CovigatorDashBoardInitialisationError("{} needs to be a numeric value : {}".format(variable, str(e)))
+        return value
 
     def log_configuration(self):
         logger.info("Configuration")
