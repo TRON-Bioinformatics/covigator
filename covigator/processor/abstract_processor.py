@@ -76,6 +76,8 @@ class AbstractProcessor:
         finally:
             logger.info("Logging execution stats...")
             self._write_execution_log(count, data_source=self.data_source)
+            logger.info("Waits a minute to let the cluster")
+            time.sleep(60)
             logger.info("Shutting down cluster and database session...")
             with suppress(Exception):
                 self.dask_client.shutdown()
