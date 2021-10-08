@@ -99,6 +99,33 @@ class FakeEnaProcessorExcludingSamples(AbstractProcessor):
         raise CovigatorExcludedSampleTooManyMutations("Exclude em'all")
 
 
+class FakeEnaProcessorFailing(AbstractProcessor):
+
+    def __init__(self, database: Database, dask_client: Client, config: Configuration):
+        logger.info("Initialising ENA processor")
+        super().__init__(database, dask_client, DataSource.ENA, config)
+
+    def _process_run(self, run_accession: str):
+        """
+        Launches all jobs and returns the futures for the final job only
+        """
+        # NOTE: here we set the priority of each step to ensure a depth first processing
+        future = self.dask_client.submit(FakeEnaProcessorFailing.job, self.config, run_accession, priority=1)
+        return future
+
+    @staticmethod
+    def job(config: Configuration, run_accession):
+        return FakeEnaProcessorFailing.run_job(
+            config, run_accession, start_status=JobStatus.QUEUED, end_status=JobStatus.FINISHED,
+            error_status=JobStatus.FAILED_PROCESSING, data_source=DataSource.ENA,
+            function=FakeEnaProcessorFailing.run_all
+        )
+
+    @staticmethod
+    def run_all(job: JobEna, queries: Queries, config: Configuration):
+        raise ValueError("Fail em'all")
+
+
 class FakeGisaidProcessor(AbstractProcessor):
 
     def __init__(self, database: Database, dask_client: Client, config: Configuration):
