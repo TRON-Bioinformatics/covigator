@@ -1,5 +1,5 @@
 from covigator.database.database import Database
-from covigator.database.model import Gene, get_table_versioned_name, Variant, Conservation
+from covigator.database.model import Gene, get_table_versioned_name, Variant, Conservation, Domain
 import pandas as pd
 from covigator.configuration import Configuration
 from covigator.tests.unit_tests.abstract_test import AbstractTest
@@ -14,18 +14,32 @@ class DatabaseInitialisationTests(AbstractTest):
         for g in session.query(Gene).all():
             self.assertIsNotNone(g.identifier)
             self.assertIsNotNone(g.name)
+            self.assertGreater(g.fraction_synonymous, 0.0)
+            self.assertGreater(g.fraction_non_synonymous, 0.0)
+        self.assertGreater(session.query(Domain).count(), 0)
+        for d in session.query(Domain).all():
+            self.assertIsNotNone(d.name)
+            self.assertGreater(d.fraction_synonymous, 0.0)
+            self.assertGreater(d.fraction_non_synonymous, 0.0)
+            self.assertIsNotNone(d.gene_identifier)
+            self.assertIsNotNone(d.gene_name)
 
     def test_genes_table_initialisation_not_twice(self):
         database = Database(test=True, config=self.config)
         session = database.get_database_session()
         count_genes = session.query(Gene).count()
+        count_domains = session.query(Domain).count()
 
         # creates another connection
         database2 = Database(test=True, config=self.config)
         session2 = database2.get_database_session()
 
         count_genes_2 = session2.query(Gene).count()
+        count_domains_2 = session2.query(Domain).count()
         self.assertEqual(count_genes, count_genes_2)
+        self.assertEqual(count_domains, count_domains_2)
+        self.assertGreater(count_genes, 0)
+        self.assertGreater(count_domains, 0)
 
     def test_versioned_tables(self):
         config = Configuration()
