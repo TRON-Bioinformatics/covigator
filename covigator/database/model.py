@@ -613,7 +613,7 @@ class RegionType(enum.Enum):
     CODING_REGION=3
 
 
-class PrecomputedDnDs(Base):
+class PrecomputedSynonymousNonSynonymousCounts(Base):
 
     __tablename__ = PRECOMPUTED_DN_DS_TABLE_NAME
 
