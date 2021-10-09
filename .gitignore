@@ -14,4 +14,4 @@ logs
 .nextflow.log*
 .nextflow
 data
-
+docs/build
