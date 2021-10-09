@@ -57,6 +57,7 @@ class GeneAnnotationsLoader:
                     try:
                         domain = Domain(
                             name=d["description"],
+                            description=d["interpro_description"],
                             start=int(d["start"]),
                             end=int(d["end"]),
                             fraction_synonymous=domains_fractions[domains_fractions.domain == d["description"]].S.iloc[0],

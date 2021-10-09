@@ -67,6 +67,7 @@ class Domain(Base):
     __tablename__ = DOMAIN_TABLE_NAME
 
     name = Column(String, primary_key=True)
+    description = Column(String)
     start = Column(Integer, index=True)
     end = Column(Integer)
     fraction_synonymous = Column(Float)
