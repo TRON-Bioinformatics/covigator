@@ -1,5 +1,4 @@
 venv
-references
 *.backup
 build
 dist
