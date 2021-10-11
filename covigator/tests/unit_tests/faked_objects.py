@@ -22,12 +22,6 @@ class FakeConfiguration(Configuration):
         os.environ[self.ENV_COVIGATOR_STORAGE_FOLDER] = "./data/covigator"
         os.environ[self.ENV_COVIGATOR_REF_FASTA] = pkg_resources.resource_filename(
             covigator.tests.__name__, "resources/MN908947.3.fa")
-        os.environ[self.ENV_COVIGATOR_GENE_ANNOTATIONS] = pkg_resources.resource_filename(
-            covigator.tests.__name__, "resources/sars_cov_2.json")
-        os.environ[self.ENV_COVIGATOR_GENE_NS_S_FRACTIONS] = pkg_resources.resource_filename(
-            covigator.tests.__name__, "resources/genes_NS_S.csv")
-        os.environ[self.ENV_COVIGATOR_DOMAIN_NS_S_FRACTIONS] = pkg_resources.resource_filename(
-            covigator.tests.__name__, "resources/domains_NS_S.csv")
 
         # this makes sure that we do not wipe a relevant database by mistake
         os.environ[self.ENV_COVIGATOR_TABLE_VERSION] = "_test"

@@ -39,9 +39,6 @@ class Configuration:
     ENV_COVIGATOR_MAX_DELETIONS = "COVIGATOR_MAX_DELETIONS"
     # references
     ENV_COVIGATOR_REF_FASTA = "COVIGATOR_REF_FASTA"
-    ENV_COVIGATOR_GENE_ANNOTATIONS = "COVIGATOR_GENE_ANNOTATIONS"
-    ENV_COVIGATOR_GENE_NS_S_FRACTIONS = "COVIGATOR_GENE_NS_S_FRACTIONS"
-    ENV_COVIGATOR_DOMAIN_NS_S_FRACTIONS = "COVIGATOR_DOMAIN_NS_S_FRACTIONS"
     # dask
     ENV_COVIGATOR_DASK_PORT = "COVIGATOR_DASK_PORT"
 
@@ -78,9 +75,6 @@ class Configuration:
 
         # references
         self.reference_genome = os.getenv(self.ENV_COVIGATOR_REF_FASTA)
-        self.reference_gene_annotations = os.getenv(self.ENV_COVIGATOR_GENE_ANNOTATIONS)
-        self.reference_gene_ns_s_fractions = os.getenv(self.ENV_COVIGATOR_GENE_NS_S_FRACTIONS)
-        self.reference_domain_ns_s_fractions = os.getenv(self.ENV_COVIGATOR_DOMAIN_NS_S_FRACTIONS)
 
         # pipeline
         self.nextflow = os.getenv(self.ENV_COVIGATOR_NEXTFLOW, "nextflow")

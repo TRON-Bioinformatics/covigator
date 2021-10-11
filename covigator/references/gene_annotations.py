@@ -4,36 +4,34 @@ import json
 import pandas as pd
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
-from covigator.configuration import Configuration
 from covigator.database.model import Gene, Domain
 from logzero import logger
 
 
 class GeneAnnotationsLoader:
 
-    def __init__(self, session: Session, config: Configuration):
-        self.config = config
+    GENES_NS_S_COUNTS_FILENAME = "genes_NS_S.csv"
+    DOMAINS_NS_S_COUNTS_FILENAME = "domains_NS_S.csv"
+    GENE_ANNOTATIONS_FILENAME = "sars_cov_2.json"
+
+    def __init__(self, session: Session):
         self.session = session
-        assert self.config.reference_gene_annotations is not None and os.path.exists(
-            self.config.reference_gene_annotations), \
-            "Please configure the gene annotations in the variable {}".format(self.config.ENV_COVIGATOR_GENE_ANNOTATIONS)
-        assert self.config.reference_gene_ns_s_fractions is not None and os.path.exists(
-            self.config.reference_gene_ns_s_fractions), \
-            "Please configure the gene annotations for NS and S fractions in the variable {}".format(
-                self.config.ENV_COVIGATOR_GENE_NS_S_FRACTIONS)
-        assert self.config.reference_domain_ns_s_fractions is not None and os.path.exists(
-            self.config.reference_domain_ns_s_fractions), \
-            "Please configure the domain annotations for NS and S fractions in the variable {}".format(
-                self.config.ENV_COVIGATOR_DOMAIN_NS_S_FRACTIONS)
+
+        self.genes_ns_s_counts = os.path.join(
+            os.path.abspath(os.path.dirname(__file__)), self.GENES_NS_S_COUNTS_FILENAME)
+        self.domains_ns_s_counts = os.path.join(
+            os.path.abspath(os.path.dirname(__file__)), self.DOMAINS_NS_S_COUNTS_FILENAME)
+        self.gene_annotations = os.path.join(
+            os.path.abspath(os.path.dirname(__file__)), self.GENE_ANNOTATIONS_FILENAME)
 
     def load_data(self):
         # reads the JSON
-        with open(self.config.reference_gene_annotations) as fd:
+        with open(self.gene_annotations) as fd:
             data = json.load(fd)
 
         # NOTE: load fraction of synonymous and non synonymous
-        genes_fractions = pd.read_csv(self.config.reference_gene_ns_s_fractions)
-        domains_fractions = pd.read_csv(self.config.reference_domain_ns_s_fractions)
+        genes_fractions = pd.read_csv(self.genes_ns_s_counts)
+        domains_fractions = pd.read_csv(self.domains_ns_s_counts)
 
         count_genes = 0
         count_domains = 0

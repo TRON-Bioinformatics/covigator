@@ -15,6 +15,7 @@ from covigator.database.database import Database, session_scope
 from covigator.database.model import Log, DataSource, CovigatorModule, JobStatus, JobEna, JobGisaid
 from covigator.database.queries import Queries
 from covigator.exceptions import CovigatorExcludedSampleException
+from covigator.precomputations.loader import PrecomputationsLoader
 
 
 class AbstractProcessor:
@@ -67,6 +68,10 @@ class AbstractProcessor:
             if count_batch > 0:
                 self._wait_for_batch()
             logger.info("Processor finished!")
+
+            # precomputes data right after processor
+            PrecomputationsLoader(session=self.session).load()
+
         except Exception as e:
             logger.exception(e)
             self.session.rollback()
@@ -81,7 +86,7 @@ class AbstractProcessor:
             with suppress(Exception):
                 self.dask_client.shutdown()
                 self.session.close()
-            logger.info("Finished processor")
+            logger.info("Cluster and database sessions closed")
 
     def _wait_for_batch(self):
         logger.info("Waiting for a batch of jobs...")
