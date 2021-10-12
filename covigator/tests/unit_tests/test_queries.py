@@ -245,7 +245,7 @@ class QueriesTests(AbstractTest):
     def _assert_dnds_table(self, data):
         self.assertIsNotNone(data)
         self.assertGreater(data.shape[0], 0)
-        self.assertEqual(data.shape[1], 9)
+        self.assertEqual(data.shape[1], 8)
         self.assertEqual(data[data.region_type != RegionType.GENE].shape[0], 0)  # all entries to a gene
         self.assertEqual(data[data.country.isna()].shape[0], 0)  # no empty countries
         self.assertEqual(data[data.month.isna()].shape[0], 0)  # no empty months
