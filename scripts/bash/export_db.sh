@@ -25,7 +25,7 @@ precomputed_top_occurrence=`get_export_command "precomputed_top_occurrence"`
 precomputed_variants_per_sample=`get_export_command "precomputed_variants_per_sample"`
 precomputed_table_counts=`get_export_command "precomputed_table_counts"`
 precomputed_ns_s_counts=`get_export_command "precomputed_ns_s_counts"`
-precomputed_variants_per_sample=`get_export_command "precomputed_variants_per_sample"`
+precomputed_variant_abundance_histogram=`get_export_command "precomputed_variant_abundance_histogram"`
 sample_ena=`get_export_command "sample_ena"`
 sample_gisaid="\\copy sample_gisaid$version(run_accession,date,host_tax_id,host,country_raw,region,country,country_alpha_2,country_alpha_3,continent,continent_alpha_2,site,site2,sequence_length,count_n_bases,count_ambiguous_bases,count_snvs,count_insertions,count_deletions,finished) to program 'gzip > $output/sample_gisaid.csv.gz' csv header;"
 sample=`get_export_command "sample"`
@@ -47,7 +47,7 @@ psql $pg_uri -c "$precomputed_top_occurrence"
 psql $pg_uri -c "$precomputed_variants_per_sample"
 psql $pg_uri -c "$precomputed_table_counts"
 psql $pg_uri -c "$precomputed_ns_s_counts"
-psql $pg_uri -c "$precomputed_variants_per_sample"
+psql $pg_uri -c "$precomputed_variant_abundance_histogram"
 psql $pg_uri -c "$sample_ena"
 psql $pg_uri -c "$sample_gisaid"
 psql $pg_uri -c "$sample"
