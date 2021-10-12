@@ -17,8 +17,8 @@ class NsSCountsLoader:
 
     def load(self):
 
-        counts_by_gene = self.load_counts(region=RegionType.GENE)
-        counts_by_domain = self.load_counts(region=RegionType.DOMAIN)
+        counts_by_gene = self._load_counts(region=RegionType.GENE)
+        counts_by_domain = self._load_counts(region=RegionType.DOMAIN)
         database_rows = counts_by_gene + counts_by_domain
 
         # delete all rows before starting
@@ -31,7 +31,7 @@ class NsSCountsLoader:
         logger.info("Added {} entries to {}".format(len(database_rows),
                                                     PrecomputedSynonymousNonSynonymousCounts.__tablename__))
 
-    def load_counts(self, region: RegionType) -> List[PrecomputedSynonymousNonSynonymousCounts]:
+    def _load_counts(self, region: RegionType) -> List[PrecomputedSynonymousNonSynonymousCounts]:
         data_s_ena = self._count_variant_observations_by_source_annotation_and_region(
             source=DataSource.ENA, annotation=SYNONYMOUS_VARIANT, region=region)
         data_ns_ena = self._count_variant_observations_by_source_annotation_and_region(
