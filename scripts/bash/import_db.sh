@@ -41,7 +41,7 @@ precomputed_ns_s_counts=`get_import_command "precomputed_ns_s_counts"`
 
 sample_ena=`get_import_command "sample_ena"`
 # NOTE: add column finished back in
-sample_gisaid="\\copy sample_gisaid$version(run_accession,date,host_tax_id,host,country_raw,region,country,country_alpha_2,country_alpha_3,continent,continent_alpha_2,site,site2,sequence_length,count_n_bases,count_ambiguous_bases,count_snvs,count_insertions,count_deletions) from program 'gzip -dc $input_folder/sample_gisaid.csv.gz' csv header;"
+sample_gisaid="\\copy sample_gisaid$version(run_accession,date,host_tax_id,host,country_raw,region,country,country_alpha_2,country_alpha_3,continent,continent_alpha_2,site,site2,sequence_length,count_n_bases,count_ambiguous_bases,count_snvs,count_insertions,count_deletions,finished) from program 'gzip -dc $input_folder/sample_gisaid.csv.gz' csv header;"
 sample=`get_import_command "sample"`
 subclonal_variant_observation=`get_import_command "subclonal_variant_observation"`
 variant_cooccurrence=`get_import_command "variant_cooccurrence"`
