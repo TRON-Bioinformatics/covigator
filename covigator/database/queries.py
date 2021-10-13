@@ -17,7 +17,7 @@ from covigator.database.model import Log, DataSource, CovigatorModule, SampleEna
     Gene, Variant, VariantCooccurrence, Conservation, JobGisaid, SampleGisaid, SubclonalVariantObservation, \
     PrecomputedVariantsPerSample, PrecomputedSubstitutionsCounts, PrecomputedIndelLength, VariantType, \
     PrecomputedAnnotation, PrecomputedOccurrence, PrecomputedTableCounts, Sample, PrecomputedVariantAbundanceHistogram, \
-    VARIANT_OBSERVATION_TABLE_NAME, PrecomputedDnDs, RegionType
+    VARIANT_OBSERVATION_TABLE_NAME, PrecomputedSynonymousNonSynonymousCounts, RegionType, Domain
 from covigator.exceptions import CovigatorQueryException, CovigatorDashboardMissingPrecomputedData
 
 
@@ -247,11 +247,20 @@ class Queries:
                          and_(SampleGisaid.finished, SampleGisaid.date.isnot(None))).distinct().all()]
         return sorted(set(dates_ena + dates_gisaid))
 
-    def get_gene(self, gene_name: str):
+    def get_gene(self, gene_name: str) -> Gene:
         return self.session.query(Gene).filter(Gene.name == gene_name).first()
 
     def get_genes(self) -> List[Gene]:
         return self.session.query(Gene).order_by(Gene.start).all()
+
+    def get_genes_df(self) -> pd.DataFrame:
+        return pd.read_sql(self.session.query(Gene).order_by(Gene.start).statement, self.session.bind)
+
+    def get_domains(self) -> List[Domain]:
+        return self.session.query(Domain).order_by(and_(Domain.gene_name, Domain.start)).all()
+
+    def get_domains_by_gene(self, gene_name: str) -> Domain:
+        return self.session.query(Domain).filter(Domain.gene_name == gene_name).first()
 
     def get_non_synonymous_variants_by_region(self, start, end, source) -> pd.DataFrame:
         query = self.session.query(VariantObservation.position,
@@ -880,19 +889,15 @@ class Queries:
 
     def get_dnds_table(self, source: DataSource = None, countries=None, genes=None) -> pd.DataFrame:
         # counts variants over those bins
-        query = self.session.query(PrecomputedDnDs).filter(PrecomputedDnDs.region_type == RegionType.GENE)
+        query = self.session.query(PrecomputedSynonymousNonSynonymousCounts).filter(PrecomputedSynonymousNonSynonymousCounts.region_type == RegionType.GENE)
 
         if source is not None:
-            query = query.filter(PrecomputedDnDs.source == source)
+            query = query.filter(PrecomputedSynonymousNonSynonymousCounts.source == source)
         if countries is not None and len(countries) > 0:
-            query = query.filter(PrecomputedDnDs.country.in_(countries))
+            query = query.filter(PrecomputedSynonymousNonSynonymousCounts.country.in_(countries))
         if genes is not None and len(genes) > 0:
-            query = query.filter(PrecomputedDnDs.region_name.in_(genes))
+            query = query.filter(PrecomputedSynonymousNonSynonymousCounts.region_name.in_(genes))
 
-        return pd.read_sql(query.statement, self.session.bind)
-
-    def get_genes_synonymous_to_non_synonymous_ratio(self) -> pd.DataFrame:
-        query = self.session.query(Gene.name, Gene.ratio_synonymous_non_synonymous)
         return pd.read_sql(query.statement, self.session.bind)
 
     def _print_query(self, query):

@@ -150,5 +150,5 @@ def precompute_queries():
     database = Database(initialize=True, config=Configuration())
     precomputer = Precomputer(session=database.get_database_session())
     logger.info("Starting precomputation...")
-    precomputer.precompute()
+    precomputer.load()
     logger.info("Done precomputing")

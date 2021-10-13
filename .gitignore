@@ -1,5 +1,4 @@
 venv
-references
 *.backup
 build
 dist
@@ -14,4 +13,5 @@ logs
 .nextflow.log*
 .nextflow
 data
+*.dirlock
 

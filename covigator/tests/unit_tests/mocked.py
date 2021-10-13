@@ -11,12 +11,14 @@ from Bio.Alphabet.IUPAC import IUPACData
 
 
 MOCKED_GENES = ["S", "N", "E", "M", "ORF3a", "ORF1ab", "ORF7b", "ORF10", "ORF6", "ORF8", "ORF7a"]
+MOCKED_DOMAINS = ["CoV_S2", "bCoV_S1_RBD", "bCoV_S1_N", "CoV_S1_C", "bCoV_viroporin", "Macro", "Peptidase_C30",
+                  "CoV_NSP9", "CoV_peptidase", "CoV_NSP7"]
 
 
 def get_mocked_variant(faker: Faker, chromosome=None, gene_name=None) -> Variant:
     if gene_name is None:
-        gene_name = faker.random_choices(
-            MOCKED_GENES, length=1)[0]
+        gene_name = faker.random_choices(MOCKED_GENES, length=1)[0]
+    domain_name = faker.random_choices(MOCKED_DOMAINS, length=1)[0]
     annotation = faker.random_choices(
             [MISSENSE_VARIANT, SYNONYMOUS_VARIANT, INFRAME_DELETION, INFRAME_INSERTION], length=1)[0]
     variant = Variant(
@@ -33,7 +35,8 @@ def get_mocked_variant(faker: Faker, chromosome=None, gene_name=None) -> Variant
             faker.random_choices(list(IUPACData.protein_letters_1to3.values()), length=1)[0]
         ),
         annotation=annotation,
-        annotation_highest_impact=annotation
+        annotation_highest_impact=annotation,
+        pfam_name=domain_name
     )
     variant.variant_id = variant.get_variant_id()
     return variant
@@ -51,7 +54,8 @@ def get_mocked_variant_observation(sample: Sample, variant: Variant, faker=Faker
         variant_type=VariantType.SNV,
         annotation=variant.annotation,
         annotation_highest_impact=variant.annotation_highest_impact,
-        gene_name=variant.gene_name
+        gene_name=variant.gene_name,
+        pfam_name=variant.pfam_name
     )
 
 

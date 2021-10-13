@@ -14,6 +14,7 @@ def get_table_versioned_name(basename, config: Configuration):
 
 config = Configuration()
 GENE_TABLE_NAME = get_table_versioned_name('gene', config=config)
+DOMAIN_TABLE_NAME = get_table_versioned_name('domain', config=config)
 LOG_TABLE_NAME = get_table_versioned_name('log', config=config)
 VARIANT_COOCCURRENCE_TABLE_NAME = get_table_versioned_name('variant_cooccurrence', config=config)
 VARIANT_OBSERVATION_TABLE_NAME = get_table_versioned_name('variant_observation', config=config)
@@ -30,7 +31,7 @@ PRECOMPUTED_SUBSTITUTIONS_COUNTS_TABLE_NAME = get_table_versioned_name('precompu
 PRECOMPUTED_INDEL_LENGTH_TABLE_NAME = get_table_versioned_name('precomputed_indel_length', config=config)
 PRECOMPUTED_ANNOTATION_TABLE_NAME = get_table_versioned_name('precomputed_annotation', config=config)
 PRECOMPUTED_OCCURRENCE_TABLE_NAME = get_table_versioned_name('precomputed_top_occurrence', config=config)
-PRECOMPUTED_DN_DS_TABLE_NAME = get_table_versioned_name('precomputed_dn_ds', config=config)
+PRECOMPUTED_NS_S_COUNTS_TABLE_NAME = get_table_versioned_name('precomputed_ns_s_counts', config=config)
 PRECOMPUTED_DN_DS_BY_DOMAIN_TABLE_NAME = get_table_versioned_name('precomputed_dn_ds_by_domain', config=config)
 PRECOMPUTED_TABLE_COUNTS_TABLE_NAME = get_table_versioned_name('precomputed_table_counts', config=config)
 PRECOMPUTED_VARIANT_ABUNDANCE_HIST_TABLE_NAME = get_table_versioned_name('precomputed_variant_abundance_histogram', config=config)
@@ -55,13 +56,24 @@ class Gene(Base):
     name = Column(String)
     start = Column(Integer, index=True)
     end = Column(Integer)
-    ratio_synonymous_non_synonymous = Column(Float)
-    data = Column(JSON)
+    fraction_synonymous = Column(Float)
+    fraction_non_synonymous = Column(Float)
 
-    def get_pfam_domains(self):
-        protein_features = self.data.get("transcripts", [])[0].get("translations", [])[0].get("protein_features")
-        pfam_protein_features = [f for f in protein_features if f.get("dbname") == "Pfam"]
-        return sorted(pfam_protein_features, key=lambda d: int(d.get("start")))
+
+class Domain(Base):
+    """
+    This table holds the Pfam domains for the genes
+    """
+    __tablename__ = DOMAIN_TABLE_NAME
+
+    name = Column(String, primary_key=True)
+    description = Column(String)
+    start = Column(Integer, index=True)
+    end = Column(Integer)
+    fraction_synonymous = Column(Float)
+    fraction_non_synonymous = Column(Float)
+    gene_identifier = Column(ForeignKey("{}.identifier".format(Gene.__tablename__)))
+    gene_name = Column(String)
 
 
 class JobStatus(enum.Enum):
@@ -601,9 +613,9 @@ class RegionType(enum.Enum):
     CODING_REGION=3
 
 
-class PrecomputedDnDs(Base):
+class PrecomputedSynonymousNonSynonymousCounts(Base):
 
-    __tablename__ = PRECOMPUTED_DN_DS_TABLE_NAME
+    __tablename__ = PRECOMPUTED_NS_S_COUNTS_TABLE_NAME
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     month = Column(Date)
@@ -613,7 +625,6 @@ class PrecomputedDnDs(Base):
     source = Column(Enum(DataSource, name=DataSource.__constraint_name__))
     ns = Column(Integer)
     s = Column(Integer)
-    dn_ds = Column(Float)
 
 
 class PrecomputedTableCounts(Base):

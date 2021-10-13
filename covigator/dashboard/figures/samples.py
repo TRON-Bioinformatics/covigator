@@ -183,6 +183,13 @@ class SampleFigures(Figures):
             ]
         return graph
 
+    def _calculate_dn_ds(self, NS, S, ns, s):
+        pn = float(ns) / float(NS)
+        ps = float(s) / float(S)
+        dn = np.log(1 + pn)
+        ds = np.log(1 + ps)
+        return dn / ds
+
     def get_dnds_by_gene_plot(
             self, data_source: DataSource = None, countries: List[str] =None, genes: List[str] = None):
 
@@ -191,12 +198,13 @@ class SampleFigures(Figures):
         graph = dcc.Markdown("""**No data for the current selection**""")
         if data is not None and data.shape[0] > 0:
 
-            genes_ratios = self.queries.get_genes_synonymous_to_non_synonymous_ratio()
+            genes = self.queries.get_genes_df()
 
             # prepares the data and calculates the dN/dS
             data_to_plot = data.groupby(["month", "region_name"]).sum().reset_index().sort_values("month")
-            data_to_plot = pd.merge(left=data_to_plot, right=genes_ratios, left_on="region_name", right_on="name")
-            data_to_plot["dn_ds"] = data_to_plot.ratio_synonymous_non_synonymous / (data_to_plot.s / data_to_plot.ns)
+            data_to_plot = pd.merge(left=data_to_plot, right=genes, left_on="region_name", right_on="name")
+            data_to_plot["dn_ds"] = data_to_plot[["ns", "s", "fraction_non_synonymous", "fraction_synonymous"]].apply(
+                lambda x: self._calculate_dn_ds(ns=x[0], s=x[1], NS=x[2], S=x[3]), axis=1)
 
             fig = px.line(data_to_plot, x='month', y='dn_ds', color='region_name',
                           symbol='region_name', line_dash='region_name', line_dash_sequence=['dash'],
