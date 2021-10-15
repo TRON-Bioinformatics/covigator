@@ -8,6 +8,7 @@
 [![Run unit tests](https://github.com/TRON-Bioinformatics/covigator/actions/workflows/unit_tests.yml/badge.svg?branch=main)](https://github.com/TRON-Bioinformatics/covigator/actions/workflows/unit_tests.yml)
 [![Powered by Dash](https://img.shields.io/badge/powered%20by-Dash-orange.svg?style=flat&colorA=E1523D&colorB=007D8A)](https://dash.plotly.com/)
 [![License](https://img.shields.io/badge/license-MIT-green)](https://opensource.org/licenses/MIT)
+[![Documentation Status](https://readthedocs.org/projects/covigator/badge/?version=latest)](https://covigator.readthedocs.io/en/latest/?badge=latest)
 
 
 Human infections with SARS-CoV-2 are spreading globally since the beginning of 2020, necessitating preventive or 
@@ -43,7 +44,7 @@ The project was kindly supported by Intel´s Pandemic Response Technology Initia
 
 If you want to cite us:
 
-* Schrörs, B., Gudimella, R., Bukur, T., Rösler, T., Löwer, M., & Sahin, U. (2021). Large-scale analysis of SARS-CoV-2 spike-glycoprotein mutants demonstrates the need for continuous screening of virus isolates. BioRxiv, 2021.02.04.429765. ![https://doi.org/10.1101/2021.02.04.429765](https://doi.org/10.1101/2021.02.04.429765)
+* Schrörs, B., Riesgo-Ferreiro, P., Sorn, P., Gudimella, R., Bukur, T., Rösler, T., Löwer, M., & Sahin, U. (2021). Large-scale analysis of SARS-CoV-2 spike-glycoprotein mutants demonstrates the need for continuous screening of virus isolates. PLOS ONE, 16(9), e0249254. ![https://doi.org/10.1371/journal.pone.0249254](https://doi.org/10.1371/journal.pone.0249254)
 
 ## System architecture
 
