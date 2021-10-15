@@ -2,7 +2,8 @@ from dash_core_components import Markdown, Graph
 from covigator.dashboard.figures.samples import SampleFigures
 from covigator.dashboard.figures.variants import VariantsFigures
 from covigator.database.model import VariantType
-from covigator.database.precomputed import Precomputer
+from covigator.precomputations.loader import PrecomputationsLoader
+from covigator.precomputations.load_ns_s_counts import NsSCountsLoader
 from covigator.database.queries import Queries
 from covigator.tests.unit_tests.abstract_test import AbstractTest
 from covigator.tests.unit_tests.mocked import mock_samples_and_variants, mock_samples
@@ -30,7 +31,7 @@ class FiguresTests(AbstractTest):
     def test_variants_per_sample(self):
         # populates the ENA samples tables
         mock_samples_and_variants(session=self.session, faker=self.faker, num_samples=100)
-        Precomputer(session=self.session).load_counts_variants_per_sample()
+        PrecomputationsLoader(session=self.session).load_counts_variants_per_sample()
         figure = self.sample_figures.get_variants_per_sample_plot()
         self.assertIsNotNone(figure)
         self.assertTrue(len(figure) == 2)
@@ -44,7 +45,7 @@ class FiguresTests(AbstractTest):
     def test_substitutions(self):
         # populates the ENA samples tables
         mock_samples_and_variants(session=self.session, faker=self.faker, num_samples=100)
-        Precomputer(session=self.session).load_count_substitutions()
+        PrecomputationsLoader(session=self.session).load_count_substitutions()
         figure = self.sample_figures.get_substitutions_plot(variant_types=[VariantType.SNV.name])
         self.assertIsNotNone(figure)
         self.assertTrue(len(figure) == 2)
@@ -64,8 +65,8 @@ class FiguresTests(AbstractTest):
         self.assertIsInstance(figure, Markdown)
 
         mock_samples_and_variants(session=self.session, faker=self.faker, num_samples=100)
-        precomputer = Precomputer(session=self.session)
-        precomputer.load_dn_ds()
+        loader = NsSCountsLoader(session=self.session)
+        loader.load()
         figure = self.sample_figures.get_dnds_by_gene_plot()
         self.assertIsInstance(figure, list)
         self.assertIsInstance(figure[0], Graph)

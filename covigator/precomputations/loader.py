@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 from sqlalchemy.orm import Session
 from typing import List, Dict
@@ -8,31 +9,42 @@ from covigator.dashboard.tabs.variants import BIN_SIZE_VALUES
 from covigator.database.database import Database
 from covigator.database.model import PrecomputedVariantsPerSample, PrecomputedSubstitutionsCounts, \
     VARIANT_OBSERVATION_TABLE_NAME, PrecomputedIndelLength, \
-    PrecomputedAnnotation, VariantObservation, DataSource, PrecomputedOccurrence, PrecomputedDnDs, \
+    PrecomputedAnnotation, VariantObservation, DataSource, PrecomputedOccurrence, PrecomputedSynonymousNonSynonymousCounts, \
     SAMPLE_ENA_TABLE_NAME, SAMPLE_GISAID_TABLE_NAME, PrecomputedTableCounts, Variant, \
     SubclonalVariantObservation, Sample, PrecomputedVariantAbundanceHistogram, RegionType, Gene
 from logzero import logger
 
 from covigator.database.queries import Queries
+from covigator.precomputations.load_ns_s_counts import NsSCountsLoader
 
 NUMBER_TOP_OCCURRENCES = 1000
 
 
-class Precomputer:
+class PrecomputationsLoader:
 
     def __init__(self, session: Session):
         self.session = session
         self.queries = Queries(session=self.session)
+        self.ns_s_counts_loader = NsSCountsLoader(session=session)
 
-    def precompute(self):
+    def load(self):
+        logger.info("Starting precomputations...")
         self.load_table_counts()
+        logger.info("Done with table counts (1/8)")
         self.load_variant_abundance_histogram()
+        logger.info("Done with variant abundance histogram (2/8)")
         self.load_counts_variants_per_sample()
+        logger.info("Done with count variants per sample (3/8)")
         self.load_count_substitutions()
+        logger.info("Done with count base subsitutions (4/8)")
         self.load_indel_length()
+        logger.info("Done with indel length (5/8)")
         self.load_annotation()
+        logger.info("Done with effect annotations (6/8)")
         self.load_top_occurrences()
-        self.load_dn_ds()
+        logger.info("Done with top occurrent variants (7/8)")
+        self.ns_s_counts_loader.load()
+        logger.info("Done with NS S counts (8/8)")
 
     def load_counts_variants_per_sample(self):
 
@@ -287,101 +299,6 @@ class Precomputer:
             frequency_by_month=row["frequency_by_month"],
         )
 
-    def load_dn_ds(self):
-        data_s_ena = self._count_variant_observations_by_source_and_annotation(
-            source=DataSource.ENA, annotation=SYNONYMOUS_VARIANT).rename(columns={'count': 's'})
-        data_ns_ena = self._count_variant_observations_by_source_and_annotation(
-            source=DataSource.ENA, annotation=MISSENSE_VARIANT).rename(columns={'count': 'ns'})
-        data_s_gisaid = self._count_variant_observations_by_source_and_annotation(
-            source=DataSource.GISAID, annotation=SYNONYMOUS_VARIANT).rename(columns={'count': 's'})
-        data_ns_gisaid = self._count_variant_observations_by_source_and_annotation(
-            source=DataSource.GISAID, annotation=MISSENSE_VARIANT).rename(columns={'count': 'ns'})
-
-        genes = self.queries.get_genes()
-        genes_ratios = {}
-        for g in genes:
-            genes_ratios[g.name] = g.ratio_synonymous_non_synonymous
-
-        data_ena = pd.merge(
-            left=data_s_ena, right=data_ns_ena, on=["month", "gene_name", "country"], how='outer').fillna(0)
-        data_gisaid = pd.merge(
-            left=data_s_gisaid, right=data_ns_gisaid, on=["month", "gene_name", "country"], how='outer').fillna(0)
-
-        # delete all rows before starting
-        self.session.query(PrecomputedDnDs).delete()
-        self.session.commit()
-
-        database_rows = []
-        if data_ena is not None:
-            database_rows.extend(self._dn_ds_to_rows_by_source(
-                data=data_ena, source=DataSource.ENA, genes_ratios=genes_ratios))
-        if data_gisaid is not None:
-            database_rows.extend(self._dn_ds_to_rows_by_source(
-                data=data_gisaid, source=DataSource.GISAID, genes_ratios=genes_ratios))
-
-        if len(database_rows) > 0:
-            self.session.add_all(database_rows)
-            self.session.commit()
-        logger.info("Added {} entries to {}".format(len(database_rows), PrecomputedDnDs.__tablename__))
-
-    def _dn_ds_to_rows_by_source(self, data, source: DataSource, genes_ratios: Dict):
-        coding_region_ns = {}
-        coding_region_s = {}
-        database_rows = []
-        for index, row in data.iterrows():
-            # add entries per gene
-            month = row['month']
-            country = row['country']
-            ns = row["ns"]
-            s = row["s"]
-            gene_name = row["gene_name"]
-            gene_ratio = genes_ratios.get(gene_name)
-            database_rows.append(PrecomputedDnDs(
-                month=month,
-                region_type=RegionType.GENE,
-                region_name=gene_name,
-                country=country,
-                ns=ns,
-                s=s,
-                # this computes Ts/Tns / s/ns
-                dn_ds=self._calculate_dn_ds(gene_ratio, ns, s),
-                source=source
-            ))
-            coding_region_ns[(month, country)] = coding_region_ns.get((month, country), 0) + ns
-            coding_region_s[(month, country)] = coding_region_s.get((month, country), 0) + s
-        for month, country in coding_region_ns.keys():
-            database_rows.append(PrecomputedDnDs(
-                month=month,
-                region_type=RegionType.CODING_REGION,
-                country=country,
-                ns=coding_region_ns.get((month, country), 0),
-                s=coding_region_s.get((month, country), 0),
-                dn_ds=0.0,
-                source=source
-            ))
-        return database_rows
-
-    def _calculate_dn_ds(self, gene_ratio, ns, s):
-        dn_ds = None
-        if gene_ratio is not None and ns is not None and ns > 0 and s is not None and s > 0:
-            dn_ds = gene_ratio / (s / ns)
-        return dn_ds
-
-    def _count_variant_observations_by_source_and_annotation(self, source: DataSource, annotation: str):
-        sql_query = """
-                select count(*) as count, date_trunc('month', s.{date_field}) as month, vo.gene_name, s.country 
-                from {variant_observation_table} as vo join {sample_table} as s on vo.sample = s.run_accession 
-                where vo.source = '{source}' and vo.annotation_highest_impact = '{annotation}' 
-                    and s.{date_field} is not null
-                group by date_trunc('month', s.{date_field}), vo.gene_name, s.country;
-                """.format(variant_observation_table=VARIANT_OBSERVATION_TABLE_NAME,
-                           sample_table=SAMPLE_ENA_TABLE_NAME if source == DataSource.ENA else SAMPLE_GISAID_TABLE_NAME,
-                           date_field="collection_date" if source == DataSource.ENA else "date",
-                           source=source.name,
-                           annotation=annotation)
-        data = pd.read_sql_query(sql_query, self.session.bind)
-        return data
-
     def load_table_counts(self):
 
         count_variants = self.queries.count_variants(cache=False)
@@ -486,7 +403,7 @@ class Precomputer:
 
 if __name__ == '__main__':
     database = Database(initialize=True, config=Configuration())
-    precomputer = Precomputer(session=database.get_database_session())
+    precomputer = PrecomputationsLoader(session=database.get_database_session())
     #precomputer.load_dn_ds()
     #precomputer.load_table_counts()
     #precomputer.load_variant_abundance_histogram()

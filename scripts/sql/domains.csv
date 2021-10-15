@@ -1,0 +1,39 @@
+name,description,gene_name,start,end
+bCoV_NAR,"Non-structural protein NSP3, nucleic acid-binding (NAR) domain, betacoronavirus",ORF1ab,2188,2285
+bCoV_NS6,"Non-structural protein NS6, betacoronavirus",ORF6,27203,27263
+bCoV_NS7A,"Non-structural protein NS7A, coronavirus",ORF7a,27410,27515
+bCoV_NS7B,"Non-structural protein 7b, SARS-like",ORF7b,27757,27798
+bCoV_NS8,"Non-structural protein NS8, betacoronavirus",ORF8,27895,28012
+bCoV_NSP1,"Non-structural protein NSP1, betacoronavirus",ORF1ab,275,409
+bCoV_NSP3_N,"Non-structural protein NSP3, N-terminal, betacoronavirus",ORF1ab,1146,1316
+bCoV_S1_N,"Betacoronavirus-like spike glycoprotein S1, N-terminal",S,21596,21900
+bCoV_S1_RBD,"Spike receptor binding domain, betacoronavirus",S,21912,22089
+bCoV_SUD_C,"DPUP/SUD, C-terminal, betacoronavirus",ORF1ab,1764,1827
+bCoV_SUD_M,"Non-structural protein NSP3, single-stranded poly(A) binding domain, betacoronavirus",ORF1ab,1617,1759
+bCoV_viroporin,"Protein 3a, betacoronavirus",ORF3a,25394,25667
+CoV_E,"Envelope small membrane protein, coronavirus",E,26248,26313
+CoV_M,"M matrix/glycoprotein, coronavirus",M,26539,26739
+CoV_Methyltr_1,"Non-structural protein NSP15, coronavirus",ORF1ab,6195,6716
+CoV_Methyltr_2,"Non-structural protein NSP16, coronavirus-like",ORF1ab,7066,7361
+CoV_NSP10,"RNA synthesis protein NSP10, coronavirus",ORF1ab,4528,4650
+CoV_NSP15_C,"Coronavirus replicase NSP15, uridylate-specific endoribonuclease",ORF1ab,6910,7062
+CoV_NSP15_M,"Coronavirus replicase NSP15, middle domain",ORF1ab,6789,6885
+CoV_NSP15_N,"Coronavirus replicase NSP15, N-terminal oligomerisation",ORF1ab,6719,6779
+CoV_NSP2_C,"Coronavirus replicase NSP2, C-terminal",ORF1ab,918,1084
+CoV_NSP2_N,"Coronavirus replicase NSP2, N-terminal",ORF1ab,449,689
+CoV_NSP3_C,"Coronavirus replicase NSP3, C-terminal",ORF1ab,2527,3014
+CoV_NSP4_C,"Non-structural protein NSP4, C-terminal, coronavirus",ORF1ab,3432,3527
+CoV_NSP4_N,"Coronavirus replicase NSP4, N-terminal",ORF1ab,3054,3407
+CoV_NSP6,Coronavirus replicase NSP6,ORF1ab,3864,4125
+CoV_NSP7,"Non-structural protein NSP7, coronavirus",ORF1ab,4126,4208
+CoV_NSP8,"Non-structural protein NSP8, coronavirus-like",ORF1ab,4209,4405
+CoV_NSP9,"Non-structural protein NSP9, coronavirus",ORF1ab,4407,4519
+CoV_nucleocap,"Nucleocapsid protein, coronavirus",N,28316,28656
+CoV_peptidase,"Peptidase C16, coronavirus",ORF1ab,1830,2148
+CoV_RPol_N,"RNA polymerase, N-terminal, coronaviral",ORF1ab,4673,5024
+CoV_S1_C,"Coronavirus spike glycoprotein S1, C-terminal",S,22099,22155
+CoV_S2,"Spike glycoprotein S2, coronavirus",S,22274,22795
+Macro,Macro domain,ORF1ab,1324,1430
+Peptidase_C30,"Peptidase C30, coronavirus",ORF1ab,3558,3848
+RdRP_1,"RNA-directed RNA polymerase,  C-terminal domain",ORF1ab,5058,5546
+Viral_helicase1,(+) RNA virus helicase core domain,ORF1ab,5938,6162

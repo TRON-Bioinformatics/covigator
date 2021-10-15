@@ -1,3 +1,5 @@
 include covigator/dashboard/assets/*
 include covigator/references/*.bed
+include covigator/references/*.csv
+include covigator/references/*.json
 include covigator/tests/resources/*

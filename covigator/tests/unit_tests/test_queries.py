@@ -1,11 +1,12 @@
 import unittest
 
 from covigator import SYNONYMOUS_VARIANT
-from covigator.database.precomputed import Precomputer
+from covigator.precomputations.loader import PrecomputationsLoader
+from covigator.precomputations.load_ns_s_counts import NsSCountsLoader
 from covigator.database.model import JobStatus, DataSource, Sample, Gene, RegionType
 from covigator.database.queries import Queries
 from covigator.tests.unit_tests.abstract_test import AbstractTest
-from covigator.tests.unit_tests.mocked import get_mocked_ena_sample, get_mocked_log, get_mocked_variant, \
+from covigator.tests.unit_tests.mocked import get_mocked_log, get_mocked_variant, \
     get_mocked_variant_observation, mock_samples, mock_cooccurrence_matrix, mock_samples_and_variants
 
 
@@ -83,7 +84,7 @@ class QueriesTests(AbstractTest):
         self.assertIsNone(observed_date)
 
     def test_get_cooccurrence_matrix_by_gene_no_data(self):
-        Precomputer(session=self.session).load_table_counts()
+        PrecomputationsLoader(session=self.session).load_table_counts()
         data = self.queries.get_variants_cooccurrence_by_gene(gene_name="S", test=True)
         self.assertIsNone(data)
 
@@ -91,7 +92,7 @@ class QueriesTests(AbstractTest):
     @unittest.skip
     def test_get_cooccurrence_matrix_by_gene(self):
         other_variants, variants = mock_cooccurrence_matrix(faker=self.faker, session=self.session)
-        Precomputer(session=self.session).load_table_counts()
+        PrecomputationsLoader(session=self.session).load_table_counts()
 
         data = self.queries.get_variants_cooccurrence_by_gene(gene_name="S", min_cooccurrence=1, test=True)
         self.assertIsNotNone(data)
@@ -217,8 +218,8 @@ class QueriesTests(AbstractTest):
 
     def test_get_dnds_table(self):
         mock_samples_and_variants(session=self.session, faker=self.faker, num_samples=100)
-        precomputer = Precomputer(session=self.session)
-        precomputer.load_dn_ds()
+        nsSCountsLoader = NsSCountsLoader(session=self.session)
+        nsSCountsLoader.load()
 
         data = self.queries.get_dnds_table()
         self._assert_dnds_table(data)
@@ -244,7 +245,7 @@ class QueriesTests(AbstractTest):
     def _assert_dnds_table(self, data):
         self.assertIsNotNone(data)
         self.assertGreater(data.shape[0], 0)
-        self.assertEqual(data.shape[1], 9)
+        self.assertEqual(data.shape[1], 8)
         self.assertEqual(data[data.region_type != RegionType.GENE].shape[0], 0)  # all entries to a gene
         self.assertEqual(data[data.country.isna()].shape[0], 0)  # no empty countries
         self.assertEqual(data[data.month.isna()].shape[0], 0)  # no empty months

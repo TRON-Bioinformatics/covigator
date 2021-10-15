@@ -15,3 +15,5 @@ logs
 .nextflow
 data
 docs/build
+*.dirlock
+

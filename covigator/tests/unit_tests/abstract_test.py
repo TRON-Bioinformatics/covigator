@@ -6,7 +6,7 @@ from sqlalchemy import MetaData
 from covigator.database.database import Database
 from covigator.database.model import VariantCooccurrence, SampleEna, Sample, JobEna, JobGisaid, VariantObservation, \
     SampleGisaid, SubclonalVariantObservation, Variant, PrecomputedVariantAbundanceHistogram, PrecomputedTableCounts, \
-    PrecomputedDnDs, PrecomputedOccurrence, PrecomputedAnnotation, PrecomputedIndelLength, \
+    PrecomputedSynonymousNonSynonymousCounts, PrecomputedOccurrence, PrecomputedAnnotation, PrecomputedIndelLength, \
     PrecomputedSubstitutionsCounts, PrecomputedVariantsPerSample, Log
 from covigator.database.queries import Queries
 from covigator.pipeline.cooccurrence_matrix import CooccurrenceMatrix
@@ -56,7 +56,7 @@ class AbstractTest(TestCase):
             self._clean_table(PrecomputedIndelLength)
             self._clean_table(PrecomputedAnnotation)
             self._clean_table(PrecomputedOccurrence)
-            self._clean_table(PrecomputedDnDs)
+            self._clean_table(PrecomputedSynonymousNonSynonymousCounts)
             self._clean_table(PrecomputedTableCounts)
             self._clean_table(PrecomputedVariantAbundanceHistogram)
             self._clean_table(Log)

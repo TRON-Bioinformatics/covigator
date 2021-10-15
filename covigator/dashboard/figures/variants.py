@@ -12,7 +12,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import dash_html_components as html
 import dash_core_components as dcc
-from covigator.database.model import Gene
+from covigator.database.model import Gene, Domain
 
 VARIANT_TOOLTIP = '<b>%{text}</b><br>' + 'Allele frequency: %{y:.5f}<br>' + 'Genomic Position: %{x}'
 GENE_COLORS = cycle(plotly.express.colors.sequential.Reds)
@@ -254,9 +254,8 @@ class VariantsFigures(Figures):
 
         # reads genes and domains across the whole genome
         genes = self.queries.get_genes()
-        domains = []
-        for g in genes:
-            domains.extend([(g, d) for d in g.get_pfam_domains()])
+        domains = self.queries.get_domains()
+        genes_and_domains = [(list(filter(lambda g: g.name == d.gene_name, genes))[0], d) for d in domains]
 
         # reads variants abundance
         variant_abundance = self.queries.get_variant_abundance_histogram(bin_size=bin_size, source=source)
@@ -286,7 +285,7 @@ class VariantsFigures(Figures):
 
         gene_traces = [self._get_gene_trace(g, color=c, yaxis='y6') for g, c in zip(genes, GENE_COLORS)]
         domain_traces = [self._get_domain_trace(color=c, domain=d, gene=g, yaxis='y7')
-                         for (g, d), c in zip(domains, DOMAIN_COLORS)]
+                         for (g, d), c in zip(genes_and_domains, DOMAIN_COLORS)]
         conservation_traces = self._get_conservation_traces(
             conservation, xaxis='x', yaxis1='y3', yaxis2='y4', yaxis3='y5')
         variant_counts_traces = [
@@ -350,7 +349,7 @@ class VariantsFigures(Figures):
 
         # reads gene annotations
         gene = self.queries.get_gene(gene_name)
-        pfam_protein_features = gene.get_pfam_domains()
+        domains = self.queries.get_domains_by_gene(gene_name)
 
         # reads variants
         variants = self.queries.get_non_synonymous_variants_by_region(start=gene.start, end=gene.end, source=source)
@@ -417,7 +416,7 @@ class VariantsFigures(Figures):
                 gene, color=plotly.express.colors.sequential.Reds[1], yaxis='y5', xaxis=main_xaxis)
             domain_traces = [self._get_domain_trace(
                 color=c, gene=gene, domain=d, yaxis='y6', xaxis=main_xaxis, showlegend=True)
-                for d, c in zip(pfam_protein_features, DOMAIN_COLORS)]
+                for d, c in zip(domains, DOMAIN_COLORS)]
             conservation_traces = self._get_conservation_traces(
                 conservation, main_xaxis, yaxis1='y2', yaxis2='y3', yaxis3='y4')
 
@@ -490,10 +489,10 @@ class VariantsFigures(Figures):
         ]
 
     @staticmethod
-    def _get_domain_trace(color: str, domain: dict, gene: Gene, yaxis='y', xaxis='x', showlegend=False):
-        domain_start = gene.start + int(domain["start"])
-        domain_end = gene.start + int(domain["end"])
-        domain_name = domain.get('description')
+    def _get_domain_trace(color: str, domain: Domain, gene: Gene, yaxis='y', xaxis='x', showlegend=False):
+        domain_start = gene.start + (domain.start * 3)  # domain coordinates are in the protein space
+        domain_end = gene.start + (domain.end * 3)      # domain coordinates are in the protein space
+        domain_name = domain.name
         return go.Scatter(
             mode='lines',
             x=[domain_start, domain_end, domain_end, domain_start],

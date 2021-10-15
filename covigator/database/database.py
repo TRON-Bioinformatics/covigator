@@ -15,7 +15,6 @@ from covigator.references.gene_annotations import GeneAnnotationsLoader
 class Database:
 
     def __init__(self, config: Configuration = None, test=False, verbose=False, initialize=False):
-        self.config = config
         if test:
             # connects to the test postgres in the CI environment
             #db_uri = "postgresql+psycopg2://%s:%s@%s/%s" % ("test_user", "test_pass", "postgres", "test_db")
@@ -43,7 +42,7 @@ class Database:
         session = self.get_database_session()
         # loads reference genome if not set
         if session.query(Gene).count() == 0:
-            GeneAnnotationsLoader(session, config=self.config).load_data()
+            GeneAnnotationsLoader(session).load_data()
         if session.query(Conservation).count() == 0:
             ConservationLoader(session).load_data()
 
