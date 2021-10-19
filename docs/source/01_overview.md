@@ -80,7 +80,7 @@ For more information about healthcare solutions from Intel, visit intel.com/heal
 For more information about Intel’s COVID-19 response, visit 
 [intel.com/COVID-19](https://www.intel.com/content/www/us/en/corporate-responsibility/covid-19-response.html).
 
-We thank Franziska Lang and Özlem Muslu for critical discussions. We thank Rudolf Koopmann for his contribution to 
+We thank Franziska Lang for critical discussions and feedback. We thank Rudolf Koopmann for his contribution to 
 integrate Pangolin into the CoVigator pipeline.
 
 We gratefully acknowledge all data contributors, i.e. the Authors and their Originating laboratories responsible for 
