@@ -8,6 +8,7 @@
 [![Run unit tests](https://github.com/TRON-Bioinformatics/covigator/actions/workflows/unit_tests.yml/badge.svg?branch=main)](https://github.com/TRON-Bioinformatics/covigator/actions/workflows/unit_tests.yml)
 [![Powered by Dash](https://img.shields.io/badge/powered%20by-Dash-orange.svg?style=flat&colorA=E1523D&colorB=007D8A)](https://dash.plotly.com/)
 [![License](https://img.shields.io/badge/license-MIT-green)](https://opensource.org/licenses/MIT)
+[![Documentation Status](https://readthedocs.org/projects/covigator/badge/?version=latest)](https://covigator.readthedocs.io/en/latest/?badge=latest)
 
 
 Human infections with SARS-CoV-2 are spreading globally since the beginning of 2020, necessitating preventive or 
@@ -17,33 +18,34 @@ incorporated in global efforts to sustainably prevent or treat infections. Thus,
 vaccine design efforts to overcome the threats of this pandemic.
 
 CoVigator is a monitoring system for SARS-CoV-2 which integrates a full variant calling pipeline, 
-a database that stores all relevant information about mutations in SARS-CoV-2, a dashboard to enable visual analytics
-and finally an Application Programming Interface to make the data programmatically available.
+a database that stores all relevant information about mutations in SARS-CoV-2 and finally a dashboard to enable 
+visual analytics.
 
 CoVigator loads publicly available SARS-CoV-2 DNA sequences from two systems:
 
 * European Nucleotide Archive (ENA) providing raw reads in FASTQ format
 * Global Initiative on Sharing Avian Influenza Data (GISAID) providing assemblies in FASTA format
 
-The dashboard is implemented in the popular visualization framework Dash ![https://dash.plotly.com/](https://dash.plotly.com/). 
-The computation is distributed through our cluster with a library of similar name and popularity Dask ![https://dask.org/](https://dask.org/).
-The analysis pipeline is implemented in the Nextflow framework ![https://www.nextflow.io/](https://www.nextflow.io/), for full details go to 
-![https://github.com/TRON-Bioinformatics/covigator-ngs-pipeline](https://github.com/TRON-Bioinformatics/covigator-ngs-pipeline).
+The dashboard is implemented in the popular visualization framework Dash [https://dash.plotly.com/](https://dash.plotly.com/). 
+The computation is distributed through our cluster with a library of similar name and popularity Dask [https://dask.org/](https://dask.org/).
+The analysis pipeline is implemented in the Nextflow framework [https://www.nextflow.io/](https://www.nextflow.io/), for full details go to 
+[https://github.com/TRON-Bioinformatics/covigator-ngs-pipeline](https://github.com/TRON-Bioinformatics/covigator-ngs-pipeline).
 
-![CoVigator sample accumulation](covigator/dashboard/assets/screenshot_samples_by_country.png "CoVigator sample accumulation")
+![CoVigator sample accumulation](docs/figures/screenshot_samples_by_country.png "CoVigator sample accumulation")
   Figure 1: Sample accumulation by country
 
-![CoVigator gene S view](covigator/dashboard/assets/screenshot_gene_view.png "CoVigator gene S view")
+![CoVigator gene S view](docs/figures/screenshot_gene_view.png "CoVigator gene S view")
   Figure 2: Most frequent mutations in the spike gene
 
 
 The CoVigator project was developed at the Biomarker Development Center at 
 TRON (Translational Oncology at the University Medical Center of the Johannes Gutenberg University gGmbH). 
-The project was kindly supported by Intel´s Pandemic Response Technology Initiative ![https://newsroom.intel.com/tag/pandemic-response-technology-initiative](https://newsroom.intel.com/tag/pandemic-response-technology-initiative).
+
+The project was kindly supported by Intel´s Pandemic Response Technology Initiative [https://newsroom.intel.com/tag/pandemic-response-technology-initiative](https://newsroom.intel.com/tag/pandemic-response-technology-initiative).
 
 If you want to cite us:
 
-* Schrörs, B., Gudimella, R., Bukur, T., Rösler, T., Löwer, M., & Sahin, U. (2021). Large-scale analysis of SARS-CoV-2 spike-glycoprotein mutants demonstrates the need for continuous screening of virus isolates. BioRxiv, 2021.02.04.429765. ![https://doi.org/10.1101/2021.02.04.429765](https://doi.org/10.1101/2021.02.04.429765)
+* Schrörs, B., Riesgo-Ferreiro, P., Sorn, P., Gudimella, R., Bukur, T., Rösler, T., Löwer, M., & Sahin, U. (2021). Large-scale analysis of SARS-CoV-2 spike-glycoprotein mutants demonstrates the need for continuous screening of virus isolates. PLOS ONE, 16(9), e0249254. [https://doi.org/10.1371/journal.pone.0249254](https://doi.org/10.1371/journal.pone.0249254)
 
 ## System architecture
 

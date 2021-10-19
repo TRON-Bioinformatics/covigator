@@ -55,9 +55,10 @@ def get_tab_overview(queries: Queries):
                    html.Br(),
                    html.P("If you want to cite us:"),
                    html.P([
-                       "Schrörs, B., Gudimella, R., Bukur, T., Rösler, T., Löwer, M., & Sahin, U. (2021). "
-                       "Large-scale analysis of SARS-CoV-2 spike-glycoprotein mutants demonstrates the "
-                       "need for continuous screening of virus isolates. BioRxiv, 2021.02.04.429765. ",
+                       "Schrörs, B., Riesgo-Ferreiro, P., Sorn, P., Gudimella, R., Bukur, T., Rösler, T., "
+                       "Löwer, M., & Sahin, U. (2021). Large-scale analysis of SARS-CoV-2 spike-glycoprotein mutants "
+                       "demonstrates the need for continuous screening of virus isolates. PLOS ONE, 16(9), e0249254. "
+                       "https://doi.org/10.1371/journal.pone.0249254",
                        ],
                        style={"font-style": "italic", "margin-left": "50px"}),
                    html.P(
