@@ -18,8 +18,9 @@
 # -- Project information -----------------------------------------------------
 
 project = 'CoVigator'
-copyright = '2021, TRON – Translational Oncology at the University Medical Center of the Johannes Gutenberg University Mainz - Computational Medicine'
-author = 'Pablo Riesgo-Ferreiro, Patrick Sorn, Thomas Bukur, Ranganatha Gudimela, Thomas Rösler, Barbara Schrörs, Martin Löwer'
+copyright = '2021, TRON – Translational Oncology at the University Medical Center of the Johannes Gutenberg ' \
+            'University Mainz - Biomarkers Development Center'
+author = 'Thomas Bukur, Pablo Riesgo-Ferreiro, Patrick Sorn, Ranganatha Gudimela, Thomas Rösler, Barbara Schrörs, Martin Löwer'
 
 
 # -- General configuration ---------------------------------------------------
@@ -67,7 +68,7 @@ html_theme_options = {
 }
 
 html_logo = "_templates/tron.svg"
-html_favicon = "_templates/tron_small.svg"
+html_favicon = "_templates/covigator.ico"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
