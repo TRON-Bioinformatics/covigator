@@ -257,10 +257,10 @@ class Queries:
         return pd.read_sql(self.session.query(Gene).order_by(Gene.start).statement, self.session.bind)
 
     def get_domains(self) -> List[Domain]:
-        return self.session.query(Domain).order_by(and_(Domain.gene_name, Domain.start)).all()
+        return self.session.query(Domain).order_by(Domain.gene_name, Domain.start).all()
 
-    def get_domains_by_gene(self, gene_name: str) -> Domain:
-        return self.session.query(Domain).filter(Domain.gene_name == gene_name).first()
+    def get_domains_by_gene(self, gene_name: str) -> List[Domain]:
+        return self.session.query(Domain).filter(Domain.gene_name == gene_name).all()
 
     def get_non_synonymous_variants_by_region(self, start, end, source) -> pd.DataFrame:
         query = self.session.query(VariantObservation.position,

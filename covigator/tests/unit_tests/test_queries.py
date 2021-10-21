@@ -3,7 +3,7 @@ import unittest
 from covigator import SYNONYMOUS_VARIANT
 from covigator.precomputations.loader import PrecomputationsLoader
 from covigator.precomputations.load_ns_s_counts import NsSCountsLoader
-from covigator.database.model import JobStatus, DataSource, Sample, Gene, RegionType
+from covigator.database.model import JobStatus, DataSource, Sample, Gene, RegionType, Domain
 from covigator.database.queries import Queries
 from covigator.tests.unit_tests.abstract_test import AbstractTest
 from covigator.tests.unit_tests.mocked import get_mocked_log, get_mocked_variant, \
@@ -197,6 +197,7 @@ class QueriesTests(AbstractTest):
         self.assertGreater(len(genes), 0)
         for g in genes:
             self.assertIsInstance(g, Gene)
+            self.assertIsNotNone(g.name)
 
     def test_get_gene(self):
         gene = self.queries.get_gene("S")
@@ -204,6 +205,24 @@ class QueriesTests(AbstractTest):
         self.assertIsInstance(gene, Gene)
         gene = self.queries.get_gene("NOEXISTO")
         self.assertIsNone(gene)
+
+    def test_get_domains(self):
+        domains = self.queries.get_domains()
+        self.assertIsNotNone(domains)
+        self.assertGreater(len(domains), 0)
+        for d in domains:
+            self.assertIsInstance(d, Domain)
+            self.assertIsNotNone(d.name)
+            self.assertIsNotNone(d.gene_name)
+
+    def test_get_domains_by_gene(self):
+        domains = self.queries.get_domains_by_gene("S")
+        self.assertIsNotNone(domains)
+        self.assertGreater(len(domains), 0)
+        for d in domains:
+            self.assertIsInstance(d, Domain)
+            self.assertIsNotNone(d.name)
+            self.assertEqual(d.gene_name, "S")
 
     def test_count_jobs_in_queue(self):
         mock_samples(faker=self.faker, session=self.session, job_status=JobStatus.QUEUED, num_samples=50)
