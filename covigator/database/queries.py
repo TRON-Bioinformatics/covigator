@@ -247,18 +247,23 @@ class Queries:
                          and_(SampleGisaid.finished, SampleGisaid.date.isnot(None))).distinct().all()]
         return sorted(set(dates_ena + dates_gisaid))
 
+    @functools.lru_cache()
     def get_gene(self, gene_name: str) -> Gene:
         return self.session.query(Gene).filter(Gene.name == gene_name).first()
 
+    @functools.lru_cache()
     def get_genes(self) -> List[Gene]:
         return self.session.query(Gene).order_by(Gene.start).all()
 
+    @functools.lru_cache()
     def get_genes_df(self) -> pd.DataFrame:
         return pd.read_sql(self.session.query(Gene).order_by(Gene.start).statement, self.session.bind)
 
+    @functools.lru_cache()
     def get_domains(self) -> List[Domain]:
         return self.session.query(Domain).order_by(Domain.gene_name, Domain.start).all()
 
+    @functools.lru_cache()
     def get_domains_by_gene(self, gene_name: str) -> List[Domain]:
         return self.session.query(Domain).filter(Domain.gene_name == gene_name).all()
 
