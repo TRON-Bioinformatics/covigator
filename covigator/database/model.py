@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import List
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, String, Float, Enum, DateTime, Integer, Boolean, Date, ForeignKey, \
-    ForeignKeyConstraint, BigInteger, JSON
+    ForeignKeyConstraint, BigInteger, JSON, Index
 import enum
 
 from covigator.configuration import Configuration
@@ -421,6 +421,9 @@ class VariantObservation(Base):
 
     ForeignKeyConstraint([sample, source], [Sample.id, Sample.source])
     ForeignKeyConstraint([variant_id], [Variant.variant_id])
+
+    __table_args__ = (Index("{}_index_annotation_position".format(VARIANT_OBSERVATION_TABLE_NAME),
+                            "annotation", "position"),)
 
 
 class SubclonalVariantObservation(Base):

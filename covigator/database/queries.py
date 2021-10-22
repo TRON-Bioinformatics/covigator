@@ -272,8 +272,8 @@ class Queries:
                                       VariantObservation.annotation,
                                       VariantObservation.hgvs_p,
                                       func.count().label("count_occurrences"))\
-            .filter(and_(VariantObservation.position >= start, VariantObservation.position <= end,
-                         VariantObservation.annotation != SYNONYMOUS_VARIANT))
+            .filter(and_(VariantObservation.annotation != SYNONYMOUS_VARIANT,
+                         VariantObservation.position >= start, VariantObservation.position <= end))
         if source == DataSource.ENA.name:
             query = query.filter(VariantObservation.source == DataSource.ENA)
         elif source == DataSource.GISAID.name:
