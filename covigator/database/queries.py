@@ -269,16 +269,16 @@ class Queries:
 
     def get_non_synonymous_variants_by_region(self, start, end, source) -> pd.DataFrame:
         query = self.session.query(VariantObservation.position,
-                                      VariantObservation.annotation,
+                                      VariantObservation.annotation_highest_impact,
                                       VariantObservation.hgvs_p,
                                       func.count().label("count_occurrences"))\
-            .filter(and_(VariantObservation.annotation != SYNONYMOUS_VARIANT,
+            .filter(and_(VariantObservation.annotation_highest_impact != SYNONYMOUS_VARIANT,
                          VariantObservation.position >= start, VariantObservation.position <= end))
         if source == DataSource.ENA.name:
             query = query.filter(VariantObservation.source == DataSource.ENA)
         elif source == DataSource.GISAID.name:
             query = query.filter(VariantObservation.source == DataSource.GISAID)
-        subquery = query.group_by(VariantObservation.position, VariantObservation.annotation, VariantObservation.hgvs_p).subquery()
+        subquery = query.group_by(VariantObservation.position, VariantObservation.annotation_highest_impact, VariantObservation.hgvs_p).subquery()
         return pd.read_sql(
             self.session.query(subquery).filter(subquery.c.count_occurrences > 1).statement, self.session.bind)
 

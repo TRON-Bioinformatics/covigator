@@ -423,7 +423,10 @@ class VariantObservation(Base):
     ForeignKeyConstraint([variant_id], [Variant.variant_id])
 
     __table_args__ = (Index("{}_index_annotation_position".format(VARIANT_OBSERVATION_TABLE_NAME),
-                            "annotation", "position"),)
+                            "annotation_highest_impact", "position"),
+                      Index("{}_index_sample".format(VARIANT_OBSERVATION_TABLE_NAME),
+                            "sample")
+                      )
 
 
 class SubclonalVariantObservation(Base):
