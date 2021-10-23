@@ -55,7 +55,8 @@ def get_mocked_variant_observation(sample: Sample, variant: Variant, faker=Faker
         annotation=variant.annotation,
         annotation_highest_impact=variant.annotation_highest_impact,
         gene_name=variant.gene_name,
-        pfam_name=variant.pfam_name
+        pfam_name=variant.pfam_name,
+        date=faker.date_time()
     )
 
 

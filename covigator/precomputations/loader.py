@@ -1,23 +1,18 @@
-import numpy as np
 import pandas as pd
 from sqlalchemy.orm import Session
-from typing import List, Dict
-
-from covigator import SYNONYMOUS_VARIANT, MISSENSE_VARIANT
 from covigator.configuration import Configuration
 from covigator.dashboard.tabs.variants import BIN_SIZE_VALUES
 from covigator.database.database import Database
 from covigator.database.model import PrecomputedVariantsPerSample, PrecomputedSubstitutionsCounts, \
     VARIANT_OBSERVATION_TABLE_NAME, PrecomputedIndelLength, \
-    PrecomputedAnnotation, VariantObservation, DataSource, PrecomputedOccurrence, PrecomputedSynonymousNonSynonymousCounts, \
-    SAMPLE_ENA_TABLE_NAME, SAMPLE_GISAID_TABLE_NAME, PrecomputedTableCounts, Variant, \
-    SubclonalVariantObservation, Sample, PrecomputedVariantAbundanceHistogram, RegionType, Gene
+    PrecomputedAnnotation, VariantObservation, DataSource, \
+    PrecomputedTableCounts, Variant, \
+    SubclonalVariantObservation, Sample, PrecomputedVariantAbundanceHistogram
 from logzero import logger
 
 from covigator.database.queries import Queries
 from covigator.precomputations.load_ns_s_counts import NsSCountsLoader
-
-NUMBER_TOP_OCCURRENCES = 1000
+from covigator.precomputations.load_top_occurrences import TopOccurrencesLoader
 
 
 class PrecomputationsLoader:
@@ -26,6 +21,7 @@ class PrecomputationsLoader:
         self.session = session
         self.queries = Queries(session=self.session)
         self.ns_s_counts_loader = NsSCountsLoader(session=session)
+        self.top_occurrences_loader = TopOccurrencesLoader(session=session)
 
     def load(self):
         logger.info("Starting precomputations...")
@@ -41,7 +37,7 @@ class PrecomputationsLoader:
         logger.info("Done with indel length (5/8)")
         self.load_annotation()
         logger.info("Done with effect annotations (6/8)")
-        self.load_top_occurrences()
+        self.top_occurrences_loader.load()
         logger.info("Done with top occurrent variants (7/8)")
         self.ns_s_counts_loader.load()
         logger.info("Done with NS S counts (8/8)")
@@ -234,70 +230,6 @@ class PrecomputationsLoader:
         self.session.add_all(database_rows)
         self.session.commit()
         logger.info("Added {} entries to {}".format(len(database_rows), PrecomputedAnnotation.__tablename__))
-
-    def load_top_occurrences(self):
-
-        # gets the top occurrent variants for each source and overall
-        top_occurring_variants_ena = None
-        try:
-            top_occurring_variants_ena = self.queries.get_top_occurring_variants(
-                top=NUMBER_TOP_OCCURRENCES, source=DataSource.ENA.name)
-        except ValueError as e:
-            logger.exception(e)
-            logger.error("No top occurrences for ENA data")
-
-        top_occurring_variants_gisaid = None
-        try:
-            top_occurring_variants_gisaid = self.queries.get_top_occurring_variants(
-                top=NUMBER_TOP_OCCURRENCES, source=DataSource.GISAID.name)
-        except ValueError:
-            logger.error("No top occurrences for GISAID data")
-
-        top_occurring_variants = None
-        try:
-            top_occurring_variants = self.queries.get_top_occurring_variants(top=NUMBER_TOP_OCCURRENCES)
-        except ValueError:
-            logger.error("No top occurrences")
-
-        # delete all rows before starting
-        self.session.query(PrecomputedOccurrence).delete()
-        self.session.commit()
-
-        database_rows = []
-        # stores the precomputed data
-        if top_occurring_variants_ena is not None:
-            for index, row in top_occurring_variants_ena.iterrows():
-                # add entries per gene
-                database_rows.append(self._row_to_top_occurrence(row, source=DataSource.ENA))
-
-        if top_occurring_variants_gisaid is not None:
-            for index, row in top_occurring_variants_gisaid.iterrows():
-                # add entries per gene
-                database_rows.append(self._row_to_top_occurrence(row, source=DataSource.GISAID))
-
-        if top_occurring_variants is not None:
-            for index, row in top_occurring_variants.iterrows():
-                # add entries per gene
-                database_rows.append(self._row_to_top_occurrence(row))
-
-        if len(database_rows) > 0:
-            self.session.add_all(database_rows)
-            self.session.commit()
-        logger.info("Added {} entries to {}".format(len(database_rows), PrecomputedOccurrence.__tablename__))
-
-    def _row_to_top_occurrence(self, row, source=None):
-        return PrecomputedOccurrence(
-            total=row["total"],
-            frequency=row["frequency"],
-            variant_id=row["variant_id"],
-            hgvs_p=row["hgvs_p"],
-            gene_name=row["gene_name"],
-            annotation=row["annotation_highest_impact"],
-            source=source,
-            month=row["month"],
-            count=row["count"],
-            frequency_by_month=row["frequency_by_month"],
-        )
 
     def load_table_counts(self):
 
