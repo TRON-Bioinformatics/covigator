@@ -546,7 +546,8 @@ class Queries:
                 lambda d: "{}-{:02d}".format(d.year, int(d.month)))
         return top_occurring_variants
 
-    def get_top_occurring_variants_precomputed(self, top=10, gene_name=None, metric="count", source=None) -> pd.DataFrame:
+    def get_top_occurring_variants_precomputed(
+            self, top=10, gene_name=None, domain=None, metric="count", source=None) -> pd.DataFrame:
         """
         Returns the top occurring variants + the segregated counts of occurrences per month
         with columns: chromosome, position, reference, alternate, total, month, count

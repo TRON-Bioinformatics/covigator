@@ -4,6 +4,8 @@ import dash_table
 import numpy as np
 import re
 
+from logzero import logger
+
 from covigator import MISSENSE_VARIANT, DISRUPTIVE_INFRAME_DELETION, CONSERVATIVE_INFRAME_DELETION, \
     CONSERVATIVE_INFRAME_INSERTION, DISRUPTIVE_INFRAME_INSERTION
 from covigator.dashboard.figures.figures import Figures, PLOTLY_CONFIG, TEMPLATE, MARGIN, STYLES_STRIPPED, STYLE_HEADER
@@ -83,8 +85,8 @@ class VariantsFigures(Figures):
             }
         ]
 
-    def get_top_occurring_variants_plot(self, top, gene_name, date_range_start, date_range_end, metric, source):
-        data = self.queries.get_top_occurring_variants_precomputed(top, gene_name, metric, source)
+    def get_top_occurring_variants_plot(self, top, gene_name, domain, date_range_start, date_range_end, metric, source):
+        data = self.queries.get_top_occurring_variants_precomputed(top, gene_name, domain, metric, source)
         fig = dcc.Markdown("""**No variants for the current selection**""")
         if data is not None and data.shape[0] > 0:
             # removes the columns from the months out of the range
@@ -348,45 +350,48 @@ class VariantsFigures(Figures):
     def get_variants_plot(self, gene_name, selected_variants, bin_size, source=None):
 
         # reads gene annotations
+        logger.debug("Getting genes and domains...")
         gene = self.queries.get_gene(gene_name)
         domains = self.queries.get_domains_by_gene(gene_name)
 
         # reads variants
+        logger.debug("Getting variants...")
         variants = self.queries.get_non_synonymous_variants_by_region(start=gene.start, end=gene.end, source=source)
 
         # reads conservation and bins it
+        logger.debug("Getting conservation...")
         conservation = self.queries.get_conservation_table(start=gene.start, end=gene.end, bin_size=bin_size)
 
         if variants.shape[0] > 0:
             # reads total number of samples and calculates frequencies
+            logger.info("Getting sample count...")
             count_samples = self.queries.count_samples(source=source)
             variants["af"] = variants.count_occurrences / count_samples
             variants["log_af"] = variants.af.transform(lambda x: np.log(x + 1))
             variants["log_count"] = variants.count_occurrences.transform(lambda x: np.log(x))
-            # TODO: do something in the data ingestion about multiple annotations on the same variant
-            variants.annotation = variants.annotation.transform(lambda a: a.split("&")[0])
+            variants.annotation_highest_impact = variants.annotation_highest_impact.transform(lambda a: a.split("&")[0])
 
             main_xaxis = 'x'
 
             variants_traces = []
-            missense_variants = variants[variants.annotation == MISSENSE_VARIANT]
+            missense_variants = variants[variants.annotation_highest_impact == MISSENSE_VARIANT]
             if missense_variants.shape[0] > 0:
                 variants_traces.append(self._get_variants_scatter(
                     missense_variants, name="missense variants", symbol=MISSENSE_VARIANT_SYMBOL, xaxis=main_xaxis))
 
-            deletion_variants = variants[variants.annotation.isin(
+            deletion_variants = variants[variants.annotation_highest_impact.isin(
                 [DISRUPTIVE_INFRAME_DELETION, CONSERVATIVE_INFRAME_DELETION])]
             if deletion_variants.shape[0] > 0:
                 variants_traces.append(self._get_variants_scatter(
                     deletion_variants, name="inframe deletions", symbol=DELETION_SYMBOL, xaxis=main_xaxis))
 
-            insertion_variants = variants[variants.annotation.isin(
+            insertion_variants = variants[variants.annotation_highest_impact.isin(
                 [DISRUPTIVE_INFRAME_INSERTION, CONSERVATIVE_INFRAME_INSERTION])]
             if insertion_variants.shape[0] > 0:
                 variants_traces.append(self._get_variants_scatter(
                     insertion_variants, name="inframe insertions", symbol=INSERTION_SYMBOL, xaxis=main_xaxis))
 
-            other_variants = variants[~variants.annotation.isin([
+            other_variants = variants[~variants.annotation_highest_impact.isin([
                 MISSENSE_VARIANT, DISRUPTIVE_INFRAME_DELETION, CONSERVATIVE_INFRAME_DELETION,
                 DISRUPTIVE_INFRAME_INSERTION, CONSERVATIVE_INFRAME_DELETION])]
             if other_variants.shape[0] > 0:
@@ -408,7 +413,7 @@ class VariantsFigures(Figures):
                     ),
                     xaxis=main_xaxis,
                     showlegend=True,
-                    text=["{} ({})".format(v.get("hgvs_p"), v.get("annotation")) for v in selected_variants],
+                    text=["{} ({})".format(v.get("hgvs_p"), v.get("annotation_highest_impact")) for v in selected_variants],
                     hovertemplate=VARIANT_TOOLTIP
                 )
 
@@ -540,7 +545,7 @@ class VariantsFigures(Figures):
             ),
             xaxis=xaxis,
             showlegend=True,
-            text=variants[["hgvs_p", "annotation"]].apply(lambda x: "{} ({})".format(x[0], x[1]), axis=1),
+            text=variants[["hgvs_p", "annotation_highest_impact"]].apply(lambda x: "{} ({})".format(x[0], x[1]), axis=1),
             hovertemplate=VARIANT_TOOLTIP
         )
 

@@ -13,6 +13,7 @@ from covigator.database.queries import Queries
 
 ID_DROPDOWN_DATE_RANGE_END_DIV = 'dropdown-date-range-end-div'
 ID_DROPDOWN_GENE = 'dropdown-gene'
+ID_DROPDOWN_DOMAIN = 'dropdown-domain'
 ID_SLIDER_MIN_SAMPLES = 'slider-min-samples'
 ID_SLIDER_MIN_COOCCURRENCES = 'slider-min-cooccurrences'
 ID_DROPDOWN_SIMILARITY_METRIC = 'dropdown-heatmap-metric'
@@ -58,7 +59,8 @@ def get_variants_tab_graphs():
 
 def get_variants_tab_left_bar(queries: Queries):
 
-    genes = queries.get_genes()
+    # removes repeated gene names (ie: ORF1ab)
+    genes = sorted({c.name for c in queries.get_genes()})
     months = queries.get_sample_months(MONTH_PATTERN)
     today = datetime.now()
     today_formatted = today.strftime(MONTH_PATTERN)
@@ -79,11 +81,18 @@ def get_variants_tab_left_bar(queries: Queries):
         dcc.Markdown("Select a gene"),
         dcc.Dropdown(
             id=ID_DROPDOWN_GENE,
-            options=[{'label': c.name, 'value': c.name} for c in genes],
+            options=[{'label': g, 'value': g} for g in genes],
             value=None,
             multi=False
         ),
         html.Br(),
+        dcc.Markdown("""Select a protein domain"""),
+        dcc.Dropdown(
+            id=ID_DROPDOWN_DOMAIN,
+            value=None,
+            multi=False
+        ),
+
         dcc.Markdown("""**Top occurring variants**
 
 Number of top occurring variants"""),
@@ -188,17 +197,26 @@ def set_callbacks_variants_tab(app, session: Session):
     figures = VariantsFigures(queries=queries)
 
     @app.callback(
+        Output(ID_DROPDOWN_DOMAIN, 'options'),
+        Input(ID_DROPDOWN_GENE, 'value'))
+    def set_domains(selected_gene):
+        domains = queries.get_domains_by_gene(selected_gene) if selected_gene else queries.get_domains()
+        domain_labels = sorted({("{gene}: {domain}".format(domain=d.name, gene=d.gene_name), d.name) for d in domains})
+        return [{'label': label, 'value': value} for label, value in domain_labels]
+
+    @app.callback(
         Output(ID_TOP_OCCURRING_VARIANTS, 'children'),
         Input(ID_SLIDER_TOP_VARIANTS, 'value'),
         Input(ID_DROPDOWN_GENE, 'value'),
+        Input(ID_DROPDOWN_DOMAIN, 'value'),
         Input(ID_DROPDOWN_DATE_RANGE_START, 'value'),
         Input(ID_DROPDOWN_DATE_RANGE_END, 'value'),
         Input(ID_TOP_VARIANTS_METRIC, 'value'),
         Input(ID_DROPDOWN_DATA_SOURCE, 'value'),
     )
-    def update_top_occurring_variants(top_variants, gene_name, date_range_start, date_range_end, metric, source):
+    def update_top_occurring_variants(top_variants, gene_name, domain, date_range_start, date_range_end, metric, source):
         return html.Div(children=figures.get_top_occurring_variants_plot(
-            top=top_variants, gene_name=gene_name, date_range_start=date_range_start,
+            top=top_variants, gene_name=gene_name, domain=domain, date_range_start=date_range_start,
             date_range_end=date_range_end, metric=metric, source=source))
 
     @app.callback(
