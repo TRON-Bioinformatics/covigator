@@ -267,6 +267,7 @@ class Queries:
     def get_domains_by_gene(self, gene_name: str) -> List[Domain]:
         return self.session.query(Domain).filter(Domain.gene_name == gene_name).all()
 
+    @functools.lru_cache()
     def get_non_synonymous_variants_by_region(self, start, end, source) -> pd.DataFrame:
         query = self.session.query(VariantObservation.position,
                                       VariantObservation.annotation_highest_impact,
