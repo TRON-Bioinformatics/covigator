@@ -75,6 +75,7 @@ class TopOccurrencesLoader:
             variant_id=row["variant_id"],
             hgvs_p=row["hgvs_p"],
             gene_name=row["gene_name"],
+            domain=row["pfam_name"],
             annotation=row["annotation_highest_impact"],
             source=source,
             month=row["month"],

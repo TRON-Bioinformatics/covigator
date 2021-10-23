@@ -103,4 +103,5 @@ class TestPrecomputer(AbstractTest):
                 self.assertGreater(o.frequency, 0.0)
                 self.assertIsNotNone(o.variant_id)
                 self.assertIsNotNone(o.gene_name)
+                self.assertIsNotNone(o.domain)
                 self.assertIsNotNone(o.annotation)

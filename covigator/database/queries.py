@@ -506,12 +506,12 @@ class Queries:
     def get_top_occurring_variants(self, top, source: str = None):
         query = self.session.query(
             VariantObservation.variant_id, VariantObservation.hgvs_p, VariantObservation.gene_name,
-            VariantObservation.annotation_highest_impact, func.count().label('total')) \
+            VariantObservation.pfam_name, VariantObservation.annotation_highest_impact, func.count().label('total')) \
             .filter(VariantObservation.annotation_highest_impact != SYNONYMOUS_VARIANT)
         if source is not None:
             query = query.filter(VariantObservation.source == source)
         query = query.group_by(VariantObservation.variant_id, VariantObservation.hgvs_p, VariantObservation.gene_name,
-                      VariantObservation.annotation_highest_impact) \
+                      VariantObservation.pfam_name, VariantObservation.annotation_highest_impact) \
             .order_by(desc('total')).limit(top)
         top_occurring_variants = pd.read_sql(query.statement, self.session.bind)
 

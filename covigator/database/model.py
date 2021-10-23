@@ -606,6 +606,7 @@ class PrecomputedOccurrence(Base):
     variant_id = Column(String)
     hgvs_p = Column(String)
     gene_name = Column(String)
+    domain = Column(String)
     annotation = Column(String)
     source = Column(Enum(DataSource, name=DataSource.__constraint_name__))
 
