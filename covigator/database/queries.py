@@ -256,6 +256,10 @@ class Queries:
         return pd.read_sql(self.session.query(Gene).order_by(Gene.start).statement, self.session.bind)
 
     @functools.lru_cache()
+    def get_domains_df(self) -> pd.DataFrame:
+        return pd.read_sql(self.session.query(Domain).order_by(Domain.start).statement, self.session.bind)
+
+    @functools.lru_cache()
     def get_domain(self, domain_name: str) -> Domain:
         return self.session.query(Domain).filter(Domain.name == domain_name).first()
 
@@ -740,16 +744,31 @@ class Queries:
 
     def get_dnds_table(self, source: DataSource = None, countries=None, genes=None) -> pd.DataFrame:
         # counts variants over those bins
-        query = self.session.query(PrecomputedSynonymousNonSynonymousCounts).filter(PrecomputedSynonymousNonSynonymousCounts.region_type == RegionType.GENE)
+        query_genes = self.session.query(PrecomputedSynonymousNonSynonymousCounts)\
+            .filter(PrecomputedSynonymousNonSynonymousCounts.region_type == RegionType.GENE)
+        query_domains = self.session.query(PrecomputedSynonymousNonSynonymousCounts) \
+            .filter(PrecomputedSynonymousNonSynonymousCounts.region_type == RegionType.DOMAIN)
+        data_domains = None
 
         if source is not None:
-            query = query.filter(PrecomputedSynonymousNonSynonymousCounts.source == source)
+            query_genes = query_genes.filter(PrecomputedSynonymousNonSynonymousCounts.source == source)
+            query_domains = query_domains.filter(PrecomputedSynonymousNonSynonymousCounts.source == source)
         if countries is not None and len(countries) > 0:
-            query = query.filter(PrecomputedSynonymousNonSynonymousCounts.country.in_(countries))
+            query_genes = query_genes.filter(PrecomputedSynonymousNonSynonymousCounts.country.in_(countries))
+            query_domains = query_domains.filter(PrecomputedSynonymousNonSynonymousCounts.country.in_(countries))
         if genes is not None and len(genes) > 0:
-            query = query.filter(PrecomputedSynonymousNonSynonymousCounts.region_name.in_(genes))
+            query_genes = query_genes.filter(PrecomputedSynonymousNonSynonymousCounts.region_name.in_(genes))
+            domains = []
+            for g in genes:
+                domains = domains + [d.name for d in self.get_domains_by_gene(gene_name=g)]
+            query_domains = query_domains.filter(PrecomputedSynonymousNonSynonymousCounts.region_name.in_(domains))
+            data_domains = pd.read_sql(query_domains.statement, self.session.bind)
 
-        return pd.read_sql(query.statement, self.session.bind)
+        data = pd.read_sql(query_genes.statement, self.session.bind)
+        if data_domains is not None and data_domains.shape[1] > 0:
+            data = pd.concat([data, data_domains])
+
+        return data
 
     def _print_query(self, query):
         class StringLiteral(String):

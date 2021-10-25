@@ -1,4 +1,3 @@
-from math import sqrt
 from typing import List
 import numpy as np
 import pandas as pd
@@ -26,9 +25,11 @@ INDEL_TYPE_COLOR_MAP = {
 class SampleFigures(Figures):
 
     def get_annotations_plot(self, data_source: str = None, genes: List[str] = None):
+        logger.debug("Getting data on annotations...")
         data = self.queries.get_annotations(data_source=data_source, genes=genes)
         graph = dcc.Markdown("""**No data for the current selection**""")
         if data is not None and data.shape[0] > 0:
+            logger.debug("Prepare plot on annotations...")
             fig = px.bar(data, y="count", x="annotation", log_y=True, color='count',
                          color_continuous_scale=plotly.colors.sequential.Brwnyl)
             #.update_yaxes(categoryorder="total descending")
@@ -51,9 +52,11 @@ class SampleFigures(Figures):
         return graph
 
     def get_indels_lengths_plot(self, data_source: str = None, genes: List[str] = None):
+        logger.debug("Getting data on indels lengths...")
         data = self.queries.get_indel_lengths(data_source=data_source, genes=genes)
         graph = dcc.Markdown("""**No data for the current selection**""")
         if data is not None and data.shape[0] > 0:
+            logger.debug("Prepare plot on indels lengths...")
             fig = px.bar(
                 data, y="count", x="length", color="variant_type", color_discrete_map=INDEL_TYPE_COLOR_MAP)
                 #.update_yaxes(categoryorder="total descending")
@@ -78,9 +81,11 @@ class SampleFigures(Figures):
         return graph
 
     def get_substitutions_plot(self, variant_types: List[str], data_source: str = None, genes: List[str] = None):
+        logger.debug("Getting data on substitutions plot...")
         data = self.queries.get_substitutions(data_source=data_source, genes=genes, variant_types=variant_types)
         graph = dcc.Markdown("""**No data for the current selection**""")
         if data is not None and data.shape[0] > 0:
+            logger.debug("Preparing plot on samples by country...")
             fig = px.bar(
                 data, y="substitution", x="count", color="variant_type", text="rate",
                 color_discrete_map=VARIANT_TYPE_COLOR_MAP)\
@@ -109,9 +114,11 @@ class SampleFigures(Figures):
     def get_variants_per_sample_plot(
             self, data_source: str = None, genes: List[str] = None, variant_types: List[str] = None):
 
+        logger.debug("Getting data on variants per sample...")
         data = self.queries.get_variants_per_sample(data_source=data_source, genes=genes, variant_types=variant_types)
         graph = dcc.Markdown("""**No data for the current selection**""")
         if data is not None and data.shape[0] > 0:
+            logger.debug("Preparing plot on samples by country...")
             counts = np.repeat(data.number_mutations, data["count"])
             median = round(np.median(counts), 3)
             third_quartile = np.percentile(counts, 75)
@@ -147,10 +154,12 @@ class SampleFigures(Figures):
         return graph
 
     def get_accumulated_samples_by_country_plot(self, data_source: DataSource = None, countries=None, min_samples=1000):
+        logger.debug("Getting data on samples by country...")
         data = self.queries.get_accumulated_samples_by_country(
             data_source=data_source, countries=countries, min_samples=min_samples)
         graph = dcc.Markdown("""**No data for the current selection**""")
         if data is not None and data.shape[0] > 0:
+            logger.debug("Prepare plot on samples by country...")
             countries = list(data.sort_values("cumsum", ascending=False).country.unique())
             fig = px.area(data, x="date", y="cumsum", color="country",
                           category_orders={
@@ -193,13 +202,16 @@ class SampleFigures(Figures):
     def get_dnds_by_gene_plot(
             self, data_source: DataSource = None, countries: List[str] =None, genes: List[str] = None):
 
+        logger.debug("Getting data on dN/dS...")
         data = self.queries.get_dnds_table(
             source=data_source, countries=countries, genes=genes)
         graph = dcc.Markdown("""**No data for the current selection**""")
         if data is not None and data.shape[0] > 0:
-
-            genes = self.queries.get_genes_df()
-
+            logger.debug("Prepare plot on dN/dS...")
+            genes = pd.concat([
+                self.queries.get_genes_df(),
+                self.queries.get_domains_df()
+            ])
             # prepares the data and calculates the dN/dS
             data_to_plot = data.groupby(["month", "region_name"]).sum().reset_index().sort_values("month")
             data_to_plot = pd.merge(left=data_to_plot, right=genes, left_on="region_name", right_on="name")
