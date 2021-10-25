@@ -53,6 +53,21 @@ def get_tab_overview(queries: Queries):
                        ])
                    ),
                    html.Br(),
+                   dcc.Markdown("""
+                       The CoVigator project is open sourced and made available under the MIT license.
+                       We welcome any feedback through our GitHub repositories or contributions to the code.
+
+                       * The CoVigator knowledge base and dashboard are available at 
+                       https://github.com/TRON-Bioinformatics/covigator.
+                       * The CoVigator analysis pipeline processes SARS-CoV-2 FASTQ or FASTA files into
+                       annotated and normalized analysis ready VCF files. The pipeline is implemented
+                       in the Nextflow framework (Di Tommaso, 2017), it is usable as an independent component
+                       and we provide support to any user. See the repository for more details 
+                       https://github.com/TRON-Bioinformatics/covigator-ngs-pipeline
+                       """),
+                   html.Br(),
+                   dcc.Markdown("Read the CoVigator documentation here https://covigator.readthedocs.io"),
+                   html.Br(),
                    html.P("If you want to cite us:"),
                    html.P([
                        "Schrörs, B., Riesgo-Ferreiro, P., Sorn, P., Gudimella, R., Bukur, T., Rösler, T., "
@@ -66,16 +81,6 @@ def get_tab_overview(queries: Queries):
                               href="https://doi.org/10.1101/2021.02.04.429765",  target="_blank"),
                        style={"text-indent": "50px"}
                    ),
-
-                   html.Br(),
-                   html.P(["The CoVigator analysis pipeline processes SARS-CoV-2 FASTQ or FASTA files into "
-                           "annotated and normalized analysis ready VCF files. The pipeline is implemented "
-                           "in the Nextflow framework (Di Tommaso, 2017). "
-                           "It is open sourced under the MIT license, see the repository for "
-                           "more details ",
-                           html.A("https://github.com/TRON-Bioinformatics/covigator-ngs-pipeline",
-                                  href="https://github.com/TRON-Bioinformatics/covigator-ngs-pipeline",  target="_blank"),
-                           "."]),
                    html.Br(),
                    html.P("If you would like to cite the pipeline:"),
                    html.P([
