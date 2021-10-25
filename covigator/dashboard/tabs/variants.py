@@ -222,17 +222,19 @@ def set_callbacks_variants_tab(app, session: Session):
     @app.callback(
         Output(ID_NEEDLE_PLOT, 'children'),
         Input(ID_DROPDOWN_GENE, 'value'),
+        Input(ID_DROPDOWN_DOMAIN, 'value'),
         Input(ID_TOP_OCCURRING_VARIANTS_TABLE, "derived_virtual_data"),
         Input(ID_TOP_OCCURRING_VARIANTS_TABLE, "derived_virtual_selected_rows"),
         Input(ID_SLIDER_BIN_SIZE, 'value'),
         Input(ID_DROPDOWN_DATA_SOURCE, 'value'),
     )
-    def update_needle_plot(gene_name, rows, selected_rows_indices, bin_size, source):
-        if gene_name is not None:
+    def update_needle_plot(gene_name, domain, rows, selected_rows_indices, bin_size, source):
+        if gene_name is not None or domain is not None:
             selected_rows = [rows[s] for s in selected_rows_indices] if selected_rows_indices else None
             plot = html.Div(
                 children=figures.get_variants_plot(
                     gene_name=gene_name,
+                    domain_name=domain,
                     selected_variants=selected_rows,
                     bin_size=int(bin_size),
                     source=source
@@ -261,54 +263,36 @@ def set_callbacks_variants_tab(app, session: Session):
     @app.callback(
         Output(ID_COOCCURRENCE_HEATMAP, 'children'),
         Input(ID_DROPDOWN_GENE, 'value'),
+        Input(ID_DROPDOWN_DOMAIN, 'value'),
         Input(ID_TOP_OCCURRING_VARIANTS_TABLE, "derived_virtual_data"),
         Input(ID_TOP_OCCURRING_VARIANTS_TABLE, "derived_virtual_selected_rows"),
         Input(ID_DROPDOWN_SIMILARITY_METRIC, 'value'),
         Input(ID_SLIDER_MIN_COOCCURRENCES, 'value'),
-        Input(ID_DROPDOWN_DATA_SOURCE, 'value'),
-    )
-    def update_cooccurrence_heatmap(gene_name, rows, selected_rows_indices, metric, min_occurrences, source):
-        if source != DataSource.ENA.name:
-            plot = html.Div(
-                children=[dcc.Markdown(
-                    """**The cooccurrence heatmap is currently only available for the ENA dataset**""")])
-        elif gene_name is None:
-            plot = html.Div(
-                children=[dcc.Markdown(
-                    """**Please, select a gene to explore the cooccurrence heatmap**""")])
-        else:
-            selected_rows = [rows[s] for s in selected_rows_indices] if selected_rows_indices else None
-            plot = html.Div(children=figures.get_cooccurrence_heatmap(
-                gene_name=gene_name,
-                selected_variants=selected_rows,
-                metric=metric,
-                min_occurrences=min_occurrences))
-        return plot
-
-    @app.callback(
-        Output(ID_VARIANTS_MDS, 'children'),
-        Input(ID_DROPDOWN_GENE, 'value'),
-        Input(ID_TOP_OCCURRING_VARIANTS_TABLE, "derived_virtual_data"),
-        Input(ID_TOP_OCCURRING_VARIANTS_TABLE, "derived_virtual_selected_rows"),
-        Input(ID_SLIDER_MIN_COOCCURRENCES, 'value'),
         Input(ID_SLIDER_MIN_SAMPLES, 'value'),
         Input(ID_DROPDOWN_DATA_SOURCE, 'value'),
     )
-    def update_variants_mds(gene_name, rows, selected_rows_indices, min_cooccurrence, min_samples, source):
+    def update_cooccurrence_heatmap(
+            gene_name, domain, rows, selected_rows_indices, metric, min_cooccurrences, min_samples, source):
         if source != DataSource.ENA.name:
-            plot = html.Div(children=
-                            [dcc.Markdown(
-                                """**The variants clustering is currently only available for the ENA dataset**""")])
+            plot = html.Div(
+                children=[dcc.Markdown(
+                    """**The cooccurrence analysis is currently only available for the ENA dataset**""")])
         elif gene_name is None:
             plot = html.Div(
                 children=[dcc.Markdown(
-                    """**Please, select a gene to explore the cooccurrence clusters**""")])
+                    """**Please, select a gene or domain to explore the cooccurrence analysis**""")])
         else:
             selected_rows = [rows[s] for s in selected_rows_indices] if selected_rows_indices else None
-            plot = html.Div(children=figures.get_variants_clustering(
-                gene_name=gene_name,
-                selected_variants=selected_rows,
-                min_cooccurrence=min_cooccurrence,
-                min_samples=min_samples))
-            #plot = None
+            sparse_matrix = queries.get_sparse_cooccurrence_matrix(
+                gene_name=gene_name, domain=domain, min_cooccurrence=min_cooccurrences)
+            plot = html.Div(children=[
+                figures.get_cooccurrence_heatmap(
+                    sparse_matrix=sparse_matrix,
+                    selected_variants=selected_rows,
+                    metric=metric,
+                    min_cooccurrences=min_cooccurrences),
+                figures.get_variants_clustering(
+                    sparse_matrix=sparse_matrix, min_cooccurrence=min_cooccurrences, min_samples=min_samples)
+                ]
+            )
         return plot

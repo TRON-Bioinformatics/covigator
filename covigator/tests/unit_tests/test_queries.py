@@ -85,7 +85,7 @@ class QueriesTests(AbstractTest):
 
     def test_get_cooccurrence_matrix_by_gene_no_data(self):
         PrecomputationsLoader(session=self.session).load_table_counts()
-        data = self.queries.get_variants_cooccurrence_by_gene(gene_name="S", test=True)
+        data = self.queries.get_variants_cooccurrence_matrix(gene_name="S", test=True)
         self.assertIsNone(data)
 
     # TODO: make this test stable
@@ -94,7 +94,7 @@ class QueriesTests(AbstractTest):
         other_variants, variants = mock_cooccurrence_matrix(faker=self.faker, session=self.session)
         PrecomputationsLoader(session=self.session).load_table_counts()
 
-        data = self.queries.get_variants_cooccurrence_by_gene(gene_name="S", min_cooccurrence=1, test=True)
+        data = self.queries.get_variants_cooccurrence_matrix(gene_name="S", min_cooccurrence=1, test=True)
         self.assertIsNotNone(data)
         num_unique_variants = len(set([v.variant_id for v in variants if v.annotation != SYNONYMOUS_VARIANT]))
         self.assertEqual(data.shape[0], num_unique_variants * num_unique_variants)
@@ -103,13 +103,13 @@ class QueriesTests(AbstractTest):
         self.assertGreaterEqual(data[data["frequency"] > 0].shape[0], len(variants))
         self.assertGreaterEqual(data[data["jaccard"] > 0].shape[0], len(variants))
 
-        data = self.queries.get_variants_cooccurrence_by_gene(gene_name="S", min_cooccurrence=11, test=True)
+        data = self.queries.get_variants_cooccurrence_matrix(gene_name="S", min_cooccurrence=11, test=True)
         self.assertIsNone(data)
 
-        data = self.queries.get_variants_cooccurrence_by_gene(gene_name="X", min_cooccurrence=1, test=True)
+        data = self.queries.get_variants_cooccurrence_matrix(gene_name="X", min_cooccurrence=1, test=True)
         self.assertIsNone(data)
 
-        data = self.queries.get_variants_cooccurrence_by_gene(gene_name="N", min_cooccurrence=1, test=True)
+        data = self.queries.get_variants_cooccurrence_matrix(gene_name="N", min_cooccurrence=1, test=True)
         self.assertIsNotNone(data)
         self.assertEqual(data.shape[1], 7)
         self.assertGreaterEqual(data[data["count"] > 0].shape[0], len(other_variants))
