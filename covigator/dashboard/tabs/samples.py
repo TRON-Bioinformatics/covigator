@@ -64,7 +64,8 @@ def get_samples_tab_left_bar(queries: Queries):
                 id=ID_DROPDOWN_DATA_SOURCE,
                 options=[{'label': DataSource.ENA.name, 'value': DataSource.ENA.name},
                          {'label': DataSource.GISAID.name, 'value': DataSource.GISAID.name}],
-                value=None,
+                value=DataSource.ENA.name,
+                clearable=False,
                 multi=False
             ),
             html.Br(),
