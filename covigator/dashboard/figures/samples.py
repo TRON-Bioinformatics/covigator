@@ -226,7 +226,7 @@ class SampleFigures(Figures):
             fig.update_layout(
                 margin=MARGIN,
                 template=TEMPLATE,
-                #legend={'traceorder': 'reversed', 'title': None},
+                legend={'title': None},
                 xaxis={'title': None},
             )
 
