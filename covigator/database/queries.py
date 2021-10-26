@@ -269,7 +269,7 @@ class Queries:
 
     @functools.lru_cache()
     def get_domains_by_gene(self, gene_name: str) -> List[Domain]:
-        return self.session.query(Domain).filter(Domain.gene_name == gene_name).all()
+        return self.session.query(Domain).filter(Domain.gene_name == gene_name).order_by(Domain.start).all()
 
     @functools.lru_cache()
     def get_non_synonymous_variants_by_region(self, start, end, source) -> pd.DataFrame:

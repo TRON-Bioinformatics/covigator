@@ -21,8 +21,8 @@ import dash_core_components as dcc
 from covigator.database.model import Gene, Domain, DataSource
 
 VARIANT_TOOLTIP = '<b>%{text}</b><br>' + 'Allele frequency: %{y:.5f}<br>' + 'Genomic Position: %{x}'
-GENE_COLORS = cycle(reversed(plotly.express.colors.sequential.Tealgrn))
-DOMAIN_COLORS = cycle(reversed(plotly.express.colors.sequential.Magenta))
+GENE_COLORS = list(reversed(plotly.express.colors.sequential.Tealgrn))
+DOMAIN_COLORS = list(reversed(plotly.express.colors.sequential.Magenta))
 OTHER_VARIANT_SYMBOL = "x"
 INSERTION_SYMBOL = "triangle-up"
 DELETION_SYMBOL = "triangle-down"
@@ -365,11 +365,12 @@ class VariantsFigures(Figures):
             yaxis7=dict(domain=[0.0, 0.05], anchor='x7', visible=False),
             legend={'traceorder': 'normal'}
         )
-
+        gene_colors = cycle(GENE_COLORS)
+        domain_colors = cycle(DOMAIN_COLORS)
         gene_traces = [
-            self._get_gene_trace(g, start=g.start, end=g.end, color=c, yaxis='y6') for g, c in zip(genes, GENE_COLORS)]
+            self._get_gene_trace(g, start=g.start, end=g.end, color=c, yaxis='y6') for g, c in zip(genes, gene_colors)]
         domain_traces = [self._get_domain_trace(color=c, domain=d, gene=g, yaxis='y7')
-                         for (g, d), c in zip(genes_and_domains, DOMAIN_COLORS)]
+                         for (g, d), c in zip(genes_and_domains, domain_colors)]
         conservation_traces = self._get_conservation_traces(
             conservation, xaxis='x', yaxis1='y3', yaxis2='y4', yaxis3='y5')
         variant_counts_traces = [
@@ -510,11 +511,12 @@ class VariantsFigures(Figures):
                     hovertemplate=VARIANT_TOOLTIP
                 )
 
+            domain_colors = cycle(DOMAIN_COLORS)
             gene_trace = self._get_gene_trace(
-                gene, start=start, end=end, color=plotly.express.colors.sequential.Tealgrn[1], yaxis='y5', xaxis=main_xaxis)
+                gene, start=start, end=end, color=plotly.express.colors.sequential.Tealgrn[-1], yaxis='y5', xaxis=main_xaxis)
             domain_traces = [self._get_domain_trace(
                 color=c, gene=gene, domain=d, yaxis='y6', xaxis=main_xaxis, showlegend=True)
-                for d, c in zip(domains, DOMAIN_COLORS)]
+                for d, c in zip(domains, domain_colors)]
             conservation_traces = self._get_conservation_traces(
                 conservation, main_xaxis, yaxis1='y2', yaxis2='y3', yaxis3='y4')
 
