@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import dash_core_components as dcc
 import dash_table
+from logzero import logger
 from sqlalchemy.orm import Session
 from covigator.dashboard.figures.figures import Figures, MARGIN, TEMPLATE, PLOTLY_CONFIG, STYLES_STRIPPED, STYLE_HEADER
 from covigator.database.model import SubclonalVariantObservation, VariantObservation, SampleEna
@@ -16,7 +17,8 @@ class SubclonalVariantsQueries:
     def __init__(self, session: Session):
         self.session = session
 
-    def get_top_occurring_subclonal_variants(self, top, gene_name, min_vaf, order_by):
+    @functools.lru_cache()
+    def get_top_occurring_subclonal_variants(self, top, gene_name, domain, min_vaf, order_by):
 
         if order_by == "score":
             order_by_clause = "order by score asc"
@@ -30,13 +32,19 @@ class SubclonalVariantsQueries:
             raise CovigatorQueryException("Not supported order by of subclonal variants")
 
         # counts variants over those bins
+        if domain is not None:
+            where_gene = "pfam_name = '{domain}'".format(domain=domain)
+        elif gene_name is not None:
+            where_gene = "gene_name = '{gene_name}'".format(gene_name=gene_name)
+        else:
+            where_gene = "gene_name is not null"
+
         sql_query = """
         select variant_id, date, hgvs_p, gene_name, annotation_highest_impact, 
             cons_hmm_sars_cov_2, cons_hmm_sarbecovirus, cons_hmm_vertebrate_cov, pfam_name, pfam_description, vaf
             from {subclonal_variants_table_name} 
             where 
                 vaf >= {min_vaf} and 
-                sample not in (select run_accession from {samples_table_name} where library_strategy = 'RNA-Seq') and
                 variant_id in (
                     select t.variant_id from (
                         select 
@@ -47,15 +55,13 @@ class SubclonalVariantsQueries:
                             variant_id
                         from {subclonal_variants_table_name} 
                         where 
+                            annotation_highest_impact != 'synonymous_variant' and
                             vaf >= {min_vaf} and 
-                            gene_name is not null and 
-                            {where_gene}
-                            annotation_highest_impact != 'synonymous_variant' and 
-                            sample not in (select run_accession from {samples_table_name} where library_strategy = 'RNA-Seq') 
-                            and variant_id not in (
+                            {where_gene} and
+                            variant_id not in (
                                 select distinct variant_id 
                                 from {variants_table_name} 
-                                where source='ENA' and gene_name is not null and annotation_highest_impact != 'synonymous_variant'
+                                where annotation_highest_impact != 'synonymous_variant' and source='ENA' and gene_name is not null 
                             )
                         group by variant_id
                         {order_by}
@@ -66,7 +72,7 @@ class SubclonalVariantsQueries:
             variants_table_name=VariantObservation.__tablename__,
             samples_table_name=SampleEna.__tablename__,
             top=top,
-            where_gene="gene_name = '{gene_name}' and".format(gene_name=gene_name) if gene_name else "",
+            where_gene=where_gene,
             order_by=order_by_clause
         )
         return pd.read_sql_query(sql_query, self.session.bind)
@@ -128,7 +134,14 @@ class SubclonalVariantsQueries:
 
         return filled_table
 
-    def get_top_cooccurring_clonal_variants(self, variant_id, min_vaf, gene_name):
+    def get_top_cooccurring_clonal_variants(self, variant_id, min_vaf, gene_name, domain):
+        if domain is not None:
+            where_gene = "pfam_name = '{domain}'".format(domain=domain)
+        elif gene_name is not None:
+            where_gene = "gene_name = '{gene_name}'".format(gene_name=gene_name)
+        else:
+            where_gene = "gene_name is not null"
+
         sql_query = """
         select count(*) as count_samples, variant_id, hgvs_p, gene_name, annotation_highest_impact
         from {variant_observations_table}
@@ -137,7 +150,7 @@ class SubclonalVariantsQueries:
             from {subclonal_variant_observations_table} 
             where variant_id='{variant_id}' and vaf >= {min_vaf}
             )
-        {where_gene}
+        and {where_gene}
         group by variant_id, hgvs_p, gene_name, annotation_highest_impact
         order by count_samples desc
         limit 10
@@ -146,7 +159,7 @@ class SubclonalVariantsQueries:
             min_vaf=min_vaf,
             variant_observations_table=VariantObservation.__tablename__,
             subclonal_variant_observations_table=SubclonalVariantObservation.__tablename__,
-            where_gene="and gene_name = '{}'".format(gene_name) if gene_name else ""
+            where_gene=where_gene
         )
         return pd.read_sql_query(sql_query, self.session.bind)
 
@@ -154,13 +167,14 @@ class SubclonalVariantsQueries:
 class SubclonalVariantsFigures(Figures):
 
     @functools.lru_cache()
-    def get_top_occurring_subclonal_variants_plot(self, top, gene_name, min_vaf, order_by):
+    def get_top_occurring_subclonal_variants_plot(self, top, gene_name, domain, min_vaf, order_by):
 
+        logger.debug("Getting data on top occurring subclonal variants...")
         data = SubclonalVariantsQueries(session=self.queries.session).get_top_occurring_subclonal_variants(
-            top=top, gene_name=gene_name, min_vaf=min_vaf, order_by=order_by)
+            top=top, gene_name=gene_name, domain=domain, min_vaf=min_vaf, order_by=order_by)
         fig = dcc.Markdown("""**No subclonal variants for the current selection**""")
         if data is not None and data.shape[0] > 0:
-
+            logger.debug("Preparing plot on top occurring subclonal variants...")
             unique_subclonal_variants = data.groupby('variant_id').agg({
                 'gene_name': 'first',
                 'pfam_description': 'first',
@@ -287,9 +301,9 @@ class SubclonalVariantsFigures(Figures):
             dcc.Markdown("""**Country distribution for {}**""".format(variant_id))
         ]
 
-    def get_cooccurring_clonal_variants(self, variant_id, min_vaf, gene_name):
+    def get_cooccurring_clonal_variants(self, variant_id, min_vaf, gene_name, domain):
         data = SubclonalVariantsQueries(session=self.queries.session).get_top_cooccurring_clonal_variants(
-            variant_id=variant_id, min_vaf=min_vaf, gene_name=gene_name)
+            variant_id=variant_id, min_vaf=min_vaf, gene_name=gene_name, domain=domain)
 
         fig = dash_table.DataTable(
             id='top-cooccurring-clonal-variants-table',

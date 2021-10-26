@@ -18,6 +18,7 @@ ID_HIST_COUNTRIES = "id-hist-countries"
 ID_DROPDOWN_ORDER_BY = "id-combobox-order-by"
 
 ID_DROPDOWN_GENE_SUBCLONAL_VARIANTS = 'dropdown-gene-subclonal-variants'
+ID_DROPDOWN_DOMAIN_SUBCLONAL_VARIANTS = 'dropdown-domain-subclonal-variants'
 ID_SLIDER_SUBCLONAL_VARIANTS_VAF = 'slider-subclonal-variants-vaf'
 ID_SLIDER_TOP_SUBCLONAL_VARIANTS = 'slider-subclonal-variants-top'
 
@@ -103,6 +104,13 @@ def get_subclonal_variants_tab_left_bar(queries: Queries):
             multi=False
         ),
         html.Br(),
+        dcc.Markdown("""Select a protein domain"""),
+        dcc.Dropdown(
+            id=ID_DROPDOWN_DOMAIN_SUBCLONAL_VARIANTS,
+            value=None,
+            multi=False
+        ),
+        html.Br(),
         dcc.Markdown("""Minimum VAF subclonal variants"""),
         dcc.Slider(
             id=ID_SLIDER_SUBCLONAL_VARIANTS_VAF,
@@ -144,15 +152,24 @@ def set_callbacks_subclonal_variants_tab(app, session: Session):
     figures = SubclonalVariantsFigures(queries=queries)
 
     @app.callback(
+        Output(ID_DROPDOWN_DOMAIN_SUBCLONAL_VARIANTS, 'options'),
+        Input(ID_DROPDOWN_GENE_SUBCLONAL_VARIANTS, 'value'))
+    def set_domains(selected_gene):
+        domains = queries.get_domains_by_gene(selected_gene) if selected_gene else queries.get_domains()
+        domain_labels = sorted({("{gene}: {domain}".format(domain=d.name, gene=d.gene_name), d.name) for d in domains})
+        return [{'label': label, 'value': value} for label, value in domain_labels]
+
+    @app.callback(
         Output(ID_TOP_OCCURRING_SUBCLONAL_VARIANTS, 'children'),
         Input(ID_SLIDER_SUBCLONAL_VARIANTS_VAF, 'value'),
         Input(ID_DROPDOWN_GENE_SUBCLONAL_VARIANTS, 'value'),
+        Input(ID_DROPDOWN_DOMAIN_SUBCLONAL_VARIANTS, 'value'),
         Input(ID_SLIDER_TOP_SUBCLONAL_VARIANTS, 'value'),
         Input(ID_DROPDOWN_ORDER_BY, 'value')
     )
-    def update_top_occurring_variants(min_vaf, gene_name, top, order_by):
+    def update_top_occurring_variants(min_vaf, gene_name, domain, top, order_by):
         return html.Div(children=figures.get_top_occurring_subclonal_variants_plot(
-            min_vaf=min_vaf, gene_name=gene_name, top=top, order_by=order_by))
+            min_vaf=min_vaf, gene_name=gene_name, domain=domain, top=top, order_by=order_by))
 
     @app.callback(
         Output(ID_HIST_LIBRARY_STRATEGY, 'children'),
@@ -188,15 +205,16 @@ def set_callbacks_subclonal_variants_tab(app, session: Session):
         Output(TOP_COOCCURRING_CLONAL_VARIANTS, 'children'),
         Input(ID_SLIDER_SUBCLONAL_VARIANTS_VAF, 'value'),
         Input(ID_DROPDOWN_GENE_SUBCLONAL_VARIANTS, 'value'),
+        Input(ID_DROPDOWN_DOMAIN_SUBCLONAL_VARIANTS, 'value'),
         Input(ID_TOP_OCCURRING_SUBCLONAL_VARIANTS_TABLE, "derived_virtual_data"),
         Input(ID_TOP_OCCURRING_SUBCLONAL_VARIANTS_TABLE, "derived_virtual_selected_rows")
     )
-    def update_cooccurring_clonal_variants(min_vaf, gene_name, data, selected_rows):
+    def update_cooccurring_clonal_variants(min_vaf, gene_name, domain, data, selected_rows):
         plot = None
         if selected_rows:
             variant_id = data[selected_rows[0]].get("variant_id")
             plot = html.Div(
-                children=figures.get_cooccurring_clonal_variants(variant_id=variant_id, min_vaf=min_vaf,
-                                                                 gene_name=gene_name),
+                children=figures.get_cooccurring_clonal_variants(
+                    variant_id=variant_id, min_vaf=min_vaf, gene_name=gene_name, domain=domain),
             )
         return plot

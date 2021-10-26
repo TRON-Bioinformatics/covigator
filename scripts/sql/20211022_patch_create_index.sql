@@ -8,3 +8,5 @@ CREATE INDEX variant_observation_v19_index_variant_id_source ON public.variant_o
 
 
 CREATE INDEX subclonal_variant_observation_v19_index_position ON public.subclonal_variant_observation_v19 USING btree (position);
+CREATE INDEX subclonal_variant_observation_v19_index_annotation_vaf ON public.subclonal_variant_observation_v19 USING btree (annotation_highest_impact, vaf);
+CREATE INDEX subclonal_variant_observation_v19_index_vaf ON public.subclonal_variant_observation_v19 USING btree (vaf);
