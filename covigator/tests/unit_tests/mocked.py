@@ -11,8 +11,7 @@ from Bio.Alphabet.IUPAC import IUPACData
 
 
 MOCKED_GENES = ["S", "N", "E", "M", "ORF3a", "ORF1ab", "ORF7b", "ORF10", "ORF6", "ORF8", "ORF7a"]
-MOCKED_DOMAINS = ["CoV_S2", "bCoV_S1_RBD", "bCoV_S1_N", "CoV_S1_C", "bCoV_viroporin", "Macro", "Peptidase_C30",
-                  "CoV_NSP9", "CoV_peptidase", "CoV_NSP7"]
+MOCKED_DOMAINS = ["CoV_S2", "bCoV_S1_RBD", "bCoV_S1_N", "CoV_S1_C"]
 
 
 def get_mocked_variant(faker: Faker, chromosome=None, gene_name=None) -> Variant:

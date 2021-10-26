@@ -7,7 +7,7 @@ from covigator.database.model import JobStatus, DataSource, Sample, Gene, Region
 from covigator.database.queries import Queries
 from covigator.tests.unit_tests.abstract_test import AbstractTest
 from covigator.tests.unit_tests.mocked import get_mocked_log, get_mocked_variant, \
-    get_mocked_variant_observation, mock_samples, mock_cooccurrence_matrix, mock_samples_and_variants
+    get_mocked_variant_observation, mock_samples, mock_cooccurrence_matrix, mock_samples_and_variants, MOCKED_DOMAINS
 
 
 class QueriesTests(AbstractTest):
@@ -256,16 +256,19 @@ class QueriesTests(AbstractTest):
         self._assert_dnds_table(data)
         self.assertEqual(data[~data.country.isin(countries)].shape[0], 0)  # no entries to other country
 
-        genes = list(data.region_name.unique())[0:2]
+        genes = ["S"]
         data = self.queries.get_dnds_table(genes=genes)
-        self._assert_dnds_table(data)
-        self.assertEqual(data[~data.region_name.isin(genes)].shape[0], 0)  # no entries to other country
+        self._assert_dnds_table(data, has_domains=True)
+        self.assertEqual(data[~data.region_name.isin(genes + MOCKED_DOMAINS)].shape[0], 0)  # no entries to other country
 
-    def _assert_dnds_table(self, data):
+    def _assert_dnds_table(self, data, has_domains=False):
         self.assertIsNotNone(data)
         self.assertGreater(data.shape[0], 0)
         self.assertEqual(data.shape[1], 8)
-        self.assertEqual(data[data.region_type != RegionType.GENE].shape[0], 0)  # all entries to a gene
+        self.assertGreater(data[data.region_type == RegionType.GENE].shape[0], 0)
+        if has_domains:
+            self.assertGreater(data[data.region_type == RegionType.DOMAIN].shape[0], 0)
+        self.assertEqual(data[(data.region_type != RegionType.GENE) & (data.region_type != RegionType.DOMAIN)].shape[0], 0)  # all entries to a gene or domain
         self.assertEqual(data[data.country.isna()].shape[0], 0)  # no empty countries
         self.assertEqual(data[data.month.isna()].shape[0], 0)  # no empty months
         self.assertEqual(data[data.region_name.isna()].shape[0], 0)  # no empty gene
