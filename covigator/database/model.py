@@ -425,7 +425,13 @@ class VariantObservation(Base):
     __table_args__ = (Index("{}_index_annotation_position".format(VARIANT_OBSERVATION_TABLE_NAME),
                             "annotation_highest_impact", "position"),
                       Index("{}_index_sample".format(VARIANT_OBSERVATION_TABLE_NAME),
-                            "sample")
+                            "sample"),
+                      Index("{}_index_position".format(VARIANT_OBSERVATION_TABLE_NAME),
+                            "position"),
+                      Index("{}_index_annotation_source".format(VARIANT_OBSERVATION_TABLE_NAME),
+                            "annotation_highest_impact", "source"),
+                      Index("{}_index_variant_id_source".format(VARIANT_OBSERVATION_TABLE_NAME),
+                            "variant_id", "source"),
                       )
 
 
@@ -491,6 +497,8 @@ class SubclonalVariantObservation(Base):
 
     ForeignKeyConstraint([sample, source], [Sample.id, Sample.source])
     ForeignKeyConstraint([variant_id], [Variant.variant_id])
+
+    __table_args__ = ( Index("{}_index_position".format(SUBCLONAL_VARIANT_OBSERVATION_TABLE_NAME), "position"), )
 
 
 class VariantCooccurrence(Base):
