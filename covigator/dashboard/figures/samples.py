@@ -166,7 +166,8 @@ class SampleFigures(Figures):
                               "country": countries[::-1]},
                           labels={"cumsum": "num. samples", "count": "increment"},
                           hover_data=["count"],
-                          color_discrete_sequence=px.colors.qualitative.Alphabet)
+                          color_discrete_sequence=px.colors.qualitative.Vivid)
+            fig.update_traces(line=dict(width=0.5))
             fig.update_layout(
                 margin=MARGIN,
                 template=TEMPLATE,
@@ -222,7 +223,8 @@ class SampleFigures(Figures):
                           symbol='region_name', line_dash='region_name', line_dash_sequence=['dash'],
                           labels={"dn_ds": "dN/dS", "region_name": "gene"},
                           hover_data=["region_name", "dn_ds"],
-                          color_discrete_sequence=px.colors.sequential.turbid)
+                          color_discrete_sequence=px.colors.qualitative.Vivid)
+            fig.update_traces(line=dict(width=0.5), marker=dict(size=10))
             fig.update_layout(
                 margin=MARGIN,
                 template=TEMPLATE,
