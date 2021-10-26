@@ -21,8 +21,8 @@ import dash_core_components as dcc
 from covigator.database.model import Gene, Domain, DataSource
 
 VARIANT_TOOLTIP = '<b>%{text}</b><br>' + 'Allele frequency: %{y:.5f}<br>' + 'Genomic Position: %{x}'
-GENE_COLORS = cycle(plotly.express.colors.sequential.Reds)
-DOMAIN_COLORS = cycle(reversed(plotly.express.colors.sequential.Purples))
+GENE_COLORS = cycle(reversed(plotly.express.colors.sequential.Tealgrn))
+DOMAIN_COLORS = cycle(reversed(plotly.express.colors.sequential.Magenta))
 OTHER_VARIANT_SYMBOL = "x"
 INSERTION_SYMBOL = "triangle-up"
 DELETION_SYMBOL = "triangle-down"
@@ -511,7 +511,7 @@ class VariantsFigures(Figures):
                 )
 
             gene_trace = self._get_gene_trace(
-                gene, start=start, end=end, color=plotly.express.colors.sequential.Reds[1], yaxis='y5', xaxis=main_xaxis)
+                gene, start=start, end=end, color=plotly.express.colors.sequential.Tealgrn[1], yaxis='y5', xaxis=main_xaxis)
             domain_traces = [self._get_domain_trace(
                 color=c, gene=gene, domain=d, yaxis='y6', xaxis=main_xaxis, showlegend=True)
                 for d, c in zip(domains, DOMAIN_COLORS)]
