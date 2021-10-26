@@ -82,11 +82,11 @@ class Dashboard:
                     children=[
                         dbc.Tabs([
                             dbc.Tab(label="Overview", tab_id=OVERVIEW_TAB_ID),
+                            dbc.Tab(label="Samples", tab_id=SAMPLES_TAB_ID),
+                            dbc.Tab(label="Recurrent mutations", tab_id=VARIANTS_TAB_ID),
+                            dbc.Tab(label="Intrahost mutations", tab_id=SUBCLONAL_VARIANTS_TAB_ID),
                             dbc.Tab(label="ENA dataset", tab_id=ENA_DATASET_TAB_ID),
                             dbc.Tab(label="GISAID dataset", tab_id=GISAID_DATASET_TAB_ID),
-                            dbc.Tab(label="Samples", tab_id=SAMPLES_TAB_ID),
-                            dbc.Tab(label="Recurrent clonal variants", tab_id=VARIANTS_TAB_ID),
-                            dbc.Tab(label="Intrahost variants", tab_id=SUBCLONAL_VARIANTS_TAB_ID),
                             dbc.Tab(label="Download data", tab_id=DOWNLOAD_TAB_ID)],
                             id="tabs",
                             active_tab="overview",
