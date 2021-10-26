@@ -41,9 +41,6 @@ def get_footer():
                             target="_blank"),
                         "."
                         ]),
-                    dcc.Markdown("""
-                        We thank Franziska Lang for critical discussions and feedback.
-                        """),
                     dcc.Markdown([
                         """
 We gratefully acknowledge all data contributors, i.e. the Authors and their Originating laboratories responsible for 
