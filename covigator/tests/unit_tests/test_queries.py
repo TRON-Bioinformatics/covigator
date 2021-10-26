@@ -85,8 +85,8 @@ class QueriesTests(AbstractTest):
 
     def test_get_cooccurrence_matrix_by_gene_no_data(self):
         PrecomputationsLoader(session=self.session).load_table_counts()
-        data = self.queries.get_variants_cooccurrence_matrix(gene_name="S", test=True)
-        self.assertIsNone(data)
+        data = self.queries.get_sparse_cooccurrence_matrix(gene_name="S", domain=None)
+        self.assertEqual(data.shape, (0, 10))
 
     # TODO: make this test stable
     @unittest.skip

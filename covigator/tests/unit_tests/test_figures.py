@@ -57,7 +57,7 @@ class FiguresTests(AbstractTest):
         self.assertIsInstance(figure, Markdown)
 
     def test_needle_plot_no_data(self):
-        figure = self.variants_figures.get_variants_plot(gene_name="S", selected_variants=None, bin_size=50)
+        figure = self.variants_figures.get_variants_plot(gene_name="S", domain_name=None, selected_variants=None, bin_size=50)
         self.assertIsInstance(figure, Markdown)
 
     def test_dn_ds_plot(self):

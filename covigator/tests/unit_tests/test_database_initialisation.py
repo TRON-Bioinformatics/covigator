@@ -58,3 +58,11 @@ class DatabaseInitialisationTests(AbstractTest):
         self.assertEqual(conservation_values[conservation_values.conservation.isna()].shape[0], 0)
         self.assertEqual(conservation_values[conservation_values.conservation_sarbecovirus.isna()].shape[0], 0)
         self.assertEqual(conservation_values[conservation_values.conservation_vertebrates.isna()].shape[0], 0)
+
+    def test_no_repeated_genes(self):
+        database = Database(test=True, config=self.config)
+        session = database.get_database_session()
+        genes = session.query(Gene).all()
+        gene_names = [g.name for g in genes]
+        unique_gene_names = set(gene_names)
+        self.assertEqual(len(gene_names), len(unique_gene_names))
