@@ -1,7 +1,10 @@
+import logging
+
 import dash
 import dash_core_components as dcc
 import dash_bootstrap_components as dbc
 import dash_html_components as html
+import logzero
 from sqlalchemy.orm import Session
 from dash.dependencies import Input, Output
 import covigator
@@ -98,6 +101,8 @@ class Dashboard:
 
     def start_dashboard(self, debug=False):
         try:
+            if debug:
+                logzero.loglevel(level=logging.DEBUG)
             logger.info("Starting covigator dashboard")
             app = self.get_application()
             app.run_server(debug=debug, host=self.config.dash_host, port=self.config.dash_port)
@@ -158,7 +163,7 @@ def set_callbacks(app, session: Session, content_folder):
 
     @app.callback(Output("content", "children"), [Input("tabs", "active_tab")])
     def switch_tab(at):
-        logger.info("Changing tab...")
+        logger.debug("Changing tab...")
         try:
             if at == OVERVIEW_TAB_ID:
                 return get_tab_overview(queries=queries)

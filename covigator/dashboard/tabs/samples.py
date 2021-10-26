@@ -17,7 +17,6 @@ ID_SLIDER_MIN_SAMPLES = 'slider-min-samples-per-country'
 ID_DROPDOWN_DATA_SOURCE = "dropdown-data-source"
 ID_DROPDOWN_COUNTRY = 'dropdown-country'
 ID_DROPDOWN_GENE = 'dropdown-gene-overall-mutations'
-ID_DROPDOWN_GENE2 = 'dropdown-gene-overall-mutations2'
 ID_DROPDOWN_VARIANT_TYPE = 'dropdown-variant-type'
 ID_ACCUMULATED_SAMPLES_GRAPH = 'accumulated-samples-per-country'
 ID_DN_DS_GRAPH = 'dn_ds_graph'
@@ -65,7 +64,8 @@ def get_samples_tab_left_bar(queries: Queries):
                 id=ID_DROPDOWN_DATA_SOURCE,
                 options=[{'label': DataSource.ENA.name, 'value': DataSource.ENA.name},
                          {'label': DataSource.GISAID.name, 'value': DataSource.GISAID.name}],
-                value=None,
+                value=DataSource.ENA.name,
+                clearable=False,
                 multi=False
             ),
             html.Br(),

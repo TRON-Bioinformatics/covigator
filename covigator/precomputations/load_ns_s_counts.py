@@ -103,7 +103,7 @@ class NsSCountsLoader:
                 select count(*) as {count_name}, date_trunc('month', s.{date_field}) as month, 
                     vo.{region_field} as region_name, s.country 
                 from {variant_observation_table} as vo join {sample_table} as s on vo.sample = s.run_accession 
-                where vo.source = '{source}' and vo.annotation_highest_impact = '{annotation}' 
+                where vo.annotation_highest_impact = '{annotation}' and vo.source = '{source}'  
                     and s.{date_field} is not null and vo.{region_field} is not null
                 group by date_trunc('month', s.{date_field}), vo.{region_field}, s.country;
                 """.format(variant_observation_table=VARIANT_OBSERVATION_TABLE_NAME,

@@ -4,6 +4,12 @@ import dash_table
 import numpy as np
 import re
 
+import pandas as pd
+from logzero import logger
+from scipy.spatial.distance import squareform
+from skbio.stats.distance import DissimilarityMatrix
+from sklearn.cluster import OPTICS
+
 from covigator import MISSENSE_VARIANT, DISRUPTIVE_INFRAME_DELETION, CONSERVATIVE_INFRAME_DELETION, \
     CONSERVATIVE_INFRAME_INSERTION, DISRUPTIVE_INFRAME_INSERTION
 from covigator.dashboard.figures.figures import Figures, PLOTLY_CONFIG, TEMPLATE, MARGIN, STYLES_STRIPPED, STYLE_HEADER
@@ -12,11 +18,11 @@ import plotly.express as px
 import plotly.graph_objects as go
 import dash_html_components as html
 import dash_core_components as dcc
-from covigator.database.model import Gene, Domain
+from covigator.database.model import Gene, Domain, DataSource
 
 VARIANT_TOOLTIP = '<b>%{text}</b><br>' + 'Allele frequency: %{y:.5f}<br>' + 'Genomic Position: %{x}'
-GENE_COLORS = cycle(plotly.express.colors.sequential.Reds)
-DOMAIN_COLORS = cycle(reversed(plotly.express.colors.sequential.Purples))
+GENE_COLORS = list(reversed(plotly.express.colors.sequential.Tealgrn))
+DOMAIN_COLORS = list(reversed(plotly.express.colors.sequential.Magenta))
 OTHER_VARIANT_SYMBOL = "x"
 INSERTION_SYMBOL = "triangle-up"
 DELETION_SYMBOL = "triangle-down"
@@ -83,8 +89,8 @@ class VariantsFigures(Figures):
             }
         ]
 
-    def get_top_occurring_variants_plot(self, top, gene_name, date_range_start, date_range_end, metric, source):
-        data = self.queries.get_top_occurring_variants_precomputed(top, gene_name, metric, source)
+    def get_top_occurring_variants_plot(self, top, gene_name, domain, date_range_start, date_range_end, metric, source):
+        data = self.queries.get_top_occurring_variants_precomputed(top, gene_name, domain, metric, source)
         fig = dcc.Markdown("""**No variants for the current selection**""")
         if data is not None and data.shape[0] > 0:
             # removes the columns from the months out of the range
@@ -174,8 +180,8 @@ class VariantsFigures(Figures):
 
         return styles
 
-    def get_cooccurrence_heatmap(self, gene_name, selected_variants, metric="jaccard", min_occurrences=5):
-        data = self.queries.get_variants_cooccurrence_by_gene(gene_name=gene_name, min_cooccurrence=min_occurrences)
+    def get_cooccurrence_heatmap(self, sparse_matrix, selected_variants, metric="jaccard", min_cooccurrences=5):
+        data = self._get_variants_cooccurrence_matrix(data=sparse_matrix)
         graph = dcc.Markdown("""**No co-occurrent variants for the current selection**""")
         if data is not None and data.shape[0] > 0:
 
@@ -236,7 +242,7 @@ class VariantsFigures(Figures):
             fig.update_yaxes(autorange="reversed")
             graph = dcc.Graph(figure=fig, config=PLOTLY_CONFIG)
 
-        return [
+        return html.Div(children=[
             graph,
             dcc.Markdown("""
                         ***Co-occurrence matrix*** *showing variant pairs co-occurring in at least {} samples (this value is configurable).*
@@ -247,8 +253,85 @@ class VariantsFigures(Figures):
                         *The upper diagonal is not shown for clarity.*
                         *Synonymous variants are excluded.*
                         *Different genomic variants causing the same protein variant are not grouped.*
-                        """.format(min_occurrences, metric, " on gene {}".format(gene_name) if gene_name else ""))
-        ]
+                        """.format(min_cooccurrences))
+        ])
+
+    def _get_variants_cooccurrence_matrix(self, data) -> pd.DataFrame:
+        """
+        Returns the full cooccurrence matrix of all non synonymous variants in a gene with at least
+        min_occurrences occurrences.
+        """
+        # query for total samples required to calculate frequencies
+        count_samples = self.queries.count_samples(source=DataSource.ENA.name)
+
+        full_matrix = None
+        if data.shape[0] > 0:
+            # these are views of the original data
+            annotations = data.loc[data.variant_id_one == data.variant_id_two,
+                                   ["variant_id_one", "position", "reference", "alternate", "hgvs_p"]]
+            tooltip = data.loc[:, ["variant_id_one", "variant_id_two", "hgvs_tooltip"]]
+            diagonal = data.loc[
+                data.variant_id_one == data.variant_id_two, ["variant_id_one", "variant_id_two", "count"]]
+            sparse_matrix = data.loc[:, ["variant_id_one", "variant_id_two", "count"]]
+            sparse_matrix["frequency"] = sparse_matrix["count"] / count_samples
+            sparse_matrix = pd.merge(left=sparse_matrix, right=diagonal, on="variant_id_one", how="left",
+                                     suffixes=("", "_one"))
+            sparse_matrix = pd.merge(left=sparse_matrix, right=diagonal, on="variant_id_two", how="left",
+                                     suffixes=("", "_two"))
+
+            # calculate Jaccard index
+            sparse_matrix["count_union"] = sparse_matrix["count_one"] + sparse_matrix["count_two"] - sparse_matrix[
+                "count"]
+            sparse_matrix["jaccard"] = sparse_matrix["count"] / sparse_matrix["count_union"]
+
+            # calculate Cohen's kappa
+            sparse_matrix["chance_agreement"] = np.exp(-sparse_matrix["count"])
+            sparse_matrix["kappa"] = 1 - ((1 - sparse_matrix.jaccard) / (1 - sparse_matrix.chance_agreement))
+            sparse_matrix["kappa"] = sparse_matrix["kappa"].transform(lambda k: k if k > 0 else 0)
+
+            del sparse_matrix["count_union"]
+            del sparse_matrix["count_one"]
+            del sparse_matrix["count_two"]
+            del sparse_matrix["chance_agreement"]
+
+            # from the sparse matrix builds in memory the complete matrix
+            all_variants = data.variant_id_one.unique()
+            empty_full_matrix = pd.DataFrame(index=pd.MultiIndex.from_product(
+                [all_variants, all_variants], names=["variant_id_one", "variant_id_two"])).reset_index()
+            full_matrix = pd.merge(
+                left=empty_full_matrix, right=sparse_matrix, on=["variant_id_one", "variant_id_two"], how='left')
+
+            # add annotation on variant one
+            full_matrix = pd.merge(left=full_matrix, right=annotations, on="variant_id_one", how='left') \
+                .rename(columns={"position": "position_one",
+                                 "reference": "reference_one",
+                                 "alternate": "alternate_one",
+                                 "hgvs_p": "hgvs_p_one"})
+
+            # add annotations on variant two
+            full_matrix = pd.merge(left=full_matrix, right=annotations,
+                                   left_on="variant_id_two", right_on="variant_id_one", how='left') \
+                .rename(columns={"variant_id_one_x": "variant_id_one",
+                                 "position": "position_two",
+                                 "reference": "reference_two",
+                                 "alternate": "alternate_two",
+                                 "hgvs_p": "hgvs_p_two"})
+
+            # add tooltip
+            full_matrix = pd.merge(left=full_matrix, right=tooltip, on=["variant_id_one", "variant_id_two"], how='left')
+            # correct tooltip in diagonal
+            full_matrix.loc[
+                full_matrix.variant_id_one == full_matrix.variant_id_two, "hgvs_tooltip"] = full_matrix.hgvs_p_one
+
+            # NOTE: transpose matrix manually as plotly transpose does not work with labels
+            # the database return the upper diagonal, the lower is best for plots
+            full_matrix.sort_values(["position_two", "reference_two", "alternate_two",
+                                     "position_one", "reference_one", "alternate_one"], inplace=True)
+
+            full_matrix = full_matrix.loc[:, ["variant_id_one", "variant_id_two", "count", "frequency", "jaccard",
+                                              "kappa", "hgvs_tooltip"]]
+
+        return full_matrix
 
     def get_variants_abundance_plot(self, bin_size=50, source=None):
 
@@ -282,10 +365,12 @@ class VariantsFigures(Figures):
             yaxis7=dict(domain=[0.0, 0.05], anchor='x7', visible=False),
             legend={'traceorder': 'normal'}
         )
-
-        gene_traces = [self._get_gene_trace(g, color=c, yaxis='y6') for g, c in zip(genes, GENE_COLORS)]
+        gene_colors = cycle(GENE_COLORS)
+        domain_colors = cycle(DOMAIN_COLORS)
+        gene_traces = [
+            self._get_gene_trace(g, start=g.start, end=g.end, color=c, yaxis='y6') for g, c in zip(genes, gene_colors)]
         domain_traces = [self._get_domain_trace(color=c, domain=d, gene=g, yaxis='y7')
-                         for (g, d), c in zip(genes_and_domains, DOMAIN_COLORS)]
+                         for (g, d), c in zip(genes_and_domains, domain_colors)]
         conservation_traces = self._get_conservation_traces(
             conservation, xaxis='x', yaxis1='y3', yaxis2='y4', yaxis3='y5')
         variant_counts_traces = [
@@ -345,48 +430,62 @@ class VariantsFigures(Figures):
                            round(np.corrcoef(data.conservation_vertebrates, data.count_unique_variants)[0][1], 5)
                            ))]
 
-    def get_variants_plot(self, gene_name, selected_variants, bin_size, source=None):
+    def get_variants_plot(self, gene_name, domain_name, selected_variants, bin_size, source=None):
 
         # reads gene annotations
-        gene = self.queries.get_gene(gene_name)
-        domains = self.queries.get_domains_by_gene(gene_name)
+        logger.debug("Getting genes and domains...")
+        assert gene_name is not None or domain_name is not None, "Either gene or domain need to be provided"
+        
+        if domain_name is None:
+            gene = self.queries.get_gene(gene_name)
+            domains = self.queries.get_domains_by_gene(gene_name)
+            start = gene.start
+            end = gene.end
+        else:
+            domain = self.queries.get_domain(domain_name=domain_name)
+            gene = self.queries.get_gene(domain.gene_name)
+            domains = [domain]
+            start = gene.start + (domain.start * 3)
+            end = gene.start + (domain.end * 3)
 
         # reads variants
-        variants = self.queries.get_non_synonymous_variants_by_region(start=gene.start, end=gene.end, source=source)
+        logger.debug("Getting variants...")
+        variants = self.queries.get_non_synonymous_variants_by_region(start=start, end=end, source=source)
 
         # reads conservation and bins it
-        conservation = self.queries.get_conservation_table(start=gene.start, end=gene.end, bin_size=bin_size)
+        logger.debug("Getting conservation...")
+        conservation = self.queries.get_conservation_table(start=start, end=end, bin_size=bin_size)
 
         if variants.shape[0] > 0:
             # reads total number of samples and calculates frequencies
+            logger.debug("Getting sample count...")
             count_samples = self.queries.count_samples(source=source)
             variants["af"] = variants.count_occurrences / count_samples
             variants["log_af"] = variants.af.transform(lambda x: np.log(x + 1))
             variants["log_count"] = variants.count_occurrences.transform(lambda x: np.log(x))
-            # TODO: do something in the data ingestion about multiple annotations on the same variant
-            variants.annotation = variants.annotation.transform(lambda a: a.split("&")[0])
+            variants.annotation_highest_impact = variants.annotation_highest_impact.transform(lambda a: a.split("&")[0])
 
             main_xaxis = 'x'
 
             variants_traces = []
-            missense_variants = variants[variants.annotation == MISSENSE_VARIANT]
+            missense_variants = variants[variants.annotation_highest_impact == MISSENSE_VARIANT]
             if missense_variants.shape[0] > 0:
                 variants_traces.append(self._get_variants_scatter(
                     missense_variants, name="missense variants", symbol=MISSENSE_VARIANT_SYMBOL, xaxis=main_xaxis))
 
-            deletion_variants = variants[variants.annotation.isin(
+            deletion_variants = variants[variants.annotation_highest_impact.isin(
                 [DISRUPTIVE_INFRAME_DELETION, CONSERVATIVE_INFRAME_DELETION])]
             if deletion_variants.shape[0] > 0:
                 variants_traces.append(self._get_variants_scatter(
                     deletion_variants, name="inframe deletions", symbol=DELETION_SYMBOL, xaxis=main_xaxis))
 
-            insertion_variants = variants[variants.annotation.isin(
+            insertion_variants = variants[variants.annotation_highest_impact.isin(
                 [DISRUPTIVE_INFRAME_INSERTION, CONSERVATIVE_INFRAME_INSERTION])]
             if insertion_variants.shape[0] > 0:
                 variants_traces.append(self._get_variants_scatter(
                     insertion_variants, name="inframe insertions", symbol=INSERTION_SYMBOL, xaxis=main_xaxis))
 
-            other_variants = variants[~variants.annotation.isin([
+            other_variants = variants[~variants.annotation_highest_impact.isin([
                 MISSENSE_VARIANT, DISRUPTIVE_INFRAME_DELETION, CONSERVATIVE_INFRAME_DELETION,
                 DISRUPTIVE_INFRAME_INSERTION, CONSERVATIVE_INFRAME_DELETION])]
             if other_variants.shape[0] > 0:
@@ -408,15 +507,16 @@ class VariantsFigures(Figures):
                     ),
                     xaxis=main_xaxis,
                     showlegend=True,
-                    text=["{} ({})".format(v.get("hgvs_p"), v.get("annotation")) for v in selected_variants],
+                    text=["{} ({})".format(v.get("hgvs_p"), v.get("annotation_highest_impact")) for v in selected_variants],
                     hovertemplate=VARIANT_TOOLTIP
                 )
 
+            domain_colors = cycle(DOMAIN_COLORS)
             gene_trace = self._get_gene_trace(
-                gene, color=plotly.express.colors.sequential.Reds[1], yaxis='y5', xaxis=main_xaxis)
+                gene, start=start, end=end, color=plotly.express.colors.sequential.Tealgrn[-1], yaxis='y5', xaxis=main_xaxis)
             domain_traces = [self._get_domain_trace(
                 color=c, gene=gene, domain=d, yaxis='y6', xaxis=main_xaxis, showlegend=True)
-                for d, c in zip(domains, DOMAIN_COLORS)]
+                for d, c in zip(domains, domain_colors)]
             conservation_traces = self._get_conservation_traces(
                 conservation, main_xaxis, yaxis1='y2', yaxis2='y3', yaxis3='y4')
 
@@ -454,10 +554,10 @@ class VariantsFigures(Figures):
             return [dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
                     dcc.Markdown("""
                         ***Gene view*** *representing each variant with its frequency in the population and 
-                        ConsHMM (Arneson, 2019) conservation using a bin size of {} bp. Synonymous variants and variants 
+                        ConsHMM (Arneson, 2019) conservation using a bin size of {bin_size} bp. Synonymous variants and variants 
                         occurring in a single sample are excluded.*
 
-                        *The scatter plot shows non synonymous variants occurring in at least two samples on gene {}. 
+                        *The scatter plot shows non synonymous variants occurring in at least two samples on {region}. 
                         The x-axis shows the genomic coordinates and the y-axis shows the allele frequency.*
                         *The category of "other variants" includes frameshift indels, stop codon gain and lost and 
                         start lost variants.*
@@ -471,7 +571,10 @@ class VariantsFigures(Figures):
 
                         *Arneson A, Ernst J. Systematic discovery of conservation states for single-nucleotide annotation of the 
                         human genome. Communications Biology, 248, 2019. doi: https://doi.org/10.1038/s42003-019-0488-1*
-                        """.format(bin_size, gene_name))]
+                        """.format(
+                        bin_size=bin_size,
+                        region="gene {}".format(gene_name) if domain_name is not None else
+                                "domain {}: {}".format(gene_name, domain_name)))]
         else:
             return dcc.Markdown("""**No variants for the current selection**""")
 
@@ -510,10 +613,11 @@ class VariantsFigures(Figures):
         )
 
     @staticmethod
-    def _get_gene_trace(gene: Gene, color, yaxis="y", xaxis='x'):
+    def _get_gene_trace(gene: Gene, start, end, color, yaxis="y", xaxis='x'):
+        # start and end coordinates in some case will come from the domain
         return go.Scatter(
             mode='lines',
-            x=[gene.start, gene.end, gene.end, gene.start],
+            x=[start, end, end, start],
             y=[0, 0, 1, 1],
             name=gene.name,
             fill="toself",
@@ -540,13 +644,13 @@ class VariantsFigures(Figures):
             ),
             xaxis=xaxis,
             showlegend=True,
-            text=variants[["hgvs_p", "annotation"]].apply(lambda x: "{} ({})".format(x[0], x[1]), axis=1),
+            text=variants[["hgvs_p", "annotation_highest_impact"]].apply(lambda x: "{} ({})".format(x[0], x[1]), axis=1),
             hovertemplate=VARIANT_TOOLTIP
         )
 
-    def get_variants_clustering(self, gene_name, selected_variants, min_cooccurrence, min_samples):
-        data = self.queries.get_mds(
-            gene_name=gene_name, min_cooccurrence=min_cooccurrence, min_samples=min_samples)
+    def get_variants_clustering(self, sparse_matrix, min_cooccurrence, min_samples):
+
+        data = self._get_mds(sparse_matrix=sparse_matrix, min_samples=min_samples)
 
         tables = []
         for c in data.cluster.unique():
@@ -571,7 +675,7 @@ class VariantsFigures(Figures):
             ))
             tables.append(html.Br())
 
-        return [
+        return html.Div(children=[
             html.Div(children=tables),
             dcc.Markdown("""
             ***Co-occurrence clustering*** *shows the resulting clusters from the
@@ -585,4 +689,80 @@ class VariantsFigures(Figures):
             *
 
             *Ankerst et al. “OPTICS: ordering points to identify the clustering structure.” ACM SIGMOD Record 28, no. 2 (1999): 49-60.*
-            """.format(min_cooccurrence, min_samples))]
+            """.format(min_cooccurrence, min_samples))])
+
+    def _get_mds(self, sparse_matrix, min_samples) -> pd.DataFrame:
+
+        diagonal = sparse_matrix.loc[sparse_matrix.variant_id_one == sparse_matrix.variant_id_two,
+                                     ["variant_id_one", "variant_id_two", "count"]]
+        sparse_matrix_with_diagonal = pd.merge(
+            left=sparse_matrix, right=diagonal, on="variant_id_one", how="left", suffixes=("", "_one"))
+        sparse_matrix_with_diagonal = pd.merge(
+            left=sparse_matrix_with_diagonal, right=diagonal, on="variant_id_two", how="left", suffixes=("", "_two"))
+
+        # calculate Jaccard index
+        sparse_matrix_with_diagonal["count_union"] = sparse_matrix_with_diagonal["count_one"] + \
+                                                     sparse_matrix_with_diagonal["count_two"] - \
+                                                     sparse_matrix_with_diagonal["count"]
+        sparse_matrix_with_diagonal["jaccard_similarity"] = sparse_matrix_with_diagonal["count"] / \
+                                                            sparse_matrix_with_diagonal.count_union
+        sparse_matrix_with_diagonal["jaccard_dissimilarity"] = 1 - sparse_matrix_with_diagonal.jaccard_similarity
+
+        # calculate Cohen's kappa
+        sparse_matrix_with_diagonal["chance_agreement"] = np.exp(-sparse_matrix_with_diagonal["count"])
+        sparse_matrix_with_diagonal["kappa"] = 1 - ((1 - sparse_matrix_with_diagonal.jaccard_similarity) / (
+                1 - sparse_matrix_with_diagonal.chance_agreement))
+        sparse_matrix_with_diagonal["kappa"] = sparse_matrix_with_diagonal["kappa"].transform(
+            lambda k: k if k > 0 else 0)
+        sparse_matrix_with_diagonal["kappa_dissimilarity"] = 1 - sparse_matrix_with_diagonal.kappa
+
+        dissimilarity_metric = "kappa_dissimilarity"
+
+        # build upper diagonal matrix
+        all_variants = sparse_matrix_with_diagonal.variant_id_one.unique()
+        empty_full_matrix = pd.DataFrame(index=pd.MultiIndex.from_product(
+            [all_variants, all_variants], names=["variant_id_one", "variant_id_two"])).reset_index()
+        upper_diagonal_matrix = pd.merge(
+            # gets only the inferior matrix without the diagnonal
+            left=empty_full_matrix.loc[empty_full_matrix.variant_id_one < empty_full_matrix.variant_id_two, :],
+            right=sparse_matrix_with_diagonal.loc[:, ["variant_id_one", "variant_id_two", dissimilarity_metric]],
+            on=["variant_id_one", "variant_id_two"], how='left')
+        upper_diagonal_matrix.fillna(1.0, inplace=True)
+        upper_diagonal_matrix.sort_values(by=["variant_id_one", "variant_id_two"], inplace=True)
+
+        logger.debug("Building square distance matrix...")
+        distance_matrix = squareform(upper_diagonal_matrix[dissimilarity_metric])
+        # this ensures the order of variants ids is coherent with the non redundant form of the distance matrix
+        ids = np.array([list(upper_diagonal_matrix.variant_id_one[0])[0]] + \
+                       list(upper_diagonal_matrix.variant_id_two[0:len(upper_diagonal_matrix.variant_id_two.unique())]))
+        distance_matrix_with_ids = DissimilarityMatrix(data=distance_matrix, ids=ids)
+
+        logger.debug("Clustering...")
+        clusters = OPTICS(min_samples=min_samples, max_eps=1.4).fit_predict(distance_matrix_with_ids.data)
+
+        logger.debug("Building clustering dataframe...")
+        data = pd.DataFrame({'variant_id': distance_matrix_with_ids.ids, 'cluster': clusters})
+
+        logger.debug("Annotate with HGVS.p ...")
+        annotations = pd.concat([
+            sparse_matrix.loc[:, ["variant_id_one", "hgvs_p_one"]].rename(
+                columns={"variant_id_one": "variant_id", "hgvs_p_one": "hgvs_p"}),
+            sparse_matrix.loc[:, ["variant_id_two", "hgvs_p_two"]].rename(
+                columns={"variant_id_two": "variant_id", "hgvs_p_two": "hgvs_p"})])
+        data = pd.merge(left=data, right=annotations, on="variant_id", how="left")
+
+        logger.debug("Annotate with cluster mean Jaccard index...")
+        data["cluster_jaccard_mean"] = 1.0
+        for c in data.cluster.unique():
+            variants_in_cluster = data[data.cluster == c].variant_id.unique()
+            data.cluster_jaccard_mean = np.where(data.cluster == c, sparse_matrix_with_diagonal[
+                (sparse_matrix.variant_id_one.isin(variants_in_cluster)) &
+                (sparse_matrix.variant_id_two.isin(variants_in_cluster)) &
+                (sparse_matrix.variant_id_one != sparse_matrix.variant_id_two)
+                ].jaccard_dissimilarity.mean(), data.cluster_jaccard_mean)
+
+        data.cluster_jaccard_mean = data.cluster_jaccard_mean.transform(lambda x: round(x, 3))
+
+        data = data.set_index("variant_id").drop_duplicates().reset_index().sort_values("cluster")
+
+        return data[data.cluster != -1].loc[:, ["cluster", "variant_id", "hgvs_p", "cluster_jaccard_mean"]]

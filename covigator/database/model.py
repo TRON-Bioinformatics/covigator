@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import List
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, String, Float, Enum, DateTime, Integer, Boolean, Date, ForeignKey, \
-    ForeignKeyConstraint, BigInteger, JSON
+    ForeignKeyConstraint, BigInteger, JSON, Index
 import enum
 
 from covigator.configuration import Configuration
@@ -422,6 +422,18 @@ class VariantObservation(Base):
     ForeignKeyConstraint([sample, source], [Sample.id, Sample.source])
     ForeignKeyConstraint([variant_id], [Variant.variant_id])
 
+    __table_args__ = (Index("{}_index_annotation_position".format(VARIANT_OBSERVATION_TABLE_NAME),
+                            "annotation_highest_impact", "position"),
+                      Index("{}_index_sample".format(VARIANT_OBSERVATION_TABLE_NAME),
+                            "sample"),
+                      Index("{}_index_position".format(VARIANT_OBSERVATION_TABLE_NAME),
+                            "position"),
+                      Index("{}_index_annotation_source".format(VARIANT_OBSERVATION_TABLE_NAME),
+                            "annotation_highest_impact", "source"),
+                      Index("{}_index_variant_id_source".format(VARIANT_OBSERVATION_TABLE_NAME),
+                            "variant_id", "source"),
+                      )
+
 
 class SubclonalVariantObservation(Base):
     """
@@ -485,6 +497,12 @@ class SubclonalVariantObservation(Base):
 
     ForeignKeyConstraint([sample, source], [Sample.id, Sample.source])
     ForeignKeyConstraint([variant_id], [Variant.variant_id])
+
+    __table_args__ = (
+        Index("{}_index_position".format(SUBCLONAL_VARIANT_OBSERVATION_TABLE_NAME), "position"),
+        Index("{}_index_annotation_vaf".format(SUBCLONAL_VARIANT_OBSERVATION_TABLE_NAME), "annotation_highest_impact", "vaf"),
+        Index("{}_index_vaf".format(SUBCLONAL_VARIANT_OBSERVATION_TABLE_NAME), "vaf"),
+    )
 
 
 class VariantCooccurrence(Base):
@@ -600,6 +618,7 @@ class PrecomputedOccurrence(Base):
     variant_id = Column(String)
     hgvs_p = Column(String)
     gene_name = Column(String)
+    domain = Column(String)
     annotation = Column(String)
     source = Column(Enum(DataSource, name=DataSource.__constraint_name__))
 

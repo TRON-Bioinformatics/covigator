@@ -24,10 +24,24 @@ class GeneAnnotationsLoader:
         self.gene_annotations = os.path.join(
             os.path.abspath(os.path.dirname(__file__)), self.GENE_ANNOTATIONS_FILENAME)
 
+    def _remove_duplicated_genes(self, data):
+        results = {}
+        for g in data["genes"]:
+            if g["name"] not in results:
+                results[g["name"]] = g
+            else:
+                if int(g["end"]) - int(g["start"]) > int(results[g["name"]]["end"]) - int(results[g["name"]]["start"]):
+                    # in case of duplications it keeps only the longer gene
+                    results[g["name"]] = g
+        data["genes"] = list(results.values())
+        return data
+
     def load_data(self):
         # reads the JSON
         with open(self.gene_annotations) as fd:
             data = json.load(fd)
+
+        data = self._remove_duplicated_genes(data)
 
         # NOTE: load fraction of synonymous and non synonymous
         genes_fractions = pd.read_csv(self.genes_ns_s_counts)

@@ -3,11 +3,11 @@ import unittest
 from covigator import SYNONYMOUS_VARIANT
 from covigator.precomputations.loader import PrecomputationsLoader
 from covigator.precomputations.load_ns_s_counts import NsSCountsLoader
-from covigator.database.model import JobStatus, DataSource, Sample, Gene, RegionType
+from covigator.database.model import JobStatus, DataSource, Sample, Gene, RegionType, Domain
 from covigator.database.queries import Queries
 from covigator.tests.unit_tests.abstract_test import AbstractTest
 from covigator.tests.unit_tests.mocked import get_mocked_log, get_mocked_variant, \
-    get_mocked_variant_observation, mock_samples, mock_cooccurrence_matrix, mock_samples_and_variants
+    get_mocked_variant_observation, mock_samples, mock_cooccurrence_matrix, mock_samples_and_variants, MOCKED_DOMAINS
 
 
 class QueriesTests(AbstractTest):
@@ -85,8 +85,8 @@ class QueriesTests(AbstractTest):
 
     def test_get_cooccurrence_matrix_by_gene_no_data(self):
         PrecomputationsLoader(session=self.session).load_table_counts()
-        data = self.queries.get_variants_cooccurrence_by_gene(gene_name="S", test=True)
-        self.assertIsNone(data)
+        data = self.queries.get_sparse_cooccurrence_matrix(gene_name="S", domain=None)
+        self.assertEqual(data.shape, (0, 10))
 
     # TODO: make this test stable
     @unittest.skip
@@ -94,7 +94,7 @@ class QueriesTests(AbstractTest):
         other_variants, variants = mock_cooccurrence_matrix(faker=self.faker, session=self.session)
         PrecomputationsLoader(session=self.session).load_table_counts()
 
-        data = self.queries.get_variants_cooccurrence_by_gene(gene_name="S", min_cooccurrence=1, test=True)
+        data = self.queries.get_variants_cooccurrence_matrix(gene_name="S", min_cooccurrence=1, test=True)
         self.assertIsNotNone(data)
         num_unique_variants = len(set([v.variant_id for v in variants if v.annotation != SYNONYMOUS_VARIANT]))
         self.assertEqual(data.shape[0], num_unique_variants * num_unique_variants)
@@ -103,13 +103,13 @@ class QueriesTests(AbstractTest):
         self.assertGreaterEqual(data[data["frequency"] > 0].shape[0], len(variants))
         self.assertGreaterEqual(data[data["jaccard"] > 0].shape[0], len(variants))
 
-        data = self.queries.get_variants_cooccurrence_by_gene(gene_name="S", min_cooccurrence=11, test=True)
+        data = self.queries.get_variants_cooccurrence_matrix(gene_name="S", min_cooccurrence=11, test=True)
         self.assertIsNone(data)
 
-        data = self.queries.get_variants_cooccurrence_by_gene(gene_name="X", min_cooccurrence=1, test=True)
+        data = self.queries.get_variants_cooccurrence_matrix(gene_name="X", min_cooccurrence=1, test=True)
         self.assertIsNone(data)
 
-        data = self.queries.get_variants_cooccurrence_by_gene(gene_name="N", min_cooccurrence=1, test=True)
+        data = self.queries.get_variants_cooccurrence_matrix(gene_name="N", min_cooccurrence=1, test=True)
         self.assertIsNotNone(data)
         self.assertEqual(data.shape[1], 7)
         self.assertGreaterEqual(data[data["count"] > 0].shape[0], len(other_variants))
@@ -197,6 +197,7 @@ class QueriesTests(AbstractTest):
         self.assertGreater(len(genes), 0)
         for g in genes:
             self.assertIsInstance(g, Gene)
+            self.assertIsNotNone(g.name)
 
     def test_get_gene(self):
         gene = self.queries.get_gene("S")
@@ -204,6 +205,24 @@ class QueriesTests(AbstractTest):
         self.assertIsInstance(gene, Gene)
         gene = self.queries.get_gene("NOEXISTO")
         self.assertIsNone(gene)
+
+    def test_get_domains(self):
+        domains = self.queries.get_domains()
+        self.assertIsNotNone(domains)
+        self.assertGreater(len(domains), 0)
+        for d in domains:
+            self.assertIsInstance(d, Domain)
+            self.assertIsNotNone(d.name)
+            self.assertIsNotNone(d.gene_name)
+
+    def test_get_domains_by_gene(self):
+        domains = self.queries.get_domains_by_gene("S")
+        self.assertIsNotNone(domains)
+        self.assertGreater(len(domains), 0)
+        for d in domains:
+            self.assertIsInstance(d, Domain)
+            self.assertIsNotNone(d.name)
+            self.assertEqual(d.gene_name, "S")
 
     def test_count_jobs_in_queue(self):
         mock_samples(faker=self.faker, session=self.session, job_status=JobStatus.QUEUED, num_samples=50)
@@ -237,16 +256,19 @@ class QueriesTests(AbstractTest):
         self._assert_dnds_table(data)
         self.assertEqual(data[~data.country.isin(countries)].shape[0], 0)  # no entries to other country
 
-        genes = list(data.region_name.unique())[0:2]
+        genes = ["S"]
         data = self.queries.get_dnds_table(genes=genes)
-        self._assert_dnds_table(data)
-        self.assertEqual(data[~data.region_name.isin(genes)].shape[0], 0)  # no entries to other country
+        self._assert_dnds_table(data, has_domains=True)
+        self.assertEqual(data[~data.region_name.isin(genes + MOCKED_DOMAINS)].shape[0], 0)  # no entries to other country
 
-    def _assert_dnds_table(self, data):
+    def _assert_dnds_table(self, data, has_domains=False):
         self.assertIsNotNone(data)
         self.assertGreater(data.shape[0], 0)
         self.assertEqual(data.shape[1], 8)
-        self.assertEqual(data[data.region_type != RegionType.GENE].shape[0], 0)  # all entries to a gene
+        self.assertGreater(data[data.region_type == RegionType.GENE].shape[0], 0)
+        if has_domains:
+            self.assertGreater(data[data.region_type == RegionType.DOMAIN].shape[0], 0)
+        self.assertEqual(data[(data.region_type != RegionType.GENE) & (data.region_type != RegionType.DOMAIN)].shape[0], 0)  # all entries to a gene or domain
         self.assertEqual(data[data.country.isna()].shape[0], 0)  # no empty countries
         self.assertEqual(data[data.month.isna()].shape[0], 0)  # no empty months
         self.assertEqual(data[data.region_name.isna()].shape[0], 0)  # no empty gene

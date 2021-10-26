@@ -1,12 +1,8 @@
 import functools
 from datetime import date, datetime
 from typing import List, Union
-import numpy as np
 import pandas as pd
-from scipy.spatial.distance import squareform
 from logzero import logger
-from skbio.stats.distance import DissimilarityMatrix
-from sklearn.cluster import OPTICS
 from sqlalchemy import and_, desc, asc, func, String, DateTime, cast
 from sqlalchemy.engine.default import DefaultDialect
 from sqlalchemy.orm import Session, aliased
@@ -247,33 +243,47 @@ class Queries:
                          and_(SampleGisaid.finished, SampleGisaid.date.isnot(None))).distinct().all()]
         return sorted(set(dates_ena + dates_gisaid))
 
+    @functools.lru_cache()
     def get_gene(self, gene_name: str) -> Gene:
         return self.session.query(Gene).filter(Gene.name == gene_name).first()
 
+    @functools.lru_cache()
     def get_genes(self) -> List[Gene]:
         return self.session.query(Gene).order_by(Gene.start).all()
 
+    @functools.lru_cache()
     def get_genes_df(self) -> pd.DataFrame:
         return pd.read_sql(self.session.query(Gene).order_by(Gene.start).statement, self.session.bind)
 
+    @functools.lru_cache()
+    def get_domains_df(self) -> pd.DataFrame:
+        return pd.read_sql(self.session.query(Domain).order_by(Domain.start).statement, self.session.bind)
+
+    @functools.lru_cache()
+    def get_domain(self, domain_name: str) -> Domain:
+        return self.session.query(Domain).filter(Domain.name == domain_name).first()
+
+    @functools.lru_cache()
     def get_domains(self) -> List[Domain]:
-        return self.session.query(Domain).order_by(and_(Domain.gene_name, Domain.start)).all()
+        return self.session.query(Domain).order_by(Domain.gene_name, Domain.start).all()
 
-    def get_domains_by_gene(self, gene_name: str) -> Domain:
-        return self.session.query(Domain).filter(Domain.gene_name == gene_name).first()
+    @functools.lru_cache()
+    def get_domains_by_gene(self, gene_name: str) -> List[Domain]:
+        return self.session.query(Domain).filter(Domain.gene_name == gene_name).order_by(Domain.start).all()
 
+    @functools.lru_cache()
     def get_non_synonymous_variants_by_region(self, start, end, source) -> pd.DataFrame:
         query = self.session.query(VariantObservation.position,
-                                      VariantObservation.annotation,
+                                      VariantObservation.annotation_highest_impact,
                                       VariantObservation.hgvs_p,
                                       func.count().label("count_occurrences"))\
-            .filter(and_(VariantObservation.position >= start, VariantObservation.position <= end,
-                         VariantObservation.annotation != SYNONYMOUS_VARIANT))
+            .filter(and_(VariantObservation.annotation_highest_impact != SYNONYMOUS_VARIANT,
+                         VariantObservation.position >= start, VariantObservation.position <= end))
         if source == DataSource.ENA.name:
             query = query.filter(VariantObservation.source == DataSource.ENA)
         elif source == DataSource.GISAID.name:
             query = query.filter(VariantObservation.source == DataSource.GISAID)
-        subquery = query.group_by(VariantObservation.position, VariantObservation.annotation, VariantObservation.hgvs_p).subquery()
+        subquery = query.group_by(VariantObservation.position, VariantObservation.annotation_highest_impact, VariantObservation.hgvs_p).subquery()
         return pd.read_sql(
             self.session.query(subquery).filter(subquery.c.count_occurrences > 1).statement, self.session.bind)
 
@@ -500,12 +510,12 @@ class Queries:
     def get_top_occurring_variants(self, top, source: str = None):
         query = self.session.query(
             VariantObservation.variant_id, VariantObservation.hgvs_p, VariantObservation.gene_name,
-            VariantObservation.annotation_highest_impact, func.count().label('total')) \
+            VariantObservation.pfam_name, VariantObservation.annotation_highest_impact, func.count().label('total')) \
             .filter(VariantObservation.annotation_highest_impact != SYNONYMOUS_VARIANT)
         if source is not None:
             query = query.filter(VariantObservation.source == source)
         query = query.group_by(VariantObservation.variant_id, VariantObservation.hgvs_p, VariantObservation.gene_name,
-                      VariantObservation.annotation_highest_impact) \
+                      VariantObservation.pfam_name, VariantObservation.annotation_highest_impact) \
             .order_by(desc('total')).limit(top)
         top_occurring_variants = pd.read_sql(query.statement, self.session.bind)
 
@@ -540,13 +550,17 @@ class Queries:
                 lambda d: "{}-{:02d}".format(d.year, int(d.month)))
         return top_occurring_variants
 
-    def get_top_occurring_variants_precomputed(self, top=10, gene_name=None, metric="count", source=None) -> pd.DataFrame:
+    def get_top_occurring_variants_precomputed(
+            self, top=10, gene_name=None, domain=None, metric="count", source=None) -> pd.DataFrame:
         """
         Returns the top occurring variants + the segregated counts of occurrences per month
         with columns: chromosome, position, reference, alternate, total, month, count
         """
         query = self.session.query(PrecomputedOccurrence).filter(PrecomputedOccurrence.source == source)
-        if gene_name is not None:
+        # if domain is provided it supersedes the gene filter
+        if domain is not None:
+            query = query.filter(PrecomputedOccurrence.domain == domain)
+        elif gene_name is not None:
             query = query.filter(PrecomputedOccurrence.gene_name == gene_name)
         if metric == "count":
             query = query.order_by(PrecomputedOccurrence.count.desc())
@@ -613,208 +627,49 @@ class Queries:
                 counts_ena.set_index(["month"]), fill_value=0).reset_index()
         return counts
 
-    def get_variants_cooccurrence_by_gene(self, gene_name, min_cooccurrence=5, test=False) -> pd.DataFrame:
+    @functools.lru_cache()
+    def get_sparse_cooccurrence_matrix(self, gene_name, domain, min_cooccurrence=5) -> pd.DataFrame:
         """
-        Returns the full cooccurrence matrix of all non synonymous variants in a gene with at least
+        Returns the sparse cooccurrence matrix of all non synonymous variants in a gene or domain with at least
         min_occurrences occurrences.
         """
-        # query for total samples required to calculate frequencies
-        # FIXME: once we have the cooccurrence for GISAID samples we need to count all samples here
-        count_samples = self.count_samples(source=DataSource.ENA.name)
-
         # query for cooccurrence matrix
         variant_one = aliased(Variant)
         variant_two = aliased(Variant)
-        if not test:
-            query = self.session.query(VariantCooccurrence,
-                                       variant_one.position,
-                                       variant_one.reference,
-                                       variant_one.alternate,
-                                       variant_one.hgvs_p,
-                                       (variant_one.hgvs_p + " - " + variant_two.hgvs_p).label("hgvs_tooltip"))
-        else:
-            # this is needed for testing environment with SQLite
-            query = self.session.query(VariantCooccurrence,
-                                       variant_one.position,
-                                       variant_one.reference,
-                                       variant_one.alternate,
-                                       variant_one.hgvs_p,
-                                       (variant_one.hgvs_p + " - " + variant_two.hgvs_p).label("hgvs_tooltip"))
+        query = self.session.query(VariantCooccurrence,
+                                   variant_one.position,
+                                   variant_one.reference,
+                                   variant_one.alternate,
+                                   variant_one.hgvs_p,
+                                   variant_one.hgvs_p.label("hgvs_p_one"),
+                                   variant_two.hgvs_p.label("hgvs_p_two"),
+                                   (variant_one.hgvs_p + " - " + variant_two.hgvs_p).label("hgvs_tooltip"))
 
-        query = query.filter(VariantCooccurrence.count >= min_cooccurrence)\
+        query = query.filter(VariantCooccurrence.count >= min_cooccurrence) \
             .join(variant_one, and_(VariantCooccurrence.variant_id_one == variant_one.variant_id)) \
             .join(variant_two, and_(VariantCooccurrence.variant_id_two == variant_two.variant_id))
 
-        if gene_name is not None:
-            query = query.filter(and_(variant_one.gene_name == gene_name,
-                         variant_one.annotation != SYNONYMOUS_VARIANT,
-                         variant_two.gene_name == gene_name,
-                         variant_two.annotation != SYNONYMOUS_VARIANT))
+        if domain is not None:
+            query = query.filter(and_(
+                variant_one.pfam_name == domain,
+                variant_one.annotation != SYNONYMOUS_VARIANT,
+                variant_two.pfam_name == domain,
+                variant_two.annotation != SYNONYMOUS_VARIANT))
+        elif gene_name is not None:
+            query = query.filter(and_(
+                variant_one.gene_name == gene_name,
+                variant_one.annotation != SYNONYMOUS_VARIANT,
+                variant_two.gene_name == gene_name,
+                variant_two.annotation != SYNONYMOUS_VARIANT))
         else:
-            query = query.filter(and_(variant_one.annotation != SYNONYMOUS_VARIANT,
-                                      variant_two.annotation != SYNONYMOUS_VARIANT))
+            query = query.filter(and_(
+                variant_one.annotation != SYNONYMOUS_VARIANT,
+                variant_two.annotation != SYNONYMOUS_VARIANT))
 
         self._print_query(query=query)
         data = pd.read_sql(query.statement, self.session.bind)
 
-        full_matrix = None
-        if data.shape[0] > 0:
-            # these are views of the original data
-            annotations = data.loc[data.variant_id_one == data.variant_id_two,
-                                   ["variant_id_one", "position", "reference", "alternate", "hgvs_p"]]
-            tooltip = data.loc[:, ["variant_id_one", "variant_id_two", "hgvs_tooltip"]]
-            diagonal = data.loc[data.variant_id_one == data.variant_id_two, ["variant_id_one", "variant_id_two", "count"]]
-            sparse_matrix = data.loc[:, ["variant_id_one", "variant_id_two", "count"]]
-            sparse_matrix["frequency"] = sparse_matrix["count"] / count_samples
-            sparse_matrix = pd.merge(left=sparse_matrix, right=diagonal, on="variant_id_one", how="left", suffixes=("", "_one"))
-            sparse_matrix = pd.merge(left=sparse_matrix, right=diagonal, on="variant_id_two", how="left", suffixes=("", "_two"))
-
-            # calculate Jaccard index
-            sparse_matrix["count_union"] = sparse_matrix["count_one"] + sparse_matrix["count_two"] - sparse_matrix["count"]
-            sparse_matrix["jaccard"] = sparse_matrix["count"] / sparse_matrix["count_union"]
-
-            # calculate Cohen's kappa
-            sparse_matrix["chance_agreement"] = np.exp(-sparse_matrix["count"])
-            sparse_matrix["kappa"] = 1 - ((1 - sparse_matrix.jaccard) / (1 - sparse_matrix.chance_agreement))
-            sparse_matrix["kappa"] = sparse_matrix["kappa"].transform(lambda k: k if k > 0 else 0)
-
-            del sparse_matrix["count_union"]
-            del sparse_matrix["count_one"]
-            del sparse_matrix["count_two"]
-            del sparse_matrix["chance_agreement"]
-
-            # from the sparse matrix builds in memory the complete matrix
-            all_variants = data.variant_id_one.unique()
-            empty_full_matrix = pd.DataFrame(index=pd.MultiIndex.from_product(
-                [all_variants, all_variants], names=["variant_id_one", "variant_id_two"])).reset_index()
-            full_matrix = pd.merge(
-                left=empty_full_matrix, right=sparse_matrix, on=["variant_id_one", "variant_id_two"], how='left')
-
-            # add annotation on variant one
-            full_matrix = pd.merge(left=full_matrix, right=annotations, on="variant_id_one", how='left')\
-                .rename(columns={"position": "position_one",
-                                 "reference": "reference_one",
-                                 "alternate": "alternate_one",
-                                 "hgvs_p": "hgvs_p_one"})
-
-            # add annotations on variant two
-            full_matrix = pd.merge(left=full_matrix, right=annotations,
-                                   left_on="variant_id_two", right_on="variant_id_one", how='left') \
-                .rename(columns={"variant_id_one_x": "variant_id_one",
-                                 "position": "position_two",
-                                 "reference": "reference_two",
-                                 "alternate": "alternate_two",
-                                 "hgvs_p": "hgvs_p_two"})
-
-            # add tooltip
-            full_matrix = pd.merge(left=full_matrix, right=tooltip, on=["variant_id_one", "variant_id_two"], how='left')
-            # correct tooltip in diagonal
-            full_matrix.loc[full_matrix.variant_id_one == full_matrix.variant_id_two, "hgvs_tooltip"] = full_matrix.hgvs_p_one
-
-            # NOTE: transpose matrix manually as plotly transpose does not work with labels
-            # the database return the upper diagonal, the lower is best for plots
-            full_matrix.sort_values(["position_two", "reference_two", "alternate_two",
-                                     "position_one", "reference_one", "alternate_one"], inplace=True)
-
-            full_matrix = full_matrix.loc[:, ["variant_id_one", "variant_id_two", "count", "frequency", "jaccard",
-                                              "kappa", "hgvs_tooltip"]]
-
-        return full_matrix
-
-    @functools.lru_cache()
-    def get_mds(self, gene_name, min_cooccurrence, min_samples) -> pd.DataFrame:
-
-        variant_one = aliased(Variant)
-        variant_two = aliased(Variant)
-        query = self.session.query(VariantCooccurrence,
-                                   variant_one.hgvs_p.label("hgvs_p_one"),
-                                   variant_two.hgvs_p.label("hgvs_p_two")) \
-            .filter(VariantCooccurrence.count >= min_cooccurrence) \
-            .join(variant_one, and_(VariantCooccurrence.variant_id_one == variant_one.variant_id)) \
-            .join(variant_two, and_(VariantCooccurrence.variant_id_two == variant_two.variant_id))
-
-        if gene_name is not None:
-            query = query.filter(and_(variant_one.gene_name == gene_name,
-                                      variant_one.annotation != SYNONYMOUS_VARIANT,
-                                      variant_two.gene_name == gene_name,
-                                      variant_two.annotation != SYNONYMOUS_VARIANT))
-        else:
-            query = query.filter(and_(variant_one.annotation != SYNONYMOUS_VARIANT,
-                                      variant_two.annotation != SYNONYMOUS_VARIANT))
-
-        sparse_matrix = pd.read_sql(query.statement, self.session.bind)
-        diagonal = sparse_matrix.loc[sparse_matrix.variant_id_one == sparse_matrix.variant_id_two,
-                                     ["variant_id_one", "variant_id_two", "count"]]
-        sparse_matrix_with_diagonal = pd.merge(
-            left=sparse_matrix, right=diagonal, on="variant_id_one", how="left", suffixes=("", "_one"))
-        sparse_matrix_with_diagonal = pd.merge(
-            left=sparse_matrix_with_diagonal, right=diagonal, on="variant_id_two", how="left", suffixes=("", "_two"))
-
-        # calculate Jaccard index
-        sparse_matrix_with_diagonal["count_union"] = sparse_matrix_with_diagonal["count_one"] + \
-                                                     sparse_matrix_with_diagonal["count_two"] - \
-                                                     sparse_matrix_with_diagonal["count"]
-        sparse_matrix_with_diagonal["jaccard_similarity"] = sparse_matrix_with_diagonal["count"] / \
-                                                               sparse_matrix_with_diagonal.count_union
-        sparse_matrix_with_diagonal["jaccard_dissimilarity"] = 1 - sparse_matrix_with_diagonal.jaccard_similarity
-
-        # calculate Cohen's kappa
-        sparse_matrix_with_diagonal["chance_agreement"] = np.exp(-sparse_matrix_with_diagonal["count"])
-        sparse_matrix_with_diagonal["kappa"] = 1 - ((1 - sparse_matrix_with_diagonal.jaccard_similarity) / (
-                1 - sparse_matrix_with_diagonal.chance_agreement))
-        sparse_matrix_with_diagonal["kappa"] = sparse_matrix_with_diagonal["kappa"].transform(lambda k: k if k > 0 else 0)
-        sparse_matrix_with_diagonal["kappa_dissimilarity"] = 1 - sparse_matrix_with_diagonal.kappa
-
-        dissimilarity_metric = "kappa_dissimilarity"
-
-        # build upper diagonal matrix
-        all_variants = sparse_matrix_with_diagonal.variant_id_one.unique()
-        empty_full_matrix = pd.DataFrame(index=pd.MultiIndex.from_product(
-            [all_variants, all_variants], names=["variant_id_one", "variant_id_two"])).reset_index()
-        upper_diagonal_matrix = pd.merge(
-            # gets only the inferior matrix without the diagnonal
-            left=empty_full_matrix.loc[empty_full_matrix.variant_id_one < empty_full_matrix.variant_id_two, :],
-            right=sparse_matrix_with_diagonal.loc[:, ["variant_id_one", "variant_id_two", dissimilarity_metric]],
-            on=["variant_id_one", "variant_id_two"], how='left')
-        upper_diagonal_matrix.fillna(1.0, inplace=True)
-        upper_diagonal_matrix.sort_values(by=["variant_id_one", "variant_id_two"], inplace=True)
-
-        logger.info("Building square distance matrix...")
-        distance_matrix = squareform(upper_diagonal_matrix[dissimilarity_metric])
-        # this ensures the order of variants ids is coherent with the non redundant form of the distance matrix
-        ids = np.array([list(upper_diagonal_matrix.variant_id_one[0])[0]] + \
-              list(upper_diagonal_matrix.variant_id_two[0:len(upper_diagonal_matrix.variant_id_two.unique())]))
-        distance_matrix_with_ids = DissimilarityMatrix(data=distance_matrix, ids=ids)
-
-        logger.info("Clustering...")
-        clusters = OPTICS(min_samples=min_samples, max_eps=1.4).fit_predict(distance_matrix_with_ids.data)
-
-        logger.info("Building clustering dataframe...")
-        data = pd.DataFrame({'variant_id': distance_matrix_with_ids.ids, 'cluster': clusters})
-
-        logger.info("Annotate with HGVS.p ...")
-        annotations = pd.concat([
-            sparse_matrix.loc[:, ["variant_id_one", "hgvs_p_one"]].rename(
-                columns={"variant_id_one": "variant_id", "hgvs_p_one": "hgvs_p"}),
-            sparse_matrix.loc[:, ["variant_id_two", "hgvs_p_two"]].rename(
-                columns={"variant_id_two": "variant_id", "hgvs_p_two": "hgvs_p"})])
-        data = pd.merge(left=data, right=annotations, on="variant_id", how="left")
-
-        logger.info("Annotate with cluster mean Jaccard index...")
-        data["cluster_jaccard_mean"] = 1.0
-        for c in data.cluster.unique():
-            variants_in_cluster = data[data.cluster == c].variant_id.unique()
-            data.cluster_jaccard_mean = np.where(data.cluster == c, sparse_matrix_with_diagonal[
-                (sparse_matrix.variant_id_one.isin(variants_in_cluster)) &
-                (sparse_matrix.variant_id_two.isin(variants_in_cluster)) &
-                (sparse_matrix.variant_id_one != sparse_matrix.variant_id_two)
-            ].jaccard_dissimilarity.mean(), data.cluster_jaccard_mean)
-
-        data.cluster_jaccard_mean = data.cluster_jaccard_mean.transform(lambda x: round(x, 3))
-
-        data = data.set_index("variant_id").drop_duplicates().reset_index().sort_values("cluster")
-
-        return data[data.cluster != -1].loc[:, ["cluster", "variant_id", "hgvs_p", "cluster_jaccard_mean"]]
+        return data
 
     def get_variant_abundance_histogram(self, bin_size=50, source: str = None, cache=True) -> pd.DataFrame:
         histogram = None
@@ -889,16 +744,31 @@ class Queries:
 
     def get_dnds_table(self, source: DataSource = None, countries=None, genes=None) -> pd.DataFrame:
         # counts variants over those bins
-        query = self.session.query(PrecomputedSynonymousNonSynonymousCounts).filter(PrecomputedSynonymousNonSynonymousCounts.region_type == RegionType.GENE)
+        query_genes = self.session.query(PrecomputedSynonymousNonSynonymousCounts)\
+            .filter(PrecomputedSynonymousNonSynonymousCounts.region_type == RegionType.GENE)
+        query_domains = self.session.query(PrecomputedSynonymousNonSynonymousCounts) \
+            .filter(PrecomputedSynonymousNonSynonymousCounts.region_type == RegionType.DOMAIN)
+        data_domains = None
 
         if source is not None:
-            query = query.filter(PrecomputedSynonymousNonSynonymousCounts.source == source)
+            query_genes = query_genes.filter(PrecomputedSynonymousNonSynonymousCounts.source == source)
+            query_domains = query_domains.filter(PrecomputedSynonymousNonSynonymousCounts.source == source)
         if countries is not None and len(countries) > 0:
-            query = query.filter(PrecomputedSynonymousNonSynonymousCounts.country.in_(countries))
+            query_genes = query_genes.filter(PrecomputedSynonymousNonSynonymousCounts.country.in_(countries))
+            query_domains = query_domains.filter(PrecomputedSynonymousNonSynonymousCounts.country.in_(countries))
         if genes is not None and len(genes) > 0:
-            query = query.filter(PrecomputedSynonymousNonSynonymousCounts.region_name.in_(genes))
+            query_genes = query_genes.filter(PrecomputedSynonymousNonSynonymousCounts.region_name.in_(genes))
+            domains = []
+            for g in genes:
+                domains = domains + [d.name for d in self.get_domains_by_gene(gene_name=g)]
+            query_domains = query_domains.filter(PrecomputedSynonymousNonSynonymousCounts.region_name.in_(domains))
+            data_domains = pd.read_sql(query_domains.statement, self.session.bind)
 
-        return pd.read_sql(query.statement, self.session.bind)
+        data = pd.read_sql(query_genes.statement, self.session.bind)
+        if data_domains is not None and data_domains.shape[1] > 0:
+            data = pd.concat([data, data_domains])
+
+        return data
 
     def _print_query(self, query):
         class StringLiteral(String):
