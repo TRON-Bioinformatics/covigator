@@ -9,6 +9,8 @@ from covigator.dashboard.figures.samples import SampleFigures
 from covigator.database.model import DataSource, VariantType
 from covigator.database.queries import Queries
 
+DEFAULT_DATA_SOURCE = DataSource.ENA.name
+
 ID_VARIANTS_PER_SAMPLE_GRAPH = 'variants-per-sample-graph'
 ID_INDEL_LENGTH_GRAPH = 'indel-lengths-graph'
 ID_ANNOTATIONS_GRAPH = 'id-annotations-graph'
@@ -64,7 +66,7 @@ def get_samples_tab_left_bar(queries: Queries):
                 id=ID_DROPDOWN_DATA_SOURCE,
                 options=[{'label': DataSource.ENA.name, 'value': DataSource.ENA.name},
                          {'label': DataSource.GISAID.name, 'value': DataSource.GISAID.name}],
-                value=DataSource.ENA.name,
+                value=DEFAULT_DATA_SOURCE,
                 clearable=False,
                 multi=False
             ),
@@ -80,7 +82,7 @@ def get_samples_tab_left_bar(queries: Queries):
             dcc.Markdown("""Select one or more countries"""),
             dcc.Dropdown(
                 id=ID_DROPDOWN_COUNTRY,
-                options=[{'label': c, 'value': c} for c in queries.get_countries()],
+                options=[{'label': c, 'value': c} for c in queries.get_countries(DEFAULT_DATA_SOURCE)],
                 value=None,
                 multi=True
             ),
@@ -119,6 +121,15 @@ def set_callbacks_samples_tab(app, session: Session):
     figures = SampleFigures(queries)
 
     @app.callback(
+        Output(ID_DROPDOWN_COUNTRY, 'options'),
+        Input(ID_DROPDOWN_DATA_SOURCE, 'value'))
+    def set_domains(source):
+        """
+        Updates the country drop down list when the data source is changed
+        """
+        return [{'label': c, 'value': c} for c in queries.get_countries(source)]
+
+    @app.callback(
         Output(ID_ACCUMULATED_SAMPLES_GRAPH, 'children'),
         Input(ID_DROPDOWN_DATA_SOURCE, 'value'),
         Input(ID_DROPDOWN_COUNTRY, 'value'),
@@ -127,7 +138,7 @@ def set_callbacks_samples_tab(app, session: Session):
     )
     def update_accumulated_samples_by_country(data_source, countries, min_samples):
         return html.Div(children=figures.get_accumulated_samples_by_country_plot(
-            data_source=data_source, countries=countries, min_samples=min_samples))
+            data_source=data_source, countries=countries, min_samples=min_samples if countries is None else 0))
 
     @app.callback(
         Output(ID_DN_DS_GRAPH, 'children'),
