@@ -78,7 +78,7 @@ class SampleFigures(Figures):
             ])
             # prepares the data and calculates the dN/dS
             data_to_plot = data.groupby(["month", "region_name"]).sum().reset_index().sort_values("month")
-            data_to_plot = pd.merge(left=data_to_plot, right=genes, left_on="region_name", right_on="name")
+            data_to_plot = pd.merge(left=genes, right=data_to_plot, left_on="name", right_on="region_name")
             data_to_plot["dn_ds"] = data_to_plot[["ns", "s", "fraction_non_synonymous", "fraction_synonymous"]].apply(
                 lambda x: self._calculate_dn_ds(ns=x[0], s=x[1], NS=x[2], S=x[3]), axis=1)
 

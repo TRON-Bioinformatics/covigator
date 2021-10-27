@@ -54,14 +54,6 @@ def get_samples_tab_left_bar(queries: Queries):
                 multi=False
             ),
             html.Br(),
-            dcc.Markdown("""Select one or more genes"""),
-            dcc.Dropdown(
-                id=ID_DROPDOWN_GENE,
-                options=[{'label': g.name, 'value': g.name} for g in queries.get_genes()],
-                value=None,
-                multi=True
-            ),
-            html.Br(),
             dcc.Markdown("""Select one or more countries"""),
             dcc.Dropdown(
                 id=ID_DROPDOWN_COUNTRY,
@@ -70,7 +62,6 @@ def get_samples_tab_left_bar(queries: Queries):
                 multi=True
             ),
             html.Br(),
-            dcc.Markdown("""**Accumulated samples by country**"""),
             dcc.Markdown("""Minimum number of samples per country"""),
             dcc.Slider(
                 id=ID_SLIDER_MIN_SAMPLES,
@@ -80,7 +71,15 @@ def get_samples_tab_left_bar(queries: Queries):
                 value=100,
                 dots=False,
                 marks={i: '{}'.format(i) for i in [0, 2500, 5000, 7500, 10000]},
-                tooltip=dict(always_visible=False, placement="right")
+                tooltip=dict(always_visible=True, placement="right")
+            ),
+            html.Br(),
+            dcc.Markdown("""Select one or more genes to show the dN/dS ratio on protein domains"""),
+            dcc.Dropdown(
+                id=ID_DROPDOWN_GENE,
+                options=[{'label': g2, 'value': g2} for g2 in sorted([g.name for g in queries.get_genes()])],
+                value=None,
+                multi=True
             ),
         ])
 
@@ -93,11 +92,20 @@ def set_callbacks_samples_tab(app, session: Session):
     @app.callback(
         Output(ID_DROPDOWN_COUNTRY, 'options'),
         Input(ID_DROPDOWN_DATA_SOURCE, 'value'))
-    def set_domains(source):
+    def set_countries(source):
         """
         Updates the country drop down list when the data source is changed
         """
         return [{'label': c, 'value': c} for c in queries.get_countries(source)]
+
+    @app.callback(
+        Output(ID_SLIDER_MIN_SAMPLES, 'disabled'),
+        Input(ID_DROPDOWN_COUNTRY, 'value'))
+    def disable_minimum_number_samples(countries):
+        """
+        Disables the minimum number of samples option when countries are provided
+        """
+        return countries is not None
 
     @app.callback(
         Output(ID_ACCUMULATED_SAMPLES_GRAPH, 'children'),
