@@ -26,13 +26,16 @@ def get_tab_samples(queries: Queries):
     return dbc.CardBody(
             children=[
                 get_samples_tab_left_bar(queries),
+                html.Div(
+                    className="one column",
+                    children=[html.Br()]),
                 get_samples_tab_graphs()
         ])
 
 
 def get_samples_tab_graphs():
     return html.Div(
-        className="ten columns",
+        className="nine columns",
         children=[
             html.Br(),
             html.Div(id=ID_ACCUMULATED_SAMPLES_GRAPH),
