@@ -171,9 +171,8 @@ class Queries:
             data = data.head(12)
         return data
 
-    @functools.lru_cache()
     def get_accumulated_samples_by_country(
-            self, data_source: DataSource, countries: List[str], min_samples=100) -> pd.DataFrame:
+            self, data_source: str, countries: List[str], min_samples=100) -> pd.DataFrame:
         """
         Returns a DataFrame with columns: data, country, cumsum, count
         """

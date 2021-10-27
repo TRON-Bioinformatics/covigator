@@ -153,7 +153,7 @@ class SampleFigures(Figures):
                 ]
         return graph
 
-    def get_accumulated_samples_by_country_plot(self, data_source: DataSource = None, countries=None, min_samples=1000):
+    def get_accumulated_samples_by_country_plot(self, data_source: str = None, countries=None, min_samples=1000):
         logger.debug("Getting data on samples by country...")
         data = self.queries.get_accumulated_samples_by_country(
             data_source=data_source, countries=countries, min_samples=min_samples)
