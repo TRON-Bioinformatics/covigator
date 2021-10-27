@@ -3,11 +3,13 @@ import functools
 import dash_core_components as dcc
 import dash_bootstrap_components as dbc
 import dash_html_components as html
-from dash.dependencies import Output, Input
+from dash.dependencies import Output, Input, State
 from sqlalchemy.orm import Session
 from covigator.dashboard.figures.samples import SampleFigures
 from covigator.database.model import DataSource
 from covigator.database.queries import Queries
+
+ID_APPLY_BUTTOM = 's-apply-buttom'
 
 DEFAULT_DATA_SOURCE = DataSource.ENA.name
 
@@ -81,6 +83,8 @@ def get_samples_tab_left_bar(queries: Queries):
                 value=None,
                 multi=True
             ),
+            html.Br(),
+            html.Button('Apply', id=ID_APPLY_BUTTOM),
         ])
 
 
@@ -89,6 +93,9 @@ def set_callbacks_samples_tab(app, session: Session):
     queries = Queries(session=session)
     figures = SampleFigures(queries)
 
+    countries_ena = queries.get_countries(DataSource.ENA.name)
+    countries_gisaid = queries.get_countries(DataSource.GISAID.name)
+
     @app.callback(
         Output(ID_DROPDOWN_COUNTRY, 'options'),
         Input(ID_DROPDOWN_DATA_SOURCE, 'value'))
@@ -96,7 +103,12 @@ def set_callbacks_samples_tab(app, session: Session):
         """
         Updates the country drop down list when the data source is changed
         """
-        return [{'label': c, 'value': c} for c in queries.get_countries(source)]
+        countries = []
+        if source == DataSource.ENA.name:
+            countries = [{'label': c, 'value': c} for c in countries_ena]
+        elif source == DataSource.GISAID.name:
+            countries = [{'label': c, 'value': c} for c in countries_gisaid]
+        return countries
 
     @app.callback(
         Output(ID_SLIDER_MIN_SAMPLES, 'disabled'),
@@ -109,22 +121,28 @@ def set_callbacks_samples_tab(app, session: Session):
 
     @app.callback(
         Output(ID_ACCUMULATED_SAMPLES_GRAPH, 'children'),
-        Input(ID_DROPDOWN_DATA_SOURCE, 'value'),
-        Input(ID_DROPDOWN_COUNTRY, 'value'),
-        Input(ID_SLIDER_MIN_SAMPLES, 'value'),
+        [Input(ID_APPLY_BUTTOM, 'n_clicks')],
+        state=[
+            State(ID_DROPDOWN_DATA_SOURCE, 'value'),
+            State(ID_DROPDOWN_COUNTRY, 'value'),
+            State(ID_SLIDER_MIN_SAMPLES, 'value')
+        ],
         suppress_callback_exceptions=True
     )
-    def update_accumulated_samples_by_country(data_source, countries, min_samples):
+    def update_accumulated_samples_by_country(_, data_source, countries, min_samples):
         return html.Div(children=figures.get_accumulated_samples_by_country_plot(
             data_source=data_source, countries=countries, min_samples=min_samples if countries is None else 0))
 
     @app.callback(
         Output(ID_DN_DS_GRAPH, 'children'),
-        Input(ID_DROPDOWN_DATA_SOURCE, 'value'),
-        Input(ID_DROPDOWN_COUNTRY, 'value'),
-        Input(ID_DROPDOWN_GENE, 'value'),
+        [Input(ID_APPLY_BUTTOM, 'n_clicks')],
+        state=[
+            State(ID_DROPDOWN_DATA_SOURCE, 'value'),
+            State(ID_DROPDOWN_COUNTRY, 'value'),
+            State(ID_DROPDOWN_GENE, 'value'),
+        ],
         suppress_callback_exceptions=True
     )
-    def update_dn_ds_graph(data_source, countries, genes):
+    def update_dn_ds_graph(_, data_source, countries, genes):
         return html.Div(children=figures.get_dnds_by_gene_plot(
             data_source=data_source, countries=countries, genes=genes))
