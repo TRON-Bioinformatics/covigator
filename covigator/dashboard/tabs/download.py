@@ -8,8 +8,7 @@ from logzero import logger
 
 
 def get_tab_download(content_folder):
-    return dbc.Card(
-        dbc.CardBody(
+    return dbc.CardBody(
             children=[
                 dcc.Markdown("""
                     ** Download the raw CoVigator data** 
@@ -29,7 +28,6 @@ def get_tab_download(content_folder):
                 html.Br(),
                 get_downloadable_files(content_folder=content_folder)
             ])
-    )
 
 
 def get_downloadable_files(content_folder):

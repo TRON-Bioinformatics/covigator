@@ -34,27 +34,28 @@ ID_DROPDOWN_DATA_SOURCE = "dropdown-data-source-variants-tab"
 @functools.lru_cache()
 def get_tab_variants(queries: Queries):
 
-    return dbc.Card(
-        dbc.CardBody(
+    return dbc.CardBody(
             children=[
                 get_variants_tab_left_bar(queries=queries),
                 get_variants_tab_graphs()
             ])
-    )
 
 
 def get_variants_tab_graphs():
-    return html.Div(children=[
-        html.Br(),
-        html.Div(id=ID_TOP_OCCURRING_VARIANTS, children=dash_table.DataTable(id=ID_TOP_OCCURRING_VARIANTS_TABLE)),
-        html.Br(),
-        html.Div(id=ID_NEEDLE_PLOT),
-        html.Br(),
-        html.Div(id=ID_COOCCURRENCE_HEATMAP),
-        html.Br(),
-        html.Div(id=ID_VARIANTS_MDS),
-        html.Br(),
-    ], className="ten columns", style={'overflow': 'scroll', "height": "900px"}, )
+    return html.Div(
+        children=[
+            html.Br(),
+            html.Div(id=ID_TOP_OCCURRING_VARIANTS, children=dash_table.DataTable(id=ID_TOP_OCCURRING_VARIANTS_TABLE)),
+            html.Br(),
+            html.Div(id=ID_NEEDLE_PLOT),
+            html.Br(),
+            html.Div(id=ID_COOCCURRENCE_HEATMAP),
+            html.Br(),
+            html.Div(id=ID_VARIANTS_MDS),
+            html.Br(),
+        ],
+        className="ten columns",
+    )
 
 
 def get_variants_tab_left_bar(queries: Queries):

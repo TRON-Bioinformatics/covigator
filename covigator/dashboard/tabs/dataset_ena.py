@@ -34,8 +34,7 @@ def get_tab_dataset_ena(queries: Queries):
     date_of_first_sample = queries.get_date_of_first_sample(source=DataSource.ENA)
     date_of_most_recent_sample = queries.get_date_of_most_recent_sample(source=DataSource.ENA)
 
-    return dbc.Card(
-        dbc.CardBody(
+    return dbc.CardBody(
             children=[
                 dcc.Markdown("""
                 The ENA dataset and its metadata was downloaded using the ENA Portal API 
@@ -68,7 +67,7 @@ def get_tab_dataset_ena(queries: Queries):
                 ),
                 get_dataset_ena_tab_graphs(queries)
             ]
-        ))
+        )
 
 
 def get_dataset_ena_tab_graphs(queries: Queries):

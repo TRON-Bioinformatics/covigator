@@ -21,8 +21,7 @@ def get_tab_dataset_gisaid(queries: Queries):
     date_of_first_gisaid_sample = queries.get_date_of_first_sample(source=DataSource.GISAID)
     date_of_most_recent_gisaid_sample = queries.get_date_of_most_recent_sample(source=DataSource.GISAID)
 
-    return dbc.Card(
-        dbc.CardBody(
+    return dbc.CardBody(
             children=[
                 dcc.Markdown("""
                     The GISAID dataset was manually downloaded from the site https://www.gisaid.org/.
@@ -49,7 +48,6 @@ def get_tab_dataset_gisaid(queries: Queries):
                 ),
                 get_dataset_gisaid_tab_graphs(queries=queries, count_samples=count_samples)
         ])
-    )
 
 
 def get_dataset_gisaid_tab_graphs(queries: Queries, count_samples):

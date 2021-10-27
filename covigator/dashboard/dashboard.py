@@ -23,6 +23,8 @@ from covigator.database.database import get_database
 from logzero import logger
 from covigator.database.queries import Queries
 
+
+ID_TAB_CONTENT = "tab-content"
 DOWNLOAD_TAB_ID = "download"
 INTRAHOST_MUTATIONS_TAB_ID = "subclonal-variants"
 RECURRENT_MUTATIONS_TAB_ID = "variants"
@@ -45,58 +47,60 @@ class Dashboard:
         logger.info("Serving layout")
         footer = get_footer()
         layout = html.Div(children=[
-            dbc.Navbar([
-
-                # Use row and col to control vertical alignment of logo / brand
-                dbc.Row(
-                    [
-                        dbc.Col(html.A(html.Img(
-                            src="/assets/CoVigator_logo_txt_reg_no_bg.png", height="25px"),
-                            href="https://covigator.tron-mainz.de/"), className="ml-2"
-                        )
-                    ],
-                    align="center",
-                    no_gutters=True,
-                ),
-                dbc.Row(
-                    [
-                        dbc.Col(html.A(html.Img(
-                            src="/assets/tron_logo_without_text.png", height="22px"),
-                            href="https://tron-mainz.de",  target="_blank"), className="ml-2"),
-                        dbc.Col(html.Br(), className="ml-2"),
-                        dbc.Col(html.A(html.Img(
-                            src="https://github.githubassets.com/images/modules/logos_page/Octocat.png", height="25px"),
-                            href="https://github.com/TRON-bioinformatics/covigator",  target="_blank"), className="ml-2"),
-                        dbc.Col(html.Br(), className="ml-2"),
-
-                    ],
-                    align="center",
-                    justify="end",
-                    no_gutters=True,
-                    style={'float': 'right', 'position': 'absolute', 'right': 0, 'text-align': 'right'}
-                )
-            ],
-                color="white",
-                dark=False,
-            ),
             dbc.Card([
                 dbc.CardHeader(
                     children=[
-                        dbc.Tabs([
-                            dbc.Tab(label="Overview", tab_id=OVERVIEW_TAB_ID),
-                            dbc.Tab(label="Samples by country", tab_id=SAMPLES_TAB_ID),
-                            dbc.Tab(label="Mutation statistics", tab_id=MUTATIONS_TAB_ID),
-                            dbc.Tab(label="Recurrent mutations", tab_id=RECURRENT_MUTATIONS_TAB_ID),
-                            dbc.Tab(label="Intrahost mutations", tab_id=INTRAHOST_MUTATIONS_TAB_ID),
-                            dbc.Tab(label="ENA dataset", tab_id=ENA_DATASET_TAB_ID),
-                            dbc.Tab(label="GISAID dataset", tab_id=GISAID_DATASET_TAB_ID),
-                            dbc.Tab(label="Download data", tab_id=DOWNLOAD_TAB_ID)],
-                            id="tabs",
-                            active_tab="overview",
-                            card=True),
+                        dbc.Navbar([
+                            dbc.Row(
+                                [
+                                    dbc.Col(html.A(html.Img(
+                                        src="/assets/CoVigator_logo_txt_reg_no_bg.png", height="25px"),
+                                        href="https://covigator.tron-mainz.de/"), className="ml-2"
+                                    ),
+                                    dbc.Col(html.Br(), className="ml-2"),
+                                    dbc.Col(html.Br(), className="ml-2"),
+                                ],
+                                align="center",
+                                no_gutters=True,
+                            ),
+                            dbc.Row(
+                                dbc.Tabs([
+                                    dbc.Tab(label="Overview", tab_id=OVERVIEW_TAB_ID),
+                                    dbc.Tab(label="Samples by country", tab_id=SAMPLES_TAB_ID),
+                                    dbc.Tab(label="Mutation statistics", tab_id=MUTATIONS_TAB_ID),
+                                    dbc.Tab(label="Recurrent mutations", tab_id=RECURRENT_MUTATIONS_TAB_ID),
+                                    dbc.Tab(label="Intrahost mutations", tab_id=INTRAHOST_MUTATIONS_TAB_ID),
+                                    dbc.Tab(label="ENA dataset", tab_id=ENA_DATASET_TAB_ID),
+                                    dbc.Tab(label="GISAID dataset", tab_id=GISAID_DATASET_TAB_ID),
+                                    dbc.Tab(label="Download data", tab_id=DOWNLOAD_TAB_ID)],
+                                    id="tabs",
+                                    active_tab="overview",
+                                    card=True),
+                                align="center",
+                                no_gutters=True,
+                            ),
+                            dbc.Row(
+                                [
+                                    dbc.Col(html.A(html.Img(
+                                        src="/assets/tron_logo_without_text.png", height="22px"),
+                                        href="https://tron-mainz.de", target="_blank"), className="ml-2"),
+                                    dbc.Col(html.Br(), className="ml-2"),
+                                    dbc.Col(html.A(html.Img(
+                                        src="https://github.githubassets.com/images/modules/logos_page/Octocat.png",
+                                        height="25px"),
+                                        href="https://github.com/TRON-bioinformatics/covigator", target="_blank"),
+                                        className="ml-2"),
+                                    dbc.Col(html.Br(), className="ml-2"),
 
-                    ]),
-                dbc.CardBody(dcc.Loading(id="loading-1", children=[html.Div(id="content")], type="default")),
+                                ],
+                                align="center",
+                                justify="end",
+                                no_gutters=True,
+                                style={'float': 'right', 'position': 'absolute', 'right': 0, 'text-align': 'right'}
+                            )])
+                        ],
+                ),
+                dbc.CardBody(dcc.Loading(id="loading-1", children=[html.Div(id="tab-content")], style={"height": "100%"})),
                 dbc.CardFooter(footer)
             ])
         ])
@@ -165,7 +169,7 @@ def set_callbacks(app, session: Session, content_folder):
 
     queries = Queries(session=session)
 
-    @app.callback(Output("content", "children"), [Input("tabs", "active_tab")])
+    @app.callback(Output(ID_TAB_CONTENT, "children"), [Input("tabs", "active_tab")])
     def switch_tab(at):
         logger.debug("Changing tab...")
         try:

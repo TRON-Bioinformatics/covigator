@@ -21,19 +21,16 @@ ID_DN_DS_GRAPH = 'dn_ds_graph'
 
 @functools.lru_cache()
 def get_tab_samples(queries: Queries):
-    return dbc.Card(
-        dbc.CardBody(
+    return dbc.CardBody(
             children=[
                 get_samples_tab_left_bar(queries),
                 get_samples_tab_graphs()
         ])
-    )
 
 
 def get_samples_tab_graphs():
     return html.Div(
         className="ten columns",
-        style={'overflow': 'scroll', "height": "900px"},
         children=[
             html.Br(),
             html.Div(id=ID_ACCUMULATED_SAMPLES_GRAPH),

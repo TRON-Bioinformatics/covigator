@@ -29,13 +29,11 @@ ID_TOP_OCCURRING_SUBCLONAL_VARIANTS_TABLE = 'top-occurring-subclonal-variants-ta
 @functools.lru_cache()
 def get_tab_subclonal_variants(queries: Queries):
 
-    return dbc.Card(
-        dbc.CardBody(
+    return dbc.CardBody(
             children=[
                 get_subclonal_variants_tab_left_bar(queries=queries),
                 get_subclonal_variants_tab_graphs(queries)
             ])
-    )
 
 
 def get_subclonal_variants_tab_graphs(queries):
@@ -44,50 +42,53 @@ def get_subclonal_variants_tab_graphs(queries):
     count_unique_subclonal_variant = queries.count_unique_subclonal_variant()
     count_unique_only_subclonal_variant = queries.count_unique_only_subclonal_variant()
 
-    return html.Div(children=[
-        dcc.Markdown("""
-                        LoFreq variant calls with a VAF lower than 80 % are considered intrahost variants. 
-                        All variant calls with a higher VAF are considered clonal.
-                        Intrahost variants can only be detected in the ENA dataset.
-                        The dataset of intrahost variants is enriched for false positive calls due to the lower 
-                        Variant Allele Frequency (VAF). (Lythgoe, 2021) and (Valesano, 2021) reported that SARS-CoV-2 
-                        intrahost variant calls with a VAF below 2 % and 3 % respectively had not enough quality; 
-                        although the variant calling methods differ between them and with CoVigator.
-
-                        Here we provide a tool to explore those intrahost variants that have not been observed 
-                        as clonal variants.
-                         """, style={"font-size": 16}),
-        html.Br(),
-        html.Div(
-            html.Span(
-                children=[
-                    get_mini_container(
-                        title="Unique variants",
-                        value=print_number(count_unique_subclonal_variant)
-                    ),
-                    get_mini_container(
-                        title="Only subclonal variants",
-                        value=print_number(count_unique_only_subclonal_variant)
-                    ),
-                    get_mini_container(
-                        title="Variant calls",
-                        value=print_number(count_subclonal_variant_observations)
-                    ),
-                ]
-            )
-        ),
-        html.Br(),
-        html.Div(id=ID_TOP_OCCURRING_SUBCLONAL_VARIANTS,
-                 children=dash_table.DataTable(id=ID_TOP_OCCURRING_SUBCLONAL_VARIANTS_TABLE)),
-        html.Br(),
-        html.Div(id=ID_HIST_LIBRARY_STRATEGY,
-                 className="five columns", style={"margin-left": 0, "margin-right": "1%", "width": "48%"}),
-        html.Div(id=ID_HIST_COUNTRIES,
-                 className="five columns", style={"margin-left": 0, "margin-right": "1%", "width": "48%"}),
-        html.Br(),
-        html.Div(id=TOP_COOCCURRING_CLONAL_VARIANTS,
-                 className="five columns", style={"margin-left": 0, "margin-right": "1%", "width": "48%"}),
-    ], className="ten columns", style={'overflow': 'scroll', "height": "900px"}, )
+    return html.Div(
+        children=[
+            dcc.Markdown("""
+                            LoFreq variant calls with a VAF lower than 80 % are considered intrahost variants. 
+                            All variant calls with a higher VAF are considered clonal.
+                            Intrahost variants can only be detected in the ENA dataset.
+                            The dataset of intrahost variants is enriched for false positive calls due to the lower 
+                            Variant Allele Frequency (VAF). (Lythgoe, 2021) and (Valesano, 2021) reported that SARS-CoV-2 
+                            intrahost variant calls with a VAF below 2 % and 3 % respectively had not enough quality; 
+                            although the variant calling methods differ between them and with CoVigator.
+    
+                            Here we provide a tool to explore those intrahost variants that have not been observed 
+                            as clonal variants.
+                             """, style={"font-size": 16}),
+            html.Br(),
+            html.Div(
+                html.Span(
+                    children=[
+                        get_mini_container(
+                            title="Unique variants",
+                            value=print_number(count_unique_subclonal_variant)
+                        ),
+                        get_mini_container(
+                            title="Only subclonal variants",
+                            value=print_number(count_unique_only_subclonal_variant)
+                        ),
+                        get_mini_container(
+                            title="Variant calls",
+                            value=print_number(count_subclonal_variant_observations)
+                        ),
+                    ]
+                )
+            ),
+            html.Br(),
+            html.Div(id=ID_TOP_OCCURRING_SUBCLONAL_VARIANTS,
+                     children=dash_table.DataTable(id=ID_TOP_OCCURRING_SUBCLONAL_VARIANTS_TABLE)),
+            html.Br(),
+            html.Div(id=ID_HIST_LIBRARY_STRATEGY,
+                     className="five columns", style={"margin-left": 0, "margin-right": "1%", "width": "48%"}),
+            html.Div(id=ID_HIST_COUNTRIES,
+                     className="five columns", style={"margin-left": 0, "margin-right": "1%", "width": "48%"}),
+            html.Br(),
+            html.Div(id=TOP_COOCCURRING_CLONAL_VARIANTS,
+                     className="five columns", style={"margin-left": 0, "margin-right": "1%", "width": "48%"}),
+        ],
+        className="ten columns",
+    )
 
 
 def get_subclonal_variants_tab_left_bar(queries: Queries):
