@@ -3,7 +3,7 @@ import functools
 import dash_core_components as dcc
 import dash_bootstrap_components as dbc
 import dash_html_components as html
-from dash.dependencies import Output, Input
+from dash.dependencies import Output, Input, State
 from sqlalchemy.orm import Session
 
 from covigator.dashboard.figures.mutation_stats import MutationStatsFigures
@@ -24,6 +24,7 @@ ID_DROPDOWN_GENE = 'ms-dropdown-gene-overall-mutations'
 ID_DROPDOWN_VARIANT_TYPE = 'ms-dropdown-variant-type'
 ID_ACCUMULATED_SAMPLES_GRAPH = 'ms-accumulated-samples-per-country'
 ID_DN_DS_GRAPH = 'ms-dn_ds_graph'
+ID_APPLY_BUTTOM = 'ms-apply-buttom'
 
 
 @functools.lru_cache()
@@ -74,8 +75,7 @@ def get_samples_tab_left_bar(queries: Queries):
                 multi=True
             ),
             html.Br(),
-            dcc.Markdown("""**Mutations per sample and top mutations**"""),
-            dcc.Markdown("""Select a variant type"""),
+            dcc.Markdown("""Select a variant type for mutations per sample and top mutations"""),
             dcc.Dropdown(
                 id=ID_DROPDOWN_VARIANT_TYPE,
                 options=[
@@ -86,6 +86,8 @@ def get_samples_tab_left_bar(queries: Queries):
                 value=None,
                 multi=True
             ),
+            html.Br(),
+            html.Button('Apply', id=ID_APPLY_BUTTOM),
         ])
 
 
@@ -96,40 +98,52 @@ def set_callbacks_mutation_stats_tab(app, session: Session):
 
     @app.callback(
         Output(ID_VARIANTS_PER_SAMPLE_GRAPH, 'children'),
-        Input(ID_DROPDOWN_DATA_SOURCE, 'value'),
-        Input(ID_DROPDOWN_GENE, 'value'),
-        Input(ID_DROPDOWN_VARIANT_TYPE, 'value'),
+        [Input(ID_APPLY_BUTTOM, 'n_clicks')],
+        state=[
+            State(ID_DROPDOWN_DATA_SOURCE, 'value'),
+            State(ID_DROPDOWN_GENE, 'value'),
+            State(ID_DROPDOWN_VARIANT_TYPE, 'value')
+        ],
         suppress_callback_exceptions=True
     )
-    def update_variants_per_sample(data_source, genes, variant_types):
+    def update_variants_per_sample(_, data_source, genes, variant_types):
         return html.Div(children=figures.get_variants_per_sample_plot(
             data_source=data_source, genes=genes, variant_types=variant_types))
 
     @app.callback(
         Output(ID_SUBSTITUTIONS_GRAPH, 'children'),
-        Input(ID_DROPDOWN_DATA_SOURCE, 'value'),
-        Input(ID_DROPDOWN_GENE, 'value'),
-        Input(ID_DROPDOWN_VARIANT_TYPE, 'value'),
+        [Input(ID_APPLY_BUTTOM, 'n_clicks')],
+        state=[
+            State(ID_DROPDOWN_DATA_SOURCE, 'value'),
+            State(ID_DROPDOWN_GENE, 'value'),
+            State(ID_DROPDOWN_VARIANT_TYPE, 'value')
+        ],
         suppress_callback_exceptions=True
     )
-    def update_substitutions(data_source, genes, variant_types):
+    def update_substitutions(_, data_source, genes, variant_types):
         return html.Div(children=figures.get_substitutions_plot(
             data_source=data_source, genes=genes, variant_types=variant_types))
 
     @app.callback(
         Output(ID_INDEL_LENGTH_GRAPH, 'children'),
-        Input(ID_DROPDOWN_DATA_SOURCE, 'value'),
-        Input(ID_DROPDOWN_GENE, 'value'),
+        [Input(ID_APPLY_BUTTOM, 'n_clicks')],
+        state=[
+            State(ID_DROPDOWN_DATA_SOURCE, 'value'),
+            State(ID_DROPDOWN_GENE, 'value')
+        ],
         suppress_callback_exceptions=True
     )
-    def update_indel_lengths(data_source, genes):
+    def update_indel_lengths(_, data_source, genes):
         return html.Div(children=figures.get_indels_lengths_plot(data_source=data_source, genes=genes))
 
     @app.callback(
         Output(ID_ANNOTATIONS_GRAPH, 'children'),
-        Input(ID_DROPDOWN_DATA_SOURCE, 'value'),
-        Input(ID_DROPDOWN_GENE, 'value'),
+        [Input(ID_APPLY_BUTTOM, 'n_clicks')],
+        state=[
+            State(ID_DROPDOWN_DATA_SOURCE, 'value'),
+            State(ID_DROPDOWN_GENE, 'value')
+        ],
         suppress_callback_exceptions=True
     )
-    def update_annotation(data_source, genes):
+    def update_annotation(_, data_source, genes):
         return html.Div(children=figures.get_annotations_plot(data_source=data_source, genes=genes))
