@@ -164,7 +164,7 @@ class SubclonalVariantsQueries:
         return pd.read_sql_query(sql_query, self.session.bind)
 
 
-class SubclonalVariantsFigures(Figures):
+class IntrahostMutationsFigures(Figures):
 
     @functools.lru_cache()
     def get_top_occurring_subclonal_variants_plot(self, top, gene_name, domain, min_vaf, order_by):

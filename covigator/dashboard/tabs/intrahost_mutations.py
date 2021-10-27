@@ -7,7 +7,7 @@ from covigator.dashboard.tabs import get_mini_container, print_number
 from dash.dependencies import Output, Input
 from sqlalchemy.orm import Session
 
-from covigator.dashboard.figures.subclonal_variants import SubclonalVariantsFigures
+from covigator.dashboard.figures.intrahost_mutations import IntrahostMutationsFigures
 from covigator.database.queries import Queries
 
 TOP_COOCCURRING_CLONAL_VARIANTS = 'top-cooccurring-clonal-variants-table'
@@ -149,7 +149,7 @@ def get_subclonal_variants_tab_left_bar(queries: Queries):
 def set_callbacks_subclonal_variants_tab(app, session: Session):
 
     queries = Queries(session=session)
-    figures = SubclonalVariantsFigures(queries=queries)
+    figures = IntrahostMutationsFigures(queries=queries)
 
     @app.callback(
         Output(ID_DROPDOWN_DOMAIN_SUBCLONAL_VARIANTS, 'options'),

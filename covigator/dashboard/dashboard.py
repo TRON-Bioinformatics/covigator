@@ -14,18 +14,20 @@ from covigator.dashboard.tabs.dataset_ena import get_tab_dataset_ena
 from covigator.dashboard.tabs.dataset_gisaid import get_tab_dataset_gisaid
 from covigator.dashboard.tabs.download import set_callbacks_download_tab, get_tab_download
 from covigator.dashboard.tabs.footer import get_footer
+from covigator.dashboard.tabs.mutation_stats import get_tab_mutation_stats, set_callbacks_mutation_stats_tab
 from covigator.dashboard.tabs.overview import get_tab_overview
 from covigator.dashboard.tabs.samples import get_tab_samples, set_callbacks_samples_tab
-from covigator.dashboard.tabs.subclonal_variants import get_tab_subclonal_variants, set_callbacks_subclonal_variants_tab
-from covigator.dashboard.tabs.variants import get_tab_variants, set_callbacks_variants_tab
+from covigator.dashboard.tabs.intrahost_mutations import get_tab_subclonal_variants, set_callbacks_subclonal_variants_tab
+from covigator.dashboard.tabs.recurrent_mutations import get_tab_variants, set_callbacks_variants_tab
 from covigator.database.database import get_database
 from logzero import logger
 from covigator.database.queries import Queries
 
 DOWNLOAD_TAB_ID = "download"
-SUBCLONAL_VARIANTS_TAB_ID = "subclonal-variants"
-VARIANTS_TAB_ID = "variants"
+INTRAHOST_MUTATIONS_TAB_ID = "subclonal-variants"
+RECURRENT_MUTATIONS_TAB_ID = "variants"
 SAMPLES_TAB_ID = "samples"
+MUTATIONS_TAB_ID = "mutation-stats"
 GISAID_DATASET_TAB_ID = "gisaid-dataset"
 ENA_DATASET_TAB_ID = "ena-dataset"
 OVERVIEW_TAB_ID = "overview"
@@ -82,9 +84,10 @@ class Dashboard:
                     children=[
                         dbc.Tabs([
                             dbc.Tab(label="Overview", tab_id=OVERVIEW_TAB_ID),
-                            dbc.Tab(label="Samples", tab_id=SAMPLES_TAB_ID),
-                            dbc.Tab(label="Recurrent mutations", tab_id=VARIANTS_TAB_ID),
-                            dbc.Tab(label="Intrahost mutations", tab_id=SUBCLONAL_VARIANTS_TAB_ID),
+                            dbc.Tab(label="Samples by country", tab_id=SAMPLES_TAB_ID),
+                            dbc.Tab(label="Mutation statistics", tab_id=MUTATIONS_TAB_ID),
+                            dbc.Tab(label="Recurrent mutations", tab_id=RECURRENT_MUTATIONS_TAB_ID),
+                            dbc.Tab(label="Intrahost mutations", tab_id=INTRAHOST_MUTATIONS_TAB_ID),
                             dbc.Tab(label="ENA dataset", tab_id=ENA_DATASET_TAB_ID),
                             dbc.Tab(label="GISAID dataset", tab_id=GISAID_DATASET_TAB_ID),
                             dbc.Tab(label="Download data", tab_id=DOWNLOAD_TAB_ID)],
@@ -152,6 +155,7 @@ class Dashboard:
         set_callbacks(app=app, session=session, content_folder=self.config.content_folder)
         set_callbacks_variants_tab(app=app, session=session)
         set_callbacks_samples_tab(app=app, session=session)
+        set_callbacks_mutation_stats_tab(app=app, session=session)
         set_callbacks_subclonal_variants_tab(app=app, session=session)
         set_callbacks_download_tab(app=app, content_folder=self.config.content_folder)
         return app
@@ -173,9 +177,11 @@ def set_callbacks(app, session: Session, content_folder):
                 return get_tab_dataset_gisaid(queries=queries)
             elif at == SAMPLES_TAB_ID:
                 return get_tab_samples(queries=queries)
-            elif at == VARIANTS_TAB_ID:
+            elif at == MUTATIONS_TAB_ID:
+                return get_tab_mutation_stats(queries=queries)
+            elif at == RECURRENT_MUTATIONS_TAB_ID:
                 return get_tab_variants(queries=queries)
-            elif at == SUBCLONAL_VARIANTS_TAB_ID:
+            elif at == INTRAHOST_MUTATIONS_TAB_ID:
                 return get_tab_subclonal_variants(queries=queries)
             elif at == DOWNLOAD_TAB_ID:
                 return get_tab_download(content_folder=content_folder)

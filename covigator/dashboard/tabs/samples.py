@@ -6,20 +6,15 @@ import dash_html_components as html
 from dash.dependencies import Output, Input
 from sqlalchemy.orm import Session
 from covigator.dashboard.figures.samples import SampleFigures
-from covigator.database.model import DataSource, VariantType
+from covigator.database.model import DataSource
 from covigator.database.queries import Queries
 
 DEFAULT_DATA_SOURCE = DataSource.ENA.name
 
-ID_VARIANTS_PER_SAMPLE_GRAPH = 'variants-per-sample-graph'
-ID_INDEL_LENGTH_GRAPH = 'indel-lengths-graph'
-ID_ANNOTATIONS_GRAPH = 'id-annotations-graph'
-ID_SUBSTITUTIONS_GRAPH = 'substitutions-graph'
 ID_SLIDER_MIN_SAMPLES = 'slider-min-samples-per-country'
 ID_DROPDOWN_DATA_SOURCE = "dropdown-data-source"
 ID_DROPDOWN_COUNTRY = 'dropdown-country'
 ID_DROPDOWN_GENE = 'dropdown-gene-overall-mutations'
-ID_DROPDOWN_VARIANT_TYPE = 'dropdown-variant-type'
 ID_ACCUMULATED_SAMPLES_GRAPH = 'accumulated-samples-per-country'
 ID_DN_DS_GRAPH = 'dn_ds_graph'
 
@@ -44,15 +39,6 @@ def get_samples_tab_graphs():
             html.Div(id=ID_ACCUMULATED_SAMPLES_GRAPH),
             html.Br(),
             html.Div(id=ID_DN_DS_GRAPH),
-            html.Br(),
-            html.Div(children=[
-                html.Div(id=ID_VARIANTS_PER_SAMPLE_GRAPH, className="five columns"),
-                html.Div(id=ID_SUBSTITUTIONS_GRAPH, className="five columns"),
-            ]),
-            html.Div(children=[
-                html.Div(id=ID_INDEL_LENGTH_GRAPH, className="five columns"),
-                html.Div(id=ID_ANNOTATIONS_GRAPH, className="five columns"),
-            ]),
         ])
 
 
@@ -99,19 +85,6 @@ def get_samples_tab_left_bar(queries: Queries):
                 marks={i: '{}'.format(i) for i in [0, 2500, 5000, 7500, 10000]},
                 tooltip=dict(always_visible=False, placement="right")
             ),
-            html.Br(),
-            dcc.Markdown("""**Mutations per sample and top mutations**"""),
-            dcc.Markdown("""Select a variant type"""),
-            dcc.Dropdown(
-                id=ID_DROPDOWN_VARIANT_TYPE,
-                options=[
-                    {'label': VariantType.SNV.name, 'value': VariantType.SNV.name},
-                    {'label': VariantType.INSERTION.name, 'value': VariantType.INSERTION.name},
-                    {'label': VariantType.DELETION.name, 'value': VariantType.DELETION.name}
-                ],
-                value=None,
-                multi=True
-            ),
         ])
 
 
@@ -150,43 +123,3 @@ def set_callbacks_samples_tab(app, session: Session):
     def update_dn_ds_graph(data_source, countries, genes):
         return html.Div(children=figures.get_dnds_by_gene_plot(
             data_source=data_source, countries=countries, genes=genes))
-
-    @app.callback(
-        Output(ID_VARIANTS_PER_SAMPLE_GRAPH, 'children'),
-        Input(ID_DROPDOWN_DATA_SOURCE, 'value'),
-        Input(ID_DROPDOWN_GENE, 'value'),
-        Input(ID_DROPDOWN_VARIANT_TYPE, 'value'),
-        suppress_callback_exceptions=True
-    )
-    def update_variants_per_sample(data_source, genes, variant_types):
-        return html.Div(children=figures.get_variants_per_sample_plot(
-            data_source=data_source, genes=genes, variant_types=variant_types))
-
-    @app.callback(
-        Output(ID_SUBSTITUTIONS_GRAPH, 'children'),
-        Input(ID_DROPDOWN_DATA_SOURCE, 'value'),
-        Input(ID_DROPDOWN_GENE, 'value'),
-        Input(ID_DROPDOWN_VARIANT_TYPE, 'value'),
-        suppress_callback_exceptions=True
-    )
-    def update_substitutions(data_source, genes, variant_types):
-        return html.Div(children=figures.get_substitutions_plot(
-            data_source=data_source, genes=genes, variant_types=variant_types))
-
-    @app.callback(
-        Output(ID_INDEL_LENGTH_GRAPH, 'children'),
-        Input(ID_DROPDOWN_DATA_SOURCE, 'value'),
-        Input(ID_DROPDOWN_GENE, 'value'),
-        suppress_callback_exceptions=True
-    )
-    def update_indel_lengths(data_source, genes):
-        return html.Div(children=figures.get_indels_lengths_plot(data_source=data_source, genes=genes))
-
-    @app.callback(
-        Output(ID_ANNOTATIONS_GRAPH, 'children'),
-        Input(ID_DROPDOWN_DATA_SOURCE, 'value'),
-        Input(ID_DROPDOWN_GENE, 'value'),
-        suppress_callback_exceptions=True
-    )
-    def update_annotation(data_source, genes):
-        return html.Div(children=figures.get_annotations_plot(data_source=data_source, genes=genes))

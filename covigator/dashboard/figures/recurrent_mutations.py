@@ -37,7 +37,7 @@ RARE_VARIANTS_THRESHOLD = 0.001
 MONTH_PATTERN = re.compile('[0-9]{4}-[0-9]{2}')
 
 
-class VariantsFigures(Figures):
+class RecurrentMutationsFigures(Figures):
 
     def _get_color_by_af(self, af):
         color = None

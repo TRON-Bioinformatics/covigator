@@ -6,7 +6,7 @@ import dash_html_components as html
 import dash_table
 from dash.dependencies import Output, Input
 from sqlalchemy.orm import Session
-from covigator.dashboard.figures.variants import VariantsFigures
+from covigator.dashboard.figures.recurrent_mutations import RecurrentMutationsFigures
 from covigator.dashboard.tabs import MONTH_PATTERN
 from covigator.database.model import DataSource
 from covigator.database.queries import Queries
@@ -195,7 +195,7 @@ considered as a core point. This includes the point itself."""),
 def set_callbacks_variants_tab(app, session: Session):
 
     queries = Queries(session=session)
-    figures = VariantsFigures(queries=queries)
+    figures = RecurrentMutationsFigures(queries=queries)
 
     @app.callback(
         Output(ID_DROPDOWN_DOMAIN, 'options'),
