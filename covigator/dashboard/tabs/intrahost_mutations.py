@@ -4,7 +4,7 @@ import dash_bootstrap_components as dbc
 import dash_html_components as html
 import dash_table
 from covigator.dashboard.tabs import get_mini_container, print_number
-from dash.dependencies import Output, Input
+from dash.dependencies import Output, Input, State
 from sqlalchemy.orm import Session
 
 from covigator.dashboard.figures.intrahost_mutations import IntrahostMutationsFigures
@@ -24,6 +24,7 @@ ID_SLIDER_TOP_SUBCLONAL_VARIANTS = 'slider-subclonal-variants-top'
 
 ID_TOP_OCCURRING_SUBCLONAL_VARIANTS = 'top-occurring-subclonal-variants'
 ID_TOP_OCCURRING_SUBCLONAL_VARIANTS_TABLE = 'top-occurring-subclonal-variants-table'
+ID_APPLY_BUTTOM = 'im-apply-buttom'
 
 
 @functools.lru_cache()
@@ -144,6 +145,8 @@ def get_subclonal_variants_tab_left_bar(queries: Queries):
             value='score',
             multi=False
         ),
+        html.Br(),
+        html.Button('Apply', id=ID_APPLY_BUTTOM),
     ], className="two columns")
 
 
@@ -151,34 +154,42 @@ def set_callbacks_subclonal_variants_tab(app, session: Session):
 
     queries = Queries(session=session)
     figures = IntrahostMutationsFigures(queries=queries)
+    domains_by_gene = {g.name: queries.get_domains_by_gene(g.name) for g in queries.get_genes()}
+    all_domains = queries.get_domains()
 
     @app.callback(
         Output(ID_DROPDOWN_DOMAIN_SUBCLONAL_VARIANTS, 'options'),
         Input(ID_DROPDOWN_GENE_SUBCLONAL_VARIANTS, 'value'))
     def set_domains(selected_gene):
-        domains = queries.get_domains_by_gene(selected_gene) if selected_gene else queries.get_domains()
+        domains = domains_by_gene.get(selected_gene) if selected_gene else all_domains
         domain_labels = sorted({("{gene}: {domain}".format(domain=d.name, gene=d.gene_name), d.name) for d in domains})
         return [{'label': label, 'value': value} for label, value in domain_labels]
 
     @app.callback(
         Output(ID_TOP_OCCURRING_SUBCLONAL_VARIANTS, 'children'),
-        Input(ID_SLIDER_SUBCLONAL_VARIANTS_VAF, 'value'),
-        Input(ID_DROPDOWN_GENE_SUBCLONAL_VARIANTS, 'value'),
-        Input(ID_DROPDOWN_DOMAIN_SUBCLONAL_VARIANTS, 'value'),
-        Input(ID_SLIDER_TOP_SUBCLONAL_VARIANTS, 'value'),
-        Input(ID_DROPDOWN_ORDER_BY, 'value')
+        [Input(ID_APPLY_BUTTOM, 'n_clicks')],
+        state=[
+            State(ID_SLIDER_SUBCLONAL_VARIANTS_VAF, 'value'),
+            State(ID_DROPDOWN_GENE_SUBCLONAL_VARIANTS, 'value'),
+            State(ID_DROPDOWN_DOMAIN_SUBCLONAL_VARIANTS, 'value'),
+            State(ID_SLIDER_TOP_SUBCLONAL_VARIANTS, 'value'),
+            State(ID_DROPDOWN_ORDER_BY, 'value')
+        ]
     )
-    def update_top_occurring_variants(min_vaf, gene_name, domain, top, order_by):
+    def update_top_occurring_variants(_, min_vaf, gene_name, domain, top, order_by):
         return html.Div(children=figures.get_top_occurring_subclonal_variants_plot(
             min_vaf=min_vaf, gene_name=gene_name, domain=domain, top=top, order_by=order_by))
 
     @app.callback(
         Output(ID_HIST_LIBRARY_STRATEGY, 'children'),
-        Input(ID_SLIDER_SUBCLONAL_VARIANTS_VAF, 'value'),
-        Input(ID_TOP_OCCURRING_SUBCLONAL_VARIANTS_TABLE, "derived_virtual_data"),
-        Input(ID_TOP_OCCURRING_SUBCLONAL_VARIANTS_TABLE, "derived_virtual_selected_rows")
+        [Input(ID_APPLY_BUTTOM, 'n_clicks')],
+        state=[
+            State(ID_SLIDER_SUBCLONAL_VARIANTS_VAF, 'value'),
+            State(ID_TOP_OCCURRING_SUBCLONAL_VARIANTS_TABLE, "derived_virtual_data"),
+            State(ID_TOP_OCCURRING_SUBCLONAL_VARIANTS_TABLE, "derived_virtual_selected_rows")
+        ]
     )
-    def update_hist_library_strategy(min_vaf, data, selected_rows):
+    def update_hist_library_strategy(_, min_vaf, data, selected_rows):
         plot = None
         if selected_rows:
             variant_id = data[selected_rows[0]].get("variant_id")
@@ -189,11 +200,14 @@ def set_callbacks_subclonal_variants_tab(app, session: Session):
 
     @app.callback(
         Output(ID_HIST_COUNTRIES, 'children'),
-        Input(ID_SLIDER_SUBCLONAL_VARIANTS_VAF, 'value'),
-        Input(ID_TOP_OCCURRING_SUBCLONAL_VARIANTS_TABLE, "derived_virtual_data"),
-        Input(ID_TOP_OCCURRING_SUBCLONAL_VARIANTS_TABLE, "derived_virtual_selected_rows")
+        [Input(ID_APPLY_BUTTOM, 'n_clicks')],
+        state=[
+            State(ID_SLIDER_SUBCLONAL_VARIANTS_VAF, 'value'),
+            State(ID_TOP_OCCURRING_SUBCLONAL_VARIANTS_TABLE, "derived_virtual_data"),
+            State(ID_TOP_OCCURRING_SUBCLONAL_VARIANTS_TABLE, "derived_virtual_selected_rows")
+        ]
     )
-    def update_hist_countries(min_vaf, data, selected_rows):
+    def update_hist_countries(_, min_vaf, data, selected_rows):
         plot = None
         if selected_rows:
             variant_id = data[selected_rows[0]].get("variant_id")
@@ -204,11 +218,14 @@ def set_callbacks_subclonal_variants_tab(app, session: Session):
 
     @app.callback(
         Output(TOP_COOCCURRING_CLONAL_VARIANTS, 'children'),
-        Input(ID_SLIDER_SUBCLONAL_VARIANTS_VAF, 'value'),
-        Input(ID_DROPDOWN_GENE_SUBCLONAL_VARIANTS, 'value'),
-        Input(ID_DROPDOWN_DOMAIN_SUBCLONAL_VARIANTS, 'value'),
-        Input(ID_TOP_OCCURRING_SUBCLONAL_VARIANTS_TABLE, "derived_virtual_data"),
-        Input(ID_TOP_OCCURRING_SUBCLONAL_VARIANTS_TABLE, "derived_virtual_selected_rows")
+        [Input(ID_APPLY_BUTTOM, 'n_clicks')],
+        state=[
+            State(ID_SLIDER_SUBCLONAL_VARIANTS_VAF, 'value'),
+            State(ID_DROPDOWN_GENE_SUBCLONAL_VARIANTS, 'value'),
+            State(ID_DROPDOWN_DOMAIN_SUBCLONAL_VARIANTS, 'value'),
+            State(ID_TOP_OCCURRING_SUBCLONAL_VARIANTS_TABLE, "derived_virtual_data"),
+            State(ID_TOP_OCCURRING_SUBCLONAL_VARIANTS_TABLE, "derived_virtual_selected_rows")
+        ]
     )
     def update_cooccurring_clonal_variants(min_vaf, gene_name, domain, data, selected_rows):
         plot = None
