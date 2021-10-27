@@ -4,7 +4,7 @@ import dash_core_components as dcc
 import dash_bootstrap_components as dbc
 import dash_html_components as html
 import dash_table
-from dash.dependencies import Output, Input
+from dash.dependencies import Output, Input, State
 from sqlalchemy.orm import Session
 from covigator.dashboard.figures.recurrent_mutations import RecurrentMutationsFigures
 from covigator.dashboard.tabs import MONTH_PATTERN
@@ -29,6 +29,8 @@ ID_NEEDLE_PLOT = 'needle-plot'
 ID_TOP_OCCURRING_VARIANTS = 'top-occurring-variants'
 ID_TOP_OCCURRING_VARIANTS_TABLE = 'top-occurring-variants-table'
 ID_DROPDOWN_DATA_SOURCE = "dropdown-data-source-variants-tab"
+ID_APPLY_BUTTOM = 'rm-apply-buttom'
+
 
 
 @functools.lru_cache()
@@ -94,7 +96,7 @@ def get_variants_tab_left_bar(queries: Queries):
             value=None,
             multi=False
         ),
-
+        html.Br(),
         dcc.Markdown("""**Top occurring variants**
 
 Number of top occurring variants"""),
@@ -190,6 +192,8 @@ considered as a core point. This includes the point itself."""),
             marks={i: str(i) for i in range(2, 10)},
             tooltip=dict(always_visible=False, placement="right")
         ),
+        html.Br(),
+        html.Button('Apply', id=ID_APPLY_BUTTOM),
     ], className="two columns")
 
 
@@ -197,40 +201,65 @@ def set_callbacks_variants_tab(app, session: Session):
 
     queries = Queries(session=session)
     figures = RecurrentMutationsFigures(queries=queries)
+    domains_by_gene = {g.name: queries.get_domains_by_gene(g.name) for g in queries.get_genes()}
+    all_domains = queries.get_domains()
+    months_from_db = queries.get_sample_months(MONTH_PATTERN)
 
     @app.callback(
         Output(ID_DROPDOWN_DOMAIN, 'options'),
         Input(ID_DROPDOWN_GENE, 'value'))
     def set_domains(selected_gene):
-        domains = queries.get_domains_by_gene(selected_gene) if selected_gene else queries.get_domains()
+        domains = domains_by_gene.get(selected_gene) if selected_gene else all_domains
         domain_labels = sorted({("{gene}: {domain}".format(domain=d.name, gene=d.gene_name), d.name) for d in domains})
         return [{'label': label, 'value': value} for label, value in domain_labels]
 
     @app.callback(
-        Output(ID_TOP_OCCURRING_VARIANTS, 'children'),
-        Input(ID_SLIDER_TOP_VARIANTS, 'value'),
-        Input(ID_DROPDOWN_GENE, 'value'),
-        Input(ID_DROPDOWN_DOMAIN, 'value'),
+        Output(ID_DROPDOWN_DATE_RANGE_END_DIV, 'children'),
         Input(ID_DROPDOWN_DATE_RANGE_START, 'value'),
-        Input(ID_DROPDOWN_DATE_RANGE_END, 'value'),
-        Input(ID_TOP_VARIANTS_METRIC, 'value'),
-        Input(ID_DROPDOWN_DATA_SOURCE, 'value'),
     )
-    def update_top_occurring_variants(top_variants, gene_name, domain, date_range_start, date_range_end, metric, source):
+    def update_dropdown_end_date(start_date):
+        today = datetime.now()
+        today_formatted = today.strftime(MONTH_PATTERN)
+        months = [m for m in months_from_db if m >= start_date]
+        return dcc.Dropdown(
+            id=ID_DROPDOWN_DATE_RANGE_END,
+            options=[{'label': c, 'value': c} for c in months],
+            value=today_formatted,
+            multi=False,
+            clearable=False
+        )
+
+    @app.callback(
+        Output(ID_TOP_OCCURRING_VARIANTS, 'children'),
+        [Input(ID_APPLY_BUTTOM, 'n_clicks')],
+        state=[
+            State(ID_SLIDER_TOP_VARIANTS, 'value'),
+            State(ID_DROPDOWN_GENE, 'value'),
+            State(ID_DROPDOWN_DOMAIN, 'value'),
+            State(ID_DROPDOWN_DATE_RANGE_START, 'value'),
+            State(ID_DROPDOWN_DATE_RANGE_END, 'value'),
+            State(ID_TOP_VARIANTS_METRIC, 'value'),
+            State(ID_DROPDOWN_DATA_SOURCE, 'value'),
+        ]
+    )
+    def update_top_occurring_variants(_, top_variants, gene_name, domain, date_range_start, date_range_end, metric, source):
         return html.Div(children=figures.get_top_occurring_variants_plot(
             top=top_variants, gene_name=gene_name, domain=domain, date_range_start=date_range_start,
             date_range_end=date_range_end, metric=metric, source=source))
 
     @app.callback(
         Output(ID_NEEDLE_PLOT, 'children'),
-        Input(ID_DROPDOWN_GENE, 'value'),
-        Input(ID_DROPDOWN_DOMAIN, 'value'),
-        Input(ID_TOP_OCCURRING_VARIANTS_TABLE, "derived_virtual_data"),
-        Input(ID_TOP_OCCURRING_VARIANTS_TABLE, "derived_virtual_selected_rows"),
-        Input(ID_SLIDER_BIN_SIZE, 'value'),
-        Input(ID_DROPDOWN_DATA_SOURCE, 'value'),
+        [Input(ID_APPLY_BUTTOM, 'n_clicks')],
+        state=[
+            State(ID_DROPDOWN_GENE, 'value'),
+            State(ID_DROPDOWN_DOMAIN, 'value'),
+            State(ID_TOP_OCCURRING_VARIANTS_TABLE, "derived_virtual_data"),
+            State(ID_TOP_OCCURRING_VARIANTS_TABLE, "derived_virtual_selected_rows"),
+            State(ID_SLIDER_BIN_SIZE, 'value'),
+            State(ID_DROPDOWN_DATA_SOURCE, 'value'),
+        ]
     )
-    def update_needle_plot(gene_name, domain, rows, selected_rows_indices, bin_size, source):
+    def update_needle_plot(_, gene_name, domain, rows, selected_rows_indices, bin_size, source):
         if gene_name is not None or domain is not None:
             selected_rows = [rows[s] for s in selected_rows_indices] if selected_rows_indices else None
             plot = html.Div(
@@ -247,34 +276,21 @@ def set_callbacks_variants_tab(app, session: Session):
         return plot
 
     @app.callback(
-        Output(ID_DROPDOWN_DATE_RANGE_END_DIV, 'children'),
-        Input(ID_DROPDOWN_DATE_RANGE_START, 'value'),
-    )
-    def update_dropdown_end_date(start_date):
-        today = datetime.now()
-        today_formatted = today.strftime(MONTH_PATTERN)
-        months = [m for m in queries.get_sample_months(MONTH_PATTERN) if m >= start_date]
-        return dcc.Dropdown(
-            id=ID_DROPDOWN_DATE_RANGE_END,
-            options=[{'label': c, 'value': c} for c in months],
-            value=today_formatted,
-            multi=False,
-            clearable=False
-        )
-
-    @app.callback(
         Output(ID_COOCCURRENCE_HEATMAP, 'children'),
-        Input(ID_DROPDOWN_GENE, 'value'),
-        Input(ID_DROPDOWN_DOMAIN, 'value'),
-        Input(ID_TOP_OCCURRING_VARIANTS_TABLE, "derived_virtual_data"),
-        Input(ID_TOP_OCCURRING_VARIANTS_TABLE, "derived_virtual_selected_rows"),
-        Input(ID_DROPDOWN_SIMILARITY_METRIC, 'value'),
-        Input(ID_SLIDER_MIN_COOCCURRENCES, 'value'),
-        Input(ID_SLIDER_MIN_SAMPLES, 'value'),
-        Input(ID_DROPDOWN_DATA_SOURCE, 'value'),
+        [Input(ID_APPLY_BUTTOM, 'n_clicks')],
+        state=[
+            State(ID_DROPDOWN_GENE, 'value'),
+            State(ID_DROPDOWN_DOMAIN, 'value'),
+            State(ID_TOP_OCCURRING_VARIANTS_TABLE, "derived_virtual_data"),
+            State(ID_TOP_OCCURRING_VARIANTS_TABLE, "derived_virtual_selected_rows"),
+            State(ID_DROPDOWN_SIMILARITY_METRIC, 'value'),
+            State(ID_SLIDER_MIN_COOCCURRENCES, 'value'),
+            State(ID_SLIDER_MIN_SAMPLES, 'value'),
+            State(ID_DROPDOWN_DATA_SOURCE, 'value'),
+        ]
     )
     def update_cooccurrence_heatmap(
-            gene_name, domain, rows, selected_rows_indices, metric, min_cooccurrences, min_samples, source):
+            _, gene_name, domain, rows, selected_rows_indices, metric, min_cooccurrences, min_samples, source):
         if source != DataSource.ENA.name:
             plot = html.Div(
                 children=[dcc.Markdown(
@@ -295,6 +311,6 @@ def set_callbacks_variants_tab(app, session: Session):
                     min_cooccurrences=min_cooccurrences),
                 figures.get_variants_clustering(
                     sparse_matrix=sparse_matrix, min_cooccurrence=min_cooccurrences, min_samples=min_samples)
-                ]
+            ]
             )
         return plot
