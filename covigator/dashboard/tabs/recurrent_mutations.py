@@ -39,6 +39,9 @@ def get_tab_variants(queries: Queries):
     return dbc.CardBody(
             children=[
                 get_variants_tab_left_bar(queries=queries),
+                html.Div(
+                    className="one columns",
+                    children=[html.Br()]),
                 get_variants_tab_graphs()
             ])
 
@@ -56,7 +59,7 @@ def get_variants_tab_graphs():
             html.Div(id=ID_VARIANTS_MDS),
             html.Br(),
         ],
-        className="ten columns",
+        className="nine columns",
     )
 
 

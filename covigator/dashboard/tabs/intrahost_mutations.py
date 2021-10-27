@@ -33,6 +33,9 @@ def get_tab_subclonal_variants(queries: Queries):
     return dbc.CardBody(
             children=[
                 get_subclonal_variants_tab_left_bar(queries=queries),
+                html.Div(
+                    className="one columns",
+                    children=[html.Br()]),
                 get_subclonal_variants_tab_graphs(queries)
             ])
 
@@ -88,7 +91,7 @@ def get_subclonal_variants_tab_graphs(queries):
             html.Div(id=TOP_COOCCURRING_CLONAL_VARIANTS,
                      className="five columns", style={"margin-left": 0, "margin-right": "1%", "width": "48%"}),
         ],
-        className="ten columns",
+        className="nine columns",
     )
 
 
@@ -227,7 +230,7 @@ def set_callbacks_subclonal_variants_tab(app, session: Session):
             State(ID_TOP_OCCURRING_SUBCLONAL_VARIANTS_TABLE, "derived_virtual_selected_rows")
         ]
     )
-    def update_cooccurring_clonal_variants(min_vaf, gene_name, domain, data, selected_rows):
+    def update_cooccurring_clonal_variants(_, min_vaf, gene_name, domain, data, selected_rows):
         plot = None
         if selected_rows:
             variant_id = data[selected_rows[0]].get("variant_id")

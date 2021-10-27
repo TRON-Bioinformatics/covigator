@@ -32,21 +32,24 @@ def get_tab_mutation_stats(queries: Queries):
     return dbc.CardBody(
             children=[
                 get_samples_tab_left_bar(queries),
+                html.Div(
+                    className="one columns",
+                    children=[html.Br()]),
                 get_mutation_stats_tab_graphs()
         ])
 
 
 def get_mutation_stats_tab_graphs():
     return html.Div(
-        className="ten columns",
+        className="nine columns",
         children=[
             html.Br(),
             html.Div(children=[
-                html.Div(id=ID_VARIANTS_PER_SAMPLE_GRAPH, className="five columns"),
+                html.Div(id=ID_VARIANTS_PER_SAMPLE_GRAPH, className="six columns"),
                 html.Div(id=ID_SUBSTITUTIONS_GRAPH, className="five columns"),
             ]),
             html.Div(children=[
-                html.Div(id=ID_INDEL_LENGTH_GRAPH, className="five columns"),
+                html.Div(id=ID_INDEL_LENGTH_GRAPH, className="six columns"),
                 html.Div(id=ID_ANNOTATIONS_GRAPH, className="five columns"),
             ]),
         ])
