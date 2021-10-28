@@ -373,15 +373,15 @@ class RecurrentMutationsFigures(Figures):
                          for (g, d), c in zip(genes_and_domains, domain_colors)]
         conservation_traces = self._get_conservation_traces(
             conservation, xaxis='x', yaxis1='y3', yaxis2='y4', yaxis3='y5')
+        mean_unique_variants_per_bin = data.count_unique_variants.mean()
         variant_counts_traces = [
             go.Scatter(x=data.position_bin, y=data.count_variant_observations,
                        name="All variants", text="All variants", showlegend=False,
                        line_color=plotly.express.colors.sequential.Blues[-2], line_width=1),
             go.Scatter(x=data.position_bin,
-                       y=[data.count_unique_variants.mean() for _ in range(data.shape[0])],
+                       y=[mean_unique_variants_per_bin for _ in range(data.shape[0])],
                        yaxis='y2', name="Mean unique variants", text="Mean unique variants",
-                       line_width=1,
-                       showlegend=False, line_color=plotly.express.colors.sequential.Blues[-3]),
+                       line_width=1, showlegend=False, line_color=plotly.express.colors.sequential.Blues[-3]),
             go.Scatter(x=data.position_bin, y=data.count_unique_variants, yaxis='y2',
                        name="Unique variants", text="Unique variants", showlegend=False, fill='tonexty',
                        line_color=plotly.express.colors.sequential.Blues[-4], line_width=1)

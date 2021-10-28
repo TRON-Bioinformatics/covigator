@@ -563,7 +563,7 @@ class Queries:
             query = query.filter(PrecomputedOccurrence.gene_name == gene_name)
         if metric == "count":
             query = query.order_by(PrecomputedOccurrence.count.desc())
-        elif metric == "frequency":
+        elif metric == "frequency_by_month":
             query = query.order_by(PrecomputedOccurrence.frequency.desc())
         else:
             raise CovigatorQueryException("Not supported metric for top occurring variants")
@@ -572,6 +572,7 @@ class Queries:
 
         # formats the DNA mutation
         top_occurring_variants.rename(columns={'variant_id': 'dna_mutation'}, inplace=True)
+        top_occurring_variants["frequency_by_month"] = top_occurring_variants.frequency
 
         # pivots the table over months
         top_occurring_variants = pd.pivot_table(

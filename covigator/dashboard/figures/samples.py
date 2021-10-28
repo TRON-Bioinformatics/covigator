@@ -1,14 +1,9 @@
 from typing import List
 import numpy as np
 import pandas as pd
-import plotly
 from logzero import logger
-
-from covigator import MISSENSE_VARIANT, SYNONYMOUS_VARIANT
-from covigator.dashboard.figures import VARIANT_TYPE_COLOR_MAP
 from covigator.dashboard.figures.figures import Figures, PLOTLY_CONFIG, MARGIN, TEMPLATE
 import plotly.express as px
-import plotly.graph_objects as go
 import dash_core_components as dcc
 
 from covigator.database.model import DataSource
