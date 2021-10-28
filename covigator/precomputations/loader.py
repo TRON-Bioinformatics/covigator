@@ -1,7 +1,7 @@
 import pandas as pd
 from sqlalchemy.orm import Session
 from covigator.configuration import Configuration
-from covigator.dashboard.tabs.variants import BIN_SIZE_VALUES
+from covigator.dashboard.tabs.recurrent_mutations import BIN_SIZE_VALUES
 from covigator.database.database import Database
 from covigator.database.model import PrecomputedVariantsPerSample, PrecomputedSubstitutionsCounts, \
     VARIANT_OBSERVATION_TABLE_NAME, PrecomputedIndelLength, \

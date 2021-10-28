@@ -80,15 +80,15 @@ class Queries:
             raise CovigatorQueryException("Bad query trying to fetch a sample")
         return sample
 
-    def get_countries(self, source: str = None) -> List[str]:
+    def get_countries(self, source) -> List[str]:
         countries = []
         if source == DataSource.ENA.name or source is None:
-            countries = countries + [c for c, in self.session.query(SampleEna.country).filter(
-                SampleEna.finished).distinct().all()]
-        if source == DataSource.GISAID.name or source is None:
-            countries = countries + [c for c, in self.session.query(SampleGisaid.country).filter(
-                SampleGisaid.finished).distinct().all()]
-        return sorted(list(set(countries)))
+            countries = [c for c, in self.session.query(SampleEna.country).filter(
+                SampleEna.finished).distinct().order_by(SampleEna.country.asc()).all()]
+        elif source == DataSource.GISAID.name or source is None:
+            countries = [c for c, in self.session.query(SampleGisaid.country).filter(
+                SampleGisaid.finished).distinct().order_by(SampleGisaid.country.asc()).all()]
+        return countries
 
     def get_variants_per_sample(self, data_source: str, genes: List[str], variant_types: List[str]):
         """
@@ -171,9 +171,8 @@ class Queries:
             data = data.head(12)
         return data
 
-    @functools.lru_cache()
     def get_accumulated_samples_by_country(
-            self, data_source: DataSource, countries: List[str], min_samples=100) -> pd.DataFrame:
+            self, data_source: str, countries: List[str], min_samples=100) -> pd.DataFrame:
         """
         Returns a DataFrame with columns: data, country, cumsum, count
         """
@@ -564,7 +563,7 @@ class Queries:
             query = query.filter(PrecomputedOccurrence.gene_name == gene_name)
         if metric == "count":
             query = query.order_by(PrecomputedOccurrence.count.desc())
-        elif metric == "frequency":
+        elif metric == "frequency_by_month":
             query = query.order_by(PrecomputedOccurrence.frequency.desc())
         else:
             raise CovigatorQueryException("Not supported metric for top occurring variants")
@@ -573,6 +572,7 @@ class Queries:
 
         # formats the DNA mutation
         top_occurring_variants.rename(columns={'variant_id': 'dna_mutation'}, inplace=True)
+        top_occurring_variants["frequency_by_month"] = top_occurring_variants.frequency
 
         # pivots the table over months
         top_occurring_variants = pd.pivot_table(

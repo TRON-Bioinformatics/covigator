@@ -15,8 +15,7 @@ def get_tab_overview(queries: Queries):
     count_countries = queries.count_countries()
     count_variants = queries.count_variants()
 
-    return dbc.Card(
-        dbc.CardBody([
+    return dbc.CardBody([
             get_header(),
             html.Div(
                children=[
@@ -97,7 +96,7 @@ def get_tab_overview(queries: Queries):
                    html.Br(),
                ],
                style={"text-align": "left", "font-size": 16}),
-        ]))
+        ])
 
 
 def get_header():

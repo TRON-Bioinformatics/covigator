@@ -1,6 +1,8 @@
 from dash_core_components import Markdown, Graph
+
+from covigator.dashboard.figures.mutation_stats import MutationStatsFigures
 from covigator.dashboard.figures.samples import SampleFigures
-from covigator.dashboard.figures.variants import VariantsFigures
+from covigator.dashboard.figures.recurrent_mutations import RecurrentMutationsFigures
 from covigator.database.model import VariantType
 from covigator.precomputations.loader import PrecomputationsLoader
 from covigator.precomputations.load_ns_s_counts import NsSCountsLoader
@@ -13,7 +15,8 @@ class FiguresTests(AbstractTest):
 
     def setUp(self) -> None:
         self.sample_figures = SampleFigures(queries=Queries(session=self.session))
-        self.variants_figures = VariantsFigures(queries=Queries(session=self.session))
+        self.mutation_stats_figures = MutationStatsFigures(queries=Queries(session=self.session))
+        self.variants_figures = RecurrentMutationsFigures(queries=Queries(session=self.session))
 
     def test_samples_by_country(self):
         # populates the ENA samples tables
@@ -32,28 +35,28 @@ class FiguresTests(AbstractTest):
         # populates the ENA samples tables
         mock_samples_and_variants(session=self.session, faker=self.faker, num_samples=100)
         PrecomputationsLoader(session=self.session).load_counts_variants_per_sample()
-        figure = self.sample_figures.get_variants_per_sample_plot()
+        figure = self.mutation_stats_figures.get_variants_per_sample_plot()
         self.assertIsNotNone(figure)
         self.assertTrue(len(figure) == 2)
         self.assertIsInstance(figure[0], Graph)
         self.assertIsInstance(figure[1], Markdown)
 
     def test_variants_per_sample_no_data(self):
-        figure = self.sample_figures.get_variants_per_sample_plot()
+        figure = self.mutation_stats_figures.get_variants_per_sample_plot()
         self.assertIsInstance(figure, Markdown)
 
     def test_substitutions(self):
         # populates the ENA samples tables
         mock_samples_and_variants(session=self.session, faker=self.faker, num_samples=100)
         PrecomputationsLoader(session=self.session).load_count_substitutions()
-        figure = self.sample_figures.get_substitutions_plot(variant_types=[VariantType.SNV.name])
+        figure = self.mutation_stats_figures.get_substitutions_plot(variant_types=[VariantType.SNV.name])
         self.assertIsNotNone(figure)
         self.assertTrue(len(figure) == 2)
         self.assertIsInstance(figure[0], Graph)
         self.assertIsInstance(figure[1], Markdown)
 
     def test_substitutions_no_data(self):
-        figure = self.sample_figures.get_substitutions_plot(variant_types=[VariantType.SNV.name])
+        figure = self.mutation_stats_figures.get_substitutions_plot(variant_types=[VariantType.SNV.name])
         self.assertIsInstance(figure, Markdown)
 
     def test_needle_plot_no_data(self):

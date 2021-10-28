@@ -17,9 +17,10 @@ CoVigator - Monitoring SARS-CoV-2 mutations
    :maxdepth: 2
 
    01_overview
-   02_pipeline
-   03_knowledge_base
-   04_dashboard
+   02_dashboard
+   03_pipeline
+   04_knowledge_base
+
 
 
 ------------------------

@@ -21,8 +21,7 @@ def get_tab_dataset_gisaid(queries: Queries):
     date_of_first_gisaid_sample = queries.get_date_of_first_sample(source=DataSource.GISAID)
     date_of_most_recent_gisaid_sample = queries.get_date_of_most_recent_sample(source=DataSource.GISAID)
 
-    return dbc.Card(
-        dbc.CardBody(
+    return dbc.CardBody(
             children=[
                 dcc.Markdown("""
                     The GISAID dataset was manually downloaded from the site https://www.gisaid.org/.
@@ -49,7 +48,6 @@ def get_tab_dataset_gisaid(queries: Queries):
                 ),
                 get_dataset_gisaid_tab_graphs(queries=queries, count_samples=count_samples)
         ])
-    )
 
 
 def get_dataset_gisaid_tab_graphs(queries: Queries, count_samples):
@@ -79,7 +77,7 @@ def get_plot_coverage(queries: Queries):
     fig.update_layout(
         margin=MARGIN,
         template=TEMPLATE,
-        yaxis={'title': "Num. of samples"},
+        yaxis={'title': "Num. of samples (log)"},
         xaxis={'title': "Horizontal coverage (%)"},
         legend={'title': None}
     )
@@ -108,7 +106,7 @@ def get_plot_bad_bases_ratio(queries: Queries, count_samples):
     fig.update_layout(
         margin=MARGIN,
         template=TEMPLATE,
-        yaxis={'title': "Num. of samples"},
+        yaxis={'title': "Num. of samples (log)"},
         xaxis={'title': "Ratio of N and ambiguous bases (%)"},
         legend={'title': None}
     )
