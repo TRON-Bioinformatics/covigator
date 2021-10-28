@@ -19,7 +19,7 @@ CoVigator is a monitoring system for SARS-CoV-2 which integrates a full variant 
 a database that stores all relevant information about mutations in SARS-CoV-2 and finally a dashboard to enable 
 visual analytics. 
 
-**CoVigator is available here: [https://covigator.tron-mainz.de](https://covigator.tron-mainz.de)**
+CoVigator is available here: [https://covigator.tron-mainz.de](https://covigator.tron-mainz.de)
 
 CoVigator loads publicly available SARS-CoV-2 DNA sequences from two systems:
 
@@ -30,11 +30,13 @@ The dashboard is implemented in the popular visualization framework Dash [https:
 The computation is distributed through our cluster with a library of similar name and popularity Dask [https://dask.org/](https://dask.org/).
 The analysis pipeline is implemented in the Nextflow framework [https://www.nextflow.io/](https://www.nextflow.io/).
 
-![CoVigator sample accumulation](../figures/screenshot_01_01_samples.png "CoVigator sample accumulation")
-  Figure 1: Sample accumulation by country
+![CoVigator sample accumulation](../figures/screenshot_01_01_samples.png)
 
-![CoVigator gene S view](../figures/screenshot_gene_view.png "CoVigator gene S view")
-  Figure 2: Most frequent mutations in the spike gene
+Figure 1: Sample accumulation by country
+
+![CoVigator gene S view](../figures/screenshot_gene_view.png)
+
+Figure 2: Most frequent mutations in the spike gene
 
 
 The CoVigator project was developed at the Biomarker Development Center at 
