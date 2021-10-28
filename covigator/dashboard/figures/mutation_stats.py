@@ -34,7 +34,7 @@ class MutationStatsFigures(Figures):
                 margin=MARGIN,
                 template=TEMPLATE,
                 legend={'traceorder': 'normal', 'title': None},
-                yaxis={'title': "num. variants (log)"},  # , 'autorange': 'reversed'},
+                yaxis={'title': "num. mutations (log)"},  # , 'autorange': 'reversed'},
                 xaxis={'title': None},
             )
             graph = [
@@ -56,13 +56,12 @@ class MutationStatsFigures(Figures):
             logger.debug("Prepare plot on indels lengths...")
             fig = px.bar(
                 data, y="count", x="length", color="variant_type", color_discrete_map=INDEL_TYPE_COLOR_MAP)
-                #.update_yaxes(categoryorder="total descending")
             fig.update_layout(
                 margin=MARGIN,
                 template=TEMPLATE,
                 legend={'traceorder': 'normal', 'title': None},
-                yaxis={'title': "num. samples"},  #, 'autorange': 'reversed'},
-                xaxis={'title': None},
+                yaxis={'title': "num. samples"},
+                xaxis={'title': "indel length (bp)"}
             )
             graph = [
                 dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
@@ -136,8 +135,8 @@ class MutationStatsFigures(Figures):
                     margin=MARGIN,
                     template=TEMPLATE,
                     legend={'traceorder': 'normal', 'title': None},
-                    yaxis={'title': None},
-                    xaxis={'title': "num. samples"},
+                    yaxis={'title': "num. samples"},
+                    xaxis={'title': "num. mutations"},
                 )
 
                 graph = [
