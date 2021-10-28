@@ -196,9 +196,9 @@ def get_plot_coverage(queries: Queries):
     return [
         dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
         dcc.Markdown("""
-        **Horizontal coverage (%)**
+        **Coverage**
 
-        The percentage of the genome covered by at least one read.
+        The percentage of the genome covered by at least one read versus the mean depth of coverage.
         Samples covering less than 20 % of the genome are excluded.
         """)
     ]

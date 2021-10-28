@@ -507,7 +507,7 @@ class RecurrentMutationsFigures(Figures):
                     ),
                     xaxis=main_xaxis,
                     showlegend=True,
-                    text=["{} ({})".format(v.get("hgvs_p"), v.get("annotation_highest_impact")) for v in selected_variants],
+                    text=["{} ({})".format(v.get("hgvs_p"), v.get("annotation")) for v in selected_variants],
                     hovertemplate=VARIANT_TOOLTIP
                 )
 

@@ -51,13 +51,13 @@ def get_subclonal_variants_tab_graphs(queries):
             dcc.Markdown("""
                             LoFreq variant calls with a VAF lower than 80 % are considered intrahost variants. 
                             All variant calls with a higher VAF are considered clonal.
-                            Intrahost variants can only be detected in the ENA dataset.
-                            The dataset of intrahost variants is enriched for false positive calls due to the lower 
+                            Intrahost mutations can only be detected in the ENA dataset.
+                            The dataset of intrahost mutations is enriched for false positive calls due to the lower 
                             Variant Allele Frequency (VAF). (Lythgoe, 2021) and (Valesano, 2021) reported that SARS-CoV-2 
                             intrahost variant calls with a VAF below 2 % and 3 % respectively had not enough quality; 
                             although the variant calling methods differ between them and with CoVigator.
     
-                            Here we provide a tool to explore those intrahost variants that have not been observed 
+                            Here we provide a tool to explore those intrahost mutations that have not been observed 
                             as clonal variants.
                              """, style={"font-size": 16}),
             html.Br(),
@@ -65,15 +65,15 @@ def get_subclonal_variants_tab_graphs(queries):
                 html.Span(
                     children=[
                         get_mini_container(
-                            title="Unique variants",
+                            title="Unique mutations",
                             value=print_number(count_unique_subclonal_variant)
                         ),
                         get_mini_container(
-                            title="Only subclonal variants",
+                            title="Only intrahost mutations",
                             value=print_number(count_unique_only_subclonal_variant)
                         ),
                         get_mini_container(
-                            title="Variant calls",
+                            title="Mutation observations",
                             value=print_number(count_subclonal_variant_observations)
                         ),
                     ]
@@ -116,7 +116,7 @@ def get_subclonal_variants_tab_left_bar(queries: Queries):
             multi=False
         ),
         html.Br(),
-        dcc.Markdown("""Minimum VAF subclonal variants"""),
+        dcc.Markdown("""Minimum VAF intrahost variants"""),
         dcc.Slider(
             id=ID_SLIDER_SUBCLONAL_VARIANTS_VAF,
             min=0.1,
@@ -127,7 +127,7 @@ def get_subclonal_variants_tab_left_bar(queries: Queries):
             tooltip=dict(always_visible=False, placement="right")
         ),
         html.Br(),
-        dcc.Markdown("""Number of top occurring subclonal variants"""),
+        dcc.Markdown("""Number of top occurring intrahost variants"""),
         dcc.Slider(
             id=ID_SLIDER_TOP_SUBCLONAL_VARIANTS,
             min=10,

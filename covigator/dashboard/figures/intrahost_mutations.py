@@ -29,7 +29,7 @@ class SubclonalVariantsQueries:
         elif order_by == "vaf":
             order_by_clause = "order by median_vaf desc"
         else:
-            raise CovigatorQueryException("Not supported order by of subclonal variants")
+            raise CovigatorQueryException("Not supported order by of intrahost variants")
 
         # counts variants over those bins
         if domain is not None:
@@ -169,12 +169,12 @@ class IntrahostMutationsFigures(Figures):
     @functools.lru_cache()
     def get_top_occurring_subclonal_variants_plot(self, top, gene_name, domain, min_vaf, order_by):
 
-        logger.debug("Getting data on top occurring subclonal variants...")
+        logger.debug("Getting data on top occurring intrahost mutations...")
         data = SubclonalVariantsQueries(session=self.queries.session).get_top_occurring_subclonal_variants(
             top=top, gene_name=gene_name, domain=domain, min_vaf=min_vaf, order_by=order_by)
-        fig = dcc.Markdown("""**No subclonal variants for the current selection**""")
+        fig = dcc.Markdown("""**No intrahost variants for the current selection**""")
         if data is not None and data.shape[0] > 0:
-            logger.debug("Preparing plot on top occurring subclonal variants...")
+            logger.debug("Preparing plot on top occurring intrahost variants...")
             unique_subclonal_variants = data.groupby('variant_id').agg({
                 'gene_name': 'first',
                 'pfam_description': 'first',
@@ -209,7 +209,7 @@ class IntrahostMutationsFigures(Figures):
             elif order_by == "vaf":
                 ordered_data = unique_subclonal_variants.sort_values("median_vaf", ascending=False)
             else:
-                raise CovigatorQueryException("Not supported order by of subclonal variants")
+                raise CovigatorQueryException("Not supported order by of intrahost variants")
 
             fig = dash_table.DataTable(
                 id='top-occurring-subclonal-variants-table',
@@ -248,14 +248,14 @@ class IntrahostMutationsFigures(Figures):
         return [
             fig,
             dcc.Markdown("""
-            **Variants only observed as intrahost variants**
+            **Mutations only observed as intrahost**
                             
-            The list of intrahost variants can be prioritised by the count of observations, 
+            The list of intrahost mutations can be prioritised by the count of observations, 
             by the ConsHMM conservation score, by the median VAF or by a joint score using the count of observations 
             and the conservation scores (ie: *ln(count observations) x conservation score*).
             The variant calls can be filtered by VAF.
             
-            Select any of the variants to explore further details about that particular variant.
+            Select any of the mutations to explore further details.
             """)
         ]
 
@@ -298,7 +298,7 @@ class IntrahostMutationsFigures(Figures):
         )
         return [
             dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
-            dcc.Markdown("""**Country distribution for {}**""".format(variant_id))
+            dcc.Markdown("""**Countries distribution for {}**""".format(variant_id))
         ]
 
     def get_cooccurring_clonal_variants(self, variant_id, min_vaf, gene_name, domain):
@@ -333,6 +333,6 @@ class IntrahostMutationsFigures(Figures):
 
         return [
             fig,
-            dcc.Markdown("""**Top 10 co-occurring clonal variants with the intrahost variant {variant_id}**
+            dcc.Markdown("""**Top 10 co-occurring clonal mutations with the intrahost mutation {variant_id}**
                     """.format(variant_id=variant_id))
         ]
