@@ -100,9 +100,9 @@ def get_variants_tab_left_bar(queries: Queries):
             multi=False
         ),
         html.Br(),
-        dcc.Markdown("""**Top occurring variants**
+        dcc.Markdown("""**Top occurring mutations table**
 
-Number of top occurring variants"""),
+Number of top occurring mutations"""),
         dcc.Slider(
             id=ID_SLIDER_TOP_VARIANTS,
             min=10,
@@ -114,7 +114,7 @@ Number of top occurring variants"""),
             tooltip=dict(always_visible=False, placement="right")
         ),
         html.Br(),
-        dcc.Markdown("""Metric to measure abundance of variants per month"""),
+        dcc.Markdown("""Metric to measure abundance of mutations per month"""),
         dcc.Dropdown(
             id=ID_TOP_VARIANTS_METRIC,
             options=[
@@ -157,7 +157,7 @@ Bin size"""),
         html.Br(),
         dcc.Markdown("""**Co-occurrence matrix**
         
-Metric to assess paiwise co-occurrence"""),
+Paiwise co-occurrence metric"""),
         dcc.Dropdown(
             id=ID_DROPDOWN_SIMILARITY_METRIC,
             options=[{'label': "Count", 'value': "count"},
@@ -169,7 +169,7 @@ Metric to assess paiwise co-occurrence"""),
             clearable=False,
             multi=False
         ),
-        dcc.Markdown("""Minimum number of pairwise co-occurrences"""),
+        dcc.Markdown("""Minimum pairwise co-occurrences"""),
         dcc.Slider(
             id=ID_SLIDER_MIN_COOCCURRENCES,
             min=1,
@@ -181,7 +181,7 @@ Metric to assess paiwise co-occurrence"""),
             tooltip=dict(always_visible=False, placement="right")
         ),
         html.Br(),
-        dcc.Markdown("""**Variants clustering**
+        dcc.Markdown("""**Mutations clustering**
         
 The number of samples (or total weight) in a neighborhood for a point to be 
 considered as a core point. This includes the point itself."""),
@@ -297,11 +297,11 @@ def set_callbacks_variants_tab(app, session: Session):
         if source != DataSource.ENA.name:
             plot = html.Div(
                 children=[dcc.Markdown(
-                    """**The cooccurrence analysis is currently only available for the ENA dataset**""")])
+                    """**The co-occurrence analysis is currently only available for the ENA dataset**""")])
         elif gene_name is None:
             plot = html.Div(
                 children=[dcc.Markdown(
-                    """**Please, select a gene or domain to explore the cooccurrence analysis**""")])
+                    """**Please, select a gene or domain to explore the co-occurrence analysis**""")])
         else:
             selected_rows = [rows[s] for s in selected_rows_indices] if selected_rows_indices else None
             sparse_matrix = queries.get_sparse_cooccurrence_matrix(

@@ -91,7 +91,7 @@ class RecurrentMutationsFigures(Figures):
 
     def get_top_occurring_variants_plot(self, top, gene_name, domain, date_range_start, date_range_end, metric, source):
         data = self.queries.get_top_occurring_variants_precomputed(top, gene_name, domain, metric, source)
-        fig = dcc.Markdown("""**No variants for the current selection**""")
+        fig = dcc.Markdown("""**No mutations for the current selection**""")
         if data is not None and data.shape[0] > 0:
             # removes the columns from the months out of the range
             month_columns = [c for c in data.columns if MONTH_PATTERN.match(c)]
@@ -135,8 +135,8 @@ class RecurrentMutationsFigures(Figures):
         return [
             fig,
             dcc.Markdown("""
-                            **Top occurring variants** 
-                            *table shows the {} variants{} with the highest frequency across all samples.*
+                            **Top occurring mutations table** 
+                            *table shows the {} mutations{} with the highest frequency across all samples.*
                             *The counts and frequencies per month are only shown between {} and {}.*
                             *Selections in this table will be highlighted in the genome view and in the co-occurrence matrix.*
                             """.format(top, " in gene {}".format(gene_name) if gene_name else "",
@@ -182,7 +182,7 @@ class RecurrentMutationsFigures(Figures):
 
     def get_cooccurrence_heatmap(self, sparse_matrix, selected_variants, metric="jaccard", min_cooccurrences=5):
         data = self._get_variants_cooccurrence_matrix(data=sparse_matrix)
-        graph = dcc.Markdown("""**No co-occurrent variants for the current selection**""")
+        graph = dcc.Markdown("""**No co-occurrent mutations for the current selection**""")
         if data is not None and data.shape[0] > 0:
 
             all_variants = data.variant_id_one.unique()
@@ -248,11 +248,11 @@ class RecurrentMutationsFigures(Figures):
                         ***Co-occurrence matrix*** *showing variant pairs co-occurring in at least {} samples (this value is configurable).*
                         *The metric in the co-occurrence matrix can be chosen among counts, frequencies, Jaccard index or 
                         Cohen's kappa coefficient. The Cohen's kappa coefficient introduces a correction to the Jaccard index for
-                        variants with low occurrence.*
+                        mutations with low occurrence.*
                         *The diagonal contains the total counts or just 1.0 in the other metrics.*
                         *The upper diagonal is not shown for clarity.*
-                        *Synonymous variants are excluded.*
-                        *Different genomic variants causing the same protein variant are not grouped.*
+                        *Synonymous mutations are excluded.*
+                        *Different genomic mutations causing the same protein variant are not grouped.*
                         """.format(min_cooccurrences))
         ])
 
@@ -407,16 +407,16 @@ class RecurrentMutationsFigures(Figures):
                 config=PLOTLY_CONFIG
             ),
             dcc.Markdown("""
-                ***Genome view*** *representing the abundance of variants and ConsHMM (Arneson, 2019) conservation 
-                using a bin size of {} bp. Synonymous variants are included.*
+                ***Genome view*** *representing the abundance of mutations and ConsHMM (Arneson, 2019) conservation 
+                using a bin size of {} bp. Synonymous mutations are included.*
 
-                *The first track shows the count of variants across the genome including repetitions. *
-                *The second track shows the count of unique variants across the genome, the horizontal line represents 
-                the average number of unique variants per bin and thus distinguishes regions with over and under the 
-                average number of unique variants.*
+                *The first track shows the count of mutations across the genome including repetitions. *
+                *The second track shows the count of unique mutations across the genome, the horizontal line represents 
+                the average number of unique mutations per bin and thus distinguishes regions with over and under the 
+                average number of unique mutations.*
                 *The third, fourth and fifth tracks represent the conservation as reported by ConsHMM within 
                 SARS-CoV-2, among SARS-like betaCoV and among vertebrate CoV. Correlation between distribution of 
-                unique variants and conservation within Sars-CoV-2, among SARS-like betacoronavirus and among 
+                unique mutations and conservation within Sars-CoV-2, among SARS-like betacoronavirus and among 
                 vertebrates CoV respectively: {}, {}, {}.*
                 *Genes and Pfam domains are represented in tones of red and purple respectively.*
 
@@ -449,7 +449,7 @@ class RecurrentMutationsFigures(Figures):
             end = gene.start + (domain.end * 3)
 
         # reads variants
-        logger.debug("Getting variants...")
+        logger.debug("Getting mutations...")
         variants = self.queries.get_non_synonymous_variants_by_region(start=start, end=end, source=source)
 
         # reads conservation and bins it
@@ -554,16 +554,16 @@ class RecurrentMutationsFigures(Figures):
             return [dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
                     dcc.Markdown("""
                         ***Gene view*** *representing each variant with its frequency in the population and 
-                        ConsHMM (Arneson, 2019) conservation using a bin size of {bin_size} bp. Synonymous variants and variants 
-                        occurring in a single sample are excluded.*
+                        ConsHMM (Arneson, 2019) conservation using a bin size of {bin_size} bp. Synonymous mutations 
+                        and mutations occurring in a single sample are excluded.*
 
-                        *The scatter plot shows non synonymous variants occurring in at least two samples on {region}. 
+                        *The scatter plot shows non synonymous mutations occurring in at least two samples on {region}. 
                         The x-axis shows the genomic coordinates and the y-axis shows the allele frequency.*
                         *The category of "other variants" includes frameshift indels, stop codon gain and lost and 
-                        start lost variants.*
-                        *The variants are colored according to their frequency as rare variants (< 0.1 %), 
-                        low frequency variants (>= 0.1% and < 1%), common variants (>= 1% and < 10%) and very common 
-                        variants (>= 10%). The second, third and fourth tracks in grey represent the conservation as 
+                        start lost mutations.*
+                        *The mutations are colored according to their frequency as rare mutations (< 0.1 %), 
+                        low frequency mutations (>= 0.1% and < 1%), common mutations (>= 1% and < 10%) and very common 
+                        mutations (>= 10%). The second, third and fourth tracks in grey represent the conservation as 
                         reported by ConsHMM within SARS-CoV-2, among SARS-like betaCoV and among vertebrate CoV.*
                         *Genes and Pfam domains are represented in tones of red and purple respectively.*
 
@@ -576,7 +576,7 @@ class RecurrentMutationsFigures(Figures):
                         region="gene {}".format(gene_name) if domain_name is not None else
                                 "domain {}: {}".format(gene_name, domain_name)))]
         else:
-            return dcc.Markdown("""**No variants for the current selection**""")
+            return dcc.Markdown("""**No mutations for the current selection**""")
 
     def _get_conservation_traces(self, conservation, xaxis, yaxis1, yaxis2, yaxis3):
         return [
@@ -680,12 +680,12 @@ class RecurrentMutationsFigures(Figures):
             dcc.Markdown("""
             ***Co-occurrence clustering*** *shows the resulting clusters from the
             co-occurrence matrix with the Jaccard index corrected with the Cohen's kappa coefficient. 
-            The co-occurrence matrix is built taking into account only variants with at least {} pairwise 
-            co-occurrences and if a gene is provided only variants within that gene.  
+            The co-occurrence matrix is built taking into account only mutations with at least {} pairwise 
+            co-occurrences and if a gene is provided only mutations within that gene.  
             Clustering is performed on the co-occurrence matrix using OPTICS. 
             The mimimum number of neighbours to call
             a cluster is {}.
-            Variants selected in the top occurrent variants table are highlighted with a greater size in the plot.
+            Variants selected in the top occurrent mutations table are highlighted with a greater size in the plot.
             *
 
             *Ankerst et al. “OPTICS: ordering points to identify the clustering structure.” ACM SIGMOD Record 28, no. 2 (1999): 49-60.*
