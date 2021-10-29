@@ -11,13 +11,33 @@
 
 Human infections with SARS-CoV-2 are spreading globally since the beginning of 2020, necessitating preventive or 
 therapeutic strategies and first steps towards an end to this pandemic were done with the approval of the first mRNA 
-vaccines against SARS-CoV-2. We want to provide an interactive view on different types of mutations that can be 
-incorporated in global efforts to sustainably prevent or treat infections. Thus, we envision to help guiding global 
-vaccine design efforts to overcome the threats of this pandemic.
+vaccines against SARS-CoV-2. 
+The accumulation of virus samples that have been sequenced in a short time frame is unprecedented (see Figure 1).
+This is the first pandemic recorded at a molecular level with such level of detail giving us the opportunity to develop
+new tools for the monitoring of its evolution.
+
+We want to provide an up-to-date interactive view on SARS-CoV-2 mutations to support global efforts in preventing or 
+treating infections. 
+Monitoring the appearance of relevant new mutations is key to enable a fast reaction to new strains and for that 
+purpose we enable the exploration of these mutations and their annotations (see Figure 2). 
+Thus, we envision to help guiding global vaccine design efforts to overcome the threats of this pandemic.
 
 CoVigator is a monitoring system for SARS-CoV-2 which integrates a full variant calling pipeline, 
 a database that stores all relevant information about mutations in SARS-CoV-2 and finally a dashboard to enable 
-visual analytics. 
+visual analytics.
+
+![CoVigator sample accumulation](_static/figures/screenshot_01_samples.png)
+
+<p align = "center">
+<b>Figure 1: Sample accumulation by country</b>
+</p>
+
+
+![CoVigator gene S view](_static/figures/screenshot_01_gene_view.png)
+
+<p align = "center">
+<b>Figure 2: Most frequent mutations in the spike protein</b>
+</p>
 
 CoVigator is available here: [https://covigator.tron-mainz.de](https://covigator.tron-mainz.de)
 
@@ -37,15 +57,6 @@ available data.
 The dashboard is implemented in the visualization framework [Dash](https://dash.plotly.com/). 
 The computation is distributed through our cluster with a library of similar name [Dask](https://dask.org/).
 The analysis pipeline is implemented in the [Nextflow](https://www.nextflow.io/) framework.
-
-![CoVigator sample accumulation](_static/figures/screenshot_01_01_samples.png)
-
-Figure 1: Sample accumulation by country
-
-![CoVigator gene S view](_static/figures/screenshot_gene_view.png)
-
-Figure 2: Most frequent mutations in the spike gene
-
 
 The CoVigator project was developed at the Biomarker Development Center at 
 [TRON (Translational Oncology at the University Medical Center of the Johannes Gutenberg University gGmbH)](https://tron-mainz.de/). 
