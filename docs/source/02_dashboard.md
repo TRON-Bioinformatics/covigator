@@ -1,4 +1,4 @@
-![CoVigator logo](../figures/CoVigator_logo_txt_reg_no_bg.png "CoVigator logo")
+![CoVigator logo](_static/figures/CoVigator_logo_txt_reg_no_bg.png "CoVigator logo")
 
 -----------------
 
@@ -41,14 +41,14 @@ filter data. This is applicable on all plots in CoVigator.
 
 You can zoom into any region of a plot. Click and drag on the plot to zoom-in and double-click to reset. 
 
-![Plotly filtering](../figures/screencast_zoom.gif)
+![Plotly filtering](_static/figures/screencast_zoom.gif)
 
 ### Filtering
 
 Elements from a plot can be filtered out from the legend. A single click filters out the clicked element.
 A double click filters out all other elements except the clicked one. Another double click will reset filters.
 
-![Plotly filtering](../figures/screencast_filter.gif)
+![Plotly filtering](_static/figures/screencast_filter.gif)
 
 ## The samples by country tab
 
@@ -72,7 +72,7 @@ Both ENA and GISAID datasets can be explored separately.
 * dN/dSby gene. Line plot showing the evolution of the dN/dS ratio on different genomic regions. X-axis: time binned by
   months; Y-axis: dN/dS ratio
 
-![Plotly filtering](../figures/screencast_01_samples_by_country_tab.gif)
+![Plotly filtering](_static/figures/screencast_01_samples_by_country_tab.gif)
 
 
 ## The mutation statistics tab
@@ -102,7 +102,7 @@ SARS-CoV-2 mediated by APOBEC.
 * Most common mutation effects. Shows the number of times each mutation effect has been observed. 
   X-axis: mutation effect in Sequence Ontology terms; Y-axis: number of mutations in logarithmic scale.
 
-![Mutation stats tab](../figures/screenshot_02_01_mutation_stats_tab.png)
+![Mutation stats tab](_static/figures/screenshot_02_01_mutation_stats_tab.png)
 
 ## The recurrent mutations tab
 
@@ -148,9 +148,9 @@ that most frequently co-occur.
   a gene or protein domain has been selected; and only for the ENA dataset.
 * Co-occurrence clustering. The list of clusters with all the mutations within each cluster.
 
-![Recurrent mutations tab](../figures/screencast_03_recurrent_mutations_tab.gif)
+![Recurrent mutations tab](_static/figures/screencast_03_recurrent_mutations_tab.gif)
 
-![Co-occurrence heatmap](../figures/screenshot_03_heatmap.png)
+![Co-occurrence heatmap](_static/figures/screenshot_03_heatmap.png)
 
 ## The intrahost mutations tab
 
@@ -178,7 +178,7 @@ temporal distribution across countries and finally the top 10 co-occurring clona
 * Countries distribution
 * Top 10 co-occurring clonal mutations
 
-![Intrahost mutations](../figures/screenshot_04_intrahost_mutations.png)
+![Intrahost mutations](_static/figures/screenshot_04_intrahost_mutations.png)
 
 
 ## The ENA dataset tab
@@ -195,7 +195,7 @@ The ENA dataset tab shows statistics that are uniquely applicable to the ENA dat
 * Mean mapping quality versus base calling quality. The relation between the mean mapping quality and the mean base 
   call quality for each sample.
 
-![ENA dataset](../figures/screenshot_05_ena_dataset.png)
+![ENA dataset](_static/figures/screenshot_05_ena_dataset.png)
 
 
 ## The GISAID dataset tab
@@ -207,7 +207,7 @@ The GISAID dataset tab shows statistics that are uniquely applicable to the GISA
 * Horizontal coverage. The distribution of the horizontal coverage. X-axis: horizontal coverage %; Y-axis: number of 
   samples in logarithmic scale.
 
-![GISAID dataset](../figures/screenshot_06_gisaid_dataset.png)
+![GISAID dataset](_static/figures/screenshot_06_gisaid_dataset.png)
 
 
 ## Download the raw data

@@ -1,4 +1,4 @@
-![CoVigator logo](../figures/CoVigator_logo_txt_reg_no_bg.png "CoVigator logo")
+![CoVigator logo](_static/figures/CoVigator_logo_txt_reg_no_bg.png "CoVigator logo")
 
 -----------------
 
@@ -30,11 +30,11 @@ The dashboard is implemented in the popular visualization framework Dash [https:
 The computation is distributed through our cluster with a library of similar name and popularity Dask [https://dask.org/](https://dask.org/).
 The analysis pipeline is implemented in the Nextflow framework [https://www.nextflow.io/](https://www.nextflow.io/).
 
-![CoVigator sample accumulation](../figures/screenshot_01_01_samples.png)
+![CoVigator sample accumulation](_static/figures/screenshot_01_01_samples.png)
 
 Figure 1: Sample accumulation by country
 
-![CoVigator gene S view](../figures/screenshot_gene_view.png)
+![CoVigator gene S view](_static/figures/screenshot_gene_view.png)
 
 Figure 2: Most frequent mutations in the spike gene
 
@@ -73,7 +73,7 @@ for human health.
 
 [https://tron-mainz.de/](https://tron-mainz.de/)
 
-![TRON logo](../figures/tron_logo_no_bg.png "TRON logo")
+![TRON logo](_static/figures/tron_logo_no_bg.png "TRON logo")
 
 ## Acknowledgements
 

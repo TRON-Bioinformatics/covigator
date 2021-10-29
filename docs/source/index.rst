@@ -3,7 +3,7 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-.. image:: ../figures/CoVigator_logo_txt_reg_no_bg.png
+.. image:: _static/figures/CoVigator_logo_txt_reg_no_bg.png
   :width: 400
   :alt: CoVigator logo
 
