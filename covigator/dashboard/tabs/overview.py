@@ -20,18 +20,27 @@ def get_tab_overview(queries: Queries):
             html.Div(
                children=[
                    html.P(
-                       "Human infections with SARS-CoV-2 are spreading globally since the beginning of 2020, "
-                       "necessitating preventive or therapeutic strategies and first steps towards an end to "
-                       "this pandemic were done with the approval of the first mRNA vaccines against SARS-CoV-2. "
-                       "We want to provide an interactive view on different types of mutations that can be "
-                       "incorporated in global efforts to sustainably prevent or treat infections. Thus, we "
-                       "envision to help guiding global vaccine design efforts to overcome the threats of this "
-                       "pandemic."),
-                   dcc.Markdown("""
-                       CoVigator loads publicly available SARS-CoV-2 DNA sequences from two systems: 
-
-                       * European Nucleotide Archive (ENA) providing raw reads in FASTQ format
-                       * Global Initiative on Sharing Avian Influenza Data (GISAID) providing assemblies in FASTA format
+                       """
+                       Human infections with SARS-CoV-2 are spreading globally since the beginning of 2020, necessitating preventive or 
+                       therapeutic strategies and first steps towards an end to this pandemic were done with the approval of the first mRNA 
+                       vaccines against SARS-CoV-2. 
+                       The accumulation of virus samples that have been sequenced in a short time frame is unprecedented.
+                       This is the first pandemic recorded at a molecular level with such level of detail giving us the opportunity to develop
+                       new tools for the monitoring of its evolution.
+                       """),
+                   html.P(
+                       """
+                       We want to provide an up-to-date interactive view on SARS-CoV-2 mutations to support global efforts in preventing or 
+                       treating infections. 
+                       Monitoring the appearance of relevant new mutations is key to enable a fast reaction to new strains and for that 
+                       purpose we enable the exploration of these mutations and their annotations. 
+                       Thus, we envision to help guiding global vaccine design efforts to overcome the threats of this pandemic.
+                       """),
+                   html.P(
+                       """
+                       CoVigator is a monitoring system for SARS-CoV-2 which integrates a full variant calling pipeline, 
+                       a database that stores all relevant information about mutations in SARS-CoV-2 and finally a dashboard to enable 
+                       visual analytics.
                        """),
                    html.Br(),
                    html.Div(
@@ -49,23 +58,24 @@ def get_tab_overview(queries: Queries):
                                    title="Mutations",
                                    value=print_number(count_variants)
                                )
-                       ])
+                           ])
                    ),
                    html.Br(),
                    dcc.Markdown("""
-                       The CoVigator project is open sourced and made available under the MIT license.
-                       We welcome any feedback through our GitHub repositories or contributions to the code.
+                       CoVigator loads publicly available SARS-CoV-2 DNA sequences from two systems: 
 
-                       * The CoVigator knowledge base and dashboard are available at 
-                       https://github.com/TRON-Bioinformatics/covigator.
-                       * The CoVigator analysis pipeline processes SARS-CoV-2 FASTQ or FASTA files into
-                       annotated and normalized analysis ready VCF files. The pipeline is implemented
-                       in the Nextflow framework (Di Tommaso, 2017), it is usable as an independent component
-                       and we provide support to any user. See the repository for more details 
-                       https://github.com/TRON-Bioinformatics/covigator-ngs-pipeline
+                       * [European Nucleotide Archive (ENA)](https://www.ebi.ac.uk/ena) providing raw reads in FASTQ format
+                       * [Global Initiative on Sharing Avian Influenza Data (GISAID)](https://www.gisaid.org/) providing assemblies in FASTA format
                        """),
                    html.Br(),
-                   dcc.Markdown("Read the CoVigator documentation here https://covigator.readthedocs.io"),
+                   html.P("""
+                    There is certain overlap in the samples present in ENA and GISAID as some national initiatives are systematically 
+                    reporting to both databases. ENA enables a higher resolution into the SARS-CoV-2 mutation details through the individual 
+                    reads. This allows us to annotate mutations with a Variant Allele Frequency (VAF) and explore intrahost 
+                    mutations. On the other hand, while we load all of the GISAID database in CoVigator, we only process the Illumina 
+                    samples from ENA. This means excluding all of the Oxford Nanopore samples and hence having a partial view of all the 
+                    available data.
+                   """),
                    html.Br(),
                    html.P("If you want to cite us:"),
                    html.P([
