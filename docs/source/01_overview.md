@@ -9,6 +9,8 @@
 [![Powered by Dash](https://img.shields.io/badge/powered%20by-Dask-orange.svg?style=flat&colorA=E1523D&colorB=007D8A)](https://dask.org/)
 [![Powered by Dash](https://img.shields.io/badge/powered%20by-Nextflow-orange.svg?style=flat&colorA=E1523D&colorB=007D8A)](https://nextflow.io/)
 
+**CoVigator dashboard**: [https://covigator.tron-mainz.de](https://covigator.tron-mainz.de)
+
 Human infections with SARS-CoV-2 are spreading globally since the beginning of 2020, necessitating preventive or 
 therapeutic strategies and first steps towards an end to this pandemic were done with the approval of the first mRNA 
 vaccines against SARS-CoV-2. 
@@ -38,8 +40,6 @@ visual analytics.
 <p align = "center">
 <b>Figure 2: Most frequent mutations in the spike protein</b>
 </p>
-
-CoVigator is available here: [https://covigator.tron-mainz.de](https://covigator.tron-mainz.de)
 
 CoVigator loads publicly available SARS-CoV-2 DNA sequences from two databases:
 
