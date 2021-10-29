@@ -62,7 +62,7 @@ The FASTA pipeline includes the following steps:
   Indels longer than 50 bp and at the beginning or end of the assembly sequence are excluded. Any mutation where
   either reference or assembly contain a N is excluded.
 - **Variant normalization**. `bcftools norm` and `vt` tools are employed to left align indels, trim variant calls and remove variant duplicates.
-- **Variant annotation**. `SnpEff` is employed to annotate the variant consequences of variants, 
+- **Variant annotation**. `SnpEff` is employed to annotate the variant consequences of mutations, 
   `bcftools annotate` is employed to add additional annotations.
 
 The FASTA file is expected to contain a single assembly sequence.
@@ -289,7 +289,7 @@ The VCF files will be described in more detail later.
 | $NAME.lofreq.normalized.annotated.vcf.gz | Bgzipped, tabix-indexed and annotated output VCF from LoFreq | [ERR4145453.lofreq.normalized.annotated.vcf.gz](_static/covigator_pipeline_sample_output_reads/ERR4145453.lofreq.normalized.annotated.vcf.gz) |
 | $NAME.ivar.tsv | Output table from iVar | [ERR4145453.ivar.tsv](_static/covigator_pipeline_sample_output_reads/ERR4145453.ivar.tsv) |
 
-**NOTE**: iVar variant caller output variants in a custom format, in particular the indel representation is not 
+**NOTE**: iVar variant caller output mutations in a custom format, in particular the indel representation is not 
 comparable to the representation of indels in a VCF file. In the future we may parse this format into a VCF file.
 
 ### FASTA pipeline output

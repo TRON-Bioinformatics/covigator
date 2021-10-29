@@ -11,10 +11,9 @@
 
 The Covigator dashboard provides the ability to navigate the dataset of mutations derived from ENA and GISAID through 
 a series of interactive plots. Our aim is to enable users to understand trends in the dataset of mutations in its 
-geographical and temporal context. The dashboard is implemented in Dash (https://dash.plotly.com/) which is based on 
-Plotly a well known library for interactive plotting.
+geographical and temporal context. The dashboard is implemented in [Dash](https://dash.plotly.com/).
 
-The code is open sourced in a repository for the dashboard and the knowledge base 
+The code is open sourced in a GitHub repository 
 [https://github.com/TRON-Bioinformatics/covigator](https://github.com/TRON-Bioinformatics/covigator).
 
 Here we provide details on the analysis methodology and how to use and interpret the plots in the dashboard.
@@ -23,12 +22,12 @@ The dashboard is organized in tabs, here we explore each of the tabs.
 **Table of Contents**
 
 1. [How to use an interactive Dash plot](#id1)
-2. [The samples by country tab](#id2)
-3. [The mutation statistics tab](#id3)
-4. [The recurrent mutations tab](#id4)
-5. [The intrahost mutations tab](#id5)
-6. [The ENA dataset tab](#id6)
-7. [The GISAID dataset tab](#id7)
+2. [Samples by country tab](#id2)
+3. [Mutation statistics tab](#id3)
+4. [Recurrent mutations tab](#id4)
+5. [Intrahost mutations tab](#id5)
+6. [ENA dataset tab](#id6)
+7. [GISAID dataset tab](#id7)
 8. [Download the raw data](#id8)
 
 
@@ -50,10 +49,11 @@ A double click filters out all other elements except the clicked one. Another do
 
 ![Plotly filtering](_static/figures/screencast_filter.gif)
 
-## The samples by country tab
+## Samples by country tab
 
-The aim of this view is to explore the accumulation of samples and the evolutionary pressure in its 
-temporal and geographical context. We use the dN/dS ratio as a proxy for the evolutionary pressure. 
+The aim of this view is to explore the accumulation of samples on different countries through time. 
+We also use the [dN/dS ratio](https://en.wikipedia.org/wiki/Ka/Ks_ratio) as an estimation of the evolutionary pressure 
+and enable monitoring any change through time and location.
 Both ENA and GISAID datasets can be explored separately.
 
 **Filters**
@@ -62,53 +62,53 @@ Both ENA and GISAID datasets can be explored separately.
 * Countries. Select one or more countries to explore, if none are provided all are shown
 * Minimum number of samples per country. When no countries are provided then this threshold is applied to exclude 
   countries with fewer samples
-* Genes. Select one or more genes on which to explore the dN/dS. When provided also the protein domains for the selected gene
-  are shown
+* Genes. Select one or more genes on which to explore the dN/dS. When provided also the Pfam protein domains for the 
+  selected gene are shown
 
 **Plots**
 
 * Accumulated samples by country. Area plot showing the accumulation of samples for each country. X-axis: sample 
   collection date; Y-axis: number of samples
-* dN/dSby gene. Line plot showing the evolution of the dN/dS ratio on different genomic regions. X-axis: time binned by
+* dN/dS by gene. Line plot showing the evolution of the dN/dS ratio on different genomic regions. X-axis: time binned by
   months; Y-axis: dN/dS ratio
 
-![Plotly filtering](_static/figures/screencast_01_samples_by_country_tab.gif)
+![Samples tab](_static/figures/screencast_01_samples_by_country_tab.gif)
 
 
-## The mutation statistics tab
+## Mutation statistics tab
 
 The aim of this tab is to show genome wide statistics on both datasets and on different genomic regions.
 These statistics have been widely described in the literature and hence can act as quality controls of the results shown
-in CoVigator. Also, some of these observations are coherent with biological knowledge. For instance, the enrichment of 
-indels not causing a frameshift is explained by the lower impact on the final protein of such mutations; and the 
-prevalence of C>T mutations has been observed before and associated to host-driven antiviral editing mechanism against 
-SARS-CoV-2 mediated by APOBEC.
+in CoVigator. Also, some of these observations are coherent with biological knowledge.
 
 **Filters**
 
 * Data source. Choose either ENA or GISAID
 * Genes. Select one or more genes
-* Variant type. Choose SNV, insertion or deletion
+* Variant type. Choose Single Nucleotide Variant (SNV), insertion or deletion
 
 **Plots**
 
 * Mutations per sample. Distribution of the number of mutations per sample. X-axis: number of mutations; 
-  Y-axis: number of samples. Median number of mutations by sample indicated by dashed line, shadowed area indicates 
-  first and third quartiles.
-* Top mutations. Most frequent DNA substitutions. X-axis: number of samples; Y-axis: substitution.
+  Y-axis: number of samples. Median number of mutations by sample indicated by dashed line, shadowed area indicates the
+  region between the first and third quartiles.
+* Top mutations. Most frequent DNA substitutions. X-axis: number of samples; Y-axis: substitution. While for SNVs there 
+  are only 12 possible substitutions, the possible insertions or deletions is unbounded. This plot shows a maximum of 
+  12 substitutions.
 * Indel length distribution.The length distribution of insertions and deletions. Negative lengths 
   correspond to deletions and positive lengths to insertions. Darker bars indicate in-frame indels. 
   X-axis: indel length in DNA base pairs; Y-axis: number of samples.
 * Most common mutation effects. Shows the number of times each mutation effect has been observed. 
-  X-axis: mutation effect in Sequence Ontology terms; Y-axis: number of mutations in logarithmic scale.
+  X-axis: mutation effect as provided by SnpEff in Sequence Ontology terms; Y-axis: number of mutations in 
+  logarithmic scale.
 
 ![Mutation stats tab](_static/figures/screenshot_02_01_mutation_stats_tab.png)
 
-## The recurrent mutations tab
+## Recurrent mutations tab
 
-The aim of this tab is to facilitate the exploration of most common mutations within their geographical and temporal 
-context. We show how the frequency of each mutation evolves month by month. For instance, we have observed the raise 
-and decline of the mutations unique to the Delta strain. We also we provide a genomic browser that help to visualize 
+The aim of this tab is to facilitate the exploration of most common mutations in different countries through time. 
+We show how the frequency of each mutation evolves month by month. For instance, we have observed the raise 
+and decline of the mutations unique to the Alpha strain. We also provide a genomic browser that helps to visualize 
 genes and protein domains together with the abundance of mutations in each region and ConsHMM conservation scores.
 Also, when a given gene is selected we perform a co-occurrence clustering of mutations that help to identify mutations
 that most frequently co-occur.
@@ -119,32 +119,34 @@ that most frequently co-occur.
 * Gene. Select one gene
 * Protein domain. Select one protein domain
 * Top occurring mutations table
-  * Number of top occurring mutations. The number mutations to show in the table
+  * Number of top occurring mutations. The number of mutations to show in the table
   * Metric to measure the abundance of a mutation in a month. Choose either counts of observations or frequency within
     the month
-  * Start and end date. By default the last 10 months are shown, but this range can be changed.
+  * Start and end date. By default the last 10 months are shown, this range can be changed. Bear in mind that if none 
+    of the top mutations was observed at a given month, that month will not appear in the table.
 * Genome view
-  * Bin size. The size of the binning in base pairs for the mutation abundance and conservation tracks
+  * Bin size. The size of the binning in base pairs for the mutation abundance and conservation tracks. It makes sense 
+    to decrease the bin size for exploring smaller regions.
 * Co-occurrence matrix
   * Co-occurrence metric. The metric to be used for each pairwise comparison in the co-occurrence matrix
   * Minimum number of pairwise co-occurrences. Pairs of mutations with a number of co-occurrent observations below this 
-    number are ignores, ie: assumed to be zero.
-* Mutations clustering
+    number are ignored, ie: assumed to be zero.
+* Mutation clustering
   * The number of samples in the neighbourhood to consider for a cluster core sample. This is a parameter for the
     OPTICS clustering algorithm.
 
 **Plots**
 
 * Top occurring mutations table. A table with the top occurring mutations including information on the aminoacid change,
-  the mutation effect, the total frequency and number of observations of the mutation, plus the monthly counts. 
-  Mutations selected in this table will be highlighted in the other plots in this tab.
+  the mutation effect, the total frequency and number of observations of the mutation, plus the monthly counts or 
+  frequency. Mutations selected in this table will be highlighted in the other plots in this tab.
 * Genome/gene view. This plot shows by default the genome view with the SARS-CoV-2 genome including seven tracks: 
   the binned abundance of mutations including repetitions, the binned abundance of unique mutations, three ConsHMM 
   conservation tracks corresponding to conservation within SARS-CoV-2, conservation with other SARS-like beta CoV and 
   conservation with other vertebrate CoV; finally two more tracks with the genes and Pfam protein domains. When a gene 
-  or protein domain is selected the gene view is shown and the first two tracks with the abundance of variants are 
-  replaced by a scatter plot with the variants themselves and their frequency in the Y-axis.
-* Co-occurrence matrix. A heatmap showing the pairwise co-occurrence between variants. This plot is only available when 
+  or protein domain is selected the gene view is shown and the first two tracks with the abundance of mutations are 
+  replaced by a scatter plot with the mutations themselves and their frequency in the Y-axis.
+* Co-occurrence matrix. A heatmap showing the pairwise co-occurrence between mutations. This plot is only available when 
   a gene or protein domain has been selected; and only for the ENA dataset.
 * Co-occurrence clustering. The list of clusters with all the mutations within each cluster.
 
@@ -152,15 +154,16 @@ that most frequently co-occur.
 
 ![Co-occurrence heatmap](_static/figures/screenshot_03_heatmap.png)
 
-## The intrahost mutations tab
+## Intrahost mutations tab
 
 The aim of this tab is to enable the exploration of intrahost mutations that have not been observed before as clonal
-mutations. The dataset of intrahost mutations is large and noisy, for this reason we order the intrahost mutations by
-a score that combines the ConsHMM conservation and the count of observations. Alternatively, the list of intrahost 
-mutations can be sorted by the count of observations uniquely, the ConsHMM conservation uniquely or the VAF.
-The list of intrahost mutations is filtered off all observations with a VAF under 0.3 by default.
-If a variant is selected we show the different library strategies with which the mutation was observed, the
-temporal distribution across countries and finally the top 10 co-occurring clonal variants.
+mutations. The dataset of intrahost mutations is enriched for false positive calls, for this reason we order the 
+intrahost mutations by a score that combines the ConsHMM conservation and the count of observations. 
+Alternatively, the list of intrahost mutations can be sorted by the count of observations uniquely, 
+the ConsHMM conservation uniquely or the VAF. 
+The list of intrahost mutations is by default filtered off all observations with a VAF under 0.3.
+If an intrahost mutation is selected we show the different library strategies with which the mutation was observed, 
+the temporal distribution across countries and finally the top 10 co-occurring clonal mutations.
 
 **Filters**
 
@@ -173,15 +176,17 @@ temporal distribution across countries and finally the top 10 co-occurring clona
 
 **Plots**
 
-* Mutations only observed as intrahost
-* Library strategies distribution
-* Countries distribution
+* Mutations only observed as intrahost. Any mutation that has been observed in clonal state (ie: VAF > 80 %) will not 
+  be present in this table, no matter how many intrahost observations. This table includes information on the 
+  aminoacid change, the mutation effect, first and last observation dates, plus some of the scores discussed above.
+* Library strategies distribution. X-axis: library strategy; Y-axis: number of samples.
+* Countries distribution. X-axis: sample collection date; Y-axis: number of samples.
 * Top 10 co-occurring clonal mutations
 
 ![Intrahost mutations](_static/figures/screenshot_04_intrahost_mutations.png)
 
 
-## The ENA dataset tab
+## ENA dataset tab
 
 The ENA dataset tab shows statistics that are uniquely applicable to the ENA dataset.
 
@@ -198,7 +203,7 @@ The ENA dataset tab shows statistics that are uniquely applicable to the ENA dat
 ![ENA dataset](_static/figures/screenshot_05_ena_dataset.png)
 
 
-## The GISAID dataset tab
+## GISAID dataset tab
 
 The GISAID dataset tab shows statistics that are uniquely applicable to the GISAID dataset.
 
