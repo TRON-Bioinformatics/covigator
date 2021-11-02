@@ -37,6 +37,8 @@ visual analytics.
 <b>Figure 1: Sample accumulation by country</b>
 </p>
 
+* European Nucleotide Archive (ENA) providing raw reads in FASTQ format
+* Global Initiative on Sharing Avian Influenza Data (GISAID) providing assemblies in FASTA format
 
 ![CoVigator gene S view](docs/source/_static/figures/screenshot_01_gene_view.png)
 
