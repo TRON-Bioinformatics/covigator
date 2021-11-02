@@ -12,7 +12,7 @@
 
 **CoVigator dashboard**: [https://covigator.tron-mainz.de](https://covigator.tron-mainz.de)
 
-**CoVigator documentation**: [https://covigator.readthedocs.io/en/develop/](https://covigator.readthedocs.io)
+**CoVigator documentation**: [https://covigator.readthedocs.io/](https://covigator.readthedocs.io)
 
 Human infections with SARS-CoV-2 are spreading globally since the beginning of 2020, necessitating preventive or 
 therapeutic strategies and first steps towards an end to this pandemic were done with the approval of the first mRNA 
