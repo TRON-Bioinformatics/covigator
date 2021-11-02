@@ -1,9 +1,12 @@
 from datetime import date, datetime
+from json import JSONDecodeError
+
 import requests
+from requests import Response
 from sqlalchemy.orm import Session
 
 from covigator.accessor import MINIMUM_DATE
-from covigator.exceptions import CovigatorExcludedSampleTooEarlyDateException
+from covigator.exceptions import CovigatorExcludedSampleTooEarlyDateException, CovigatorException
 from covigator.misc import backoff_retrier
 from covigator.database.model import SampleEna, JobEna, Sample, DataSource, Log, CovigatorModule
 from covigator.database.database import Database
@@ -16,7 +19,6 @@ NUMBER_RETRIES = 5
 class EnaAccessor:
 
     ENA_API_URL_BASE = "https://www.ebi.ac.uk/ena/portal/api"
-    PAGE_SIZE = 1000
     # see https://www.ebi.ac.uk/ena/portal/api/returnFields?result=read_run&format=json for all possible fields
     ENA_FIELDS = [
         # data on run
@@ -56,8 +58,7 @@ class EnaAccessor:
     INCLUDED_LIBRARY_STRATEGIES = [
         "WGA",
         "WGS",
-        "Targeted-Capture",
-        "RNA-Seq"
+        "Targeted-Capture"
     ]
 
     def __init__(self, tax_id: str, host_tax_id: str, database: Database, maximum=None):
@@ -90,21 +91,16 @@ class EnaAccessor:
 
     def access(self):
         logger.info("Starting ENA accessor")
-        offset = 0
-        finished = False
         session = self.database.get_database_session()
         # NOTE: holding in memory the whole list of existing ids is much faster than querying every time
         # it assumes there will be no repetitions
         existing_sample_ids = [value for value, in session.query(SampleEna.run_accession).all()]
         try:
-            while not finished:
-                list_runs = self._get_ena_runs_page(offset)
-                logger.info("Read page of {} ENA samples".format(len(list_runs)))
-                self._process_runs(list_runs, existing_sample_ids, session)
-                # finishes when no more data or when test parameter maximum is reached
-                if len(list_runs) < self.PAGE_SIZE or (self.maximum is not None and self.included >= self.maximum):
-                    finished = True
-                offset += len(list_runs)
+            logger.info("Reading...")
+            list_runs = self._get_ena_runs_page()
+            logger.info("Processing {} ENA samples...".format(len(list_runs)))
+            self._process_runs(list_runs, existing_sample_ids, session)
+            logger.info("All samples processed!")
         except Exception as e:
             logger.exception(e)
             session.rollback()
@@ -116,20 +112,21 @@ class EnaAccessor:
             self._log_results()
             logger.info("Finished ENA accessor")
 
-    def _get_ena_runs_page(self, offset):
-        return self.get_with_retries(
+    def _get_ena_runs_page(self):
+        # as communicated by ENA support we use limit=0 and offset=0 to get all records in one query
+        response: Response = self.get_with_retries(
             "{url_base}/search?result=read_run&"
             "query=tax_eq({tax_id})&"
-            "limit={page_size}&"
-            "offset={offset}&"
+            "limit=0&"
+            "offset=0&"
             "fields={fields}&"
-            "format=json".format(
-                url_base=self.ENA_API_URL_BASE,
-                tax_id=self.tax_id,
-                page_size=self.PAGE_SIZE,
-                offset=offset,
-                fields=",".join(self.ENA_FIELDS)
-            )).json()
+            "format=json".format(url_base=self.ENA_API_URL_BASE, tax_id=self.tax_id, fields=",".join(self.ENA_FIELDS)))
+        try:
+            json = response.json()
+        except JSONDecodeError as e:
+            logger.error("Response content: {}".format(response.content))
+            raise e
+        return json
 
     def _process_runs(self, list_runs, existing_sample_ids, session: Session):
 

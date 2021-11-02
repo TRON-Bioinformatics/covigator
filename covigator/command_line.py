@@ -1,6 +1,6 @@
 from argparse import ArgumentParser
 
-from covigator.database.precomputed import Precomputer
+from covigator.precomputations.loader import PrecomputationsLoader
 from dask.distributed import Client
 from dask_jobqueue import SLURMCluster
 import covigator
@@ -148,13 +148,7 @@ def precompute_queries():
     parser.parse_args()
 
     database = Database(initialize=True, config=Configuration())
-    precomputer = Precomputer(session=database.get_database_session())
+    loader = PrecomputationsLoader(session=database.get_database_session())
     logger.info("Starting precomputation...")
-    precomputer.load_table_counts()
-    precomputer.load_variant_abundance_histogram()
-    precomputer.load_counts_variants_per_sample()
-    precomputer.load_count_substitutions()
-    precomputer.load_indel_length()
-    precomputer.load_annotation()
-    precomputer.load_top_occurrences()
+    loader.load()
     logger.info("Done precomputing")

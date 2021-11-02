@@ -1,18 +1,15 @@
-from unittest import TestCase
 import pkg_resources
 import covigator.tests
-from covigator.database.database import Database
 from covigator.database.model import Variant, VariantObservation, Sample, DataSource, SubclonalVariantObservation, \
     SampleGisaid, SampleEna
 from covigator.exceptions import CovigatorExcludedSampleTooManyMutations
 from covigator.pipeline.vcf_loader import VcfLoader
-from covigator.tests.unit_tests.faked_objects import FakeConfiguration
+from covigator.tests.unit_tests.abstract_test import AbstractTest
 
 
-class VcfLoaderTests(TestCase):
+class VcfLoaderTests(AbstractTest):
 
     def setUp(self) -> None:
-        self.session = Database(test=True, config=FakeConfiguration()).get_database_session()
         self.sample = Sample(id="TEST1", source=DataSource.ENA)
         sample_ena = SampleEna(run_accession="TEST1", fastq_ftp="something", fastq_md5="else", num_fastqs=2)
         self.sample2 = Sample(id="TEST2", source=DataSource.GISAID)

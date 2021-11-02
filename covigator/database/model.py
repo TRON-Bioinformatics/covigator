@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import List
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, String, Float, Enum, DateTime, Integer, Boolean, Date, ForeignKey, \
-    ForeignKeyConstraint, BigInteger, JSON
+    ForeignKeyConstraint, BigInteger, JSON, Index
 import enum
 
 from covigator.configuration import Configuration
@@ -14,6 +14,7 @@ def get_table_versioned_name(basename, config: Configuration):
 
 config = Configuration()
 GENE_TABLE_NAME = get_table_versioned_name('gene', config=config)
+DOMAIN_TABLE_NAME = get_table_versioned_name('domain', config=config)
 LOG_TABLE_NAME = get_table_versioned_name('log', config=config)
 VARIANT_COOCCURRENCE_TABLE_NAME = get_table_versioned_name('variant_cooccurrence', config=config)
 VARIANT_OBSERVATION_TABLE_NAME = get_table_versioned_name('variant_observation', config=config)
@@ -30,13 +31,14 @@ PRECOMPUTED_SUBSTITUTIONS_COUNTS_TABLE_NAME = get_table_versioned_name('precompu
 PRECOMPUTED_INDEL_LENGTH_TABLE_NAME = get_table_versioned_name('precomputed_indel_length', config=config)
 PRECOMPUTED_ANNOTATION_TABLE_NAME = get_table_versioned_name('precomputed_annotation', config=config)
 PRECOMPUTED_OCCURRENCE_TABLE_NAME = get_table_versioned_name('precomputed_top_occurrence', config=config)
-PRECOMPUTED_DN_DS_TABLE_NAME = get_table_versioned_name('precomputed_dn_ds', config=config)
+PRECOMPUTED_NS_S_COUNTS_TABLE_NAME = get_table_versioned_name('precomputed_ns_s_counts', config=config)
 PRECOMPUTED_DN_DS_BY_DOMAIN_TABLE_NAME = get_table_versioned_name('precomputed_dn_ds_by_domain', config=config)
 PRECOMPUTED_TABLE_COUNTS_TABLE_NAME = get_table_versioned_name('precomputed_table_counts', config=config)
 PRECOMPUTED_VARIANT_ABUNDANCE_HIST_TABLE_NAME = get_table_versioned_name('precomputed_variant_abundance_histogram', config=config)
 JOB_STATUS_CONSTRAINT_NAME = get_table_versioned_name('job_status', config=config)
 DATA_SOURCE_CONSTRAINT_NAME = get_table_versioned_name('data_source', config=config)
 COVIGATOR_MODULE_CONSTRAINT_NAME = get_table_versioned_name('covigator_module', config=config)
+REGION_TYPE_CONSTRAINT_NAME = get_table_versioned_name('region_type', config=config)
 VARIANT_TYPE_CONSTRAINT_NAME = get_table_versioned_name('variant_type', config=config)
 SEPARATOR = ";"
 
@@ -54,12 +56,24 @@ class Gene(Base):
     name = Column(String)
     start = Column(Integer, index=True)
     end = Column(Integer)
-    data = Column(JSON)
+    fraction_synonymous = Column(Float)
+    fraction_non_synonymous = Column(Float)
 
-    def get_pfam_domains(self):
-        protein_features = self.data.get("transcripts", [])[0].get("translations", [])[0].get("protein_features")
-        pfam_protein_features = [f for f in protein_features if f.get("dbname") == "Pfam"]
-        return sorted(pfam_protein_features, key=lambda d: int(d.get("start")))
+
+class Domain(Base):
+    """
+    This table holds the Pfam domains for the genes
+    """
+    __tablename__ = DOMAIN_TABLE_NAME
+
+    name = Column(String, primary_key=True)
+    description = Column(String)
+    start = Column(Integer, index=True)
+    end = Column(Integer)
+    fraction_synonymous = Column(Float)
+    fraction_non_synonymous = Column(Float)
+    gene_identifier = Column(ForeignKey("{}.identifier".format(Gene.__tablename__)))
+    gene_name = Column(String)
 
 
 class JobStatus(enum.Enum):
@@ -70,17 +84,10 @@ class JobStatus(enum.Enum):
 
     PENDING = 1
     QUEUED = 2
-    DOWNLOADED = 3
-    PROCESSED = 4
-    LOADED = 5
-    FAILED_DOWNLOAD = 6
-    FAILED_PROCESSING = 7
-    FAILED_LOAD = 8
-    COOCCURRENCE = 9
-    FAILED_COOCCURRENCE = 10
-    FINISHED = 11
-    HOLD = 12
-    EXCLUDED = 13
+    FAILED_PROCESSING = 3
+    FINISHED = 4
+    HOLD = 5
+    EXCLUDED = 6
 
 
 class DataSource(enum.Enum):
@@ -415,6 +422,18 @@ class VariantObservation(Base):
     ForeignKeyConstraint([sample, source], [Sample.id, Sample.source])
     ForeignKeyConstraint([variant_id], [Variant.variant_id])
 
+    __table_args__ = (Index("{}_index_annotation_position".format(VARIANT_OBSERVATION_TABLE_NAME),
+                            "annotation_highest_impact", "position"),
+                      Index("{}_index_sample".format(VARIANT_OBSERVATION_TABLE_NAME),
+                            "sample"),
+                      Index("{}_index_position".format(VARIANT_OBSERVATION_TABLE_NAME),
+                            "position"),
+                      Index("{}_index_annotation_source".format(VARIANT_OBSERVATION_TABLE_NAME),
+                            "annotation_highest_impact", "source"),
+                      Index("{}_index_variant_id_source".format(VARIANT_OBSERVATION_TABLE_NAME),
+                            "variant_id", "source"),
+                      )
+
 
 class SubclonalVariantObservation(Base):
     """
@@ -478,6 +497,12 @@ class SubclonalVariantObservation(Base):
 
     ForeignKeyConstraint([sample, source], [Sample.id, Sample.source])
     ForeignKeyConstraint([variant_id], [Variant.variant_id])
+
+    __table_args__ = (
+        Index("{}_index_position".format(SUBCLONAL_VARIANT_OBSERVATION_TABLE_NAME), "position"),
+        Index("{}_index_annotation_vaf".format(SUBCLONAL_VARIANT_OBSERVATION_TABLE_NAME), "annotation_highest_impact", "vaf"),
+        Index("{}_index_vaf".format(SUBCLONAL_VARIANT_OBSERVATION_TABLE_NAME), "vaf"),
+    )
 
 
 class VariantCooccurrence(Base):
@@ -593,34 +618,32 @@ class PrecomputedOccurrence(Base):
     variant_id = Column(String)
     hgvs_p = Column(String)
     gene_name = Column(String)
+    domain = Column(String)
     annotation = Column(String)
     source = Column(Enum(DataSource, name=DataSource.__constraint_name__))
 
 
-class PrecomputedDnDs(Base):
+class RegionType(enum.Enum):
 
-    __tablename__ = PRECOMPUTED_DN_DS_TABLE_NAME
+    __constraint_name__ = REGION_TYPE_CONSTRAINT_NAME
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    month = Column(Date)
-    gene_name = Column(String)
-    country = Column(String)
-    source = Column(Enum(DataSource, name=DataSource.__constraint_name__))
-    dn = Column(Integer)
-    ds = Column(Integer)
+    GENE = 1
+    DOMAIN = 2
+    CODING_REGION=3
 
 
-class PrecomputedDnDsByDomain(Base):
+class PrecomputedSynonymousNonSynonymousCounts(Base):
 
-    __tablename__ = PRECOMPUTED_DN_DS_BY_DOMAIN_TABLE_NAME
+    __tablename__ = PRECOMPUTED_NS_S_COUNTS_TABLE_NAME
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     month = Column(Date)
-    domain = Column(String)
+    region_type = Column(Enum(RegionType, name=RegionType.__constraint_name__))
+    region_name = Column(String)
     country = Column(String)
     source = Column(Enum(DataSource, name=DataSource.__constraint_name__))
-    dn = Column(Integer)
-    ds = Column(Integer)
+    ns = Column(Integer)
+    s = Column(Integer)
 
 
 class PrecomputedTableCounts(Base):

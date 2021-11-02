@@ -1,18 +1,15 @@
+import datetime
 import unittest
-from unittest import TestCase
-
-from covigator.configuration import Configuration
 from covigator.database.model import SampleEna
 from covigator.pipeline.downloader import Downloader, CovigatorMD5CheckSumError
 import os
+from covigator.tests.unit_tests.abstract_test import AbstractTest
 
-from covigator.tests.unit_tests.faked_objects import FakeConfiguration
 
-
-class DownloaderTest(TestCase):
+class DownloaderTest(AbstractTest):
 
     def setUp(self) -> None:
-        self.downloader = Downloader(config=FakeConfiguration())
+        self.downloader = Downloader(config=self.config)
 
     @unittest.skip
     def test_download_ena_run_with_bad_md5(self):
@@ -29,7 +26,7 @@ class DownloaderTest(TestCase):
         with self.assertRaises(CovigatorMD5CheckSumError):
             self.downloader.download(ena_run)
 
-    def test_download_http(self):
+    def test_download_http_without_date(self):
         run_accession = "TEST12346"
         ena_run = SampleEna(
             run_accession=run_accession,
@@ -37,7 +34,20 @@ class DownloaderTest(TestCase):
             fastq_md5="ca72bacad0dfcf665df49bfc53cc8b60"
         )
         self.downloader.download(ena_run)
-        run_storage_folder = os.path.join(self.downloader.storage_folder, run_accession)
+        run_storage_folder = os.path.join(self.downloader.storage_folder, "nodate", run_accession)
+        self.assertTrue(os.path.exists(run_storage_folder))
+        self.assertTrue(os.path.exists(os.path.join(run_storage_folder, "TRON_Logo_Science.svg")))
+
+    def test_download_http_with_date(self):
+        run_accession = "TEST12346"
+        ena_run = SampleEna(
+            run_accession=run_accession,
+            fastq_ftp="https://tron-mainz.de/wp-content/uploads/2020/07/TRON_Logo_Science.svg",
+            fastq_md5="ca72bacad0dfcf665df49bfc53cc8b60",
+            collection_date=datetime.date(year=2021, month=6, day=30)
+        )
+        self.downloader.download(ena_run)
+        run_storage_folder = os.path.join(self.downloader.storage_folder, "20210630", run_accession)
         self.assertTrue(os.path.exists(run_storage_folder))
         self.assertTrue(os.path.exists(os.path.join(run_storage_folder, "TRON_Logo_Science.svg")))
 

@@ -34,27 +34,28 @@ class Configuration:
     ENV_COVIGATOR_WORKFLOW_CPUS = "COVIGATOR_WORKFLOW_CPUS"
     ENV_COVIGATOR_WORKFLOW_MEMORY = "COVIGATOR_WORKFLOW_MEMORY"
     ENV_COVIGATOR_BATCH_SIZE = "COVIGATOR_BATCH_SIZE"
-
+    ENV_COVIGATOR_MAX_SNVS = "COVIGATOR_MAX_SNVS"
+    ENV_COVIGATOR_MAX_INSERTIONS = "COVIGATOR_MAX_INSERTIONS"
+    ENV_COVIGATOR_MAX_DELETIONS = "COVIGATOR_MAX_DELETIONS"
     # references
     ENV_COVIGATOR_REF_FASTA = "COVIGATOR_REF_FASTA"
-    ENV_COVIGATOR_GENE_ANNOTATIONS = "COVIGATOR_GENE_ANNOTATIONS"
     # dask
     ENV_COVIGATOR_DASK_PORT = "COVIGATOR_DASK_PORT"
 
-    def __init__(self):
+    def __init__(self, verbose=True):
         # local storage
         self.storage_folder = os.getenv(self.ENV_COVIGATOR_STORAGE_FOLDER, "/data/covigator")
         self.content_folder = os.getenv(self.ENV_COVIGATOR_DOWNLOAD_CONTENT_FOLDER)
 
         # database
-        self.db_host = os.getenv(self.ENV_COVIGATOR_DB_HOST, "0.0.0.0")
+        self.db_host = os.getenv(self.ENV_COVIGATOR_DB_HOST, "localhost")
         self.db_name = os.getenv(self.ENV_COVIGATOR_DB_NAME, "covigator")
         self.db_user = os.getenv(self.ENV_COVIGATOR_DB_USER, "covigator")
         self.db_password = os.getenv(self.ENV_COVIGATOR_DB_PASSWORD, "covigator")
         self.db_port = os.getenv(self.ENV_COVIGATOR_DB_PORT, "5432")
         self.db_pool_size = int(os.getenv(self.ENV_COVIGATOR_DB_POOL_SIZE, 5))
         self.db_max_overflow = int(os.getenv(self.ENV_COVIGATOR_DB_MAX_OVERFLOW, 10))
-        self.db_table_version = os.environ.get(self.ENV_COVIGATOR_TABLE_VERSION, "")
+        self.db_table_version = os.environ.get(self.ENV_COVIGATOR_TABLE_VERSION, "_test")
         self.force_pipeline = os.environ.get(self.ENV_COVIGATOR_FORCE_PIPELINE, False)
 
         # dashboard
@@ -74,20 +75,29 @@ class Configuration:
 
         # references
         self.reference_genome = os.getenv(self.ENV_COVIGATOR_REF_FASTA)
-        self.reference_gene_annotations = os.getenv(self.ENV_COVIGATOR_GENE_ANNOTATIONS)
 
+        # pipeline
         self.nextflow = os.getenv(self.ENV_COVIGATOR_NEXTFLOW, "nextflow")
         self.workflow = os.getenv(self.ENV_COVIGATOR_WORKFLOW, "tron-bioinformatics/covigator-ngs-pipeline -r v0.3.0")
         self.workflow_cpus = os.getenv(self.ENV_COVIGATOR_WORKFLOW_CPUS, "1")
         self.workflow_memory = os.getenv(self.ENV_COVIGATOR_WORKFLOW_MEMORY, "3g")
-        try:
-            self.batch_size = int(os.getenv(self.ENV_COVIGATOR_BATCH_SIZE, "1000"))
-        except ValueError as e:
-            raise CovigatorDashBoardInitialisationError("The batch size needs to be a numeric value. " + str(e))
+        self.batch_size = self.load_numeric_value(variable=self.ENV_COVIGATOR_BATCH_SIZE, default=1000)
+        self.max_snvs = self.load_numeric_value(variable=self.ENV_COVIGATOR_MAX_SNVS, default=76)
+        self.max_insertions = self.load_numeric_value(variable=self.ENV_COVIGATOR_MAX_INSERTIONS, default=10)
+        self.max_deletions = self.load_numeric_value(variable=self.ENV_COVIGATOR_MAX_DELETIONS, default=10)
+
         # NOTE: the defaults are already set in the workflow config
         self.temp_folder = os.getenv(self.ENV_COVIGATOR_TEMP_FOLDER, "/data/covigator-tmp")
 
-        self.log_configuration()
+        if verbose:
+            self.log_configuration()
+
+    def load_numeric_value(self, variable, default):
+        try:
+            value = int(os.getenv(variable, default))
+        except ValueError as e:
+            raise CovigatorDashBoardInitialisationError("{} needs to be a numeric value : {}".format(variable, str(e)))
+        return value
 
     def log_configuration(self):
         logger.info("Configuration")

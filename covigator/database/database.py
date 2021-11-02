@@ -15,18 +15,17 @@ from covigator.references.gene_annotations import GeneAnnotationsLoader
 class Database:
 
     def __init__(self, config: Configuration = None, test=False, verbose=False, initialize=False):
-        self.config = config
         if test:
-            # creates a SQLite in memory database for testing purposes
-            db_uri = 'sqlite://'
-            self.engine: Engine = create_engine(db_uri, echo=verbose)
+            # connects to the test postgres in the CI environment
+            #db_uri = "postgresql+psycopg2://%s:%s@%s/%s" % ("test_user", "test_pass", "postgres", "test_db")
+            #self.engine: Engine = create_engine(db_uri, echo=verbose)
             initialize = True   # does not make sense not to initialize the DB in the test environment
-        else:
-            db_uri = "postgresql+psycopg2://%s:%s@%s:%s/%s" % (config.db_user, config.db_password, config.db_host,
-                                                               config.db_port, config.db_name)
-            # these are the default SQLAlchemy values, this values may need to be increased for the dashboard
-            self.engine: Engine = create_engine(db_uri, pool_size=config.db_pool_size,
-                                                max_overflow=config.db_max_overflow, echo=verbose)
+
+        db_uri = "postgresql+psycopg2://%s:%s@%s:%s/%s" % (config.db_user, config.db_password, config.db_host,
+                                                           config.db_port, config.db_name)
+        # these are the default SQLAlchemy values, this values may need to be increased for the dashboard
+        self.engine: Engine = create_engine(db_uri, pool_size=config.db_pool_size,
+                                            max_overflow=config.db_max_overflow, echo=verbose)
         self.engine.connect()
         self.Session = sessionmaker(bind=self.engine, autoflush=False)
         # avoids initialisation if we know it has already been done
@@ -43,7 +42,7 @@ class Database:
         session = self.get_database_session()
         # loads reference genome if not set
         if session.query(Gene).count() == 0:
-            GeneAnnotationsLoader(session, config=self.config).load_data()
+            GeneAnnotationsLoader(session).load_data()
         if session.query(Conservation).count() == 0:
             ConservationLoader(session).load_data()
 

@@ -1,160 +1,31 @@
-from math import sqrt
 from typing import List
 import numpy as np
 import pandas as pd
-import plotly
 from logzero import logger
-
-from covigator.dashboard.figures import VARIANT_TYPE_COLOR_MAP
 from covigator.dashboard.figures.figures import Figures, PLOTLY_CONFIG, MARGIN, TEMPLATE
 import plotly.express as px
-import plotly.graph_objects as go
 import dash_core_components as dcc
 
 from covigator.database.model import DataSource
 
 
-INDEL_TYPE_COLOR_MAP = {
-    "INSERTION_INFRAME": "#ee6002",
-    "DELETION_INFRAME": "#09af00",
-    "INSERTION_FRAMESHIFT": "#ffddb0",
-    "DELETION_FRAMESHIFT": "#defabb",
-}
-
-
 class SampleFigures(Figures):
 
-    def get_annotations_plot(self, data_source: str = None, genes: List[str] = None):
-        data = self.queries.get_annotations(data_source=data_source, genes=genes)
-        graph = dcc.Markdown("""**No data for the current selection**""")
-        if data is not None and data.shape[0] > 0:
-            fig = px.bar(data, y="count", x="annotation", log_y=True, color='count',
-                         color_continuous_scale=plotly.colors.sequential.Brwnyl)
-            #.update_yaxes(categoryorder="total descending")
-            fig.update_layout(
-                margin=MARGIN,
-                template=TEMPLATE,
-                legend={'traceorder': 'normal', 'title': None},
-                yaxis={'title': "num. variants (log)"},  # , 'autorange': 'reversed'},
-                xaxis={'title': None},
-            )
-            graph = [
-                dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
-                dcc.Markdown("""
-                **Most common mutation effects**
-                
-                *Ratio of non synonymous to synonymous SNVs (N/S): {dnds}*
-                """.format(dnds=round(data[data.annotation == "missense_variant"]["count"].sum() /
-                                data[data.annotation == "synonymous_variant"]["count"].sum(), 3)))
-            ]
-        return graph
-
-    def get_indels_lengths_plot(self, data_source: str = None, genes: List[str] = None):
-        data = self.queries.get_indel_lengths(data_source=data_source, genes=genes)
-        graph = dcc.Markdown("""**No data for the current selection**""")
-        if data is not None and data.shape[0] > 0:
-            fig = px.bar(
-                data, y="count", x="length", color="variant_type", color_discrete_map=INDEL_TYPE_COLOR_MAP)
-                #.update_yaxes(categoryorder="total descending")
-            fig.update_layout(
-                margin=MARGIN,
-                template=TEMPLATE,
-                legend={'traceorder': 'normal', 'title': None},
-                yaxis={'title': "num. samples"},  #, 'autorange': 'reversed'},
-                xaxis={'title': None},
-            )
-            graph = [
-                dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
-                dcc.Markdown("""
-                **Indel length distribution**
-                
-                *Insertion to deletion ratio: {indel_ratio}*
-                """.format(
-                    indel_ratio=round(data[
-                        data.variant_type.isin(["INSERTION_INFRAME", "INSERTION_FRAMESHIFT"])]["count"].sum() /
-                        data[data.variant_type.isin(["DELETION_INFRAME", "DELETION_FRAMESHIFT"])]["count"].sum(), 3)))
-            ]
-        return graph
-
-    def get_substitutions_plot(self, variant_types: List[str], data_source: str = None, genes: List[str] = None):
-        data = self.queries.get_substitutions(data_source=data_source, genes=genes, variant_types=variant_types)
-        graph = dcc.Markdown("""**No data for the current selection**""")
-        if data is not None and data.shape[0] > 0:
-            fig = px.bar(
-                data, y="substitution", x="count", color="variant_type", text="rate",
-                color_discrete_map=VARIANT_TYPE_COLOR_MAP)\
-                .update_yaxes(categoryorder="total descending")
-            fig.update_traces(textposition='outside')
-            fig.update_layout(
-                margin=go.layout.Margin(l=0, r=40, b=0, t=30),  # we need some extra space for some labels overflowing
-                template=TEMPLATE,
-                legend={'title': None, 'yanchor': "bottom", 'y': 0.01, 'xanchor': "right", 'x': 0.99},
-                showlegend=True,
-                yaxis={'title': None, 'autorange': 'reversed'},
-                xaxis={'title': "num. samples"},
-                uniformtext_mode='show',
-                uniformtext_minsize=8
-            )
-            graph = [
-                dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
-                dcc.Markdown("""
-                **Top mutations**
-                
-                *Only mutations occurring at least in 10 samples are represented*
-                """)
-            ]
-        return graph
-
-    def get_variants_per_sample_plot(
-            self, data_source: str = None, genes: List[str] = None, variant_types: List[str] = None):
-
-        data = self.queries.get_variants_per_sample(data_source=data_source, genes=genes, variant_types=variant_types)
-        graph = dcc.Markdown("""**No data for the current selection**""")
-        if data is not None and data.shape[0] > 0:
-            counts = np.repeat(data.number_mutations, data["count"])
-            median = round(np.median(counts), 3)
-            third_quartile = np.percentile(counts, 75)
-            first_quartile = np.percentile(counts, 25)
-            extreme_threshold = median + (3 * (third_quartile - first_quartile))
-            fig = px.bar(data[data.number_mutations < extreme_threshold],
-                         x="number_mutations",
-                         y='count',
-                         color="variant_type",
-                         color_discrete_map=VARIANT_TYPE_COLOR_MAP)
-            fig.add_vline(x=median, line_width=2, line_dash="dash", line_color='grey',
-                          annotation_text="median", annotation_position="top right")
-            fig.add_vrect(x0=first_quartile, x1=third_quartile,
-                          fillcolor="grey", opacity=0.25, line_width=0)
-            fig.update_layout(
-                margin=MARGIN,
-                template=TEMPLATE,
-                legend={'traceorder': 'normal', 'title': None},
-                yaxis={'title': None},
-                xaxis={'title': "num. samples"},
-            )
-
-            graph = [
-                dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
-                dcc.Markdown("""
-                        **Mutations per sample**
-
-                        *Median: {median} (IQR: {iqr})*
-                        """.format(median=median, iqr=third_quartile - first_quartile))
-            ]
-        return graph
-
-    def get_accumulated_samples_by_country_plot(self, data_source: DataSource = None, countries=None, min_samples=1000):
+    def get_accumulated_samples_by_country_plot(self, data_source: str = None, countries=None, min_samples=1000):
+        logger.debug("Getting data on samples by country...")
         data = self.queries.get_accumulated_samples_by_country(
             data_source=data_source, countries=countries, min_samples=min_samples)
         graph = dcc.Markdown("""**No data for the current selection**""")
         if data is not None and data.shape[0] > 0:
+            logger.debug("Prepare plot on samples by country...")
             countries = list(data.sort_values("cumsum", ascending=False).country.unique())
             fig = px.area(data, x="date", y="cumsum", color="country",
                           category_orders={
                               "country": countries[::-1]},
                           labels={"cumsum": "num. samples", "count": "increment"},
                           hover_data=["count"],
-                          color_discrete_sequence=px.colors.qualitative.Light24)
+                          color_discrete_sequence=px.colors.qualitative.Vivid)
+            fig.update_traces(line=dict(width=0.5))
             fig.update_layout(
                 margin=MARGIN,
                 template=TEMPLATE,
@@ -177,5 +48,52 @@ class SampleFigures(Figures):
                 """.format(len(top_countries_tooltip),
                            ", ".join(top_countries_tooltip),
                            min_samples))
+            ]
+        return graph
+
+    def _calculate_dn_ds(self, NS, S, ns, s):
+        pn = float(ns) / float(NS)
+        ps = float(s) / float(S)
+        dn = np.log(1 + pn)
+        ds = np.log(1 + ps)
+        return dn / ds
+
+    def get_dnds_by_gene_plot(
+            self, data_source: DataSource = None, countries: List[str] =None, genes: List[str] = None):
+
+        logger.debug("Getting data on dN/dS...")
+        data = self.queries.get_dnds_table(
+            source=data_source, countries=countries, genes=genes)
+        graph = dcc.Markdown("""**No data for the current selection**""")
+        if data is not None and data.shape[0] > 0:
+            logger.debug("Prepare plot on dN/dS...")
+            genes = pd.concat([
+                self.queries.get_genes_df(),
+                self.queries.get_domains_df()
+            ])
+            # prepares the data and calculates the dN/dS
+            data_to_plot = data.groupby(["month", "region_name"]).sum().reset_index().sort_values("month")
+            data_to_plot = pd.merge(left=genes, right=data_to_plot, left_on="name", right_on="region_name")
+            data_to_plot["dn_ds"] = data_to_plot[["ns", "s", "fraction_non_synonymous", "fraction_synonymous"]].apply(
+                lambda x: self._calculate_dn_ds(ns=x[0], s=x[1], NS=x[2], S=x[3]), axis=1)
+
+            fig = px.line(data_to_plot, x='month', y='dn_ds', color='region_name',
+                          symbol='region_name', line_dash='region_name', line_dash_sequence=['dash'],
+                          labels={"dn_ds": "dN/dS", "region_name": "gene"},
+                          hover_data=["region_name", "dn_ds"],
+                          color_discrete_sequence=px.colors.qualitative.Vivid)
+            fig.update_traces(line=dict(width=0.5), marker=dict(size=10))
+            fig.update_layout(
+                margin=MARGIN,
+                template=TEMPLATE,
+                legend={'title': None},
+                xaxis={'title': None},
+            )
+
+            graph = [
+                dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
+                dcc.Markdown("""
+                **dN/dS by gene**
+                """)
             ]
         return graph

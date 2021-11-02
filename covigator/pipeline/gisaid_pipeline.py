@@ -11,7 +11,7 @@ from covigator.exceptions import CovigatorExcludedAssemblySequence
 from covigator.misc.compression import decompress_sequence
 from covigator.pipeline.runner import run_command
 
-MINIMUM_SEQUENCE_SIZE = 1000
+MINIMUM_SEQUENCE_SIZE = 5980    # 20 % of the genome, 29903 bp
 
 
 class GisaidPipeline:
@@ -22,7 +22,10 @@ class GisaidPipeline:
     def run(self, sample: SampleGisaid):
         logger.info("Processing {}".format(sample.run_accession))
         sample_name = sample.run_accession.replace("/", "_").replace(" ", "-").replace("'", "-").replace("$", "")
-        sample_data_folder = os.path.join(self.config.storage_folder, sample_name)
+        # NOTE: sample folder date/run_accession
+        sample_data_folder = os.path.join(
+            self.config.storage_folder, sample.date.strftime("%Y%m%d") if sample.date is not None else "nodate",
+            sample_name)
         output_vcf = os.path.join(
             sample_data_folder,
             "{name}.assembly.normalized.annotated.vcf.gz".format(name=sample_name))
@@ -51,7 +54,7 @@ class GisaidPipeline:
                       "-profile conda -offline -work-dir {work_folder} -with-trace {trace_file}".format(
                 nextflow=self.config.nextflow,
                 fasta=input_fasta,
-                output_folder=self.config.storage_folder,
+                output_folder=sample_data_folder,
                 name=sample_name,
                 work_folder=self.config.temp_folder,
                 workflow=self.config.workflow,
