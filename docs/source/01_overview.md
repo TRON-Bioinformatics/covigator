@@ -107,6 +107,7 @@ contribution to integrate Pangolin into the CoVigator pipeline.
 We gratefully acknowledge all data contributors, i.e. the Authors and their Originating laboratories responsible for 
 obtaining the specimens, and their Submitting laboratories for generating the genetic sequence and metadata and sharing 
 via the GISAID Initiative (1) and the European Nucleotide Archive (2), on which this research is based.
+GISAID data used in this web application remain subject to GISAID’s Terms and Conditions http://www/gisaid/org/DAA/.
 
 1) Elbe, S., and Buckland-Merrett, G. (2017) Data, disease and diplomacy: GISAID’s innovative contribution to global 
    health. Global Challenges, 1:33-46. DOI: 10.1002/gch2.1018 PMCID: 31565258

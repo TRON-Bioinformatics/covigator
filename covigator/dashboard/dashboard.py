@@ -14,6 +14,7 @@ from covigator.dashboard.tabs.dataset_ena import get_tab_dataset_ena
 from covigator.dashboard.tabs.dataset_gisaid import get_tab_dataset_gisaid
 from covigator.dashboard.tabs.download import set_callbacks_download_tab, get_tab_download
 from covigator.dashboard.tabs.footer import get_footer
+from covigator.dashboard.tabs.help import get_tab_help
 from covigator.dashboard.tabs.mutation_stats import get_tab_mutation_stats, set_callbacks_mutation_stats_tab
 from covigator.dashboard.tabs.overview import get_tab_overview
 from covigator.dashboard.tabs.samples import get_tab_samples, set_callbacks_samples_tab
@@ -26,6 +27,7 @@ from covigator.database.queries import Queries
 
 ID_TAB_CONTENT = "tab-content"
 DOWNLOAD_TAB_ID = "download"
+HELP_TAB_ID = "help"
 INTRAHOST_MUTATIONS_TAB_ID = "subclonal-variants"
 RECURRENT_MUTATIONS_TAB_ID = "variants"
 SAMPLES_TAB_ID = "samples"
@@ -72,7 +74,8 @@ class Dashboard:
                                     dbc.Tab(label="Intrahost mutations", tab_id=INTRAHOST_MUTATIONS_TAB_ID),
                                     dbc.Tab(label="ENA dataset", tab_id=ENA_DATASET_TAB_ID),
                                     dbc.Tab(label="GISAID dataset", tab_id=GISAID_DATASET_TAB_ID),
-                                    dbc.Tab(label="Download data", tab_id=DOWNLOAD_TAB_ID)],
+                                    dbc.Tab(label="Download data", tab_id=DOWNLOAD_TAB_ID),
+                                    dbc.Tab(label="Help", tab_id=HELP_TAB_ID)],
                                     id="tabs",
                                     active_tab="overview",
                                     card=True),
@@ -84,14 +87,7 @@ class Dashboard:
                                     dbc.Col(html.A(html.Img(
                                         src="/assets/tron_logo_without_text.png", height="22px"),
                                         href="https://tron-mainz.de", target="_blank"), className="ml-2"),
-                                    dbc.Col(html.Br(), className="ml-2"),
-                                    dbc.Col(html.A(html.Img(
-                                        src="https://github.githubassets.com/images/modules/logos_page/Octocat.png",
-                                        height="25px"),
-                                        href="https://github.com/TRON-bioinformatics/covigator", target="_blank"),
-                                        className="ml-2"),
-                                    dbc.Col(html.Br(), className="ml-2"),
-
+                                    dbc.Col(html.Br(), className="ml-2")
                                 ],
                                 align="center",
                                 justify="end",
@@ -189,6 +185,8 @@ def set_callbacks(app, session: Session, content_folder):
                 return get_tab_subclonal_variants(queries=queries)
             elif at == DOWNLOAD_TAB_ID:
                 return get_tab_download(content_folder=content_folder)
+            elif at == HELP_TAB_ID:
+                return get_tab_help()
             return html.P("This shouldn't ever be displayed...")
         except Exception as e:
             logger.exception(e)
