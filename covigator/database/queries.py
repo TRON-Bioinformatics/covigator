@@ -83,12 +83,12 @@ class Queries:
     def get_countries(self, source) -> List[str]:
         countries = []
         if source == DataSource.ENA.name or source is None:
-            countries = [c for c, in self.session.query(SampleEna.country).filter(
+            countries = countries + [c for c, in self.session.query(SampleEna.country).filter(
                 SampleEna.finished).distinct().order_by(SampleEna.country.asc()).all()]
-        elif source == DataSource.GISAID.name or source is None:
-            countries = [c for c, in self.session.query(SampleGisaid.country).filter(
+        if source == DataSource.GISAID.name or source is None:
+            countries = countries + [c for c, in self.session.query(SampleGisaid.country).filter(
                 SampleGisaid.finished).distinct().order_by(SampleGisaid.country.asc()).all()]
-        return countries
+        return list(set(countries))
 
     def get_variants_per_sample(self, data_source: str, genes: List[str], variant_types: List[str]):
         """
