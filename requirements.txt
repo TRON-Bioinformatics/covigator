@@ -7,6 +7,7 @@ distributed==2021.06.2
 cytoolz==0.11.0
 logzero==1.6.3
 psycopg2-binary==2.8.6
+plotly==5.3.1
 dash==1.21.0
 dash_bootstrap_components==0.12.2
 cyvcf2==0.30.4
