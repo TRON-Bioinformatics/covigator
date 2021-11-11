@@ -102,7 +102,7 @@ nextflow main.nf -profile conda --initialize
 
 To make sure that all your executions use the same conda environment we recommend using the directive `conda.cacheDir`
 [https://www.nextflow.io/docs/latest/config.html#scope-conda](https://www.nextflow.io/docs/latest/config.html#scope-conda).
-Otherwise, your conda environment will be stores in the execution folder under `work/conda`.
+Otherwise, your conda environment will be stored in the execution folder under `work/conda`.
 
 ### Running it
 

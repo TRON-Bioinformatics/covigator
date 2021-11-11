@@ -1,4 +1,4 @@
-VERSION = "0.4.1"
+VERSION = "0.4.2"
 
 MISSENSE_VARIANT = "missense_variant"
 SYNONYMOUS_VARIANT = "synonymous_variant"
