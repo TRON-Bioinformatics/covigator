@@ -64,10 +64,12 @@ Both ENA and GISAID datasets can be explored separately.
 
 ### Plots
 
-* **Accumulated samples by country**. Area plot showing the accumulation of samples for each country. X-axis: sample 
-  collection date; Y-axis: number of samples
-* **dN/dS by gene**. Line plot showing the evolution of the dN/dS ratio on different genomic regions. X-axis: time binned by
-  months; Y-axis: dN/dS ratio
+* **Accumulated samples by country**. Area plot showing the accumulation of samples for each country. 
+  * X-axis: sample collection date
+  * Y-axis: number of samples
+* **dN/dS by gene**. Line plot showing the evolution of the dN/dS ratio on different genomic regions. 
+  * X-axis: time binned by months
+  * Y-axis: dN/dS ratio
 
 ![Samples tab](_static/figures/screencast_01_samples_by_country_tab.gif)
 
@@ -86,18 +88,22 @@ in CoVigator. Also, some of these observations are coherent with biological know
 
 ### Plots
 
-* **Mutations per sample**. Distribution of the number of mutations per sample. X-axis: number of mutations; 
-  Y-axis: number of samples. Median number of mutations by sample indicated by dashed line, shadowed area indicates the
-  region between the first and third quartiles.
-* **Top mutations**. Most frequent DNA substitutions. X-axis: number of samples; Y-axis: substitution. While for SNVs there 
-  are only 12 possible substitutions, the possible insertions or deletions is unbounded. This plot shows a maximum of 
-  12 substitutions.
+* **Mutations per sample**. Distribution of the number of mutations per sample. 
+  * X-axis: number of mutations
+  * Y-axis: number of samples 
+  * Median number of mutations by sample indicated by dashed line, shadowed area indicates the region between the first and third quartiles.
+* **Top mutations**. Most frequent DNA substitutions. 
+  * X-axis: number of samples
+  * Y-axis: substitution 
+  * While for SNVs there are only 12 possible substitutions, the possible insertions or deletions is unbounded. This plot shows a maximum of 
+    12 substitutions.
 * **Indel length distribution**.The length distribution of insertions and deletions. Negative lengths 
   correspond to deletions and positive lengths to insertions. Darker bars indicate in-frame indels. 
-  X-axis: indel length in DNA base pairs; Y-axis: number of samples.
+  * X-axis: indel length in DNA base pairs
+  * Y-axis: number of samples
 * **Most common mutation effects**. Shows the number of times each mutation effect has been observed. 
-  X-axis: mutation effect as provided by SnpEff in Sequence Ontology terms; Y-axis: number of mutations in 
-  logarithmic scale.
+  * X-axis: mutation effect as provided by SnpEff in Sequence Ontology terms
+  * Y-axis: number of mutations in logarithmic scale
 
 ![Mutation stats tab](_static/figures/screenshot_02_01_mutation_stats_tab.png)
 
@@ -143,6 +149,7 @@ that most frequently co-occur.
   conservation with other vertebrate CoV; finally two more tracks with the genes and Pfam protein domains. When a gene 
   or protein domain is selected the gene view is shown and the first two tracks with the abundance of mutations are 
   replaced by a scatter plot with the mutations themselves and their frequency in the Y-axis.
+  * X-axis: genomic coordinates in base pairs
 * **Co-occurrence matrix**. A heatmap showing the pairwise co-occurrence between mutations. This plot is only available when 
   a gene or protein domain has been selected; and only for the ENA dataset.
 * **Co-occurrence clustering**. The list of clusters with all the mutations within each cluster.
@@ -179,8 +186,12 @@ the temporal distribution across countries and finally the top 10 co-occurring c
 * **Mutations only observed as intrahost**. Any mutation that has been observed in clonal state (ie: VAF > 80 %) will not 
   be present in this table, no matter how many intrahost observations. This table includes information on the 
   aminoacid change, the mutation effect, first and last observation dates, plus some of the scores discussed above.
-* **Library strategies distribution**. X-axis: library strategy; Y-axis: number of samples.
-* **Countries distribution**. X-axis: sample collection date; Y-axis: number of samples.
+* **Library strategies distribution** 
+  * X-axis: library strategy
+  * Y-axis: number of samples
+* **Countries distribution** 
+  * X-axis: sample collection date
+  * Y-axis: number of samples
 * **Top 10 co-occurring clonal mutations**
 
 ![Intrahost mutations](_static/figures/screenshot_04_intrahost_mutations.png)
@@ -194,11 +205,18 @@ The ENA dataset tab shows statistics that are uniquely applicable to the ENA dat
 
 * **Library strategies**. The distribution of samples across different library strategies (ie: WGS, WGA and 
   targeted-capture).
+  * X-axis: library strategy
+  * Y-axis: number of samples
 * **Number of reads**. The number of reads before and after trimming was applied for each sample.
-* **Coverage**. The relation between horizontal and vertical coverage for each sample. X-axis: mean depth of coverage 
-  (ie: vertical coverage) and Y-axis: % of genome covered with at least one read (ie: horizontal coverage).
+  * X-axis: number of read after trimming
+  * Y-axis: number of reads before trimming
+* **Coverage**. The relation between horizontal and vertical coverage for each sample. 
+  * X-axis: mean depth of coverage per sample (ie: vertical coverage)
+  * Y-axis: % of genome covered with at least one read per sample (ie: horizontal coverage)
 * **Mean mapping quality versus base calling quality**. The relation between the mean mapping quality and the mean base 
   call quality for each sample.
+  * X-axis: mean base call quality per sample (this is a Phred score)
+  * Y-axis: mean mapping quality per sample (this is a Phred score)
 
 ![ENA dataset](_static/figures/screenshot_05_ena_dataset.png)
 
@@ -209,10 +227,13 @@ The GISAID dataset tab shows statistics that are uniquely applicable to the GISA
 
 ### Plots
 
-* **Horizontal coverage**. The distribution of the horizontal coverage. X-axis: horizontal coverage %; Y-axis: number of 
-  samples in logarithmic scale.
+* **Horizontal coverage**. The distribution of the horizontal coverage. 
+  * X-axis: horizontal coverage %
+  * Y-axis: number of samples in logarithmic scale
 * **Ratio of N and ambiguous bases**. The FASTA format supports ambiguous bases in the form of Ns or other ambiguous 
   categories that refer to more than one nucleotide base. The ambiguous sequence is unusable for our purposes.
+  * X-axis: ratio of N and ambiguous bases over sequence length
+  * Y-axis: number of samples in logarithmic scale
 
 ![GISAID dataset](_static/figures/screenshot_06_gisaid_dataset.png)
 

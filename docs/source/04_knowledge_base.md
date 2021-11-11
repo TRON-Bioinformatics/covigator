@@ -58,44 +58,44 @@ CoVigator is configured through environment variables.
 
 ### Database configuration
 
-- `COVIGATOR_DB_HOST`: the host of the database (default value 0.0.0.0)
-- `COVIGATOR_DB_NAME`: the database name inside Postgres (default value: covigator)
-- `COVIGATOR_DB_USER`: the database user (default value: covigator)
-- `COVIGATOR_DB_PASSWORD`: the database password (default value: covigator)
-- `COVIGATOR_DB_PORT`: the database port (default value: 5432)
-- `COVIGATOR_DB_POOL_SIZE`: the database pool size (default value: 5)
-- `COVIGATOR_DB_MAX_OVERFLOW`: the database max overflow (default value: 10)
-- `COVIGATOR_TABLE_VERSION`: this suffix is appended to all table names when provided
+- `COVIGATOR_DB_HOST` : the host of the database (default value 0.0.0.0)
+- `COVIGATOR_DB_NAME` : the database name inside Postgres (default value: covigator)
+- `COVIGATOR_DB_USER` : the database user (default value: covigator)
+- `COVIGATOR_DB_PASSWORD` : the database password (default value: covigator)
+- `COVIGATOR_DB_PORT` : the database port (default value: 5432)
+- `COVIGATOR_DB_POOL_SIZE` : the database pool size (default value: 5)
+- `COVIGATOR_DB_MAX_OVERFLOW` : the database max overflow (default value: 10)
+- `COVIGATOR_TABLE_VERSION` : this suffix is appended to all table names when provided
 
 ### File system storage
 
-- `COVIGATOR_STORAGE_FOLDER`: the storage folder where the pipeline results for each sample are stored
-- `COVIGATOR_TEMP_FOLDER`: the temp folder
-- `COVIGATOR_DOWNLOAD_CONTENT_FOLDER`: the files in this folder will be available for download in the download tab
+- `COVIGATOR_STORAGE_FOLDER` : the storage folder where the pipeline results for each sample are stored
+- `COVIGATOR_TEMP_FOLDER` : the temp folder
+- `COVIGATOR_DOWNLOAD_CONTENT_FOLDER` : the files in this folder will be available for download in the download tab
 
 ### Dashboard
 
-- `COVIGATOR_DASHBOARD_HOST`: the host where the dashboard is available
-- `COVIGATOR_DASHBOARD_PORT`: the port where the dashboard is available
+- `COVIGATOR_DASHBOARD_HOST` : the host where the dashboard is available
+- `COVIGATOR_DASHBOARD_PORT` : the port where the dashboard is available
 
 ### Logs
 
-- `COVIGATOR_DASHBOARD_LOG_FILE`: the dashboard log file
-- `COVIGATOR_PROCESSOR_LOG_FILE`: the processor log file
-- `COVIGATOR_ACCESSOR_LOG_FILE`: the accessor log file
+- `COVIGATOR_DASHBOARD_LOG_FILE` : the dashboard log file
+- `COVIGATOR_PROCESSOR_LOG_FILE` : the processor log file
+- `COVIGATOR_ACCESSOR_LOG_FILE` : the accessor log file
 
 ### Pipeline
 
-- `COVIGATOR_NEXTFLOW`: the nextflow binary
-- `COVIGATOR_WORKFLOW`: the path to the CoVigator nextflow workflow
-- `COVIGATOR_FORCE_PIPELINE`: a flag that indicates when the pipeline needs to rerun, otherwise results are reloaded 
+- `COVIGATOR_NEXTFLOW` : the nextflow binary
+- `COVIGATOR_WORKFLOW` : the path to the CoVigator nextflow workflow
+- `COVIGATOR_FORCE_PIPELINE` : a flag that indicates when the pipeline needs to rerun, otherwise results are reloaded 
   in the database. This is useful is the database model has changes to reload all data without fully reprocessing all 
   samples.
-- `COVIGATOR_MAX_SNVS`: all samples with a number of SNVs above this number are excluded
-- `COVIGATOR_MAX_INSERTIONS`: all samples with a number of insertions above this number are excluded
-- `COVIGATOR_MAX_DELETIONS`: all samples with a number of deletions above this number are excluded
-- `COVIGATOR_REF_FASTA`: the reference fasta file (a default SARS-CoV-2 reference genome is provided)
-- `COVIGATOR_DASK_PORT`: the port where the dask dashboard will be available
+- `COVIGATOR_MAX_SNVS` : all samples with a number of SNVs above this number are excluded
+- `COVIGATOR_MAX_INSERTIONS` : all samples with a number of insertions above this number are excluded
+- `COVIGATOR_MAX_DELETIONS` : all samples with a number of deletions above this number are excluded
+- `COVIGATOR_REF_FASTA` : the reference fasta file (a default SARS-CoV-2 reference genome is provided)
+- `COVIGATOR_DASK_PORT` : the port where the dask dashboard will be available
 
 ## How to run
 
