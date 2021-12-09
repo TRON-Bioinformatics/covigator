@@ -10,11 +10,11 @@ from dash.dependencies import Input, Output
 import covigator
 import covigator.configuration
 from covigator.configuration import Configuration
+from covigator.dashboard.tabs.acknowledgements import get_tab_acknowledgements
 from covigator.dashboard.tabs.dataset_ena import get_tab_dataset_ena
 from covigator.dashboard.tabs.dataset_gisaid import get_tab_dataset_gisaid
 from covigator.dashboard.tabs.download import set_callbacks_download_tab, get_tab_download
 from covigator.dashboard.tabs.footer import get_footer
-from covigator.dashboard.tabs.help import get_tab_help
 from covigator.dashboard.tabs.mutation_stats import get_tab_mutation_stats, set_callbacks_mutation_stats_tab
 from covigator.dashboard.tabs.overview import get_tab_overview
 from covigator.dashboard.tabs.samples import get_tab_samples, set_callbacks_samples_tab
@@ -75,7 +75,7 @@ class Dashboard:
                                     dbc.Tab(label="ENA dataset", tab_id=ENA_DATASET_TAB_ID),
                                     dbc.Tab(label="GISAID dataset", tab_id=GISAID_DATASET_TAB_ID),
                                     dbc.Tab(label="Download data", tab_id=DOWNLOAD_TAB_ID),
-                                    dbc.Tab(label="Help", tab_id=HELP_TAB_ID)],
+                                    dbc.Tab(label="Acknowledgements", tab_id=HELP_TAB_ID)],
                                     id="tabs",
                                     active_tab="overview",
                                     card=True),
@@ -186,7 +186,7 @@ def set_callbacks(app, session: Session, content_folder):
             elif at == DOWNLOAD_TAB_ID:
                 return get_tab_download(content_folder=content_folder)
             elif at == HELP_TAB_ID:
-                return get_tab_help()
+                return get_tab_acknowledgements()
             return html.P("This shouldn't ever be displayed...")
         except Exception as e:
             logger.exception(e)

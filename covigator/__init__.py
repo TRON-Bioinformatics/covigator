@@ -1,4 +1,5 @@
-VERSION = "0.4.2"
+VERSION = "0.4.3"
+ANALYSIS_PIPELINE_VERSION = "0.7.0"
 
 MISSENSE_VARIANT = "missense_variant"
 SYNONYMOUS_VARIANT = "synonymous_variant"
