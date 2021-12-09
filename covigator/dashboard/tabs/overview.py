@@ -77,33 +77,7 @@ def get_tab_overview(queries: Queries):
                     available data.
                    """),
                    html.Br(),
-                   html.P("If you want to cite us:"),
-                   html.P([
-                       "Schrörs, B., Riesgo-Ferreiro, P., Sorn, P., Gudimella, R., Bukur, T., Rösler, T., "
-                       "Löwer, M., & Sahin, U. (2021). Large-scale analysis of SARS-CoV-2 spike-glycoprotein mutants "
-                       "demonstrates the need for continuous screening of virus isolates. PLOS ONE, 16(9), e0249254. "
-                       "https://doi.org/10.1371/journal.pone.0249254",
-                       ],
-                       style={"font-style": "italic", "margin-left": "50px"}),
-                   html.P(
-                       html.A("https://doi.org/10.1101/2021.02.04.429765",
-                              href="https://doi.org/10.1101/2021.02.04.429765",  target="_blank"),
-                       style={"text-indent": "50px"}
-                   ),
-                   html.Br(),
-                   html.P("If you would like to cite the pipeline:"),
-                   html.P([
-                       "Riesgo-Ferreiro, P., Sorn, P., & Bukur, T.. (2021, July 8). "
-                       "TRON-Bioinformatics/covigator-ngs-pipeline: Release v0.5.0 (Version v0.5.0). "
-                       "Zenodo. ",
 
-                   ], style={"font-style": "italic", "margin-left": "50px"}),
-                   html.P(
-                       html.A("http://doi.org/10.5281/zenodo.5082444",
-                              href="http://doi.org/10.5281/zenodo.5082444",  target="_blank"),
-                       style={"text-indent": "50px"}
-                   ),
-                   html.Br(),
                ],
                style={"text-align": "left", "font-size": 16}),
         ])
