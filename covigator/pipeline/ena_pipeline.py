@@ -18,6 +18,7 @@ class Pipeline:
         sample_data_folder = Path(fastq1).parent
 
         logger.info("Sample data folder: {}".format(sample_data_folder))
+        # TODO: this can be simplified to the sample_data_folder
         output_vcf = os.path.join(
             self.config.storage_folder, run_accession,
             "{name}.lofreq.normalized.annotated.vcf.gz".format(name=run_accession))

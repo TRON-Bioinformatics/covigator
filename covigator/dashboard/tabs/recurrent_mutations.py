@@ -34,11 +34,11 @@ ID_APPLY_BUTTOM = 'rm-apply-buttom'
 
 
 @functools.lru_cache()
-def get_tab_variants(queries: Queries):
+def get_tab_variants(queries: Queries, data_source: DataSource):
 
     return dbc.CardBody(
             children=[
-                get_variants_tab_left_bar(queries=queries),
+                get_variants_tab_left_bar(queries=queries, data_source=data_source),
                 html.Div(
                     className="one columns",
                     children=[html.Br()]),
@@ -63,7 +63,7 @@ def get_variants_tab_graphs():
     )
 
 
-def get_variants_tab_left_bar(queries: Queries):
+def get_variants_tab_left_bar(queries: Queries, data_source: DataSource):
 
     # removes repeated gene names (ie: ORF1ab)
     genes = sorted({c.name for c in queries.get_genes()})
@@ -75,14 +75,14 @@ def get_variants_tab_left_bar(queries: Queries):
 
     return html.Div(children=[
         html.Br(),
-        dcc.Markdown("""Select data source"""),
+        dcc.Markdown("""Data source"""),
         dcc.Dropdown(
             id=ID_DROPDOWN_DATA_SOURCE,
-            options=[{'label': DataSource.ENA.name, 'value': DataSource.ENA.name},
-                     {'label': DataSource.GISAID.name, 'value': DataSource.GISAID.name}],
-            value=DataSource.ENA.name,
+            options=[{'label': data_source.name, 'value': data_source.name}],
+            value=data_source.name,
             clearable=False,
-            multi=False
+            multi=False,
+            disabled=True
         ),
         html.Br(),
         dcc.Markdown("Select a gene"),

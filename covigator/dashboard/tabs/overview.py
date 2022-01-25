@@ -67,6 +67,9 @@ def get_tab_overview(queries: Queries):
                        * [European Nucleotide Archive (ENA)](https://www.ebi.ac.uk/ena) providing raw reads in FASTQ format
                        * [Global Initiative on Sharing Avian Influenza Data (GISAID)](https://www.gisaid.org/) providing assemblies in FASTA format
                        """),
+                   dcc.Link('Explore ENA dataset', href='/ena'),
+                   html.Br(),
+                   dcc.Link('Explore GISAID dataset', href='/gisaid'),
                    html.Br(),
                    html.P("""
                     There is certain overlap in the samples present in ENA and GISAID as some national initiatives are systematically 

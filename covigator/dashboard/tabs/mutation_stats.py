@@ -11,7 +11,6 @@ from covigator.dashboard.figures.samples import SampleFigures
 from covigator.database.model import DataSource, VariantType
 from covigator.database.queries import Queries
 
-DEFAULT_DATA_SOURCE = DataSource.ENA.name
 
 ID_VARIANTS_PER_SAMPLE_GRAPH = 'ms-variants-per-sample-graph'
 ID_INDEL_LENGTH_GRAPH = 'ms-indel-lengths-graph'
@@ -28,10 +27,10 @@ ID_APPLY_BUTTOM = 'ms-apply-buttom'
 
 
 @functools.lru_cache()
-def get_tab_mutation_stats(queries: Queries):
+def get_tab_mutation_stats(queries: Queries, data_source: DataSource):
     return dbc.CardBody(
             children=[
-                get_samples_tab_left_bar(queries),
+                get_samples_tab_left_bar(queries, data_source),
                 html.Div(
                     className="one columns",
                     children=[html.Br()]),
@@ -55,19 +54,19 @@ def get_mutation_stats_tab_graphs():
         ])
 
 
-def get_samples_tab_left_bar(queries: Queries):
+def get_samples_tab_left_bar(queries: Queries, data_source: DataSource):
     return html.Div(
         className="two columns",
         children=[
             html.Br(),
-            dcc.Markdown("""Select data source"""),
+            dcc.Markdown("""Data source"""),
             dcc.Dropdown(
                 id=ID_DROPDOWN_DATA_SOURCE,
-                options=[{'label': DataSource.ENA.name, 'value': DataSource.ENA.name},
-                         {'label': DataSource.GISAID.name, 'value': DataSource.GISAID.name}],
-                value=DEFAULT_DATA_SOURCE,
+                options=[{'label': data_source.name, 'value': data_source.name}],
+                value=data_source.name,
                 clearable=False,
-                multi=False
+                multi=False,
+                disabled=True
             ),
             html.Br(),
             dcc.Markdown("""Select one or more genes"""),
