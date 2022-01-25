@@ -59,16 +59,15 @@ def get_samples_tab_left_bar(queries: Queries, data_source: DataSource):
         className="two columns",
         children=[
             html.Br(),
-            dcc.Markdown("""Data source"""),
-            dcc.Dropdown(
-                id=ID_DROPDOWN_DATA_SOURCE,
-                options=[{'label': data_source.name, 'value': data_source.name}],
-                value=data_source.name,
-                clearable=False,
-                multi=False,
-                disabled=True
-            ),
-            html.Br(),
+            html.Div(
+                dcc.Dropdown(
+                    id=ID_DROPDOWN_DATA_SOURCE,
+                    options=[{'label': data_source.name, 'value': data_source.name}],
+                    value=data_source.name,
+                    clearable=False,
+                    multi=False,
+                    disabled=True
+                ), style={'display': 'none'}),
             dcc.Markdown("""Select one or more genes"""),
             dcc.Dropdown(
                 id=ID_DROPDOWN_GENE,
