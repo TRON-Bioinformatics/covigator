@@ -190,7 +190,7 @@ def set_callbacks(app, session: Session, content_folder):
                 dbc.Tab(label="Samples by country", tab_id=SAMPLES_TAB_ID),
                 dbc.Tab(label="Mutation statistics", tab_id=MUTATIONS_TAB_ID),
                 dbc.Tab(label="Recurrent mutations", tab_id=RECURRENT_MUTATIONS_TAB_ID),
-                dbc.Tab(label="GISAID dataset", tab_id=GISAID_DATASET_TAB_ID),
+                dbc.Tab(label="Quality control", tab_id=GISAID_DATASET_TAB_ID),
                 dbc.Tab(label="Acknowledgements", tab_id=HELP_TAB_ID)]
         elif page == ENA_PAGE:
             # show ena tabs
@@ -199,7 +199,7 @@ def set_callbacks(app, session: Session, content_folder):
                 dbc.Tab(label="Mutation statistics", tab_id=MUTATIONS_TAB_ID),
                 dbc.Tab(label="Recurrent mutations", tab_id=RECURRENT_MUTATIONS_TAB_ID),
                 dbc.Tab(label="Intrahost mutations", tab_id=INTRAHOST_MUTATIONS_TAB_ID),
-                dbc.Tab(label="ENA dataset", tab_id=ENA_DATASET_TAB_ID),
+                dbc.Tab(label="Quality control", tab_id=ENA_DATASET_TAB_ID),
                 dbc.Tab(label="Download data", tab_id=DOWNLOAD_TAB_ID),
                 dbc.Tab(label="Acknowledgements", tab_id=HELP_TAB_ID)]
 
