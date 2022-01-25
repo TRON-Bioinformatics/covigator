@@ -51,16 +51,16 @@ def get_tab_overview():
                             html.Br(),
                             html.P([
                                 dbc.Button(
-                                    "Explore data derived from ENA",
-                                    color="warning", size='lg',
-                                    style={"margin-left": "20px", "margin-right": "20px", "font-size": 20},
-                                    href="/ena"),
-                                "or",
-                                dbc.Button(
                                     "Explore data derived from GISAID",
                                     color="warning", size='lg',
                                     style={"margin-left": "20px", "margin-right": "20px", "font-size": 20},
-                                    href="/gisaid")
+                                    href="/gisaid"),
+                                "or",
+                                dbc.Button(
+                                    "Explore data derived from ENA",
+                                    color="warning", size='lg',
+                                    style={"margin-left": "20px", "margin-right": "20px", "font-size": 20},
+                                    href="/ena")
                                 ]),
                             html.Br(),
                             html.Br(),

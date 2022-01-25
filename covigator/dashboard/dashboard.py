@@ -212,9 +212,9 @@ def set_callbacks(app, session: Session, content_folder):
         if page == MAIN_PAGE:
             return html.A(html.Img(src="/assets/CoVigator_logo_txt_reg_no_bg.png", height="25px"), href="/")
         elif page == GISAID_PAGE:
-            return html.A(html.Img(src="/assets/CoVigator_logo_txt_reg_no_bg_gisaid.png", height="60px"), href="/")
+            return html.A(html.Img(src="/assets/CoVigator_logo_txt_reg_no_bg_gisaid.png", height="50px"), href="/")
         elif page == ENA_PAGE:
-            return html.A(html.Img(src="/assets/CoVigator_logo_txt_reg_no_bg_ena.png", height="60px"), href="/")
+            return html.A(html.Img(src="/assets/CoVigator_logo_txt_reg_no_bg_ena.png", height="50px"), href="/")
 
     @app.callback(
         Output(ID_TAB_CONTENT, "children"),
