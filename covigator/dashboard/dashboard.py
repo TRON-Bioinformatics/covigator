@@ -59,9 +59,11 @@ class Dashboard:
                         dbc.Navbar([
                             dbc.Row(
                                 [
-                                    dbc.Col(html.A(html.Img(
-                                        src="/assets/CoVigator_logo_txt_reg_no_bg.png", height="25px"),
-                                        href="https://covigator.tron-mainz.de/"), className="ml-2"
+                                    dbc.Col(
+                                        children=html.A(html.Img(src="/assets/CoVigator_logo_txt_reg_no_bg.png",
+                                                                 height="25px"), href="/"),
+                                        className="ml-2",
+                                        id="logo"
                                     ),
                                     dbc.Col(html.Br(), className="ml-2"),
                                     dbc.Col(html.Br(), className="ml-2"),
@@ -179,7 +181,6 @@ def set_callbacks(app, session: Session, content_folder):
         Output('tabs', "children"),
         [Input("url", "pathname")])
     def switch_page(url):
-        logger.debug("Changing tab...")
         page = _get_page(url)
         if page == MAIN_PAGE:
             # show overview with links
@@ -202,6 +203,18 @@ def set_callbacks(app, session: Session, content_folder):
                 dbc.Tab(label="Quality control", tab_id=ENA_DATASET_TAB_ID),
                 dbc.Tab(label="Download data", tab_id=DOWNLOAD_TAB_ID),
                 dbc.Tab(label="Acknowledgements", tab_id=HELP_TAB_ID)]
+
+    @app.callback(
+        Output('logo', "children"),
+        [Input("url", "pathname")])
+    def switch_logo(url):
+        page = _get_page(url)
+        if page == MAIN_PAGE:
+            return html.A(html.Img(src="/assets/CoVigator_logo_txt_reg_no_bg.png", height="25px"), href="/")
+        elif page == GISAID_PAGE:
+            return html.A(html.Img(src="/assets/CoVigator_logo_txt_reg_no_bg_gisaid.png", height="60px"), href="/")
+        elif page == ENA_PAGE:
+            return html.A(html.Img(src="/assets/CoVigator_logo_txt_reg_no_bg_ena.png", height="60px"), href="/")
 
     @app.callback(
         Output(ID_TAB_CONTENT, "children"),

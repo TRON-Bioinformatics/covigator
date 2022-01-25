@@ -75,7 +75,7 @@ def get_tab_overview():
 
 
 def get_header():
-    logo = "/assets/CoVigator_logo_txt_reg_no_bg.png"
+    logo = "/assets/CoVigator_logo_txt_reg_no_bg_gisaid_ena.png"
     return dbc.Row([
                 dbc.Col([None], width=2),
                 dbc.Col([html.Img(src=logo, id="covigator-logo",
