@@ -70,10 +70,11 @@ class Dashboard:
                                 no_gutters=True,
                             ),
                             dbc.Row(
-                                dbc.Tabs(None,
-                                    id="tabs",
-                                    active_tab=SAMPLES_TAB_ID,
-                                    card=True),
+                                [
+                                    dbc.Tabs(None,
+                                        id="tabs",
+                                        active_tab=SAMPLES_TAB_ID,
+                                        card=True)],
                                 align="center",
                                 no_gutters=True,
                             ),
@@ -91,7 +92,7 @@ class Dashboard:
                             )])
                         ],
                 ),
-                dbc.CardBody(dcc.Loading(id="loading-1", children=[html.Div(id="tab-content")], style={"height": "100%"})),
+                dbc.CardBody(dcc.Loading(id="loading-1", children=[html.Div(id=ID_TAB_CONTENT)], style={"height": "100%"})),
                 dbc.CardFooter(footer)
             ])
         ])
@@ -209,7 +210,7 @@ def set_callbacks(app, session: Session, content_folder):
         page = _get_page(url)
         try:
             if page == MAIN_PAGE:
-                return get_tab_overview(queries=queries)
+                return get_tab_overview()
             elif at == ENA_DATASET_TAB_ID:
                 return get_tab_dataset_ena(queries=queries)
             elif at == GISAID_DATASET_TAB_ID:
