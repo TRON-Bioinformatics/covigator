@@ -1,5 +1,6 @@
 import dash_html_components as html
 import dash_core_components as dcc
+import dash_bootstrap_components as dbc
 
 import covigator
 
@@ -8,8 +9,9 @@ def get_footer():
     tron_logo = "/assets/tron_logo_no_bg.png"
     return html.Footer(
         [
-            html.Div(
-                children=[
+            dbc.Row([
+                dbc.Col([None], width=1),
+                dbc.Col([
                     html.Br(),
                     html.P("CoVigator {} © 2021 TRON. All Rights Reserved".format(covigator.VERSION)),
                     html.P([
@@ -48,7 +50,8 @@ def get_footer():
                     html.P([
                         html.A("DATA PROTECTION", href="https://tron-mainz.de/data-protection/",  target="_blank"), " | ",
                         html.A("IMPRINT", href="https://tron-mainz.de/imprint/",  target="_blank")])
-                ],
+                ], width=10),
+                dbc.Col([None], width=1)]
                 # this bit makes sure the footer sticks at the bottom
                 #style={"position": "relative", "bottom": "0", "width": "100%", "overflow": "hidden", "height": "120px"}
             )

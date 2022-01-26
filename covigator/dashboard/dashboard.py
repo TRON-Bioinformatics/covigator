@@ -22,6 +22,8 @@ from covigator.dashboard.tabs.intrahost_mutations import get_tab_subclonal_varia
 from covigator.dashboard.tabs.recurrent_mutations import get_tab_variants, set_callbacks_variants_tab
 from covigator.database.database import get_database
 from logzero import logger
+
+from covigator.database.model import DataSource
 from covigator.database.queries import Queries
 
 
@@ -48,16 +50,20 @@ class Dashboard:
     def serve_layout(self):
         logger.info("Serving layout")
         footer = get_footer()
+
         layout = html.Div(children=[
             dbc.Card([
                 dbc.CardHeader(
                     children=[
+                        dcc.Location(id='url', refresh=False),
                         dbc.Navbar([
                             dbc.Row(
                                 [
-                                    dbc.Col(html.A(html.Img(
-                                        src="/assets/CoVigator_logo_txt_reg_no_bg.png", height="25px"),
-                                        href="https://covigator.tron-mainz.de/"), className="ml-2"
+                                    dbc.Col(
+                                        children=html.A(html.Img(src="/assets/CoVigator_logo_txt_reg_no_bg.png",
+                                                                 height="25px"), href="/"),
+                                        className="ml-2",
+                                        id="logo"
                                     ),
                                     dbc.Col(html.Br(), className="ml-2"),
                                     dbc.Col(html.Br(), className="ml-2"),
@@ -66,19 +72,11 @@ class Dashboard:
                                 no_gutters=True,
                             ),
                             dbc.Row(
-                                dbc.Tabs([
-                                    dbc.Tab(label="Overview", tab_id=OVERVIEW_TAB_ID),
-                                    dbc.Tab(label="Samples by country", tab_id=SAMPLES_TAB_ID),
-                                    dbc.Tab(label="Mutation statistics", tab_id=MUTATIONS_TAB_ID),
-                                    dbc.Tab(label="Recurrent mutations", tab_id=RECURRENT_MUTATIONS_TAB_ID),
-                                    dbc.Tab(label="Intrahost mutations", tab_id=INTRAHOST_MUTATIONS_TAB_ID),
-                                    dbc.Tab(label="ENA dataset", tab_id=ENA_DATASET_TAB_ID),
-                                    dbc.Tab(label="GISAID dataset", tab_id=GISAID_DATASET_TAB_ID),
-                                    dbc.Tab(label="Download data", tab_id=DOWNLOAD_TAB_ID),
-                                    dbc.Tab(label="Acknowledgements", tab_id=HELP_TAB_ID)],
-                                    id="tabs",
-                                    active_tab="overview",
-                                    card=True),
+                                [
+                                    dbc.Tabs(None,
+                                        id="tabs",
+                                        active_tab=SAMPLES_TAB_ID,
+                                        card=True)],
                                 align="center",
                                 no_gutters=True,
                             ),
@@ -96,7 +94,7 @@ class Dashboard:
                             )])
                         ],
                 ),
-                dbc.CardBody(dcc.Loading(id="loading-1", children=[html.Div(id="tab-content")], style={"height": "100%"})),
+                dbc.CardBody(dcc.Loading(id="loading-1", children=[html.Div(id=ID_TAB_CONTENT)], style={"height": "100%"})),
                 dbc.CardFooter(footer)
             ])
         ])
@@ -165,22 +163,77 @@ def set_callbacks(app, session: Session, content_folder):
 
     queries = Queries(session=session)
 
-    @app.callback(Output(ID_TAB_CONTENT, "children"), [Input("tabs", "active_tab")])
-    def switch_tab(at):
-        logger.debug("Changing tab...")
+    MAIN_PAGE = "main"
+    ENA_PAGE = DataSource.ENA
+    GISAID_PAGE = DataSource.GISAID
+
+    def _get_page(url):
+        if url in ["", "/"]:
+            return MAIN_PAGE
+        elif url == "/gisaid":
+            return GISAID_PAGE
+        elif url == "/ena":
+            return ENA_PAGE
+        else:
+            raise ValueError("This URL does not exist")
+
+    @app.callback(
+        Output('tabs', "children"),
+        [Input("url", "pathname")])
+    def switch_page(url):
+        page = _get_page(url)
+        if page == MAIN_PAGE:
+            # show overview with links
+            return None
+        elif page == GISAID_PAGE:
+            # show gisaid tabs
+            return [
+                dbc.Tab(label="Samples by country", tab_id=SAMPLES_TAB_ID),
+                dbc.Tab(label="Mutation statistics", tab_id=MUTATIONS_TAB_ID),
+                dbc.Tab(label="Recurrent mutations", tab_id=RECURRENT_MUTATIONS_TAB_ID),
+                dbc.Tab(label="Quality control", tab_id=GISAID_DATASET_TAB_ID),
+                dbc.Tab(label="Acknowledgements", tab_id=HELP_TAB_ID)]
+        elif page == ENA_PAGE:
+            # show ena tabs
+            return [
+                dbc.Tab(label="Samples by country", tab_id=SAMPLES_TAB_ID),
+                dbc.Tab(label="Mutation statistics", tab_id=MUTATIONS_TAB_ID),
+                dbc.Tab(label="Recurrent mutations", tab_id=RECURRENT_MUTATIONS_TAB_ID),
+                dbc.Tab(label="Intrahost mutations", tab_id=INTRAHOST_MUTATIONS_TAB_ID),
+                dbc.Tab(label="Quality control", tab_id=ENA_DATASET_TAB_ID),
+                dbc.Tab(label="Download data", tab_id=DOWNLOAD_TAB_ID),
+                dbc.Tab(label="Acknowledgements", tab_id=HELP_TAB_ID)]
+
+    @app.callback(
+        Output('logo', "children"),
+        [Input("url", "pathname")])
+    def switch_logo(url):
+        page = _get_page(url)
+        if page == MAIN_PAGE:
+            return html.A(html.Img(src="/assets/CoVigator_logo_txt_reg_no_bg.png", height="25px"), href="/")
+        elif page == GISAID_PAGE:
+            return html.A(html.Img(src="/assets/CoVigator_logo_txt_reg_no_bg_gisaid.png", height="50px"), href="/")
+        elif page == ENA_PAGE:
+            return html.A(html.Img(src="/assets/CoVigator_logo_txt_reg_no_bg_ena.png", height="50px"), href="/")
+
+    @app.callback(
+        Output(ID_TAB_CONTENT, "children"),
+        [Input("tabs", "active_tab"), Input("url", "pathname")])
+    def switch_tab(at, url):
+        page = _get_page(url)
         try:
-            if at == OVERVIEW_TAB_ID:
-                return get_tab_overview(queries=queries)
+            if page == MAIN_PAGE:
+                return get_tab_overview()
             elif at == ENA_DATASET_TAB_ID:
                 return get_tab_dataset_ena(queries=queries)
             elif at == GISAID_DATASET_TAB_ID:
                 return get_tab_dataset_gisaid(queries=queries)
             elif at == SAMPLES_TAB_ID:
-                return get_tab_samples(queries=queries)
+                return get_tab_samples(queries=queries, data_source=page)
             elif at == MUTATIONS_TAB_ID:
-                return get_tab_mutation_stats(queries=queries)
+                return get_tab_mutation_stats(queries=queries, data_source=page)
             elif at == RECURRENT_MUTATIONS_TAB_ID:
-                return get_tab_variants(queries=queries)
+                return get_tab_variants(queries=queries, data_source=page)
             elif at == INTRAHOST_MUTATIONS_TAB_ID:
                 return get_tab_subclonal_variants(queries=queries)
             elif at == DOWNLOAD_TAB_ID:
