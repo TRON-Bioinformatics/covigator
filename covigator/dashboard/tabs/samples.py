@@ -11,7 +11,6 @@ from covigator.database.queries import Queries
 
 ID_APPLY_BUTTOM = 's-apply-buttom'
 
-DEFAULT_DATA_SOURCE = DataSource.ENA.name
 
 ID_SLIDER_MIN_SAMPLES = 'slider-min-samples-per-country'
 ID_DROPDOWN_DATA_SOURCE = "dropdown-data-source"
@@ -22,10 +21,10 @@ ID_DN_DS_GRAPH = 'dn_ds_graph'
 
 
 @functools.lru_cache()
-def get_tab_samples(queries: Queries):
+def get_tab_samples(queries: Queries, data_source: DataSource):
     return dbc.CardBody(
             children=[
-                get_samples_tab_left_bar(queries),
+                get_samples_tab_left_bar(queries, data_source),
                 html.Div(
                     className="one column",
                     children=[html.Br()]),
@@ -44,25 +43,24 @@ def get_samples_tab_graphs():
         ])
 
 
-def get_samples_tab_left_bar(queries: Queries):
+def get_samples_tab_left_bar(queries: Queries, data_source: DataSource):
     return html.Div(
         className="two columns",
         children=[
             html.Br(),
-            dcc.Markdown("""Select data source"""),
-            dcc.Dropdown(
-                id=ID_DROPDOWN_DATA_SOURCE,
-                options=[{'label': DataSource.ENA.name, 'value': DataSource.ENA.name},
-                         {'label': DataSource.GISAID.name, 'value': DataSource.GISAID.name}],
-                value=DEFAULT_DATA_SOURCE,
-                clearable=False,
-                multi=False
-            ),
-            html.Br(),
+            html.Div(
+                dcc.Dropdown(
+                    id=ID_DROPDOWN_DATA_SOURCE,
+                    options=[{'label': data_source.name, 'value': data_source.name}],
+                    value=data_source.name,
+                    clearable=False,
+                    multi=False,
+                    disabled=True
+                ), style={'display': 'none'}),
             dcc.Markdown("""Select one or more countries"""),
             dcc.Dropdown(
                 id=ID_DROPDOWN_COUNTRY,
-                options=[{'label': c, 'value': c} for c in queries.get_countries(DEFAULT_DATA_SOURCE)],
+                options=[{'label': c, 'value': c} for c in queries.get_countries(data_source.name)],
                 value=None,
                 multi=True
             ),

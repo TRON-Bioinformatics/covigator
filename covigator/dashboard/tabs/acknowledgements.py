@@ -7,9 +7,9 @@ import dash_html_components as html
 def get_tab_acknowledgements():
 
     return dbc.CardBody([
-        html.Div(
-            children=[
-
+        dbc.Row([
+            dbc.Col([None], width=2),
+            dbc.Col([
                 dcc.Markdown("""
                 **The CoVigator project** was developed at the Biomarker Development Center at TRON (Translational 
                 Oncology at the University Medical Center of the Johannes Gutenberg University) gGmbH. 
@@ -119,6 +119,7 @@ def get_tab_acknowledgements():
                 html.A(html.Img(src="/assets/2021_twitter_logo_blue.png", height="25px"),
                        href="https://twitter.com/hashtag/CoVigator", target="_blank")
 
-            ],
-            style={"text-align": "left", "font-size": 16}),
+            ], width=8, style={"text-align": "left", "font-size": 16}),
+            dbc.Col([None], width=2)]
+            ),
     ])
