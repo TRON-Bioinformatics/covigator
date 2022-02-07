@@ -13,6 +13,7 @@ def get_tab_overview():
                 dbc.Col([
                     html.Div(
                         children=[
+                            html.Br(),
                             html.P(
                                 """
                                 Human infections with SARS-CoV-2 are spreading globally since the beginning of 2020, necessitating preventive or 
@@ -75,11 +76,11 @@ def get_tab_overview():
 
 
 def get_header():
-    logo = "/assets/CoVigator_logo_txt_reg_no_bg_gisaid_ena.png"
+    logo = "/assets/CoVigator_logo_GISAID_ENA.png"
     return dbc.Row([
                 dbc.Col([None], width=2),
                 dbc.Col([html.Img(src=logo, id="covigator-logo",
-                 style={"height": "80px", "width": "auto", "margin-bottom": "10px"}, )], width=3),
+                 style={"height": "100px", "width": "auto", "margin-bottom": "10px"}, )], width=3),
                 dbc.Col([html.Div(
                     [html.Div([html.H1("Monitoring SARS-CoV-2 mutations")], style={"text-align": "right"})],
                     id="title",
