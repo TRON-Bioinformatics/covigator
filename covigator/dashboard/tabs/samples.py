@@ -122,7 +122,7 @@ def set_callbacks_samples_tab(app, session: Session):
 
     @app.callback(
         Output(ID_ACCUMULATED_SAMPLES_GRAPH, 'children'),
-        [Input(ID_APPLY_BUTTOM, 'n_clicks')],
+        inputs=[Input(ID_APPLY_BUTTOM, 'n_clicks')],
         state=[
             State(ID_DROPDOWN_DATA_SOURCE, 'value'),
             State(ID_DROPDOWN_COUNTRY, 'value'),
@@ -136,7 +136,7 @@ def set_callbacks_samples_tab(app, session: Session):
 
     @app.callback(
         Output(ID_DN_DS_GRAPH, 'children'),
-        [Input(ID_APPLY_BUTTOM, 'n_clicks')],
+        inputs=[Input(ID_APPLY_BUTTOM, 'n_clicks')],
         state=[
             State(ID_DROPDOWN_DATA_SOURCE, 'value'),
             State(ID_DROPDOWN_COUNTRY, 'value'),
