@@ -81,17 +81,18 @@ class Dashboard:
                                 no_gutters=True,
                             ),
                             dbc.Row(
-                                [
-                                    dbc.Col(html.A(html.Img(
-                                        src="/assets/tron_logo_without_text.png", height="22px"),
-                                        href="https://tron-mainz.de", target="_blank"), className="ml-2"),
-                                    dbc.Col(html.Br(), className="ml-2")
-                                ],
+                                dbc.Col(
+                                    html.A(
+                                        html.Img(src="/assets/tron_logo_without_text.png", height="22px"),
+                                        href="https://tron-mainz.de", target="_blank"),
+                                    className="ml-2",
+                                    id="top-right-logo"),
                                 align="center",
                                 justify="end",
                                 no_gutters=True,
                                 style={'float': 'right', 'position': 'absolute', 'right': 0, 'text-align': 'right'}
-                            )])
+                            )
+                            ])
                         ],
                 ),
                 dbc.CardBody(dcc.Loading(id="loading-1", children=[html.Div(id=ID_TAB_CONTENT)], style={"height": "100%"})),
@@ -215,6 +216,24 @@ def set_callbacks(app, session: Session, content_folder):
             return html.A(html.Img(src="/assets/CoVigator_logo_GISAID.png", height="80px"), href="/")
         elif page == ENA_PAGE:
             return html.A(html.Img(src="/assets/CoVigator_logo_ENA.png", height="80px"), href="/")
+
+    @app.callback(
+        Output('top-right-logo', "children"),
+        [Input("url", "pathname")])
+    def switch_right_logo(url):
+        page = _get_page(url)
+        if page == MAIN_PAGE:
+            return html.A(
+                html.Img(src="/assets/tron_logo_without_text.png", height="22px"),
+                href="https://tron-mainz.de", target="_blank")
+        elif page == GISAID_PAGE:
+            return dbc.Button(
+                "GISAID last updated {date}".format(date=queries.get_last_update(DataSource.GISAID)),
+                style={'background-color': '#003c78'})
+        elif page == ENA_PAGE:
+            return dbc.Button(
+                "ENA last updated {date}".format(date=queries.get_last_update(DataSource.ENA)),
+                style={'background-color': '#003c78'})
 
     @app.callback(
         Output(ID_TAB_CONTENT, "children"),

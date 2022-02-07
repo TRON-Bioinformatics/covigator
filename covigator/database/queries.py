@@ -13,7 +13,7 @@ from covigator.database.model import Log, DataSource, CovigatorModule, SampleEna
     Gene, Variant, VariantCooccurrence, Conservation, JobGisaid, SampleGisaid, SubclonalVariantObservation, \
     PrecomputedVariantsPerSample, PrecomputedSubstitutionsCounts, PrecomputedIndelLength, VariantType, \
     PrecomputedAnnotation, PrecomputedOccurrence, PrecomputedTableCounts, Sample, PrecomputedVariantAbundanceHistogram, \
-    VARIANT_OBSERVATION_TABLE_NAME, PrecomputedSynonymousNonSynonymousCounts, RegionType, Domain
+    VARIANT_OBSERVATION_TABLE_NAME, PrecomputedSynonymousNonSynonymousCounts, RegionType, Domain, LastUpdate
 from covigator.exceptions import CovigatorQueryException, CovigatorDashboardMissingPrecomputedData
 
 
@@ -505,6 +505,12 @@ class Queries:
                      Log.processed > 0, Log.start < most_recent_processor_run)) \
                 .order_by(desc(Log.start)).first()
         return result2[0] if result2 is not None else result2
+
+    def get_last_update(self, data_source: DataSource) -> date:
+        result = self.session.query(LastUpdate.update_time).filter(LastUpdate.source == data_source).order_by(
+            desc(LastUpdate.update_time)).first()
+        most_recent_update = result[0] if result is not None else result
+        return most_recent_update
 
     def get_top_occurring_variants(self, top, source: str = None):
         query = self.session.query(
