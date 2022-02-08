@@ -91,11 +91,19 @@ class Dashboard:
                                     dbc.Col(
                                         dbc.DropdownMenu(
                                             label="Menu", children=[
-                                                dbc.DropdownMenuItem("Home", href="/"),
-                                                dbc.DropdownMenuItem("GISAID dataset", href="/gisaid"),
-                                                dbc.DropdownMenuItem("ENA dataset", href="/ena"),
-                                                dbc.DropdownMenuItem("Acknowledgements", href="/acknowledgements"),
-                                            ], align_end=True, className="m-1",
+                                                dbc.DropdownMenuItem("Home", href="/", class_name="m-1", style={'font-size' : '150%'}),
+                                                dbc.DropdownMenuItem("GISAID dataset", href="/gisaid", style={'font-size' : '150%'}),
+                                                dbc.DropdownMenuItem("ENA dataset", href="/ena", style={'font-size' : '150%'}),
+                                                dbc.DropdownMenuItem("Acknowledgements", href="/acknowledgements", style={'font-size' : '150%'}),
+                                            ],
+                                            align_end=True,
+                                            size="lg",
+                                            toggle_style={
+                                                "textTransform": "uppercase",
+                                                "background": "#003c78",
+                                                'font-size': '85%'
+                                            },
+                                            style={"margin-left": "15px"}
                                         )
                                     )],
                                     align="right",
@@ -237,18 +245,21 @@ def set_callbacks(app, session: Session, content_folder):
     @app.callback(
         Output('top-right-logo', "children"),
         [Input("url", "pathname")])
-    def switch_right_logo(url):
+    def switch_lat_update(url):
         page = _get_page(url)
         if page == MAIN_PAGE:
             return None
         elif page == GISAID_PAGE:
             return dbc.Button(
-                "GISAID last updated {date}".format(date=queries.get_last_update(DataSource.GISAID)),
-                style={'background-color': '#003c78'})
+                "last updated {date}".format(date=queries.get_last_update(DataSource.GISAID)),
+                outline=True, color="dark", className="me-1",
+                # 'background-color': '#b71300',
+                style={"margin-right": "15px", 'font-size': '85%'})
         elif page == ENA_PAGE:
             return dbc.Button(
-                "ENA last updated {date}".format(date=queries.get_last_update(DataSource.ENA)),
-                style={'background-color': '#003c78'})
+                "last updated {date}".format(date=queries.get_last_update(DataSource.ENA)),
+                outline=True, color="dark", className="me-1",
+                style={"margin-right": "15px", 'font-size': '85%'})
 
     @app.callback(
         Output(ID_TAB_CONTENT, "children"),
