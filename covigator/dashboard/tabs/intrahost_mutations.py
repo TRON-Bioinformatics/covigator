@@ -170,7 +170,7 @@ def set_callbacks_subclonal_variants_tab(app, session: Session):
 
     @app.callback(
         Output(ID_TOP_OCCURRING_SUBCLONAL_VARIANTS, 'children'),
-        [Input(ID_APPLY_BUTTOM, 'n_clicks')],
+        inputs=[Input(ID_APPLY_BUTTOM, 'n_clicks')],
         state=[
             State(ID_SLIDER_SUBCLONAL_VARIANTS_VAF, 'value'),
             State(ID_DROPDOWN_GENE_SUBCLONAL_VARIANTS, 'value'),
@@ -185,7 +185,7 @@ def set_callbacks_subclonal_variants_tab(app, session: Session):
 
     @app.callback(
         Output(ID_HIST_LIBRARY_STRATEGY, 'children'),
-        [Input(ID_APPLY_BUTTOM, 'n_clicks')],
+        inputs=[Input(ID_APPLY_BUTTOM, 'n_clicks')],
         state=[
             State(ID_SLIDER_SUBCLONAL_VARIANTS_VAF, 'value'),
             State(ID_TOP_OCCURRING_SUBCLONAL_VARIANTS_TABLE, "derived_virtual_data"),
@@ -203,7 +203,7 @@ def set_callbacks_subclonal_variants_tab(app, session: Session):
 
     @app.callback(
         Output(ID_HIST_COUNTRIES, 'children'),
-        [Input(ID_APPLY_BUTTOM, 'n_clicks')],
+        inputs=[Input(ID_APPLY_BUTTOM, 'n_clicks')],
         state=[
             State(ID_SLIDER_SUBCLONAL_VARIANTS_VAF, 'value'),
             State(ID_TOP_OCCURRING_SUBCLONAL_VARIANTS_TABLE, "derived_virtual_data"),
@@ -221,7 +221,7 @@ def set_callbacks_subclonal_variants_tab(app, session: Session):
 
     @app.callback(
         Output(TOP_COOCCURRING_CLONAL_VARIANTS, 'children'),
-        [Input(ID_APPLY_BUTTOM, 'n_clicks')],
+        inputs=[Input(ID_APPLY_BUTTOM, 'n_clicks')],
         state=[
             State(ID_SLIDER_SUBCLONAL_VARIANTS_VAF, 'value'),
             State(ID_DROPDOWN_GENE_SUBCLONAL_VARIANTS, 'value'),

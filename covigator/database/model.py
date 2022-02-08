@@ -16,6 +16,7 @@ config = Configuration()
 GENE_TABLE_NAME = get_table_versioned_name('gene', config=config)
 DOMAIN_TABLE_NAME = get_table_versioned_name('domain', config=config)
 LOG_TABLE_NAME = get_table_versioned_name('log', config=config)
+LAST_UPDATE_TABLE_NAME = get_table_versioned_name('last_update', config=config)
 VARIANT_COOCCURRENCE_TABLE_NAME = get_table_versioned_name('variant_cooccurrence', config=config)
 VARIANT_OBSERVATION_TABLE_NAME = get_table_versioned_name('variant_observation', config=config)
 SUBCLONAL_VARIANT_OBSERVATION_TABLE_NAME = get_table_versioned_name('subclonal_variant_observation', config=config)
@@ -542,6 +543,15 @@ class Log(Base):
     error_message = Column(String)
     processed = Column(Integer)
     data = Column(JSON)
+
+
+class LastUpdate(Base):
+
+    __tablename__ = LAST_UPDATE_TABLE_NAME
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    update_time = Column(Date(), nullable=False)
+    source = Column(Enum(DataSource, name=DataSource.__constraint_name__), nullable=False)
 
 
 class Conservation(Base):

@@ -99,7 +99,7 @@ def set_callbacks_mutation_stats_tab(app, session: Session):
 
     @app.callback(
         Output(ID_VARIANTS_PER_SAMPLE_GRAPH, 'children'),
-        [Input(ID_APPLY_BUTTOM, 'n_clicks')],
+        inputs=[Input(ID_APPLY_BUTTOM, 'n_clicks')],
         state=[
             State(ID_DROPDOWN_DATA_SOURCE, 'value'),
             State(ID_DROPDOWN_GENE, 'value'),
@@ -113,7 +113,7 @@ def set_callbacks_mutation_stats_tab(app, session: Session):
 
     @app.callback(
         Output(ID_SUBSTITUTIONS_GRAPH, 'children'),
-        [Input(ID_APPLY_BUTTOM, 'n_clicks')],
+        inputs=[Input(ID_APPLY_BUTTOM, 'n_clicks')],
         state=[
             State(ID_DROPDOWN_DATA_SOURCE, 'value'),
             State(ID_DROPDOWN_GENE, 'value'),
@@ -127,7 +127,7 @@ def set_callbacks_mutation_stats_tab(app, session: Session):
 
     @app.callback(
         Output(ID_INDEL_LENGTH_GRAPH, 'children'),
-        [Input(ID_APPLY_BUTTOM, 'n_clicks')],
+        inputs=[Input(ID_APPLY_BUTTOM, 'n_clicks')],
         state=[
             State(ID_DROPDOWN_DATA_SOURCE, 'value'),
             State(ID_DROPDOWN_GENE, 'value')
@@ -139,7 +139,7 @@ def set_callbacks_mutation_stats_tab(app, session: Session):
 
     @app.callback(
         Output(ID_ANNOTATIONS_GRAPH, 'children'),
-        [Input(ID_APPLY_BUTTOM, 'n_clicks')],
+        inputs=[Input(ID_APPLY_BUTTOM, 'n_clicks')],
         state=[
             State(ID_DROPDOWN_DATA_SOURCE, 'value'),
             State(ID_DROPDOWN_GENE, 'value')
