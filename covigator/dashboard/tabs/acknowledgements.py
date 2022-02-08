@@ -10,6 +10,7 @@ def get_tab_acknowledgements():
         dbc.Row([
             dbc.Col([None], width=2),
             dbc.Col([
+                html.H1("Acknowledgements"),
                 dcc.Markdown("""
                 **The CoVigator project** was developed at the Biomarker Development Center at TRON (Translational 
                 Oncology at the University Medical Center of the Johannes Gutenberg University) gGmbH. 
@@ -20,8 +21,7 @@ def get_tab_acknowledgements():
                 html.P([
                     "Schrörs, B., Riesgo-Ferreiro, P., Sorn, P., Gudimella, R., Bukur, T., Rösler, T., "
                     "Löwer, M., & Sahin, U. (2021). Large-scale analysis of SARS-CoV-2 spike-glycoprotein mutants "
-                    "demonstrates the need for continuous screening of virus isolates. PLOS ONE, 16(9), e0249254. "
-                    "https://doi.org/10.1371/journal.pone.0249254",
+                    "demonstrates the need for continuous screening of virus isolates. PLOS ONE, 16(9), e0249254.",
                 ],
                     style={"font-style": "italic", "margin-left": "50px"}),
                 html.P(
@@ -33,13 +33,12 @@ def get_tab_acknowledgements():
                 html.P("If you would like to cite the pipeline:"),
                 html.P([
                     "Riesgo-Ferreiro, P., Sorn, P., & Bukur, T.. (2021, July 8). "
-                    "TRON-Bioinformatics/covigator-ngs-pipeline: Release v0.5.0 (Version v0.5.0). "
-                    "Zenodo. ",
+                    "TRON-Bioinformatics/covigator-ngs-pipeline. Zenodo. ",
 
                 ], style={"font-style": "italic", "margin-left": "50px"}),
                 html.P(
-                    html.A("http://doi.org/10.5281/zenodo.5082444",
-                           href="http://doi.org/10.5281/zenodo.5082444", target="_blank"),
+                    html.A("https://doi.org/10.5281/zenodo.4906281",
+                           href="https://doi.org/10.5281/zenodo.4906281", target="_blank"),
                     style={"text-indent": "50px"}
                 ),
                 html.Br(),
@@ -86,7 +85,7 @@ def get_tab_acknowledgements():
                        The CoVigator project is open sourced and made available under the MIT license.
                        We welcome any bug report, feature request or contribution through our GitHub repositories."""),
                 html.P([
-                    "The knowledge base and dashboard are available at ",
+                    "The knowledge base and dashboard source is hosted at ",
                     html.A("https://github.com/TRON-Bioinformatics/covigator",
                            href="https://github.com/TRON-Bioinformatics/covigator", target="_blank")
                 ]),
@@ -95,7 +94,7 @@ def get_tab_acknowledgements():
                     The analysis pipeline processes SARS-CoV-2 FASTQ or FASTA files into
                     annotated and normalized analysis ready VCF files. The pipeline is implemented
                     in the Nextflow framework (Di Tommaso, 2017), it is usable as an independent component
-                    and we provide support to any user. The repository is available at
+                    and we provide support to any user and to other viruses. The repository is hosted at
                     """,
                     html.A("https://github.com/TRON-Bioinformatics/covigator-ngs-pipeline",
                            href="https://github.com/TRON-Bioinformatics/covigator-ngs-pipeline", target="_blank")
@@ -103,7 +102,7 @@ def get_tab_acknowledgements():
 
                 html.Br(),
                 html.P("We value your feedback!"),
-                html.P("If you found an error or have a feature request for the dashboard, please, report it:"),
+                html.P("If you found an error or have a feature request, please, report it:"),
                 html.Iframe(srcDoc="""
                         <a class="github-button" href="https://github.com/tron-bioinformatics/covigator/issues/new?assignees=&labels=bug&template=bug_report.md&title=" data-color-scheme="no-preference: light; light: light; dark: light;" data-size="large" data-show-count="false" aria-label="Issue tron-bioinformatics/covigator on GitHub">Issue</a>
                         <a class="github-button" href="https://github.com/tron-bioinformatics/covigator/issues/new?assignees=&labels=bug&template=feature_request.md&title=" data-color-scheme="no-preference: light; light: light; dark: light;" data-size="large" data-show-count="false" aria-label="Issue tron-bioinformatics/covigator on GitHub">Feature request</a>

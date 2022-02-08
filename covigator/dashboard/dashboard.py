@@ -74,11 +74,14 @@ class Dashboard:
                                 ),
                                 dbc.Row(
                                     [
-                                        dbc.Tabs(None,
+                                        dbc.Tabs(
+                                            None,
                                             id="tabs",
-                                            active_tab=SAMPLES_TAB_ID, style={'align': 'right'}
-                                                 )],
+                                            active_tab=SAMPLES_TAB_ID,
+                                            style={'align': 'right', 'vertical-align': 'bottom', 'margin-left': '20px'},
+                                        )],
                                     align="right",
+                                    style={'vertical-align': 'bottom'}
                                 ),
                                 dbc.Row([
                                     dbc.Col(
@@ -212,23 +215,23 @@ def set_callbacks(app, session: Session, content_folder):
         elif page == GISAID_PAGE:
             # show gisaid tabs
             return [
-                dbc.Tab(label="Samples by country", tab_id=SAMPLES_TAB_ID),
-                dbc.Tab(label="Mutation statistics", tab_id=MUTATIONS_TAB_ID),
-                dbc.Tab(label="Recurrent mutations", tab_id=RECURRENT_MUTATIONS_TAB_ID),
-                dbc.Tab(label="Quality control", tab_id=GISAID_DATASET_TAB_ID)], SAMPLES_TAB_ID
+                dbc.Tab(label="Samples by country", tab_id=SAMPLES_TAB_ID, label_style={"color": "#003c78"}),
+                dbc.Tab(label="Mutation statistics", tab_id=MUTATIONS_TAB_ID, label_style={"color": "#003c78"}),
+                dbc.Tab(label="Recurrent mutations", tab_id=RECURRENT_MUTATIONS_TAB_ID, label_style={"color": "#003c78"}),
+                dbc.Tab(label="Quality control", tab_id=GISAID_DATASET_TAB_ID, label_style={"color": "#003c78"})], SAMPLES_TAB_ID
         elif page == ENA_PAGE:
             # show ena tabs
             return [
-                dbc.Tab(label="Samples by country", tab_id=SAMPLES_TAB_ID),
-                dbc.Tab(label="Mutation statistics", tab_id=MUTATIONS_TAB_ID),
-                dbc.Tab(label="Recurrent mutations", tab_id=RECURRENT_MUTATIONS_TAB_ID),
-                dbc.Tab(label="Intrahost mutations", tab_id=INTRAHOST_MUTATIONS_TAB_ID),
-                dbc.Tab(label="Quality control", tab_id=ENA_DATASET_TAB_ID),
-                dbc.Tab(label="Download data", tab_id=DOWNLOAD_TAB_ID)], SAMPLES_TAB_ID
+                dbc.Tab(label="Samples by country", tab_id=SAMPLES_TAB_ID, label_style={"color": "#003c78"}),
+                dbc.Tab(label="Mutation statistics", tab_id=MUTATIONS_TAB_ID, label_style={"color": "#003c78"}),
+                dbc.Tab(label="Recurrent mutations", tab_id=RECURRENT_MUTATIONS_TAB_ID, label_style={"color": "#003c78"}),
+                dbc.Tab(label="Intrahost mutations", tab_id=INTRAHOST_MUTATIONS_TAB_ID, label_style={"color": "#003c78"}),
+                dbc.Tab(label="Quality control", tab_id=ENA_DATASET_TAB_ID, label_style={"color": "#003c78"}),
+                dbc.Tab(label="Download data", tab_id=DOWNLOAD_TAB_ID, label_style={"color": "#003c78"})], SAMPLES_TAB_ID
         elif page == ACKNOWLEDGEMENTS_PAGE:
             # show ena tabs
             return [
-                dbc.Tab(label="Acknowledgements", tab_id=HELP_TAB_ID)], HELP_TAB_ID
+                dbc.Tab(label="Acknowledgements", tab_id=HELP_TAB_ID, label_style={"color": "#003c78", 'display': 'none'})], HELP_TAB_ID
 
     @app.callback(
         Output('logo', "children"),
@@ -236,7 +239,7 @@ def set_callbacks(app, session: Session, content_folder):
     def switch_logo(url):
         page = _get_page(url)
         if page == MAIN_PAGE or page == ACKNOWLEDGEMENTS_PAGE:
-            return html.A(html.Img(src="/assets/CoVigator_logo_txt_reg_no_bg.png", height="25px"), href="/")
+            return html.A(html.Img(src="/assets/CoVigator_logo_GISAID_ENA.png", height="80px"), href="/")
         elif page == GISAID_PAGE:
             return html.A(html.Img(src="/assets/CoVigator_logo_GISAID.png", height="80px"), href="/")
         elif page == ENA_PAGE:

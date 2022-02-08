@@ -76,14 +76,10 @@ def get_tab_overview():
 
 
 def get_header():
-    logo = "/assets/CoVigator_logo_GISAID_ENA.png"
     return dbc.Row([
                 dbc.Col([None], width=2),
-                dbc.Col([html.Img(src=logo, id="covigator-logo",
-                 style={"height": "100px", "width": "auto", "margin-bottom": "10px"}, )], width=3),
                 dbc.Col([html.Div(
-                    [html.Div([html.H1("Monitoring SARS-CoV-2 mutations")], style={"text-align": "right"})],
-                    id="title",
-                ),], width=5),
+                    [html.Div([html.H1("Monitoring SARS-CoV-2 mutations")], style={"text-align": "left"})],
+                    id="title")], width=5),
                 dbc.Col([None], width=2)
         ], id="header", className="row flex-display",)
