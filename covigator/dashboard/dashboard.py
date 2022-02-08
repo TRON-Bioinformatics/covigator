@@ -78,26 +78,35 @@ class Dashboard:
                                             None,
                                             id="tabs",
                                             active_tab=SAMPLES_TAB_ID,
-                                            style={'align': 'right', 'vertical-align': 'bottom', 'margin-left': '20px'},
+                                            style={'align': 'right', },
                                         )],
                                     align="right",
-                                    style={'vertical-align': 'bottom'}
+                                    style={'margin-left': '2%', }
                                 ),
                                 dbc.Row([
                                     dbc.Col(
                                         None,
                                         className="ml-2",
                                         id="top-right-logo",
-                                        align="left"
+                                        align="left",
+                                        style={'margin-left': '2%', }
                                     ),
                                     dbc.Col(html.Br()),
                                     dbc.Col(
                                         dbc.DropdownMenu(
                                             label="Menu", children=[
-                                                dbc.DropdownMenuItem("Home", href="/", class_name="m-1", style={'font-size' : '150%'}),
-                                                dbc.DropdownMenuItem("GISAID dataset", href="/gisaid", style={'font-size' : '150%'}),
-                                                dbc.DropdownMenuItem("ENA dataset", href="/ena", style={'font-size' : '150%'}),
-                                                dbc.DropdownMenuItem("Acknowledgements", href="/acknowledgements", style={'font-size' : '150%'}),
+                                                dbc.DropdownMenuItem(
+                                                    "Home", href="/", class_name="m-1",
+                                                    style={'font-size' : '150%', "color": "#003c78"}),
+                                                dbc.DropdownMenuItem(
+                                                    "GISAID dataset", href="/gisaid",
+                                                    style={'font-size' : '150%', "color": "#003c78"}),
+                                                dbc.DropdownMenuItem(
+                                                    "ENA dataset", href="/ena",
+                                                    style={'font-size' : '150%', "color": "#003c78"}),
+                                                dbc.DropdownMenuItem(
+                                                    "Acknowledgements", href="/acknowledgements",
+                                                    style={'font-size' : '150%', "color": "#003c78"}),
                                             ],
                                             align_end=True,
                                             size="lg",
@@ -107,11 +116,13 @@ class Dashboard:
                                                 'font-size': '85%'
                                             },
                                             style={"margin-left": "15px"}
-                                        )
+                                        ),
+                                        style={}
                                     )],
                                     align="right",
                                     justify="end",
-                                    style={'float': 'right', 'position': 'absolute', 'right': 0, 'text-align': 'right'},
+                                    style={'float': 'right', 'position': 'absolute', 'right': 0, 'text-align': 'right',
+                                           },
                                     className="g-0 ms-auto flex-nowrap mt-3 mt-md-0",
                                 )
                                 ]
