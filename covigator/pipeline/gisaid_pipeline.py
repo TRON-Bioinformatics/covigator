@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 import os
+from dataclasses import dataclass
+
 from Bio import SeqIO
 from Bio.Alphabet import IUPAC
 from Bio.Seq import Seq
@@ -14,21 +16,27 @@ from covigator.pipeline.runner import run_command
 MINIMUM_SEQUENCE_SIZE = 5980    # 20 % of the genome, 29903 bp
 
 
+@dataclass
+class GisaidPipelineResult:
+    vcf_path: str
+    fasta_path: str
+    pangolin_path: str
+
+
 class GisaidPipeline:
 
     def __init__(self, config: Configuration):
         self.config = config
 
-    def run(self, sample: SampleGisaid):
+    def run(self, sample: SampleGisaid) -> GisaidPipelineResult:
         logger.info("Processing {}".format(sample.run_accession))
         sample_name = sample.run_accession.replace("/", "_").replace(" ", "-").replace("'", "-").replace("$", "")
         # NOTE: sample folder date/run_accession
         sample_data_folder = os.path.join(
             self.config.storage_folder, sample.date.strftime("%Y%m%d") if sample.date is not None else "nodate",
             sample_name)
-        output_vcf = os.path.join(
-            sample_data_folder,
-            "{name}.assembly.normalized.annotated.vcf.gz".format(name=sample_name))
+        output_vcf = os.path.join(sample_data_folder, "{name}.assembly.vcf.gz".format(name=sample_name))
+        output_pangolin = os.path.join(sample_data_folder, "{name}.assembly.pangolin.csv".format(name=sample_name))
         input_fasta = os.path.join(sample_data_folder, "{}.fasta".format(sample_name))
 
         if not os.path.exists(output_vcf) or self.config.force_pipeline:
@@ -64,4 +72,8 @@ class GisaidPipeline:
             )
             run_command(command, sample_data_folder)
 
-        return output_vcf
+        return GisaidPipelineResult(
+            vcf=output_vcf,
+            fasta=input_fasta,
+            pangolin=output_pangolin
+        )

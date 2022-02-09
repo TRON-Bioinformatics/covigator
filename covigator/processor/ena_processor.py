@@ -19,6 +19,7 @@ from covigator.pipeline.downloader import Downloader
 from covigator.pipeline.ena_pipeline import Pipeline
 from covigator.pipeline.vcf_loader import VcfLoader
 
+
 NUMBER_RETRIES_DOWNLOADER = 10
 
 
@@ -68,18 +69,18 @@ class EnaProcessor(AbstractProcessor):
         job.analysed_at = datetime.now()
 
         # stores the paths to all files output by pipeline
-        job.lofreq_vcf = pipeline_result.lofreq_vcf
-        job.ivar_vcf = pipeline_result.ivar_vcf
-        job.gatk_vcf = pipeline_result.gatk_vcf
-        job.bcftools_vcf = pipeline_result.bcftools_vcf
-        job.lofreq_pangolin = pipeline_result.lofreq_pangolin
-        job.ivar_pangolin = pipeline_result.ivar_pangolin
-        job.gatk_pangolin = pipeline_result.gatk_pangolin
-        job.bcftools_pangolin = pipeline_result.bcftools_pangolin
+        job.lofreq_vcf_path = pipeline_result.lofreq_vcf
+        job.ivar_vcf_path = pipeline_result.ivar_vcf
+        job.gatk_vcf_path = pipeline_result.gatk_vcf
+        job.bcftools_vcf_path = pipeline_result.bcftools_vcf
+        job.lofreq_pangolin_path = pipeline_result.lofreq_pangolin
+        job.ivar_pangolin_path = pipeline_result.ivar_pangolin
+        job.gatk_pangolin_path = pipeline_result.gatk_pangolin
+        job.bcftools_pangolin_path = pipeline_result.bcftools_pangolin
         job.fastp_path = pipeline_result.fastp_qc
         job.horizontal_coverage_path = pipeline_result.horizontal_coverage
         job.vertical_coverage_path = pipeline_result.vertical_coverage
-        job.deduplication_metrics = pipeline_result.deduplication_metrics
+        job.deduplication_metrics_path = pipeline_result.deduplication_metrics
 
         # load FAST JSON into the DB
         job.qc = json.load(open(pipeline_result.fastp_qc))
@@ -93,7 +94,7 @@ class EnaProcessor(AbstractProcessor):
     @staticmethod
     def load_deduplication_metrics(job: JobEna):
         try:
-            data = pd.read_csv(job.deduplication_metrics, sep="\t", skiprows=6)
+            data = pd.read_csv(job.deduplication_metrics_path, sep="\t", skiprows=6)
             job.percent_duplication = float(data.PERCENT_DUPLICATION.loc[0])
             job.unpaired_reads_examined = float(data.UNPAIRED_READS_EXAMINED.loc[0])
             job.read_pairs_examined = float(data.READ_PAIRS_EXAMINED.loc[0])
@@ -108,7 +109,7 @@ class EnaProcessor(AbstractProcessor):
     @staticmethod
     def load_lofreq_pangolin(job: JobEna):
         try:
-            data = pd.read_csv(job.lofreq_pangolin)
+            data = pd.read_csv(job.lofreq_pangolin_path)
             job.pangolin_lineage = float(data.lineage.loc[0])
             job.pangolin_conflict = float(data.conflict.loc[0])
             job.pangolin_ambiguity_score = float(data.ambiguity_score.loc[0])
@@ -140,13 +141,13 @@ class EnaProcessor(AbstractProcessor):
 
     @staticmethod
     def load(job: JobEna, queries: Queries, config: Configuration):
-        if job.mean_mapping_quality < 10 or job.mean_base_quality < 10:
+        if job.mean_mapping_quality < config.mean_mq_thr or job.mean_base_quality < config.mean_bq_thr:
             raise CovigatorExcludedSampleBadQualityReads("Mean MQ: {}; mean BCQ: {}".format(
                 job.mean_mapping_quality, job.mean_base_quality))
-        if job.coverage < 20.0:
+        if job.coverage < config.horizontal_coverage_thr:
             raise CovigatorExcludedSampleNarrowCoverage("Horizontal coverage {} %".format(job.coverage))
         VcfLoader().load(
-            vcf_file=job.lofreq_vcf, sample=Sample(id=job.run_accession, source=DataSource.ENA), session=queries.session)
+            vcf_file=job.lofreq_vcf_path, sample=Sample(id=job.run_accession, source=DataSource.ENA), session=queries.session)
         job.loaded_at = datetime.now()
 
     @staticmethod

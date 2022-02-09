@@ -7,15 +7,15 @@ from sqlalchemy.orm import Session
 
 from covigator import MISSENSE_VARIANT
 from covigator.database.model import Variant as CovigatorVariant, VariantObservation, Sample, \
-    SubclonalVariantObservation, SampleEna, SampleGisaid, DataSource, VariantType
+    SubclonalVariantObservation, SampleEna, SampleGisaid, DataSource, VariantType, GisaidVariantObservation, \
+    LowFrequencyVariantObservation, GisaidVariant
 from covigator.database.queries import Queries
-from covigator.exceptions import CovigatorNotSupportedVariant, CovigatorExcludedSampleTooManyMutations
+from covigator.exceptions import CovigatorNotSupportedVariant
 
 
 class VcfLoader:
 
-    def load(self, vcf_file: str, sample: Sample, session: Session,
-             max_snvs=None, max_deletions=None, max_insertions=None):
+    def load(self, vcf_file: str, sample: Sample, session: Session):
 
         assert vcf_file is not None or vcf_file == "", "Missing VCF file provided to VcfLoader"
         assert os.path.exists(vcf_file) and os.path.isfile(vcf_file), "Non existing VCF file provided to VcfLoader"
@@ -24,6 +24,7 @@ class VcfLoader:
 
         observed_variants = []
         subclonal_observed_variants = []
+        low_frequency_observed_variants = []
         specific_sample = Queries(session=session).find_sample_by_accession(
             run_accession=sample.id, source=sample.source)
         assert specific_sample is not None, "Cannot find sample in database"
@@ -32,36 +33,29 @@ class VcfLoader:
         variants = [v for v in VCF(vcf_file)]
 
         # counts variants
-        count_snvs = len([v for v in variants if v.FILTER is None and len(v.REF) == 1 and len(v.ALT[0]) == 1])
-        count_insertions = len([v for v in variants if v.FILTER is None and len(v.REF) == 1 and len(v.ALT[0]) > 1])
-        count_deletions = len([v for v in variants if v.FILTER is None and len(v.REF) > 1 and len(v.ALT[0]) == 1])
-        too_many_snvs = max_snvs is not None and count_snvs > max_snvs
-        too_many_insertions = max_insertions is not None and count_insertions > max_insertions
-        too_many_deletions = max_deletions is not None and count_deletions > max_deletions
-        if too_many_snvs or too_many_deletions or too_many_insertions:
-            raise CovigatorExcludedSampleTooManyMutations(
-                "Too many variants: SNVs={}, insertions={}, deletions={}".format(
-                    count_snvs, count_insertions, count_deletions))
-
-        specific_sample.count_snvs = count_snvs
-        specific_sample.count_deletions = count_deletions
-        specific_sample.count_insertions = count_insertions
+        specific_sample.count_snvs = len([v for v in variants if v.FILTER is None and len(v.REF) == 1 and len(v.ALT[0]) == 1])
+        specific_sample.count_deletions = len([v for v in variants if v.FILTER is None and len(v.REF) == 1 and len(v.ALT[0]) > 1])
+        specific_sample.count_insertions = len([v for v in variants if v.FILTER is None and len(v.REF) > 1 and len(v.ALT[0]) == 1])
 
         if sample.source == DataSource.ENA:
-            count_subclonal_snvs = len([v for v in variants if v.FILTER in ["LOW_FREQUENCY", "SUBCLONAL"]
+            specific_sample.count_subclonal_snvs = len([v for v in variants if v.FILTER == "SUBCLONAL"
                                         and len(v.REF) == 1 and len(v.ALT[0]) == 1])
-            count_subclonal_deletions = len([v for v in variants if v.FILTER in ["LOW_FREQUENCY", "SUBCLONAL"]
+            specific_sample.count_subclonal_deletions = len([v for v in variants if v.FILTER == "SUBCLONAL"
                                              and len(v.REF) > 1 and len(v.ALT[0]) == 1])
-            count_subclonal_insertions = len([v for v in variants if v.FILTER in ["LOW_FREQUENCY", "SUBCLONAL"]
+            specific_sample.count_subclonal_insertions = len([v for v in variants if v.FILTER == "SUBCLONAL"
                                               and len(v.REF) == 1 and len(v.ALT[0]) > 1])
-            specific_sample.count_subclonal_snvs = count_subclonal_snvs
-            specific_sample.count_subclonal_deletions = count_subclonal_deletions
-            specific_sample.count_subclonal_insertions = count_subclonal_insertions
+            specific_sample.count_low_frequency_snvs = len([v for v in variants if v.FILTER  == "LOW_FREQUENCY"
+                                        and len(v.REF) == 1 and len(v.ALT[0]) == 1])
+            specific_sample.count_low_frequency_deletions = len([v for v in variants if v.FILTER == "LOW_FREQUENCY"
+                                             and len(v.REF) > 1 and len(v.ALT[0]) == 1])
+            specific_sample.count_low_frequency_insertions = len([v for v in variants if v.FILTER == "LOW_FREQUENCY"
+                                              and len(v.REF) == 1 and len(v.ALT[0]) > 1])
 
         variant: Variant
         for variant in variants:
             if variant.FILTER is None or variant.FILTER in ["LOW_FREQUENCY", "SUBCLONAL"]:
-                covigator_variant = self._parse_variant(variant)
+                covigator_variant = self._parse_variant(
+                    variant, CovigatorVariant if sample.source == DataSource.ENA else GisaidVariant)
                 if covigator_variant:
                     # NOTE: merge checks for existence adds or updates it if required
                     # this variant is not part of the rollback if something else fails
@@ -71,19 +65,30 @@ class VcfLoader:
                     except (IntegrityError, InvalidRequestError):
                         # do nothing the variant was just added by another process between merge and commit
                         session.rollback()
-                if variant.FILTER is None:
+                if sample.source == DataSource.GISAID:
+                    observed_variants.append(
+                        self._parse_variant_observation(variant, specific_sample, sample.source, covigator_variant,
+                                                        GisaidVariantObservation))
+                elif variant.FILTER is None:    # ENA clonal
                     # only stores clonal high quality variants in this table
                     observed_variants.append(
-                        self._parse_variant_observation(variant, specific_sample, sample.source, covigator_variant, VariantObservation))
-                elif variant.FILTER in ["LOW_FREQUENCY", "SUBCLONAL"]:
+                        self._parse_variant_observation(
+                            variant, specific_sample, sample.source, covigator_variant, VariantObservation))
+                elif variant.FILTER == "SUBCLONAL":
                     subclonal_observed_variants.append(
-                        self._parse_variant_observation(variant, specific_sample, sample.source, covigator_variant, SubclonalVariantObservation))
+                        self._parse_variant_observation(
+                            variant, specific_sample, sample.source, covigator_variant, SubclonalVariantObservation))
+                elif variant.FILTER == "LOW_FREQUENCY":
+                    low_frequency_observed_variants.append(
+                        self._parse_variant_observation(
+                            variant, specific_sample, sample.source, covigator_variant, LowFrequencyVariantObservation))
         session.add_all(observed_variants)
         session.add_all(subclonal_observed_variants)
+        session.add_all(low_frequency_observed_variants)
         # NOTE: commit will happen afterwards when the job status is updated
 
-    def _parse_variant(self, variant: Variant) -> CovigatorVariant:
-        parsed_variant = CovigatorVariant(
+    def _parse_variant(self, variant: Variant, klass) -> Union[CovigatorVariant, GisaidVariant]:
+        parsed_variant = klass(
             chromosome=variant.CHROM,
             position=variant.POS,
             reference=variant.REF,
@@ -98,14 +103,14 @@ class VcfLoader:
         self._parse_additional_annotations(covigator_variant=parsed_variant, vcf_variant=variant)
         return parsed_variant
 
-    def _parse_additional_annotations(self, covigator_variant: CovigatorVariant, vcf_variant: Variant):
+    def _parse_additional_annotations(self, covigator_variant: Union[CovigatorVariant, GisaidVariant], vcf_variant: Variant):
         covigator_variant.cons_hmm_sars_cov_2 = vcf_variant.INFO.get("CONS_HMM_SARS_COV_2")
         covigator_variant.cons_hmm_sarbecovirus = vcf_variant.INFO.get("CONS_HMM_SARBECOVIRUS")
         covigator_variant.cons_hmm_vertebrate_cov = vcf_variant.INFO.get("CONS_HMM_VERTEBRATE_COV")
         covigator_variant.pfam_name = vcf_variant.INFO.get("PFAM_NAME")
         covigator_variant.pfam_description = vcf_variant.INFO.get("PFAM_DESCRIPTION")
 
-    def _parse_snpeff_annotations(self, covigator_variant: CovigatorVariant, vcf_variant: Variant):
+    def _parse_snpeff_annotations(self, covigator_variant: Union[CovigatorVariant, GisaidVariant], vcf_variant: Variant):
         ann = vcf_variant.INFO.get("ANN")
         if ann is not None:
             annotations = ann.split(",")
@@ -133,7 +138,8 @@ class VcfLoader:
                         covigator_variant.position_amino_acid = int(match.group(2))
 
     def _parse_variant_observation(
-            self, variant: Variant, sample: Union[SampleEna, SampleGisaid], source: DataSource, covigator_variant: CovigatorVariant, klass):
+            self, variant: Variant, sample: Union[SampleEna, SampleGisaid], source: DataSource,
+            covigator_variant: Union[CovigatorVariant, GisaidVariant], klass):
 
         dp4 = variant.INFO.get("DP4")
         return klass(
@@ -147,12 +153,13 @@ class VcfLoader:
             alternate=variant.ALT[0],
             quality=variant.QUAL,
             filter=variant.FILTER,
-            dp=variant.INFO.get("DP"),
+            dp=variant.INFO.get("vafator_dp"),
             dp4_ref_forward=dp4[0] if dp4 else None,
             dp4_ref_reverse=dp4[1] if dp4 else None,
             dp4_alt_forward=dp4[2] if dp4 else None,
             dp4_alt_reverse=dp4[3] if dp4 else None,
-            vaf=variant.INFO.get("AF"),
+            vaf=variant.INFO.get("vafator_af"),
+            ac=variant.INFO.get("vafator_ac"),
             strand_bias=variant.INFO.get("SB"),
             # denormalized fields
             annotation=covigator_variant.annotation,

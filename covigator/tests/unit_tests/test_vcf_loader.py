@@ -88,12 +88,3 @@ class VcfLoaderTests(AbstractTest):
         self.assertEqual(variant_observation.reference, "A")
         self.assertEqual(variant_observation.alternate, "G")
         self.assertEqual(self.session.query(SubclonalVariantObservation).count(), 2)
-
-    def test_too_many_mutations(self):
-        vcf_file = pkg_resources.resource_filename(covigator.tests.__name__, "resources/snpeff.vcf")
-        self.session.commit()
-        try:
-            VcfLoader().load(vcf_file, self.sample2, self.session, max_snvs=0)
-            self.assertTrue(False)
-        except CovigatorExcludedSampleTooManyMutations:
-            self.assertTrue(True)

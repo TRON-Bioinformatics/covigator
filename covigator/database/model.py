@@ -19,7 +19,12 @@ LOG_TABLE_NAME = get_table_versioned_name('log', config=config)
 VARIANT_COOCCURRENCE_TABLE_NAME = get_table_versioned_name('variant_cooccurrence', config=config)
 VARIANT_OBSERVATION_TABLE_NAME = get_table_versioned_name('variant_observation', config=config)
 SUBCLONAL_VARIANT_OBSERVATION_TABLE_NAME = get_table_versioned_name('subclonal_variant_observation', config=config)
+LOW_FREQUENCY_VARIANT_OBSERVATION_TABLE_NAME = get_table_versioned_name('low_frequency_variant_observation', config=config)
+GISAID_VARIANT_OBSERVATION_TABLE_NAME = get_table_versioned_name('gisaid_variant_observation', config=config)
 VARIANT_TABLE_NAME = get_table_versioned_name('variant', config=config)
+SUBCLONAL_VARIANT_TABLE_NAME = get_table_versioned_name('subclonal_variant', config=config)
+LOW_FREQUENCY_VARIANT_TABLE_NAME = get_table_versioned_name('low_frequency_variant', config=config)
+GISAID_VARIANT_TABLE_NAME = get_table_versioned_name('gisaid_variant', config=config)
 JOB_ENA_TABLE_NAME = get_table_versioned_name('job_ena', config=config)
 JOB_GISAID_TABLE_NAME = get_table_versioned_name('job_gisaid', config=config)
 SAMPLE_TABLE_NAME = get_table_versioned_name('sample', config=config)
@@ -204,6 +209,9 @@ class SampleEna(Base):
     count_subclonal_snvs = Column(Integer)
     count_subclonal_insertions = Column(Integer)
     count_subclonal_deletions = Column(Integer)
+    count_low_frequency_snvs = Column(Integer)
+    count_low_frequency_insertions = Column(Integer)
+    count_low_frequency_deletions = Column(Integer)
 
     def get_fastqs_ftp(self) -> List:
         return self.fastq_ftp.split(SEPARATOR) if self.fastq_ftp is not None else []
@@ -243,7 +251,25 @@ class JobGisaid(Base):
     loaded_at = Column(DateTime(timezone=True))
     failed_at = Column(DateTime(timezone=True))
     error_message = Column(String)
-    vcf_path = Column(String)
+
+    # output files
+    vcf_path= Column(String)
+    fasta_path = Column(String)
+    pangolin_path = Column(String)
+
+    # pango output (corresponding only to LoFreq)
+    pangolin_lineage = Column(String)
+    pangolin_conflict = Column(Float)
+    pangolin_ambiguity_score = Column(Float)
+    pangolin_scorpio_call = Column(String)
+    pangolin_scorpio_support = Column(Float)
+    pangolin_scorpio_conflict = Column(Float)
+    pangolin_version = Column(String)
+    pangolin_pangolin_version = Column(String)
+    pangolin_pangoLEARN_version = Column(String)
+    pangolin_pango_version = Column(String)
+    pangolin_status = Column(String)
+    pangolin_note = Column(String)
 
 
 class JobEna(Base):
@@ -268,16 +294,16 @@ class JobEna(Base):
 
     # local files storage
     fastq_path = Column(String)     # the local path where FASTQ files are stored in semi colon separated list
-    lofreq_vcf = Column(String)
-    ivar_vcf = Column(String)
-    gatk_vcf = Column(String)
-    bcftools_vcf = Column(String)
-    lofreq_pangolin = Column(String)
-    ivar_pangolin = Column(String)
-    gatk_pangolin = Column(String)
-    bcftools_pangolin = Column(String)
+    lofreq_vcf_path = Column(String)
+    ivar_vcf_path = Column(String)
+    gatk_vcf_path = Column(String)
+    bcftools_vcf_path = Column(String)
+    lofreq_pangolin_path = Column(String)
+    ivar_pangolin_path = Column(String)
+    gatk_pangolin_path = Column(String)
+    bcftools_pangolin_path = Column(String)
     fastp_path = Column(String)
-    deduplication_metrics = Column(String)
+    deduplication_metrics_path = Column(String)
     horizontal_coverage_path = Column(String)
     vertical_coverage_path = Column(String)
 
@@ -394,6 +420,133 @@ class Variant(Base):
         return "{}:{}>{}".format(self.position, self.reference, self.alternate)
 
 
+class SubclonalVariant(Base):
+
+    __tablename__ = SUBCLONAL_VARIANT_TABLE_NAME
+
+    variant_id = Column(String, primary_key=True)
+    chromosome = Column(String)
+    position = Column(Integer, index=True)
+    reference = Column(String)
+    alternate = Column(String)
+    overlaps_multiple_genes = Column(Boolean, default=False)
+
+    annotation = Column(String, index=True)
+    annotation_highest_impact = Column(String, index=True)
+    annotation_impact = Column(String, index=True)
+    gene_name = Column(String, index=True)
+    gene_id = Column(String)
+    biotype = Column(String)
+    hgvs_c = Column(String)
+    hgvs_p = Column(String)
+    cdna_pos_length = Column(String)
+    cds_pos_length = Column(String)
+    aa_pos_length = Column(String)
+
+    # derived annotations
+    variant_type = Column(Enum(VariantType, name=VariantType.__constraint_name__))
+    length = Column(Integer)
+    reference_amino_acid = Column(String)
+    alternate_amino_acid = Column(String)
+    position_amino_acid = Column(Integer)
+
+    # ConsHMM conservation annotations
+    cons_hmm_sars_cov_2 = Column(Float)
+    cons_hmm_sarbecovirus = Column(Float)
+    cons_hmm_vertebrate_cov = Column(Float)
+
+    # Pfam protein domains
+    pfam_name = Column(String)
+    pfam_description = Column(String)
+
+    def get_variant_id(self):
+        return "{}:{}>{}".format(self.position, self.reference, self.alternate)
+
+
+class LowFrequencyVariant(Base):
+    __tablename__ = LOW_FREQUENCY_VARIANT_TABLE_NAME
+
+    variant_id = Column(String, primary_key=True)
+    chromosome = Column(String)
+    position = Column(Integer, index=True)
+    reference = Column(String)
+    alternate = Column(String)
+    overlaps_multiple_genes = Column(Boolean, default=False)
+
+    annotation = Column(String, index=True)
+    annotation_highest_impact = Column(String, index=True)
+    annotation_impact = Column(String, index=True)
+    gene_name = Column(String, index=True)
+    gene_id = Column(String)
+    biotype = Column(String)
+    hgvs_c = Column(String)
+    hgvs_p = Column(String)
+    cdna_pos_length = Column(String)
+    cds_pos_length = Column(String)
+    aa_pos_length = Column(String)
+
+    # derived annotations
+    variant_type = Column(Enum(VariantType, name=VariantType.__constraint_name__))
+    length = Column(Integer)
+    reference_amino_acid = Column(String)
+    alternate_amino_acid = Column(String)
+    position_amino_acid = Column(Integer)
+
+    # ConsHMM conservation annotations
+    cons_hmm_sars_cov_2 = Column(Float)
+    cons_hmm_sarbecovirus = Column(Float)
+    cons_hmm_vertebrate_cov = Column(Float)
+
+    # Pfam protein domains
+    pfam_name = Column(String)
+    pfam_description = Column(String)
+
+    def get_variant_id(self):
+        return "{}:{}>{}".format(self.position, self.reference, self.alternate)
+
+
+class GisaidVariant(Base):
+    __tablename__ = GISAID_VARIANT_TABLE_NAME
+
+    variant_id = Column(String, primary_key=True)
+    chromosome = Column(String)
+    position = Column(Integer, index=True)
+    reference = Column(String)
+    alternate = Column(String)
+    overlaps_multiple_genes = Column(Boolean, default=False)
+
+    annotation = Column(String, index=True)
+    annotation_highest_impact = Column(String, index=True)
+    annotation_impact = Column(String, index=True)
+    gene_name = Column(String, index=True)
+    gene_id = Column(String)
+    biotype = Column(String)
+    hgvs_c = Column(String)
+    hgvs_p = Column(String)
+    cdna_pos_length = Column(String)
+    cds_pos_length = Column(String)
+    aa_pos_length = Column(String)
+
+    # derived annotations
+    variant_type = Column(Enum(VariantType, name=VariantType.__constraint_name__))
+    length = Column(Integer)
+    reference_amino_acid = Column(String)
+    alternate_amino_acid = Column(String)
+    position_amino_acid = Column(Integer)
+
+    # ConsHMM conservation annotations
+    cons_hmm_sars_cov_2 = Column(Float)
+    cons_hmm_sarbecovirus = Column(Float)
+    cons_hmm_vertebrate_cov = Column(Float)
+
+    # Pfam protein domains
+    pfam_name = Column(String)
+    pfam_description = Column(String)
+
+    def get_variant_id(self):
+        return "{}:{}>{}".format(self.position, self.reference, self.alternate)
+
+
 class VariantObservation(Base):
     """
     A variant observation in a particular sample. This contains all annotations of a specific observation of a variant.
@@ -419,6 +572,7 @@ class VariantObservation(Base):
     ##INFO=<ID=HRUN,Number=1,Type=Integer,Description="Homopolymer length to the right of report indel position">
     """
     dp = Column(Integer)
+    ac = Column(Integer)
     dp4_ref_forward = Column(Integer)
     dp4_ref_reverse = Column(Integer)
     dp4_alt_forward = Column(Integer)
@@ -484,16 +638,8 @@ class SubclonalVariantObservation(Base):
     alternate = Column(String)
     quality = Column(Float)
     filter = Column(String)
-    """
-    ##INFO=<ID=DP,Number=1,Type=Integer,Description="Raw Depth">
-    ##INFO=<ID=AF,Number=1,Type=Float,Description="Allele Frequency">
-    ##INFO=<ID=SB,Number=1,Type=Integer,Description="Phred-scaled strand bias at this position">
-    ##INFO=<ID=DP4,Number=4,Type=Integer,Description="Counts for ref-forward bases, ref-reverse, alt-forward and alt-reverse bases">
-    ##INFO=<ID=INDEL,Number=0,Type=Flag,Description="Indicates that the variant is an INDEL.">
-    ##INFO=<ID=CONSVAR,Number=0,Type=Flag,Description="Indicates that the variant is a consensus variant (as opposed to a low frequency variant).">
-    ##INFO=<ID=HRUN,Number=1,Type=Integer,Description="Homopolymer length to the right of report indel position">
-    """
     dp = Column(Integer)
+    ac = Column(Integer)
     dp4_ref_forward = Column(Integer)
     dp4_ref_reverse = Column(Integer)
     dp4_alt_forward = Column(Integer)
@@ -530,12 +676,136 @@ class SubclonalVariantObservation(Base):
     pfam_description = Column(String)
 
     ForeignKeyConstraint([sample, source], [Sample.id, Sample.source])
-    ForeignKeyConstraint([variant_id], [Variant.variant_id])
+    ForeignKeyConstraint([variant_id], [SubclonalVariant.variant_id])
 
     __table_args__ = (
         Index("{}_index_position".format(SUBCLONAL_VARIANT_OBSERVATION_TABLE_NAME), "position"),
         Index("{}_index_annotation_vaf".format(SUBCLONAL_VARIANT_OBSERVATION_TABLE_NAME), "annotation_highest_impact", "vaf"),
         Index("{}_index_vaf".format(SUBCLONAL_VARIANT_OBSERVATION_TABLE_NAME), "vaf"),
+    )
+
+
+class LowFrequencyVariantObservation(Base):
+    """
+    A variant observation in a particular sample. This contains all annotations of a specific observation of a variant.
+    """
+    __tablename__ = LOW_FREQUENCY_VARIANT_OBSERVATION_TABLE_NAME
+
+    source = Column(Enum(DataSource, name=DataSource.__constraint_name__), primary_key=True)
+    sample = Column(String, primary_key=True)
+    variant_id = Column(String, primary_key=True)
+    chromosome = Column(String)
+    position = Column(Integer)
+    reference = Column(String)
+    alternate = Column(String)
+    quality = Column(Float)
+    filter = Column(String)
+    dp = Column(Integer)
+    ac = Column(Integer)
+    dp4_ref_forward = Column(Integer)
+    dp4_ref_reverse = Column(Integer)
+    dp4_alt_forward = Column(Integer)
+    dp4_alt_reverse = Column(Integer)
+    vaf = Column(Float)
+    strand_bias = Column(Integer)
+
+    # fields replicated from Variant for performance reasons
+    annotation = Column(String)
+    annotation_impact = Column(String)
+    biotype = Column(String)
+    annotation_highest_impact = Column(String, index=True)
+    gene_name = Column(String)
+    hgvs_c = Column(String)
+    hgvs_p = Column(String)
+
+    # fields replicated from sample for performance reasons
+    date = Column(Date)
+
+    # derived annotations
+    variant_type = Column(Enum(VariantType, name=VariantType.__constraint_name__))
+    length = Column(Integer)
+    reference_amino_acid = Column(String)
+    alternate_amino_acid = Column(String)
+    position_amino_acid = Column(Integer)
+
+    # ConsHMM conservation annotations
+    cons_hmm_sars_cov_2 = Column(Float)
+    cons_hmm_sarbecovirus = Column(Float)
+    cons_hmm_vertebrate_cov = Column(Float)
+
+    # Pfam protein domains
+    pfam_name = Column(String)
+    pfam_description = Column(String)
+
+    ForeignKeyConstraint([sample, source], [Sample.id, Sample.source])
+    ForeignKeyConstraint([variant_id], [LowFrequencyVariant.variant_id])
+
+    __table_args__ = (
+        Index("{}_index_position".format(LOW_FREQUENCY_VARIANT_OBSERVATION_TABLE_NAME), "position"),
+        Index("{}_index_annotation_vaf".format(LOW_FREQUENCY_VARIANT_OBSERVATION_TABLE_NAME), "annotation_highest_impact", "vaf"),
+        Index("{}_index_vaf".format(LOW_FREQUENCY_VARIANT_OBSERVATION_TABLE_NAME), "vaf"),
+    )
+
+
+class GisaidVariantObservation(Base):
+    """
+    A variant observation in a particular sample. This contains all annotations of a specific observation of a variant.
+    """
+    __tablename__ = GISAID_VARIANT_OBSERVATION_TABLE_NAME
+
+    source = Column(Enum(DataSource, name=DataSource.__constraint_name__), primary_key=True)
+    sample = Column(String, primary_key=True)
+    variant_id = Column(String, primary_key=True)
+    chromosome = Column(String)
+    position = Column(Integer)
+    reference = Column(String)
+    alternate = Column(String)
+    quality = Column(Float)
+    filter = Column(String)
+    dp = Column(Integer)
+    ac = Column(Integer)
+    dp4_ref_forward = Column(Integer)
+    dp4_ref_reverse = Column(Integer)
+    dp4_alt_forward = Column(Integer)
+    dp4_alt_reverse = Column(Integer)
+    vaf = Column(Float)
+    strand_bias = Column(Integer)
+
+    # fields replicated from Variant for performance reasons
+    annotation = Column(String)
+    annotation_impact = Column(String)
+    biotype = Column(String)
+    annotation_highest_impact = Column(String, index=True)
+    gene_name = Column(String)
+    hgvs_c = Column(String)
+    hgvs_p = Column(String)
+
+    # fields replicated from sample for performance reasons
+    date = Column(Date)
+
+    # derived annotations
+    variant_type = Column(Enum(VariantType, name=VariantType.__constraint_name__))
+    length = Column(Integer)
+    reference_amino_acid = Column(String)
+    alternate_amino_acid = Column(String)
+    position_amino_acid = Column(Integer)
+
+    # ConsHMM conservation annotations
+    cons_hmm_sars_cov_2 = Column(Float)
+    cons_hmm_sarbecovirus = Column(Float)
+    cons_hmm_vertebrate_cov = Column(Float)
+
+    # Pfam protein domains
+    pfam_name = Column(String)
+    pfam_description = Column(String)
+
+    ForeignKeyConstraint([sample, source], [Sample.id, Sample.source])
+    ForeignKeyConstraint([variant_id], [GisaidVariant.variant_id])
+
+    __table_args__ = (
+        Index("{}_index_position".format(GISAID_VARIANT_OBSERVATION_TABLE_NAME), "position"),
+        Index("{}_index_annotation_vaf".format(GISAID_VARIANT_OBSERVATION_TABLE_NAME), "annotation_highest_impact", "vaf"),
+        Index("{}_index_vaf".format(GISAID_VARIANT_OBSERVATION_TABLE_NAME), "vaf"),
     )
 
 
