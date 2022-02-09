@@ -9,6 +9,7 @@ DEFAULT_LOW_COVERAGE_AF_THR = 0.05
 DEFAULT_HORIZONTAL_COVERAGE_THR = 20
 DEFAULT_MEAN_BQ_THR = 10
 DEFAULT_MEAN_MQ_THR = 10
+DEFAULT_MINIMUM_SEQUENCE_SIZE = 5980    # 20 % of the genome, 29903 bp
 
 
 class Configuration:
@@ -54,6 +55,7 @@ class Configuration:
     ENV_COVIGATOR_MAX_SNVS = "COVIGATOR_MAX_SNVS"
     ENV_COVIGATOR_MAX_INSERTIONS = "COVIGATOR_MAX_INSERTIONS"
     ENV_COVIGATOR_MAX_DELETIONS = "COVIGATOR_MAX_DELETIONS"
+    ENV_COVIGATOR_MIN_SEQUENCE_SIZE = "COVIGATOR_MIN_SEQUENCE_SIZE"
 
     def __init__(self, verbose=True):
         # local storage
@@ -109,6 +111,8 @@ class Configuration:
         self.max_snvs = self.load_numeric_value(variable=self.ENV_COVIGATOR_MAX_SNVS, default=76)
         self.max_insertions = self.load_numeric_value(variable=self.ENV_COVIGATOR_MAX_INSERTIONS, default=10)
         self.max_deletions = self.load_numeric_value(variable=self.ENV_COVIGATOR_MAX_DELETIONS, default=10)
+        self.min_sequence_size = self.load_numeric_value(variable=self.ENV_COVIGATOR_MIN_SEQUENCE_SIZE,
+                                                         default=DEFAULT_MINIMUM_SEQUENCE_SIZE)
 
         # NOTE: the defaults are already set in the workflow config
         self.temp_folder = os.getenv(self.ENV_COVIGATOR_TEMP_FOLDER, "/data/covigator-tmp")

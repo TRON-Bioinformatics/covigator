@@ -13,8 +13,6 @@ from covigator.exceptions import CovigatorExcludedAssemblySequence
 from covigator.misc.compression import decompress_sequence
 from covigator.pipeline.runner import run_command
 
-MINIMUM_SEQUENCE_SIZE = 5980    # 20 % of the genome, 29903 bp
-
 
 @dataclass
 class GisaidPipelineResult:
@@ -47,7 +45,7 @@ class GisaidPipeline:
             decompressed_sequence = decompress_sequence(sequence)
 
             # excludes too small sequences
-            if len(decompressed_sequence) < MINIMUM_SEQUENCE_SIZE:
+            if len(decompressed_sequence) < self.config.min_sequence_size:
                 raise CovigatorExcludedAssemblySequence
 
             with open(input_fasta, "w+") as output:
