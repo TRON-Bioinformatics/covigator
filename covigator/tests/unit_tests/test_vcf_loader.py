@@ -1,7 +1,7 @@
 import pkg_resources
 import covigator.tests
 from covigator.database.model import Variant, VariantObservation, Sample, DataSource, SubclonalVariantObservation, \
-    SampleGisaid, SampleEna
+    SampleGisaid, SampleEna, GisaidVariant, GisaidVariantObservation
 from covigator.exceptions import CovigatorExcludedSampleTooManyMutations
 from covigator.pipeline.vcf_loader import VcfLoader
 from covigator.tests.unit_tests.abstract_test import AbstractTest
@@ -72,19 +72,18 @@ class VcfLoaderTests(AbstractTest):
         vcf_file = pkg_resources.resource_filename(covigator.tests.__name__, "resources/snpeff.vcf")
         VcfLoader().load(vcf_file, self.sample2, self.session)
         self.session.commit()
-        self.assertEqual(self.session.query(Variant).count(), 3)
-        self.assertEqual(self.session.query(VariantObservation).count(), 1)
-        variant = self.session.query(Variant).first()
+        self.assertEqual(self.session.query(GisaidVariant).count(), 3)
+        self.assertEqual(self.session.query(GisaidVariantObservation).count(), 3)
+        variant = self.session.query(GisaidVariant).first()
         self.assertEqual(variant.chromosome, "MN908947.3")
         self.assertEqual(variant.position, 23403)
         self.assertEqual(variant.reference, "A")
         self.assertEqual(variant.alternate, "G")
         self.assertEqual(variant.gene_name, "S")
-        variant_observation = self.session.query(VariantObservation).first()
+        variant_observation = self.session.query(GisaidVariantObservation).first()
         self.assertEqual(variant_observation.sample, self.sample2.id)
         self.assertEqual(variant_observation.source, self.sample2.source)
         self.assertEqual(variant_observation.chromosome, "MN908947.3")
         self.assertEqual(variant_observation.position, 23403)
         self.assertEqual(variant_observation.reference, "A")
         self.assertEqual(variant_observation.alternate, "G")
-        self.assertEqual(self.session.query(SubclonalVariantObservation).count(), 2)
