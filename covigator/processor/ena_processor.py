@@ -6,7 +6,8 @@ import pandas as pd
 from covigator.configuration import Configuration
 from covigator.database.queries import Queries
 from covigator.exceptions import CovigatorErrorProcessingCoverageResults, CovigatorExcludedSampleBadQualityReads, \
-    CovigatorExcludedSampleNarrowCoverage
+    CovigatorExcludedSampleNarrowCoverage, CovigatorErrorProcessingPangolinResults, \
+    CovigatorErrorProcessingDeduplicationResults
 from covigator.misc import backoff_retrier
 from covigator.database.model import JobStatus, JobEna, Sample, DataSource
 from covigator.database.database import Database
@@ -62,20 +63,71 @@ class EnaProcessor(AbstractProcessor):
     @staticmethod
     def run_pipeline(job: JobEna, queries: Queries, config: Configuration):
         fastq1, fastq2 = job.get_fastq1_and_fastq2()
-        vcf_path, qc_path, vertical_coverage_path, horizontal_coverage_path = Pipeline(config=config)\
+        pipeline_result = Pipeline(config=config)\
             .run(run_accession=job.run_accession, fastq1=fastq1, fastq2=fastq2)
         job.analysed_at = datetime.now()
-        job.vcf_path = vcf_path
-        job.qc_path = qc_path
-        job.qc = json.load(open(qc_path))
-        job.horizontal_coverage_path = horizontal_coverage_path
-        job.vertical_coverage_path = vertical_coverage_path
-        EnaProcessor.load_coverage_results(horizontal_coverage_path, job)
+
+        # stores the paths to all files output by pipeline
+        job.lofreq_vcf = pipeline_result.lofreq_vcf
+        job.ivar_vcf = pipeline_result.ivar_vcf
+        job.gatk_vcf = pipeline_result.gatk_vcf
+        job.bcftools_vcf = pipeline_result.bcftools_vcf
+        job.lofreq_pangolin = pipeline_result.lofreq_pangolin
+        job.ivar_pangolin = pipeline_result.ivar_pangolin
+        job.gatk_pangolin = pipeline_result.gatk_pangolin
+        job.bcftools_pangolin = pipeline_result.bcftools_pangolin
+        job.fastp_path = pipeline_result.fastp_qc
+        job.horizontal_coverage_path = pipeline_result.horizontal_coverage
+        job.vertical_coverage_path = pipeline_result.vertical_coverage
+        job.deduplication_metrics = pipeline_result.deduplication_metrics
+
+        # load FAST JSON into the DB
+        job.qc = json.load(open(pipeline_result.fastp_qc))
+        # load horizontal coverage values in the database
+        EnaProcessor.load_coverage_results(job)
+        # load deduplication metrics
+        EnaProcessor.load_deduplication_metrics(job)
+        # load pangolin results
+        EnaProcessor.load_lofreq_pangolin(job)
 
     @staticmethod
-    def load_coverage_results(horizontal_coverage_path, job):
+    def load_deduplication_metrics(job: JobEna):
         try:
-            data = pd.read_csv(horizontal_coverage_path, sep="\t")
+            data = pd.read_csv(job.deduplication_metrics, sep="\t", skiprows=6)
+            job.percent_duplication = float(data.PERCENT_DUPLICATION.loc[0])
+            job.unpaired_reads_examined = float(data.UNPAIRED_READS_EXAMINED.loc[0])
+            job.read_pairs_examined = float(data.READ_PAIRS_EXAMINED.loc[0])
+            job.secondary_or_supplementary_reads = float(data.SECONDARY_OR_SUPPLEMENTARY_RDS.loc[0])
+            job.unmapped_reads = float(data.UNMAPPED_READS.loc[0])
+            job.unpaired_read_duplicates = float(data.UNPAIRED_READ_DUPLICATES.loc[0])
+            job.read_pair_duplicates = float(data.READ_PAIR_DUPLICATES.loc[0])
+            job.read_pair_optical_duplicates = float(data.READ_PAIR_OPTICAL_DUPLICATES.loc[0])
+        except Exception as e:
+            raise CovigatorErrorProcessingDeduplicationResults(e)
+
+    @staticmethod
+    def load_lofreq_pangolin(job: JobEna):
+        try:
+            data = pd.read_csv(job.lofreq_pangolin)
+            job.pangolin_lineage = float(data.lineage.loc[0])
+            job.pangolin_conflict = float(data.conflict.loc[0])
+            job.pangolin_ambiguity_score = float(data.ambiguity_score.loc[0])
+            job.pangolin_scorpio_call = float(data.scorpio_call.loc[0])
+            job.pangolin_scorpio_support = float(data.scorpio_support.loc[0])
+            job.pangolin_scorpio_conflict = float(data.scorpio_conflict.loc[0])
+            job.pangolin_version = float(data.version.loc[0])
+            job.pangolin_pangolin_version = float(data.pangolin_version.loc[0])
+            job.pangolin_pangoLEARN_version = float(data.pangoLEARN_version.loc[0])
+            job.pangolin_pango_version = float(data.pango_version.loc[0])
+            job.pangolin_status = float(data.status.loc[0])
+            job.pangolin_note = float(data.note.loc[0])
+        except Exception as e:
+            raise CovigatorErrorProcessingPangolinResults(e)
+
+    @staticmethod
+    def load_coverage_results(job: JobEna):
+        try:
+            data = pd.read_csv(job.horizontal_coverage_path, sep="\t")
             job.mean_depth = float(data.meandepth.loc[0])
             job.mean_base_quality = float(data.meanbaseq.loc[0])
             job.mean_mapping_quality = float(data.meanmapq.loc[0])
@@ -94,7 +146,7 @@ class EnaProcessor(AbstractProcessor):
         if job.coverage < 20.0:
             raise CovigatorExcludedSampleNarrowCoverage("Horizontal coverage {} %".format(job.coverage))
         VcfLoader().load(
-            vcf_file=job.vcf_path, sample=Sample(id=job.run_accession, source=DataSource.ENA), session=queries.session)
+            vcf_file=job.lofreq_vcf, sample=Sample(id=job.run_accession, source=DataSource.ENA), session=queries.session)
         job.loaded_at = datetime.now()
 
     @staticmethod

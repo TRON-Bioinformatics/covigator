@@ -1,8 +1,28 @@
 import os
+from dataclasses import dataclass
 from pathlib import Path
 from logzero import logger
 from covigator.configuration import Configuration
 from covigator.pipeline.runner import run_command
+
+
+@dataclass
+class PipelineResult:
+    # VCF
+    lofreq_vcf: str
+    ivar_vcf:  str
+    gatk_vcf: str
+    bcftools_vcf: str
+    # QC
+    fastp_qc: str
+    vertical_coverage: str
+    horizontal_coverage: str
+    deduplication_metrics: str
+    # pangolin results
+    lofreq_pangolin: str
+    ivar_pangolin: str
+    gatk_pangolin: str
+    bcftools_pangolin: str
 
 
 class Pipeline:
@@ -12,24 +32,41 @@ class Pipeline:
         assert self.config.reference_genome is not None and os.path.exists(self.config.reference_genome), \
             "Please configure the reference genome in the variable {}".format(self.config.ENV_COVIGATOR_REF_FASTA)
 
-    def run(self, run_accession: str, fastq1: str, fastq2: str = None):
+    def run(self, run_accession: str, fastq1: str, fastq2: str = None) -> PipelineResult:
 
         logger.info("Processing {} and {}".format(fastq1, fastq2))
         sample_data_folder = Path(fastq1).parent
 
         logger.info("Sample data folder: {}".format(sample_data_folder))
-        # TODO: this can be simplified to the sample_data_folder
-        output_vcf = os.path.join(
-            self.config.storage_folder, run_accession,
-            "{name}.lofreq.normalized.annotated.vcf.gz".format(name=run_accession))
+
+        lofreq_vcf = os.path.join(
+            self.config.storage_folder, run_accession, "{name}.lofreq.vcf.gz".format(name=run_accession))
+        ivar_vcf = os.path.join(
+            self.config.storage_folder, run_accession, "{name}.ivar.vcf.gz".format(name=run_accession))
+        gatk_vcf = os.path.join(
+            self.config.storage_folder, run_accession, "{name}.gatk.vcf.gz".format(name=run_accession))
+        bcftools_vcf = os.path.join(
+            self.config.storage_folder, run_accession, "{name}.bcftools.vcf.gz".format(name=run_accession))
+
+        lofreq_pangolin = os.path.join(
+            self.config.storage_folder, run_accession, "{name}.lofreq.pangolin.csv".format(name=run_accession))
+        ivar_pangolin = os.path.join(
+            self.config.storage_folder, run_accession, "{name}.ivar.pangolin.csv".format(name=run_accession))
+        gatk_pangolin = os.path.join(
+            self.config.storage_folder, run_accession, "{name}.gatk.pangolin.csv".format(name=run_accession))
+        bcftools_pangolin = os.path.join(
+            self.config.storage_folder, run_accession, "{name}.bcftools.pangolin.csv".format(name=run_accession))
+
         output_qc = os.path.join(
             self.config.storage_folder, run_accession, "{name}.fastp_stats.json".format(name=run_accession))
         output_vertical_coverage = os.path.join(
             self.config.storage_folder, run_accession, "{name}.depth.tsv".format(name=run_accession))
         output_horizontal_coverage = os.path.join(
             self.config.storage_folder, run_accession, "{name}.coverage.tsv".format(name=run_accession))
+        deduplication_metrics = os.path.join(
+            self.config.storage_folder, run_accession, "{name}.deduplication_metrics.txt".format(name=run_accession))
 
-        if not os.path.exists(output_vcf) \
+        if not os.path.exists(lofreq_vcf) \
                 or not os.path.exists(output_qc) \
                 or not os.path.exists(output_horizontal_coverage) \
                 or not os.path.exists(output_vertical_coverage) \
@@ -48,8 +85,23 @@ class Pipeline:
                 workflow=self.config.workflow,
                 trace_file=os.path.join(sample_data_folder, "nextflow_traces.txt"),
                 cpus=self.config.workflow_cpus,
-                memory=self.config.workflow_memory
-            )
+                memory=self.config.workflow_memory)
             run_command(command, sample_data_folder)
 
-        return output_vcf, output_qc, output_vertical_coverage, output_horizontal_coverage
+        return PipelineResult(
+            # VCF
+            lofreq_vcf=lofreq_vcf,
+            ivar_vcf=ivar_vcf,
+            gatk_vcf=gatk_vcf,
+            bcftools_vcf=bcftools_vcf,
+            # QC
+            fastp_qc=output_qc,
+            vertical_coverage=output_vertical_coverage,
+            horizontal_coverage=output_horizontal_coverage,
+            deduplication_metrics=deduplication_metrics,
+            # pangolin
+            lofreq_pangolin=lofreq_pangolin,
+            ivar_pangolin=ivar_pangolin,
+            gatk_pangolin=gatk_pangolin,
+            bcftools_pangolin=bcftools_pangolin
+        )

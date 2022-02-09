@@ -268,19 +268,53 @@ class JobEna(Base):
 
     # local files storage
     fastq_path = Column(String)     # the local path where FASTQ files are stored in semi colon separated list
-    vcf_path = Column(String)
-    # FASTP results
-    qc = Column(JSON)
-    qc_path = Column(String)
-    # coverage analysis results
+    lofreq_vcf = Column(String)
+    ivar_vcf = Column(String)
+    gatk_vcf = Column(String)
+    bcftools_vcf = Column(String)
+    lofreq_pangolin = Column(String)
+    ivar_pangolin = Column(String)
+    gatk_pangolin = Column(String)
+    bcftools_pangolin = Column(String)
+    fastp_path = Column(String)
+    deduplication_metrics = Column(String)
     horizontal_coverage_path = Column(String)
     vertical_coverage_path = Column(String)
+
+    # FASTP results
+    qc = Column(JSON)
+
+    # horizontal coverage analysis results
     num_reads = Column(Integer)
     covered_bases = Column(Integer)
     coverage = Column(Float)
     mean_depth = Column(Float)
     mean_base_quality = Column(Float)
     mean_mapping_quality = Column(Float)
+
+    # pango output (corresponding only to LoFreq)
+    pangolin_lineage = Column(String)
+    pangolin_conflict = Column(Float)
+    pangolin_ambiguity_score = Column(Float)
+    pangolin_scorpio_call = Column(String)
+    pangolin_scorpio_support = Column(Float)
+    pangolin_scorpio_conflict = Column(Float)
+    pangolin_version = Column(String)
+    pangolin_pangolin_version = Column(String)
+    pangolin_pangoLEARN_version = Column(String)
+    pangolin_pango_version = Column(String)
+    pangolin_status = Column(String)
+    pangolin_note = Column(String)
+
+    # Picard deduplicatio output
+    percent_duplication = Column(Float)
+    unpaired_reads_examined = Column(Integer)
+    read_pairs_examined = Column(Integer)
+    secondary_or_supplementary_reads = Column(Integer)
+    unmapped_reads = Column(Integer)
+    unpaired_read_duplicates = Column(Integer)
+    read_pair_duplicates = Column(Integer)
+    read_pair_optical_duplicates = Column(Integer)
 
     def get_fastq_paths(self):
         return self.fastq_path.split(SEPARATOR) if self.fastq_path is not None else []
