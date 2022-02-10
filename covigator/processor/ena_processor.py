@@ -1,4 +1,5 @@
 import json
+import numpy as np
 from datetime import datetime
 
 import pandas as pd
@@ -94,45 +95,84 @@ class EnaProcessor(AbstractProcessor):
     @staticmethod
     def load_deduplication_metrics(job: JobEna):
         try:
-            data = pd.read_csv(job.deduplication_metrics_path, sep="\t", skiprows=6)
-            job.percent_duplication = float(data.PERCENT_DUPLICATION.loc[0])
-            job.unpaired_reads_examined = float(data.UNPAIRED_READS_EXAMINED.loc[0])
-            job.read_pairs_examined = float(data.READ_PAIRS_EXAMINED.loc[0])
-            job.secondary_or_supplementary_reads = float(data.SECONDARY_OR_SUPPLEMENTARY_RDS.loc[0])
-            job.unmapped_reads = float(data.UNMAPPED_READS.loc[0])
-            job.unpaired_read_duplicates = float(data.UNPAIRED_READ_DUPLICATES.loc[0])
-            job.read_pair_duplicates = float(data.READ_PAIR_DUPLICATES.loc[0])
-            job.read_pair_optical_duplicates = float(data.READ_PAIR_OPTICAL_DUPLICATES.loc[0])
+            data = pd.read_csv(job.deduplication_metrics_path,
+                               sep="\t",
+                               skiprows=6,
+                               dtype={
+                                   'PERCENT_DUPLICATION': float,
+                                   'UNPAIRED_READS_EXAMINED': int,
+                                   'READ_PAIRS_EXAMINED': int,
+                                   'SECONDARY_OR_SUPPLEMENTARY_RDS': int,
+                                   'UNMAPPED_READS': int,
+                                   'UNPAIRED_READ_DUPLICATES': int,
+                                   'READ_PAIR_DUPLICATES': int,
+                                   'READ_PAIR_OPTICAL_DUPLICATES': int
+                               })
+            data.fillna(0, inplace=True)
+            job.percent_duplication = data.PERCENT_DUPLICATION.loc[0]
+            job.unpaired_reads_examined = data.UNPAIRED_READS_EXAMINED.loc[0]
+            job.read_pairs_examined = data.READ_PAIRS_EXAMINED.loc[0]
+            job.secondary_or_supplementary_reads = data.SECONDARY_OR_SUPPLEMENTARY_RDS.loc[0]
+            job.unmapped_reads = data.UNMAPPED_READS.loc[0]
+            job.unpaired_read_duplicates = data.UNPAIRED_READ_DUPLICATES.loc[0]
+            job.read_pair_duplicates = data.READ_PAIR_DUPLICATES.loc[0]
+            job.read_pair_optical_duplicates = data.READ_PAIR_OPTICAL_DUPLICATES.loc[0]
         except Exception as e:
             raise CovigatorErrorProcessingDeduplicationResults(e)
 
     @staticmethod
     def load_lofreq_pangolin(job: JobEna):
         try:
-            data = pd.read_csv(job.lofreq_pangolin_path)
-            job.pangolin_lineage = float(data.lineage.loc[0])
-            job.pangolin_conflict = float(data.conflict.loc[0])
-            job.pangolin_ambiguity_score = float(data.ambiguity_score.loc[0])
-            job.pangolin_scorpio_call = float(data.scorpio_call.loc[0])
-            job.pangolin_scorpio_support = float(data.scorpio_support.loc[0])
-            job.pangolin_scorpio_conflict = float(data.scorpio_conflict.loc[0])
-            job.pangolin_version = float(data.version.loc[0])
-            job.pangolin_pangolin_version = float(data.pangolin_version.loc[0])
-            job.pangolin_pangoLEARN_version = float(data.pangoLEARN_version.loc[0])
-            job.pangolin_pango_version = float(data.pango_version.loc[0])
-            job.pangolin_status = float(data.status.loc[0])
-            job.pangolin_note = float(data.note.loc[0])
+            data = pd.read_csv(job.lofreq_pangolin_path,
+                               na_values=None,
+                               dtype={
+                                   'lineage': str,
+                                   'conflict': float,
+                                   'ambiguity_score': float,
+                                   'scorpio_call': str,
+                                   'scorpio_support': float,
+                                   'scorpio_conflict': float,
+                                   'version': str,
+                                   'pangolin_version': str,
+                                   'pangoLEARN_version': str,
+                                   'pango_version': str,
+                                   'status': str,
+                                   'note': str
+                               })
+            data.fillna(value="", inplace=True)
+            job.pangolin_lineage = data.lineage.loc[0]
+            job.pangolin_conflict = data.conflict.loc[0]
+            job.pangolin_ambiguity_score = data.ambiguity_score.loc[0]
+            job.pangolin_scorpio_call = data.scorpio_call.loc[0]
+            job.pangolin_scorpio_support = data.scorpio_support.loc[0]
+            job.pangolin_scorpio_conflict = data.scorpio_conflict.loc[0]
+            job.pangolin_version = data.version.loc[0]
+            job.pangolin_pangolin_version = data.pangolin_version.loc[0]
+            job.pangolin_pangoLEARN_version = data.pangoLEARN_version.loc[0]
+            job.pangolin_pango_version = data.pango_version.loc[0]
+            job.pangolin_status = data.status.loc[0]
+            job.pangolin_note = data.note.loc[0]
         except Exception as e:
             raise CovigatorErrorProcessingPangolinResults(e)
 
     @staticmethod
     def load_coverage_results(job: JobEna):
         try:
-            data = pd.read_csv(job.horizontal_coverage_path, sep="\t")
+            data = pd.read_csv(job.horizontal_coverage_path,
+                               sep="\t",
+                               dtype={
+                                   'numreads': int,
+                                   'covbases': int,
+                                   'meandepth': float,
+                                   'meanbaseq': float,
+                                   'meanmapq': float,
+                                   'coverage': float,
+                               }
+                               )
+            data.fillna(0, inplace=True)
             job.mean_depth = float(data.meandepth.loc[0])
             job.mean_base_quality = float(data.meanbaseq.loc[0])
             job.mean_mapping_quality = float(data.meanmapq.loc[0])
-            job.num_reads = int(data.numreads.loc[0])
             job.num_reads = int(data.numreads.loc[0])
             job.covered_bases = int(data.covbases.loc[0])
             job.coverage = float(data.coverage.loc[0])

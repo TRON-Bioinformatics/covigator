@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from covigator import MISSENSE_VARIANT
 from covigator.database.model import Variant as CovigatorVariant, VariantObservation, Sample, \
     SubclonalVariantObservation, SampleEna, SampleGisaid, DataSource, VariantType, GisaidVariantObservation, \
-    LowFrequencyVariantObservation, GisaidVariant
+    LowFrequencyVariantObservation, GisaidVariant, SubclonalVariant, LowFrequencyVariant
 from covigator.database.queries import Queries
 from covigator.exceptions import CovigatorNotSupportedVariant
 
@@ -54,8 +54,28 @@ class VcfLoader:
         variant: Variant
         for variant in variants:
             if variant.FILTER is None or variant.FILTER in ["LOW_FREQUENCY", "SUBCLONAL"]:
-                covigator_variant = self._parse_variant(
-                    variant, CovigatorVariant if sample.source == DataSource.ENA else GisaidVariant)
+                covigator_variant = None
+                if sample.source == DataSource.GISAID:
+                    covigator_variant = self._parse_variant(variant, GisaidVariant)
+                    observed_variants.append(
+                        self._parse_variant_observation(variant, specific_sample, sample.source, covigator_variant,
+                                                        GisaidVariantObservation))
+                elif variant.FILTER is None:    # ENA clonal
+                    # only stores clonal high quality variants in this table
+                    covigator_variant = self._parse_variant(variant, CovigatorVariant)
+                    observed_variants.append(
+                        self._parse_variant_observation(
+                            variant, specific_sample, sample.source, covigator_variant, VariantObservation))
+                elif variant.FILTER == "SUBCLONAL":
+                    covigator_variant = self._parse_variant(variant, SubclonalVariant)
+                    subclonal_observed_variants.append(
+                        self._parse_variant_observation(
+                            variant, specific_sample, sample.source, covigator_variant, SubclonalVariantObservation))
+                elif variant.FILTER == "LOW_FREQUENCY":
+                    covigator_variant = self._parse_variant(variant, LowFrequencyVariant)
+                    low_frequency_observed_variants.append(
+                        self._parse_variant_observation(
+                            variant, specific_sample, sample.source, covigator_variant, LowFrequencyVariantObservation))
                 if covigator_variant:
                     # NOTE: merge checks for existence adds or updates it if required
                     # this variant is not part of the rollback if something else fails
@@ -65,23 +85,6 @@ class VcfLoader:
                     except (IntegrityError, InvalidRequestError):
                         # do nothing the variant was just added by another process between merge and commit
                         session.rollback()
-                if sample.source == DataSource.GISAID:
-                    observed_variants.append(
-                        self._parse_variant_observation(variant, specific_sample, sample.source, covigator_variant,
-                                                        GisaidVariantObservation))
-                elif variant.FILTER is None:    # ENA clonal
-                    # only stores clonal high quality variants in this table
-                    observed_variants.append(
-                        self._parse_variant_observation(
-                            variant, specific_sample, sample.source, covigator_variant, VariantObservation))
-                elif variant.FILTER == "SUBCLONAL":
-                    subclonal_observed_variants.append(
-                        self._parse_variant_observation(
-                            variant, specific_sample, sample.source, covigator_variant, SubclonalVariantObservation))
-                elif variant.FILTER == "LOW_FREQUENCY":
-                    low_frequency_observed_variants.append(
-                        self._parse_variant_observation(
-                            variant, specific_sample, sample.source, covigator_variant, LowFrequencyVariantObservation))
         session.add_all(observed_variants)
         session.add_all(subclonal_observed_variants)
         session.add_all(low_frequency_observed_variants)

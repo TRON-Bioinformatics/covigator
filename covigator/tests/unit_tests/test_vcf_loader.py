@@ -1,7 +1,8 @@
 import pkg_resources
 import covigator.tests
 from covigator.database.model import Variant, VariantObservation, Sample, DataSource, SubclonalVariantObservation, \
-    SampleGisaid, SampleEna, GisaidVariant, GisaidVariantObservation
+    SampleGisaid, SampleEna, GisaidVariant, GisaidVariantObservation, LowFrequencyVariantObservation, SubclonalVariant, \
+    LowFrequencyVariant
 from covigator.exceptions import CovigatorExcludedSampleTooManyMutations
 from covigator.pipeline.vcf_loader import VcfLoader
 from covigator.tests.unit_tests.abstract_test import AbstractTest
@@ -87,3 +88,44 @@ class VcfLoaderTests(AbstractTest):
         self.assertEqual(variant_observation.position, 23403)
         self.assertEqual(variant_observation.reference, "A")
         self.assertEqual(variant_observation.alternate, "G")
+
+    def test_vcf_loader_vafator(self):
+        vcf_file = pkg_resources.resource_filename(covigator.tests.__name__, "resources/test.lofreq.vcf.gz")
+        VcfLoader().load(vcf_file, self.sample, self.session)
+        self.session.commit()
+        self.assertEqual(self.session.query(Variant).count(), 2)
+        self.assertEqual(self.session.query(VariantObservation).count(), 2)
+        self.assertEqual(self.session.query(SubclonalVariant).count(), 1)
+        self.assertEqual(self.session.query(SubclonalVariantObservation).count(), 1)
+        self.assertEqual(self.session.query(LowFrequencyVariant).count(), 8)
+        self.assertEqual(self.session.query(LowFrequencyVariantObservation).count(), 8)
+
+        # NOTE: this test VCF was computed with thresholds of 0.2 and 0.8
+        for vo in self.session.query(VariantObservation).all():
+            self.assertGreaterEqual(vo.vaf, 0.8)
+            self.assertGreater(vo.dp, 0)
+            self.assertGreater(vo.ac, 0)
+
+        for vo in self.session.query(SubclonalVariantObservation).all():
+            self.assertGreaterEqual(vo.vaf, 0.2)
+            self.assertLess(vo.vaf, 0.8)
+            self.assertGreater(vo.dp, 0)
+            self.assertGreater(vo.ac, 0)
+
+        for vo in self.session.query(LowFrequencyVariantObservation).all():
+            self.assertLess(vo.vaf, 0.2)
+            self.assertGreater(vo.dp, 0)
+            self.assertGreater(vo.ac, 0)
+
+    def test_vcf_loader_gisaid_2(self):
+        vcf_file = pkg_resources.resource_filename(covigator.tests.__name__, "resources/test.assembly.vcf.gz")
+        VcfLoader().load(vcf_file, self.sample2, self.session)  # GISAID sample
+        self.session.commit()
+        self.assertEqual(self.session.query(GisaidVariant).count(), 13)
+        self.assertEqual(self.session.query(GisaidVariantObservation).count(), 13)
+
+        # NOTE: this test VCF was computed with thresholds of 0.2 and 0.8
+        for vo in self.session.query(GisaidVariantObservation).all():
+            self.assertIsNone(vo.vaf)
+            self.assertIsNone(vo.dp)
+            self.assertIsNone(vo.ac)
