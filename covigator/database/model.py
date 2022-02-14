@@ -121,7 +121,7 @@ class SampleGisaid(Base):
 
     run_accession = Column(String, primary_key=True)
     finished = Column(Boolean)
-    date = Column(Date)
+    collection_date = Column(Date)
     # Host information
     host_tax_id = Column(String)
     host = Column(String)
@@ -553,7 +553,6 @@ class VariantObservation(Base):
     """
     __tablename__ = VARIANT_OBSERVATION_TABLE_NAME
 
-    source = Column(Enum(DataSource, name=DataSource.__constraint_name__), primary_key=True)
     sample = Column(String, primary_key=True)
     variant_id = Column(String, primary_key=True)
     chromosome = Column(String)
@@ -607,20 +606,17 @@ class VariantObservation(Base):
     pfam_name = Column(String)
     pfam_description = Column(String)
 
-    ForeignKeyConstraint([sample, source], [Sample.id, Sample.source])
+    ForeignKeyConstraint([sample], [SampleEna.run_accession])
     ForeignKeyConstraint([variant_id], [Variant.variant_id])
 
-    __table_args__ = (Index("{}_index_annotation_position".format(VARIANT_OBSERVATION_TABLE_NAME),
-                            "annotation_highest_impact", "position"),
-                      Index("{}_index_sample".format(VARIANT_OBSERVATION_TABLE_NAME),
-                            "sample"),
-                      Index("{}_index_position".format(VARIANT_OBSERVATION_TABLE_NAME),
-                            "position"),
-                      Index("{}_index_annotation_source".format(VARIANT_OBSERVATION_TABLE_NAME),
-                            "annotation_highest_impact", "source"),
-                      Index("{}_index_variant_id_source".format(VARIANT_OBSERVATION_TABLE_NAME),
-                            "variant_id", "source"),
-                      )
+    __table_args__ = (
+        Index("{}_index_annotation_position".format(VARIANT_OBSERVATION_TABLE_NAME),
+              "annotation_highest_impact", "position"),
+        Index("{}_index_sample".format(VARIANT_OBSERVATION_TABLE_NAME), "sample"),
+        Index("{}_index_position".format(VARIANT_OBSERVATION_TABLE_NAME), "position"),
+        Index("{}_index_annotation_source".format(VARIANT_OBSERVATION_TABLE_NAME), "annotation_highest_impact"),
+        Index("{}_index_variant_id_source".format(VARIANT_OBSERVATION_TABLE_NAME), "variant_id")
+    )
 
 
 class SubclonalVariantObservation(Base):
@@ -629,7 +625,6 @@ class SubclonalVariantObservation(Base):
     """
     __tablename__ = SUBCLONAL_VARIANT_OBSERVATION_TABLE_NAME
 
-    source = Column(Enum(DataSource, name=DataSource.__constraint_name__), primary_key=True)
     sample = Column(String, primary_key=True)
     variant_id = Column(String, primary_key=True)
     chromosome = Column(String)
@@ -675,7 +670,7 @@ class SubclonalVariantObservation(Base):
     pfam_name = Column(String)
     pfam_description = Column(String)
 
-    ForeignKeyConstraint([sample, source], [Sample.id, Sample.source])
+    ForeignKeyConstraint([sample], [SampleEna.run_accession])
     ForeignKeyConstraint([variant_id], [SubclonalVariant.variant_id])
 
     __table_args__ = (
@@ -691,7 +686,6 @@ class LowFrequencyVariantObservation(Base):
     """
     __tablename__ = LOW_FREQUENCY_VARIANT_OBSERVATION_TABLE_NAME
 
-    source = Column(Enum(DataSource, name=DataSource.__constraint_name__), primary_key=True)
     sample = Column(String, primary_key=True)
     variant_id = Column(String, primary_key=True)
     chromosome = Column(String)
@@ -737,7 +731,7 @@ class LowFrequencyVariantObservation(Base):
     pfam_name = Column(String)
     pfam_description = Column(String)
 
-    ForeignKeyConstraint([sample, source], [Sample.id, Sample.source])
+    ForeignKeyConstraint([sample], [SampleEna.run_accession])
     ForeignKeyConstraint([variant_id], [LowFrequencyVariant.variant_id])
 
     __table_args__ = (
@@ -753,7 +747,6 @@ class GisaidVariantObservation(Base):
     """
     __tablename__ = GISAID_VARIANT_OBSERVATION_TABLE_NAME
 
-    source = Column(Enum(DataSource, name=DataSource.__constraint_name__), primary_key=True)
     sample = Column(String, primary_key=True)
     variant_id = Column(String, primary_key=True)
     chromosome = Column(String)
@@ -799,13 +792,16 @@ class GisaidVariantObservation(Base):
     pfam_name = Column(String)
     pfam_description = Column(String)
 
-    ForeignKeyConstraint([sample, source], [Sample.id, Sample.source])
+    ForeignKeyConstraint([sample], [SampleGisaid.run_accession])
     ForeignKeyConstraint([variant_id], [GisaidVariant.variant_id])
 
     __table_args__ = (
+        Index("{}_index_annotation_position".format(GISAID_VARIANT_OBSERVATION_TABLE_NAME),
+              "annotation_highest_impact", "position"),
+        Index("{}_index_sample".format(GISAID_VARIANT_OBSERVATION_TABLE_NAME), "sample"),
         Index("{}_index_position".format(GISAID_VARIANT_OBSERVATION_TABLE_NAME), "position"),
-        Index("{}_index_annotation_vaf".format(GISAID_VARIANT_OBSERVATION_TABLE_NAME), "annotation_highest_impact", "vaf"),
-        Index("{}_index_vaf".format(GISAID_VARIANT_OBSERVATION_TABLE_NAME), "vaf"),
+        Index("{}_index_annotation_source".format(GISAID_VARIANT_OBSERVATION_TABLE_NAME), "annotation_highest_impact"),
+        Index("{}_index_variant_id_source".format(GISAID_VARIANT_OBSERVATION_TABLE_NAME), "variant_id")
     )
 
 

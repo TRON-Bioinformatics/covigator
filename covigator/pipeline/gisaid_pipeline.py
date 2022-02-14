@@ -31,7 +31,7 @@ class GisaidPipeline:
         sample_name = sample.run_accession.replace("/", "_").replace(" ", "-").replace("'", "-").replace("$", "")
         # NOTE: sample folder date/run_accession
         sample_data_folder = os.path.join(
-            self.config.storage_folder, sample.date.strftime("%Y%m%d") if sample.date is not None else "nodate",
+            self.config.storage_folder, sample.collection_date.strftime("%Y%m%d") if sample.collection_date is not None else "nodate",
             sample_name)
         output_vcf = os.path.join(sample_data_folder, "{name}.assembly.vcf.gz".format(name=sample_name))
         output_pangolin = os.path.join(sample_data_folder, "{name}.assembly.pangolin.csv".format(name=sample_name))

@@ -9,20 +9,33 @@ from covigator.database.model import SampleEna, Sample, DataSource, JobEna, JobS
     VariantObservation, VariantCooccurrence, VariantType, SampleGisaid, JobGisaid
 from Bio.Alphabet.IUPAC import IUPACData
 
+from covigator.database.queries import Queries
 
 MOCKED_GENES = ["S", "N", "E", "M", "ORF3a", "ORF1ab", "ORF7b", "ORF10", "ORF6", "ORF8", "ORF7a"]
 MOCKED_DOMAINS = ["CoV_S2", "bCoV_S1_RBD", "bCoV_S1_N", "CoV_S1_C"]
 
 
-def get_mocked_variant(faker: Faker, chromosome=None, gene_name=None) -> Variant:
+def get_mocked_variant(faker: Faker, chromosome=None, gene_name=None, source=DataSource.ENA.name, session: Session = None) -> Variant:
+
     if gene_name is None:
         gene_name = faker.random_choices(MOCKED_GENES, length=1)[0]
     domain_name = faker.random_choices(MOCKED_DOMAINS, length=1)[0]
     annotation = faker.random_choices(
             [MISSENSE_VARIANT, SYNONYMOUS_VARIANT, INFRAME_DELETION, INFRAME_INSERTION], length=1)[0]
-    variant = Variant(
+
+    if session:
+        queries = Queries(session=session)
+        gene = queries.get_gene(gene_name=gene_name)
+        start = gene.start
+        end = gene.end
+    else:
+        start = 1
+        end = 30000
+
+    klass = Queries.get_variant_klass(source)
+    variant = klass(
         chromosome=chromosome if chromosome else faker.bothify(text="chr##"),
-        position=faker.random_int(min=1, max=30000),
+        position=faker.random_int(min=start, max=end),
         reference=faker.random_choices(list(IUPACData.unambiguous_dna_letters), length=1)[0],
         # TODO: reference and alternate could be equal!
         alternate=faker.random_choices(list(IUPACData.unambiguous_dna_letters), length=1)[0],
@@ -42,9 +55,10 @@ def get_mocked_variant(faker: Faker, chromosome=None, gene_name=None) -> Variant
 
 
 def get_mocked_variant_observation(sample: Sample, variant: Variant, faker=Faker()):
-    return VariantObservation(
+
+    klass = Queries.get_variant_observation_klass(sample.source.name)
+    return klass(
         sample=sample.id if sample else faker.unique.uuid4(),
-        source=sample.source if sample else faker.random_choices((DataSource.ENA, DataSource.GISAID)),
         variant_id=variant.variant_id,
         chromosome=variant.chromosome,
         position=variant.position,
@@ -55,7 +69,8 @@ def get_mocked_variant_observation(sample: Sample, variant: Variant, faker=Faker
         annotation_highest_impact=variant.annotation_highest_impact,
         gene_name=variant.gene_name,
         pfam_name=variant.pfam_name,
-        date=faker.date_time()
+        date=faker.date_time(),
+        hgvs_p=variant.hgvs_p
     )
 
 
@@ -92,7 +107,7 @@ def get_mocked_gisaid_sample(faker: Faker, job_status=JobStatus.FINISHED) -> Tup
     identifier = faker.unique.uuid4()
     sample_gisaid = SampleGisaid(
         run_accession=identifier,
-        date=faker.date_time(),
+        collection_date=faker.date_time(),
         country=faker.country(),
         finished=job_status == JobStatus.FINISHED
     )
@@ -139,14 +154,17 @@ def get_mocked_variant_cooccurrence(faker: Faker, variant_one: Variant, variant_
 
 
 def mock_samples_and_variants(faker, session: Session, num_samples=10):
-    existing_variants = set()
+    existing_variants = {DataSource.ENA.name: set(), DataSource.GISAID.name: set()}
     samples = mock_samples(faker=faker, session=session, num_samples=num_samples)
     for sample_ena, sample, job in samples:
-        variants = [get_mocked_variant(faker=faker) for _ in range(10)]
-        new_variants = list(filter(lambda x: x.variant_id not in existing_variants, variants))
+        variants = [get_mocked_variant(faker=faker, source=sample.source.name, session=session) for _ in range(10)]
+        # this aims at removing potentially repeated variants
+        variants_dict = {v.variant_id: v for v in variants}
+        variants = variants_dict.values()
+        new_variants = list(filter(lambda x: x.variant_id not in existing_variants.get(sample.source.name), variants))
         session.add_all(new_variants)
         session.commit()
-        existing_variants.update([v.variant_id for v in variants])
+        existing_variants.get(sample.source.name).update([v.variant_id for v in variants])
 
         variants_observations = [get_mocked_variant_observation(faker=faker, variant=v, sample=sample)
                                  for v in variants]

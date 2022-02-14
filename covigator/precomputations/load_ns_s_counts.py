@@ -4,8 +4,7 @@ import pandas as pd
 from logzero import logger
 from sqlalchemy.orm import Session
 from covigator import SYNONYMOUS_VARIANT, MISSENSE_VARIANT
-from covigator.database.model import DataSource, PrecomputedSynonymousNonSynonymousCounts, RegionType, \
-    VARIANT_OBSERVATION_TABLE_NAME, SAMPLE_ENA_TABLE_NAME, SAMPLE_GISAID_TABLE_NAME
+from covigator.database.model import DataSource, PrecomputedSynonymousNonSynonymousCounts, RegionType
 from covigator.database.queries import Queries
 
 
@@ -99,19 +98,21 @@ class NsSCountsLoader:
 
     def _count_variant_observations_by_source_annotation_and_region(
             self, source: DataSource, annotation: str, region: RegionType):
+
+        variant_observation_table = self.queries.get_variant_observation_klass(source=source.name).__tablename__
+        sample_table = self.queries.get_sample_klass(source=source.name).__tablename__
+
         sql_query = """
-                select count(*) as {count_name}, date_trunc('month', s.{date_field}) as month, 
+                select count(*) as {count_name}, date_trunc('month', s.collection_date) as month, 
                     vo.{region_field} as region_name, s.country 
                 from {variant_observation_table} as vo join {sample_table} as s on vo.sample = s.run_accession 
-                where vo.annotation_highest_impact = '{annotation}' and vo.source = '{source}'  
-                    and s.{date_field} is not null and vo.{region_field} is not null
-                group by date_trunc('month', s.{date_field}), vo.{region_field}, s.country;
-                """.format(variant_observation_table=VARIANT_OBSERVATION_TABLE_NAME,
-                           sample_table=SAMPLE_ENA_TABLE_NAME if source == DataSource.ENA else SAMPLE_GISAID_TABLE_NAME,
-                           date_field="collection_date" if source == DataSource.ENA else "date",
+                where vo.annotation_highest_impact = '{annotation}'
+                    and s.collection_date is not null and vo.{region_field} is not null
+                group by date_trunc('month', s.collection_date), vo.{region_field}, s.country;
+                """.format(variant_observation_table=variant_observation_table,
+                           sample_table=sample_table,
                            region_field="gene_name" if region == RegionType.GENE else "pfam_name",
                            count_name="s" if annotation == SYNONYMOUS_VARIANT else "ns",
-                           source=source.name,
                            annotation=annotation)
         data = pd.read_sql_query(sql_query, self.session.bind)
         return data

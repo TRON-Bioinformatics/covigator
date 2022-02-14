@@ -23,7 +23,7 @@ class CooccurrenceMatrix:
         logger.info("Processing cooccurrent variants for sample {}".format(sample_id))
 
         # the order by position is important to ensure we store only half the matrix and the same half of the matrix
-        variants = queries.get_variants_by_sample(sample_id)
+        variants = queries.get_variants_by_sample(sample_id, source=sample.source.name)
         failed_variants = []
 
         # process all pairwise combinations without repetitions including the diagoonal

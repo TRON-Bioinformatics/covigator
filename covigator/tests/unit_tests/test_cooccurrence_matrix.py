@@ -1,4 +1,4 @@
-from covigator.database.model import Sample, VariantCooccurrence
+from covigator.database.model import Sample, VariantCooccurrence, DataSource
 from covigator.pipeline.cooccurrence_matrix import CooccurrenceMatrix
 from covigator.tests.unit_tests.abstract_test import AbstractTest
 from covigator.tests.unit_tests.mocked import get_mocked_ena_sample, get_mocked_variant, get_mocked_variant_observation
@@ -51,7 +51,7 @@ class CooccurrenceMatrixTests(AbstractTest):
     def test_non_existing_sample_does_not_add_new_entries(self):
         count = self.session.query(VariantCooccurrence).count()
         self.assertEqual(count, 0)
-        CooccurrenceMatrix().compute(Sample(id="12345"), self.session)
+        CooccurrenceMatrix().compute(Sample(id="12345", source=DataSource.ENA), self.session)
         self.session.commit()
         count = self.session.query(VariantCooccurrence).count()
         self.assertEqual(count, 0)

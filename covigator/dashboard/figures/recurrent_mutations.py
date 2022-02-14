@@ -430,7 +430,7 @@ class RecurrentMutationsFigures(Figures):
                            round(np.corrcoef(data.conservation_vertebrates, data.count_unique_variants)[0][1], 5)
                            ))]
 
-    def get_variants_plot(self, gene_name, domain_name, selected_variants, bin_size, source=None):
+    def get_variants_plot(self, gene_name, domain_name, selected_variants, bin_size, source):
 
         # reads gene annotations
         logger.debug("Getting genes and domains...")

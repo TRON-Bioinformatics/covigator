@@ -5,8 +5,7 @@ import dash_html_components as html
 from covigator.dashboard.figures import VARIANT_TYPE_COLOR_MAP
 from covigator.dashboard.figures.figures import PLOTLY_CONFIG, MARGIN, TEMPLATE
 from covigator.dashboard.tabs import get_mini_container, print_number, print_date
-from covigator.database.model import DataSource, SAMPLE_ENA_TABLE_NAME, JOB_ENA_TABLE_NAME, \
-    VARIANT_OBSERVATION_TABLE_NAME
+from covigator.database.model import DataSource, SAMPLE_ENA_TABLE_NAME, JOB_ENA_TABLE_NAME, VariantObservation
 from covigator.database.queries import Queries
 import pandas as pd
 import plotly.express as px
@@ -266,11 +265,9 @@ def get_plot_clonal_variants(queries: Queries):
 
 
 def get_data_clonal_variants(queries):
-    sql_query = """
-    select variant_id, vaf, dp, variant_type
-    from {table} 
-    where source='ENA'""".format(table=VARIANT_OBSERVATION_TABLE_NAME)
-    data = pd.read_sql_query(sql_query, queries.session.bind)
+    query = queries.session.query(
+        VariantObservation.variant_id, VariantObservation.vaf, VariantObservation.dp, VariantObservation.variant_type)
+    data = pd.read_sql_query(query.statement, queries.session.bind)
     return data
 
 

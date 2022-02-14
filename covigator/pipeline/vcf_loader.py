@@ -147,7 +147,6 @@ class VcfLoader:
         dp4 = variant.INFO.get("DP4")
         return klass(
             sample=sample.run_accession,
-            source=source,
             variant_id=covigator_variant.variant_id,
             chromosome=variant.CHROM,
             position=variant.POS,
@@ -172,7 +171,7 @@ class VcfLoader:
             gene_name=covigator_variant.gene_name,
             hgvs_p=covigator_variant.hgvs_p,
             hgvs_c=covigator_variant.hgvs_c,
-            date=sample.first_created if source == DataSource.ENA else sample.date,
+            date=sample.first_created if source == DataSource.ENA else sample.collection_date,
             variant_type=covigator_variant.variant_type,
             length=self._get_variant_length(variant),
             reference_amino_acid=covigator_variant.reference_amino_acid,

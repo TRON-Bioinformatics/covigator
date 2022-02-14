@@ -196,8 +196,8 @@ class GisaidAccessor:
         gisaid_sample.continent = parsed_country.continent
 
     def _parse_dates(self, gisaid_sample: SampleGisaid):
-        gisaid_sample.date = self._parse_abstract(gisaid_sample.date, date.fromisoformat)
-        if gisaid_sample.date is not None and gisaid_sample.date < MINIMUM_DATE:
+        gisaid_sample.collection_date = self._parse_abstract(gisaid_sample.collection_date, date.fromisoformat)
+        if gisaid_sample.collection_date is not None and gisaid_sample.collection_date < MINIMUM_DATE:
             raise CovigatorExcludedSampleTooEarlyDateException
 
     def _parse_abstract(self, value, type):
