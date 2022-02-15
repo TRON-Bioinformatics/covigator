@@ -1,5 +1,7 @@
 import unittest
 
+from parameterized import parameterized
+
 from covigator import SYNONYMOUS_VARIANT
 from covigator.precomputations.loader import PrecomputationsLoader
 from covigator.precomputations.load_ns_s_counts import NsSCountsLoader
@@ -7,7 +9,8 @@ from covigator.database.model import JobStatus, DataSource, Sample, Gene, Region
 from covigator.database.queries import Queries
 from covigator.tests.unit_tests.abstract_test import AbstractTest
 from covigator.tests.unit_tests.mocked import get_mocked_log, get_mocked_variant, \
-    get_mocked_variant_observation, mock_samples, mock_cooccurrence_matrix, mock_samples_and_variants, MOCKED_DOMAINS
+    get_mocked_variant_observation, mock_samples, mock_cooccurrence_matrix, mock_samples_and_variants, MOCKED_DOMAINS, \
+    get_mocked_sample
 
 
 class QueriesTests(AbstractTest):
@@ -53,36 +56,6 @@ class QueriesTests(AbstractTest):
         observed_date = self.queries.get_date_of_most_recent_sample()
         self.assertIsNone(observed_date)
 
-    def test_get_date_of_last_ena_check(self):
-        logs = [get_mocked_log(faker=self.faker, source=DataSource.ENA) for _ in range(25)] + \
-                [get_mocked_log(faker=self.faker, source=DataSource.GISAID) for _ in range(25)]
-        self.session.add_all(logs)
-        self.session.commit()
-        observed_date = self.queries.get_date_of_last_check(data_source=DataSource.ENA)
-        self.assertIsNotNone(observed_date)
-        observed_date_gisaid = self.queries.get_date_of_last_check(data_source=DataSource.GISAID)
-        self.assertIsNotNone(observed_date_gisaid)
-
-    def test_get_date_of_last_ena_check_empty(self):
-        observed_date = self.queries.get_date_of_last_check(data_source=DataSource.ENA)
-        self.assertIsNone(observed_date)
-        observed_date = self.queries.get_date_of_last_check(data_source=DataSource.GISAID)
-        self.assertIsNone(observed_date)
-
-    def test_get_date_of_last_ena_update(self):
-        # NOTE: the implementation that works in Postgres does not work in SQLite!!
-        logs = [get_mocked_log(faker=self.faker, source=DataSource.ENA) for _ in range(50)]
-        self.session.add_all(logs)
-        self.session.commit()
-        observed_date = self.queries.get_date_of_last_update(data_source=DataSource.ENA)
-        self.assertIsNotNone(observed_date)
-
-    def test_get_date_of_last_ena_update_empty(self):
-        observed_date = self.queries.get_date_of_last_update(data_source=DataSource.ENA)
-        self.assertIsNone(observed_date)
-        observed_date = self.queries.get_date_of_last_update(data_source=DataSource.GISAID)
-        self.assertIsNone(observed_date)
-
     def test_get_cooccurrence_matrix_by_gene_no_data(self):
         PrecomputationsLoader(session=self.session).load_table_counts()
         data = self.queries.get_sparse_cooccurrence_matrix(gene_name="S", domain=None)
@@ -123,20 +96,21 @@ class QueriesTests(AbstractTest):
         mds_fit, mds_coords = self.queries.get_mds(gene_name="S")
         self.assertIsNotNone(mds_fit)
 
-    def test_get_variant_abundance_histogram(self):
+    @parameterized.expand([(DataSource.ENA, ), (DataSource.GISAID, )])
+    def test_get_variant_abundance_histogram(self, source):
 
         # gets an empty histogram
-        histogram = self.queries.get_variant_abundance_histogram(cache=False)
+        histogram = self.queries.get_variant_abundance_histogram(cache=False, source=source.name)
         self.assertIsNone(histogram)
 
         # mocks a 100 variants
         num_variants = 100
-        variants = [get_mocked_variant(faker=self.faker, chromosome="chr_test") for _ in range(num_variants)]
+        variants = [get_mocked_variant(faker=self.faker, chromosome="chr_test", source=source.name) for _ in range(num_variants)]
         self.session.add_all(variants)
         self.session.commit()
 
         # gets an histogram over 100 variants without variant observations
-        histogram = self.queries.get_variant_abundance_histogram(cache=False)
+        histogram = self.queries.get_variant_abundance_histogram(cache=False, source=source.name)
         self.assertIsNotNone(histogram)
         self.assertGreater(histogram.shape[0], 0)
         self.assertEqual(histogram.shape[1], 3)
@@ -144,7 +118,7 @@ class QueriesTests(AbstractTest):
         self.assertEqual(histogram.count_variant_observations.sum(), 0)
 
         # mock some variant observations
-        test_samples = [Sample(id=self.faker.unique.uuid4(), source=DataSource.ENA) for _ in range(5)]
+        test_samples = [get_mocked_sample(faker=self.faker, source=source) for _ in range(5)]
         self.session.add_all(test_samples)
         self.session.commit()
         variant_observations = []
@@ -155,7 +129,7 @@ class QueriesTests(AbstractTest):
         self.session.commit()
 
         # gets an histogram over 100 variants
-        histogram = self.queries.get_variant_abundance_histogram(cache=False)
+        histogram = self.queries.get_variant_abundance_histogram(cache=False, source=source.name)
         self.assertIsNotNone(histogram)
         self.assertGreater(histogram.shape[0], 0)
         self.assertEqual(histogram.shape[1], 3)
@@ -240,24 +214,21 @@ class QueriesTests(AbstractTest):
         nsSCountsLoader = NsSCountsLoader(session=self.session)
         nsSCountsLoader.load()
 
-        data = self.queries.get_dnds_table()
-        self._assert_dnds_table(data)
-
-        data = self.queries.get_dnds_table(source=DataSource.ENA.name)
+        data = self.queries.get_dnds_table(source=DataSource.ENA)
         self._assert_dnds_table(data)
         self.assertEqual(data[data.source != DataSource.ENA].shape[0], 0)      # no entries to other source
 
-        data = self.queries.get_dnds_table(source=DataSource.GISAID.name)
+        data = self.queries.get_dnds_table(source=DataSource.GISAID)
         self._assert_dnds_table(data)
         self.assertEqual(data[data.source != DataSource.GISAID].shape[0], 0)  # no entries to other source
 
         countries = list(data.country.unique())[0:2]
-        data = self.queries.get_dnds_table(countries=countries)
+        data = self.queries.get_dnds_table(source=DataSource.ENA, countries=countries)
         self._assert_dnds_table(data)
         self.assertEqual(data[~data.country.isin(countries)].shape[0], 0)  # no entries to other country
 
         genes = ["S"]
-        data = self.queries.get_dnds_table(genes=genes)
+        data = self.queries.get_dnds_table(source=DataSource.ENA, genes=genes)
         self._assert_dnds_table(data, has_domains=True)
         self.assertEqual(data[~data.region_name.isin(genes + MOCKED_DOMAINS)].shape[0], 0)  # no entries to other country
 

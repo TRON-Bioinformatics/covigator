@@ -3,7 +3,6 @@ import covigator.tests
 from covigator.database.model import Variant, VariantObservation, Sample, DataSource, SubclonalVariantObservation, \
     SampleGisaid, SampleEna, GisaidVariant, GisaidVariantObservation, LowFrequencyVariantObservation, SubclonalVariant, \
     LowFrequencyVariant
-from covigator.exceptions import CovigatorExcludedSampleTooManyMutations
 from covigator.pipeline.vcf_loader import VcfLoader
 from covigator.tests.unit_tests.abstract_test import AbstractTest
 
@@ -22,8 +21,12 @@ class VcfLoaderTests(AbstractTest):
         vcf_file = pkg_resources.resource_filename(covigator.tests.__name__, "resources/snpeff.vcf")
         VcfLoader().load(vcf_file, self.sample, self.session)
         self.session.commit()
-        self.assertEqual(self.session.query(Variant).count(), 3)
+        self.assertEqual(self.session.query(Variant).count(), 1)
         self.assertEqual(self.session.query(VariantObservation).count(), 1)
+        self.assertEqual(self.session.query(SubclonalVariant).count(), 1)
+        self.assertEqual(self.session.query(SubclonalVariantObservation).count(), 1)
+        self.assertEqual(self.session.query(LowFrequencyVariant).count(), 1)
+        self.assertEqual(self.session.query(LowFrequencyVariantObservation).count(), 1)
         variant = self.session.query(Variant).first()
         self.assertEqual(variant.chromosome, "MN908947.3")
         self.assertEqual(variant.position, 23403)
@@ -32,14 +35,12 @@ class VcfLoaderTests(AbstractTest):
         self.assertEqual(variant.gene_name, "S")
         variant_observation = self.session.query(VariantObservation).first()
         self.assertEqual(variant_observation.sample, self.sample.id)
-        self.assertEqual(variant_observation.source, self.sample.source)
         self.assertEqual(variant_observation.chromosome, "MN908947.3")
         self.assertEqual(variant_observation.position, 23403)
         self.assertEqual(variant_observation.reference, "A")
         self.assertEqual(variant_observation.alternate, "G")
-        self.assertEqual(variant_observation.dp, 38)
-        self.assertEqual(variant_observation.vaf, 1.0)
-        self.assertEqual(self.session.query(SubclonalVariantObservation).count(), 2)
+        self.assertIsNone(variant_observation.dp)
+        self.assertIsNone(variant_observation.vaf)
 
     def test_vcf_loader_without_dp4(self):
         vcf_file = pkg_resources.resource_filename(covigator.tests.__name__, "resources/snpeff_without_dp4.vcf")
@@ -83,7 +84,6 @@ class VcfLoaderTests(AbstractTest):
         self.assertEqual(variant.gene_name, "S")
         variant_observation = self.session.query(GisaidVariantObservation).first()
         self.assertEqual(variant_observation.sample, self.sample2.id)
-        self.assertEqual(variant_observation.source, self.sample2.source)
         self.assertEqual(variant_observation.chromosome, "MN908947.3")
         self.assertEqual(variant_observation.position, 23403)
         self.assertEqual(variant_observation.reference, "A")

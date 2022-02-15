@@ -333,7 +333,7 @@ class RecurrentMutationsFigures(Figures):
 
         return full_matrix
 
-    def get_variants_abundance_plot(self, bin_size=50, source=None):
+    def get_variants_abundance_plot(self, source, bin_size=50):
 
         # reads genes and domains across the whole genome
         genes = self.queries.get_genes()

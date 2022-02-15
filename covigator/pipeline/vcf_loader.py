@@ -54,37 +54,36 @@ class VcfLoader:
         variant: Variant
         for variant in variants:
             if variant.FILTER is None or variant.FILTER in ["LOW_FREQUENCY", "SUBCLONAL"]:
-                covigator_variant = None
                 if sample.source == DataSource.GISAID:
-                    covigator_variant = self._parse_variant(variant, GisaidVariant)
+                    gisaid_variant = self._parse_variant(variant, GisaidVariant)
                     observed_variants.append(
-                        self._parse_variant_observation(variant, specific_sample, sample.source, covigator_variant,
+                        self._parse_variant_observation(variant, specific_sample, sample.source, gisaid_variant,
                                                         GisaidVariantObservation))
+                    session.add(gisaid_variant)
                 elif variant.FILTER is None:    # ENA clonal
                     # only stores clonal high quality variants in this table
-                    covigator_variant = self._parse_variant(variant, CovigatorVariant)
+                    ena_variant = self._parse_variant(variant, CovigatorVariant)
                     observed_variants.append(
                         self._parse_variant_observation(
-                            variant, specific_sample, sample.source, covigator_variant, VariantObservation))
+                            variant, specific_sample, sample.source, ena_variant, VariantObservation))
+                    session.add(ena_variant)
                 elif variant.FILTER == "SUBCLONAL":
-                    covigator_variant = self._parse_variant(variant, SubclonalVariant)
+                    subclonal_variant = self._parse_variant(variant, SubclonalVariant)
                     subclonal_observed_variants.append(
                         self._parse_variant_observation(
-                            variant, specific_sample, sample.source, covigator_variant, SubclonalVariantObservation))
+                            variant, specific_sample, sample.source, subclonal_variant, SubclonalVariantObservation))
+                    session.add(subclonal_variant)
                 elif variant.FILTER == "LOW_FREQUENCY":
-                    covigator_variant = self._parse_variant(variant, LowFrequencyVariant)
+                    low_frequency_variant = self._parse_variant(variant, LowFrequencyVariant)
                     low_frequency_observed_variants.append(
                         self._parse_variant_observation(
-                            variant, specific_sample, sample.source, covigator_variant, LowFrequencyVariantObservation))
-                if covigator_variant:
-                    # NOTE: merge checks for existence adds or updates it if required
-                    # this variant is not part of the rollback if something else fails
-                    session.merge(covigator_variant)
-                    try:
-                        session.commit()
-                    except (IntegrityError, InvalidRequestError):
-                        # do nothing the variant was just added by another process between merge and commit
-                        session.rollback()
+                            variant, specific_sample, sample.source, low_frequency_variant, LowFrequencyVariantObservation))
+                    session.add(low_frequency_variant)
+                try:
+                    session.commit()
+                except (IntegrityError, InvalidRequestError):
+                    # do nothing the variant was just added by another process between merge and commit
+                    session.rollback()
         session.add_all(observed_variants)
         session.add_all(subclonal_observed_variants)
         session.add_all(low_frequency_observed_variants)
@@ -106,14 +105,18 @@ class VcfLoader:
         self._parse_additional_annotations(covigator_variant=parsed_variant, vcf_variant=variant)
         return parsed_variant
 
-    def _parse_additional_annotations(self, covigator_variant: Union[CovigatorVariant, GisaidVariant], vcf_variant: Variant):
+    def _parse_additional_annotations(
+            self, covigator_variant: Union[CovigatorVariant, GisaidVariant, SubclonalVariant, LowFrequencyVariant],
+            vcf_variant: Variant):
         covigator_variant.cons_hmm_sars_cov_2 = vcf_variant.INFO.get("CONS_HMM_SARS_COV_2")
         covigator_variant.cons_hmm_sarbecovirus = vcf_variant.INFO.get("CONS_HMM_SARBECOVIRUS")
         covigator_variant.cons_hmm_vertebrate_cov = vcf_variant.INFO.get("CONS_HMM_VERTEBRATE_COV")
         covigator_variant.pfam_name = vcf_variant.INFO.get("PFAM_NAME")
         covigator_variant.pfam_description = vcf_variant.INFO.get("PFAM_DESCRIPTION")
 
-    def _parse_snpeff_annotations(self, covigator_variant: Union[CovigatorVariant, GisaidVariant], vcf_variant: Variant):
+    def _parse_snpeff_annotations(
+            self, covigator_variant: Union[CovigatorVariant, GisaidVariant, SubclonalVariant, LowFrequencyVariant],
+            vcf_variant: Variant):
         ann = vcf_variant.INFO.get("ANN")
         if ann is not None:
             annotations = ann.split(",")

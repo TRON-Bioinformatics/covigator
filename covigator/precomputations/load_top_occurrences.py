@@ -93,7 +93,7 @@ class TopOccurrencesLoader:
 
         return top_occurring_variants
 
-    def _get_counts_per_month(self, top_occurring_variants, source):
+    def _get_counts_per_month(self, top_occurring_variants, source: str):
         variant_counts_by_month = []
         for _, variant in top_occurring_variants.iterrows():
             variant_counts_by_month.append(self.queries.get_variant_counts_by_month(variant.variant_id, source=source))

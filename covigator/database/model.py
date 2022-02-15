@@ -614,8 +614,8 @@ class VariantObservation(Base):
               "annotation_highest_impact", "position"),
         Index("{}_index_sample".format(VARIANT_OBSERVATION_TABLE_NAME), "sample"),
         Index("{}_index_position".format(VARIANT_OBSERVATION_TABLE_NAME), "position"),
-        Index("{}_index_annotation_source".format(VARIANT_OBSERVATION_TABLE_NAME), "annotation_highest_impact"),
-        Index("{}_index_variant_id_source".format(VARIANT_OBSERVATION_TABLE_NAME), "variant_id")
+        Index("{}_index_annotation".format(VARIANT_OBSERVATION_TABLE_NAME), "annotation_highest_impact"),
+        Index("{}_index_variant_id".format(VARIANT_OBSERVATION_TABLE_NAME), "variant_id")
     )
 
 
@@ -800,8 +800,8 @@ class GisaidVariantObservation(Base):
               "annotation_highest_impact", "position"),
         Index("{}_index_sample".format(GISAID_VARIANT_OBSERVATION_TABLE_NAME), "sample"),
         Index("{}_index_position".format(GISAID_VARIANT_OBSERVATION_TABLE_NAME), "position"),
-        Index("{}_index_annotation_source".format(GISAID_VARIANT_OBSERVATION_TABLE_NAME), "annotation_highest_impact"),
-        Index("{}_index_variant_id_source".format(GISAID_VARIANT_OBSERVATION_TABLE_NAME), "variant_id")
+        Index("{}_index_annotation".format(GISAID_VARIANT_OBSERVATION_TABLE_NAME), "annotation_highest_impact"),
+        Index("{}_index_variant_id".format(GISAID_VARIANT_OBSERVATION_TABLE_NAME), "variant_id")
     )
 
 

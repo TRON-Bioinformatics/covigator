@@ -3,7 +3,8 @@ from sqlalchemy.orm import Session
 from covigator.dashboard.tabs.recurrent_mutations import BIN_SIZE_VALUES
 from covigator.database.model import PrecomputedVariantsPerSample, PrecomputedSubstitutionsCounts, \
     PrecomputedIndelLength, PrecomputedAnnotation, VariantObservation, DataSource, \
-    PrecomputedTableCounts, Variant, SubclonalVariantObservation, Sample, PrecomputedVariantAbundanceHistogram
+    PrecomputedTableCounts, Variant, SubclonalVariantObservation, Sample, PrecomputedVariantAbundanceHistogram, \
+    SampleEna, SampleGisaid
 from logzero import logger
 
 from covigator.database.queries import Queries
@@ -291,10 +292,10 @@ class PrecomputationsLoader:
                 table=SubclonalVariantObservation.__name__ + "_unique_only_subclonal",
                 count=count_subclonal_variant_unique_only_subclonal),
             PrecomputedTableCounts(
-                table=Sample.__name__, count=count_samples_ena,
+                table=SampleEna.__name__, count=count_samples_ena,
                 factor=PrecomputedTableCounts.FACTOR_SOURCE, value=DataSource.ENA.name),
             PrecomputedTableCounts(
-                table=Sample.__name__, count=count_samples_gisaid,
+                table=SampleGisaid.__name__, count=count_samples_gisaid,
                 factor=PrecomputedTableCounts.FACTOR_SOURCE, value=DataSource.GISAID.name),
             PrecomputedTableCounts(
                 table=PrecomputedTableCounts.VIRTUAL_TABLE_COUNTRY, count=count_countries_ena,

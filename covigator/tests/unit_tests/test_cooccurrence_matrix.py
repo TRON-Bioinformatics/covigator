@@ -30,7 +30,7 @@ class CooccurrenceMatrixTests(AbstractTest):
             # mocks observed variants
             for vo in self.faker.random_elements(
                     self.mocked_variants, length=self.NUM_VARIANT_OBSERVATIONS_PER_SAMPLE, unique=True):
-                variant_observations.append(get_mocked_variant_observation(sample, vo))
+                variant_observations.append(get_mocked_variant_observation(sample_ena, vo))
             self.session.add_all(variant_observations)
             self.session.commit()
 
