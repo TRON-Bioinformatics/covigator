@@ -59,7 +59,7 @@ class SampleFigures(Figures):
         return dn / ds
 
     def get_dnds_by_gene_plot(
-            self, data_source: DataSource, countries: List[str] =None, genes: List[str] = None):
+            self, data_source: str, countries: List[str] =None, genes: List[str] = None):
 
         logger.debug("Getting data on dN/dS...")
         data = self.queries.get_dnds_table(

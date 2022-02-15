@@ -587,8 +587,8 @@ class Queries:
                            if start is not None and end is not None else "")
         return pd.read_sql_query(sql_query, self.session.bind)
 
-    def get_dnds_table(self, source: DataSource, countries=None, genes=None) -> pd.DataFrame:
-        self._assert_data_source(data_source=source.name)
+    def get_dnds_table(self, source: str, countries=None, genes=None) -> pd.DataFrame:
+        self._assert_data_source(data_source=source)
         # counts variants over those bins
         query_genes = self.session.query(PrecomputedSynonymousNonSynonymousCounts)\
             .filter(PrecomputedSynonymousNonSynonymousCounts.region_type == RegionType.GENE)

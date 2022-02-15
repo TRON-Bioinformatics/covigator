@@ -214,21 +214,21 @@ class QueriesTests(AbstractTest):
         nsSCountsLoader = NsSCountsLoader(session=self.session)
         nsSCountsLoader.load()
 
-        data = self.queries.get_dnds_table(source=DataSource.ENA)
+        data = self.queries.get_dnds_table(source=DataSource.ENA.name)
         self._assert_dnds_table(data)
         self.assertEqual(data[data.source != DataSource.ENA].shape[0], 0)      # no entries to other source
 
-        data = self.queries.get_dnds_table(source=DataSource.GISAID)
+        data = self.queries.get_dnds_table(source=DataSource.GISAID.name)
         self._assert_dnds_table(data)
         self.assertEqual(data[data.source != DataSource.GISAID].shape[0], 0)  # no entries to other source
 
         countries = list(data.country.unique())[0:2]
-        data = self.queries.get_dnds_table(source=DataSource.ENA, countries=countries)
+        data = self.queries.get_dnds_table(source=DataSource.ENA.name, countries=countries)
         self._assert_dnds_table(data)
         self.assertEqual(data[~data.country.isin(countries)].shape[0], 0)  # no entries to other country
 
         genes = ["S"]
-        data = self.queries.get_dnds_table(source=DataSource.ENA, genes=genes)
+        data = self.queries.get_dnds_table(source=DataSource.ENA.name, genes=genes)
         self._assert_dnds_table(data, has_domains=True)
         self.assertEqual(data[~data.region_name.isin(genes + MOCKED_DOMAINS)].shape[0], 0)  # no entries to other country
 
