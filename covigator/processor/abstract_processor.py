@@ -20,7 +20,7 @@ from covigator.precomputations.loader import PrecomputationsLoader
 
 class AbstractProcessor:
 
-    def __init__(self, database: Database, dask_client: Client, data_source: DataSource, config: Configuration):
+    def __init__(self, database: Database, dask_client: Client, data_source: DataSource, config: Configuration, wait_time=60):
         self.data_source = data_source
         self.config = config
         self.start_time = datetime.now()
@@ -32,6 +32,7 @@ class AbstractProcessor:
         assert self.dask_client is not None, "Empty dask client"
         self.session = self.database.get_database_session()
         self.queries = Queries(self.session)
+        self.wait_time = wait_time
 
     def process(self):
         logger.info("Starting processor")
@@ -80,8 +81,8 @@ class AbstractProcessor:
         finally:
             logger.info("Logging execution stats...")
             self._write_execution_log(count, data_source=self.data_source)
-            logger.info("Waits 30 secs to let the cluster tidy up things...")
-            time.sleep(30)
+            logger.info("Waits {} secs to let the cluster tidy up things...".format(self.wait_time))
+            time.sleep(self.wait_time)
             logger.info("Shutting down cluster and database session...")
             with suppress(Exception):
                 self.dask_client.shutdown()
@@ -92,7 +93,7 @@ class AbstractProcessor:
         logger.info("Waiting for a batch of jobs...")
         while (count_pending_jobs := self.queries.count_jobs_in_queue(data_source=self.data_source)) > 0:
             logger.info("Waiting for {} pending jobs".format(count_pending_jobs))
-            time.sleep(60)
+            time.sleep(self.wait_time)
         logger.info("Batch finished")
 
     @staticmethod

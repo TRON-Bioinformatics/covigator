@@ -16,9 +16,9 @@ from covigator.pipeline.vcf_loader import VcfLoader
 
 class GisaidProcessor(AbstractProcessor):
 
-    def __init__(self, database: Database, dask_client: Client, config: Configuration):
+    def __init__(self, database: Database, dask_client: Client, config: Configuration, wait_time=60):
         logger.info("Initialising GISAID processor")
-        super().__init__(database, dask_client, DataSource.GISAID, config=config)
+        super().__init__(database, dask_client, DataSource.GISAID, config=config, wait_time=wait_time)
 
     def _process_run(self, run_accession: str):
         # NOTE: here we set the priority of each step to ensure a depth first processing
