@@ -223,7 +223,7 @@ class QueriesTests(AbstractTest):
         self.assertEqual(data[data.source != DataSource.GISAID].shape[0], 0)  # no entries to other source
 
         countries = list(data.country.unique())[0:2]
-        data = self.queries.get_dnds_table(source=DataSource.ENA.name, countries=countries)
+        data = self.queries.get_dnds_table(source=DataSource.GISAID.name, countries=countries)
         self._assert_dnds_table(data)
         self.assertEqual(data[~data.country.isin(countries)].shape[0], 0)  # no entries to other country
 
