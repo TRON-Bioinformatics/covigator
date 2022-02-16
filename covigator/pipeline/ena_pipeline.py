@@ -74,8 +74,8 @@ class Pipeline:
 
             command = "{nextflow} run {workflow} " \
                       "--fastq1 {fastq1} {fastq2} --output {output_folder} --name {name} " \
-                      "--low_frequency_variant_threshold {af_low_frequency_thr}" \
-                      "--subclonal_variant_threshold {af_subclonal_thr}" \
+                      "--low_frequency_variant_threshold {af_low_frequency_thr} " \
+                      "--subclonal_variant_threshold {af_subclonal_thr} " \
                       "--cpus {cpus} --memory {memory} " \
                       "-profile conda -offline -work-dir {work_folder} -with-trace {trace_file}".format(
                 nextflow=self.config.nextflow,
