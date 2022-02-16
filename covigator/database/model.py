@@ -306,6 +306,9 @@ class SampleEna(Base):
     def get_fastqs_md5(self) -> List:
         return self.fastq_md5.split(SEPARATOR) if self.fastq_md5 is not None else []
 
+    def get_fastq_paths(self) -> List:
+        return self.fastq_path.split(SEPARATOR) if self.fastq_path is not None else []
+
     def get_fastq1_and_fastq2(self):
         fastqs = self.get_fastq_paths()
         if len(fastqs) > 1:
