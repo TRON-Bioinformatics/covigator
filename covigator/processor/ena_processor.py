@@ -10,7 +10,7 @@ from covigator.exceptions import CovigatorErrorProcessingCoverageResults, Coviga
     CovigatorExcludedSampleNarrowCoverage, CovigatorErrorProcessingPangolinResults, \
     CovigatorErrorProcessingDeduplicationResults
 from covigator.misc import backoff_retrier
-from covigator.database.model import JobStatus, JobEna, Sample, DataSource
+from covigator.database.model import JobStatus, JobEna, DataSource
 from covigator.database.database import Database
 from logzero import logger
 from dask.distributed import Client
@@ -187,11 +187,10 @@ class EnaProcessor(AbstractProcessor):
         if job.coverage < config.horizontal_coverage_thr:
             raise CovigatorExcludedSampleNarrowCoverage("Horizontal coverage {} %".format(job.coverage))
         VcfLoader().load(
-            vcf_file=job.lofreq_vcf_path, sample=Sample(id=job.run_accession, source=DataSource.ENA), session=queries.session)
+            vcf_file=job.lofreq_vcf_path, run_accession=job.run_accession, source=DataSource.ENA, session=queries.session)
         job.loaded_at = datetime.now()
 
     @staticmethod
     def compute_cooccurrence(job: JobEna, queries: Queries, config: Configuration):
-        CooccurrenceMatrix().compute(
-            sample=Sample(id=job.run_accession, source=DataSource.ENA), session=queries.session)
+        CooccurrenceMatrix().compute(run_accession=job.run_accession, source=DataSource.ENA, session=queries.session)
         job.cooccurrence_at = datetime.now()

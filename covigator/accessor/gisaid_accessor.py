@@ -2,7 +2,7 @@ from datetime import date, datetime
 from sqlalchemy.orm import Session
 
 from covigator.accessor import MINIMUM_DATE
-from covigator.database.model import SampleGisaid, JobGisaid, Sample, DataSource, Log, CovigatorModule
+from covigator.database.model import SampleGisaid, JobGisaid, DataSource, Log, CovigatorModule
 from covigator.database.database import Database
 from logzero import logger
 from Bio import SeqIO
@@ -76,7 +76,7 @@ class GisaidAccessor:
         total_time = 0
         logger.info("Reading FASTA...")
         samples_gisaid = []
-        jobs_and_samples = []
+        jobs = []
         for record in SeqIO.parse(self.input_fasta, "fasta"):
             start = time.time()
 
@@ -150,11 +150,9 @@ class GisaidAccessor:
             try:
                 self._parse_country(sample_gisaid)
                 self._parse_dates(sample_gisaid)
-                sample = self._build_sample(sample_gisaid)
                 job = JobGisaid(run_accession=sample_gisaid.run_accession)
                 samples_gisaid.append(sample_gisaid)
-                jobs_and_samples.append(job)
-                jobs_and_samples.append(sample)
+                jobs.append(job)
                 num_samples += 1
                 self.included += 1
                 end = time.time()
@@ -163,10 +161,10 @@ class GisaidAccessor:
                 if len(samples_gisaid) == BATCH_SIZE:
                     session.add_all(samples_gisaid)
                     session.commit()
-                    session.add_all(jobs_and_samples)
+                    session.add_all(jobs)
                     session.commit()
                     samples_gisaid = []
-                    jobs_and_samples = []
+                    jobs = []
             except CovigatorExcludedSampleTooEarlyDateException:
                 logger.error("Sample excluded due to too early date")
                 self.excluded_by_date += 0
@@ -174,18 +172,11 @@ class GisaidAccessor:
         if len(samples_gisaid) > 0:
             session.add_all(samples_gisaid)
             session.commit()
-            session.add_all(jobs_and_samples)
+            session.add_all(jobs)
             session.commit()
         if num_samples > 0:
             logger.info("It took {} secs/sample on average".format(float(total_time) / num_samples))
         return num_samples
-
-    def _build_sample(self, sample_gisaid):
-        return Sample(
-            id=sample_gisaid.run_accession,
-            source=DataSource.GISAID,
-            gisaid_id=sample_gisaid.run_accession
-        )
 
     def _parse_country(self, gisaid_sample: SampleGisaid):
         parsed_country = self.country_parser.parse_country(gisaid_sample.country_raw)

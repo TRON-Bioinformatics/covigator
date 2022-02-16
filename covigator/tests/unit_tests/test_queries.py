@@ -5,10 +5,10 @@ from parameterized import parameterized
 from covigator import SYNONYMOUS_VARIANT
 from covigator.precomputations.loader import PrecomputationsLoader
 from covigator.precomputations.load_ns_s_counts import NsSCountsLoader
-from covigator.database.model import JobStatus, DataSource, Sample, Gene, RegionType, Domain
+from covigator.database.model import JobStatus, DataSource, Gene, RegionType, Domain
 from covigator.database.queries import Queries
 from covigator.tests.unit_tests.abstract_test import AbstractTest
-from covigator.tests.unit_tests.mocked import get_mocked_log, get_mocked_variant, \
+from covigator.tests.unit_tests.mocked import get_mocked_variant, \
     get_mocked_variant_observation, mock_samples, mock_cooccurrence_matrix, mock_samples_and_variants, MOCKED_DOMAINS, \
     get_mocked_sample
 
@@ -24,7 +24,7 @@ class QueriesTests(AbstractTest):
         samples = mock_samples(faker=self.faker, session=self.session, num_samples=50, source=DataSource.ENA.name) + \
                   mock_samples(faker=self.faker, session=self.session, job_status=JobStatus.FAILED_PROCESSING, num_samples=50,
                                source=DataSource.ENA.name)
-        for sample_ena, sample, job in samples:
+        for sample_ena, job in samples:
             if job.status == JobStatus.FINISHED:
                 if first_sample_date is None:
                     first_sample_date = sample_ena.collection_date
@@ -43,7 +43,7 @@ class QueriesTests(AbstractTest):
         samples = mock_samples(faker=self.faker, session=self.session, num_samples=50, source=DataSource.ENA.name) + \
                   mock_samples(faker=self.faker, session=self.session, job_status=JobStatus.FAILED_PROCESSING, num_samples=50,
                                source=DataSource.ENA.name)
-        for sample_ena, sample, job in samples:
+        for sample_ena, job in samples:
             if job.status == JobStatus.FINISHED:
                 if most_recent_sample_date is None:
                     most_recent_sample_date = sample_ena.collection_date

@@ -2,7 +2,7 @@ import pandas as pd
 from datetime import datetime
 
 from covigator.configuration import Configuration
-from covigator.database.model import JobStatus, JobGisaid, Sample, DataSource
+from covigator.database.model import JobStatus, JobGisaid, DataSource
 from covigator.database.database import Database
 from logzero import logger
 from dask.distributed import Client
@@ -52,8 +52,7 @@ class GisaidProcessor(AbstractProcessor):
     @staticmethod
     def load(job: JobGisaid, queries: Queries, config: Configuration):
         VcfLoader().load(
-            vcf_file=job.vcf_path, sample=Sample(id=job.run_accession, source=DataSource.GISAID),
-            session=queries.session)
+            vcf_file=job.vcf_path, run_accession=job.run_accession, source=DataSource.GISAID, session=queries.session)
         job.loaded_at = datetime.now()
 
     @staticmethod

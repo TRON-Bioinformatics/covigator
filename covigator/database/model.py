@@ -27,7 +27,6 @@ LOW_FREQUENCY_VARIANT_TABLE_NAME = get_table_versioned_name('low_frequency_varia
 GISAID_VARIANT_TABLE_NAME = get_table_versioned_name('gisaid_variant', config=config)
 JOB_ENA_TABLE_NAME = get_table_versioned_name('job_ena', config=config)
 JOB_GISAID_TABLE_NAME = get_table_versioned_name('job_gisaid', config=config)
-SAMPLE_TABLE_NAME = get_table_versioned_name('sample', config=config)
 SAMPLE_GISAID_TABLE_NAME = get_table_versioned_name('sample_gisaid', config=config)
 SAMPLE_ENA_TABLE_NAME = get_table_versioned_name('sample_ena', config=config)
 CONSERVATION_TABLE_NAME = get_table_versioned_name('conservation', config=config)
@@ -218,21 +217,6 @@ class SampleEna(Base):
 
     def get_fastqs_md5(self) -> List:
         return self.fastq_md5.split(SEPARATOR) if self.fastq_md5 is not None else []
-
-
-class Sample(Base):
-    """
-    This table holds all samples loaded into Covigator irrespective of the data source.
-    The same sample may be loaded from different data sources.
-    There are foreign keys fields pointing to the source-specific tables with all metadata for the sample.
-    """
-    __tablename__ = SAMPLE_TABLE_NAME
-
-    id = Column(String, primary_key=True)
-    source = Column(Enum(DataSource, name=DataSource.__constraint_name__), primary_key=True)
-    # NOTE: should have only one filled, either ena_id or gisaid_id and be coherent with the value of source
-    ena_id = Column(ForeignKey("{}.run_accession".format(SampleEna.__tablename__)))
-    gisaid_id = Column(ForeignKey("{}.run_accession".format(SampleGisaid.__tablename__)))
 
 
 class JobGisaid(Base):

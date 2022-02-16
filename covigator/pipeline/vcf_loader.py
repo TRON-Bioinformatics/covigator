@@ -6,7 +6,7 @@ from sqlalchemy.exc import IntegrityError, InvalidRequestError
 from sqlalchemy.orm import Session
 
 from covigator import MISSENSE_VARIANT
-from covigator.database.model import Variant as CovigatorVariant, VariantObservation, Sample, \
+from covigator.database.model import Variant as CovigatorVariant, VariantObservation, \
     SubclonalVariantObservation, SampleEna, SampleGisaid, DataSource, VariantType, GisaidVariantObservation, \
     LowFrequencyVariantObservation, GisaidVariant, SubclonalVariant, LowFrequencyVariant
 from covigator.database.queries import Queries
@@ -15,18 +15,18 @@ from covigator.exceptions import CovigatorNotSupportedVariant
 
 class VcfLoader:
 
-    def load(self, vcf_file: str, sample: Sample, session: Session):
+    def load(self, vcf_file: str, run_accession: str, source: DataSource, session: Session):
 
         assert vcf_file is not None or vcf_file == "", "Missing VCF file provided to VcfLoader"
         assert os.path.exists(vcf_file) and os.path.isfile(vcf_file), "Non existing VCF file provided to VcfLoader"
-        assert sample.id is not None or sample.id == "", "Missing sample"
+        assert run_accession is not None or run_accession == "", "Missing sample"
         assert session is not None, "Missing DB session"
 
         observed_variants = []
         subclonal_observed_variants = []
         low_frequency_observed_variants = []
         specific_sample = Queries(session=session).find_sample_by_accession(
-            run_accession=sample.id, source=sample.source)
+            run_accession=run_accession, source=source)
         assert specific_sample is not None, "Cannot find sample in database"
 
         # reads whole VCF in memory to count variants
@@ -37,7 +37,7 @@ class VcfLoader:
         specific_sample.count_deletions = len([v for v in variants if v.FILTER is None and len(v.REF) == 1 and len(v.ALT[0]) > 1])
         specific_sample.count_insertions = len([v for v in variants if v.FILTER is None and len(v.REF) > 1 and len(v.ALT[0]) == 1])
 
-        if sample.source == DataSource.ENA:
+        if source == DataSource.ENA:
             specific_sample.count_subclonal_snvs = len([v for v in variants if v.FILTER == "SUBCLONAL"
                                         and len(v.REF) == 1 and len(v.ALT[0]) == 1])
             specific_sample.count_subclonal_deletions = len([v for v in variants if v.FILTER == "SUBCLONAL"
@@ -54,10 +54,10 @@ class VcfLoader:
         variant: Variant
         for variant in variants:
             if variant.FILTER is None or variant.FILTER in ["LOW_FREQUENCY", "SUBCLONAL"]:
-                if sample.source == DataSource.GISAID:
+                if source == DataSource.GISAID:
                     gisaid_variant = self._parse_variant(variant, GisaidVariant)
                     observed_variants.append(
-                        self._parse_variant_observation(variant, specific_sample, sample.source, gisaid_variant,
+                        self._parse_variant_observation(variant, specific_sample, source, gisaid_variant,
                                                         GisaidVariantObservation))
                     session.add(gisaid_variant)
                 elif variant.FILTER is None:    # ENA clonal
@@ -65,19 +65,19 @@ class VcfLoader:
                     ena_variant = self._parse_variant(variant, CovigatorVariant)
                     observed_variants.append(
                         self._parse_variant_observation(
-                            variant, specific_sample, sample.source, ena_variant, VariantObservation))
+                            variant, specific_sample, source, ena_variant, VariantObservation))
                     session.add(ena_variant)
                 elif variant.FILTER == "SUBCLONAL":
                     subclonal_variant = self._parse_variant(variant, SubclonalVariant)
                     subclonal_observed_variants.append(
                         self._parse_variant_observation(
-                            variant, specific_sample, sample.source, subclonal_variant, SubclonalVariantObservation))
+                            variant, specific_sample, source, subclonal_variant, SubclonalVariantObservation))
                     session.add(subclonal_variant)
                 elif variant.FILTER == "LOW_FREQUENCY":
                     low_frequency_variant = self._parse_variant(variant, LowFrequencyVariant)
                     low_frequency_observed_variants.append(
                         self._parse_variant_observation(
-                            variant, specific_sample, sample.source, low_frequency_variant, LowFrequencyVariantObservation))
+                            variant, specific_sample, source, low_frequency_variant, LowFrequencyVariantObservation))
                     session.add(low_frequency_variant)
                 try:
                     session.commit()

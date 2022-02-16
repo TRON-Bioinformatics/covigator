@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from covigator.dashboard.tabs.recurrent_mutations import BIN_SIZE_VALUES
 from covigator.database.model import PrecomputedVariantsPerSample, PrecomputedSubstitutionsCounts, \
     PrecomputedIndelLength, PrecomputedAnnotation, VariantObservation, DataSource, \
-    PrecomputedTableCounts, Variant, SubclonalVariantObservation, Sample, PrecomputedVariantAbundanceHistogram, \
+    PrecomputedTableCounts, Variant, SubclonalVariantObservation, PrecomputedVariantAbundanceHistogram, \
     SampleEna, SampleGisaid
 from logzero import logger
 

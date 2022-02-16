@@ -6,9 +6,9 @@ from requests import Response
 from sqlalchemy.orm import Session
 
 from covigator.accessor import MINIMUM_DATE
-from covigator.exceptions import CovigatorExcludedSampleTooEarlyDateException, CovigatorException
+from covigator.exceptions import CovigatorExcludedSampleTooEarlyDateException
 from covigator.misc import backoff_retrier
-from covigator.database.model import SampleEna, JobEna, Sample, DataSource, Log, CovigatorModule
+from covigator.database.model import SampleEna, JobEna, DataSource, Log, CovigatorModule
 from covigator.database.database import Database
 from logzero import logger
 from covigator.misc.country_parser import CountryParser
@@ -131,7 +131,6 @@ class EnaAccessor:
     def _process_runs(self, list_runs, existing_sample_ids, session: Session):
 
         included_samples = []
-        included_samples_ena = []
         included_jobs = []
         for run in list_runs:
             if isinstance(run, dict):
@@ -143,10 +142,8 @@ class EnaAccessor:
                 # NOTE: this parse operation is costly
                 try:
                     sample_ena = self._parse_ena_run(run)
-                    sample = self._build_sample(sample_ena)
                     self.included += 1
-                    included_samples_ena.append(sample_ena)
-                    included_samples.append(sample)
+                    included_samples.append(sample_ena)
                     included_jobs.append(JobEna(run_accession=sample_ena.run_accession))
                 except CovigatorExcludedSampleTooEarlyDateException:
                     logger.error("Excluded sample due to too early date")
@@ -156,20 +153,12 @@ class EnaAccessor:
                 logger.error("Run from ENA without the expected format")
 
         if len(included_samples) > 0:
-            session.add_all(included_samples_ena)
-            session.commit()
             session.add_all(included_samples)
+            session.commit()
             session.add_all(included_jobs)
             session.commit()
             logger.info("Added {} new ENA samples".format(len(included_samples)))
         logger.info("Processed {} ENA samples".format(len(list_runs)))
-
-    def _build_sample(self, sample_ena):
-        return Sample(
-            id=sample_ena.run_accession,
-            source=DataSource.ENA,
-            ena_id=sample_ena.run_accession
-        )
 
     def _parse_country(self, sample: SampleEna):
         parsed_country = self.country_parser.parse_country(
