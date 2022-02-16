@@ -14,6 +14,7 @@ from logzero import logger
 from covigator.misc.country_parser import CountryParser
 
 NUMBER_RETRIES = 5
+BATCH_SIZE = 1000
 
 
 class EnaAccessor:
@@ -149,6 +150,11 @@ class EnaAccessor:
                     self.excluded += 1
             else:
                 logger.error("Run from ENA without the expected format")
+
+            if len(included_samples) >= BATCH_SIZE:
+                session.add_all(included_samples)
+                session.commit()
+                included_samples = []
 
         if len(included_samples) > 0:
             session.add_all(included_samples)
