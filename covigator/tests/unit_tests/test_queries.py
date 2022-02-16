@@ -24,8 +24,8 @@ class QueriesTests(AbstractTest):
         samples = mock_samples(faker=self.faker, session=self.session, num_samples=50, source=DataSource.ENA.name) + \
                   mock_samples(faker=self.faker, session=self.session, job_status=JobStatus.FAILED_PROCESSING, num_samples=50,
                                source=DataSource.ENA.name)
-        for sample_ena, job in samples:
-            if job.status == JobStatus.FINISHED:
+        for sample_ena in samples:
+            if sample_ena.status == JobStatus.FINISHED:
                 if first_sample_date is None:
                     first_sample_date = sample_ena.collection_date
                 if sample_ena.collection_date < first_sample_date:
@@ -43,8 +43,8 @@ class QueriesTests(AbstractTest):
         samples = mock_samples(faker=self.faker, session=self.session, num_samples=50, source=DataSource.ENA.name) + \
                   mock_samples(faker=self.faker, session=self.session, job_status=JobStatus.FAILED_PROCESSING, num_samples=50,
                                source=DataSource.ENA.name)
-        for sample_ena, job in samples:
-            if job.status == JobStatus.FINISHED:
+        for sample_ena in samples:
+            if sample_ena.status == JobStatus.FINISHED:
                 if most_recent_sample_date is None:
                     most_recent_sample_date = sample_ena.collection_date
                 if sample_ena.collection_date > most_recent_sample_date:

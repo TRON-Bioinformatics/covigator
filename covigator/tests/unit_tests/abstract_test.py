@@ -2,7 +2,7 @@ from unittest import TestCase
 from faker import Faker
 from logzero import logger
 from covigator.database.database import Database
-from covigator.database.model import VariantCooccurrence, SampleEna, JobEna, JobGisaid, VariantObservation, \
+from covigator.database.model import VariantCooccurrence, SampleEna, VariantObservation, \
     SampleGisaid, SubclonalVariantObservation, Variant, PrecomputedVariantAbundanceHistogram, PrecomputedTableCounts, \
     PrecomputedSynonymousNonSynonymousCounts, PrecomputedOccurrence, PrecomputedAnnotation, PrecomputedIndelLength, \
     PrecomputedSubstitutionsCounts, PrecomputedVariantsPerSample, Log, GisaidVariant, GisaidVariantObservation, \
@@ -44,8 +44,6 @@ class AbstractTest(TestCase):
             self._clean_table(VariantObservation)
             self._clean_table(SubclonalVariantObservation)
             self._clean_table(LowFrequencyVariantObservation)
-            self._clean_table(JobEna)
-            self._clean_table(JobGisaid)
             self._clean_table(SampleEna)
             self._clean_table(SampleGisaid)
             self._clean_table(VariantCooccurrence)

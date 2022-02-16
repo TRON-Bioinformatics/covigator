@@ -3,7 +3,7 @@ from unittest import TestCase
 from Bio import SeqIO
 from covigator.accessor.gisaid_accessor import GisaidAccessor
 from covigator.database.database import Database
-from covigator.database.model import SampleGisaid, JobGisaid
+from covigator.database.model import SampleGisaid
 from covigator.misc.compression import decompress_sequence
 from covigator.tests.unit_tests.faked_objects import FakeConfiguration
 
@@ -21,7 +21,6 @@ class GisaidAccessorTests(TestCase):
         GisaidAccessor(input_fasta=self.input_fasta, input_metadata=self.input_metadata, database=self.database).access()
         session = self.database.get_database_session()
         self.assertEqual(session.query(SampleGisaid).count(), 1)
-        self.assertEqual(session.query(JobGisaid).count(), 1)
         samples = session.query(SampleGisaid).all()
         for s in samples:
             self.assertEqual(s.country, "China")

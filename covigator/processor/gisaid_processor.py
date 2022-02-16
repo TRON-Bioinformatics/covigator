@@ -2,7 +2,7 @@ import pandas as pd
 from datetime import datetime
 
 from covigator.configuration import Configuration
-from covigator.database.model import JobStatus, JobGisaid, DataSource
+from covigator.database.model import JobStatus, DataSource, SampleGisaid
 from covigator.database.database import Database
 from logzero import logger
 from dask.distributed import Client
@@ -33,43 +33,42 @@ class GisaidProcessor(AbstractProcessor):
             function=GisaidProcessor.run_all)
 
     @staticmethod
-    def run_all(job: JobGisaid, queries: Queries, config: Configuration):
-        GisaidProcessor.run_pipeline(job=job, queries=queries, config=config)
-        GisaidProcessor.load(job=job, queries=queries, config=config)
+    def run_all(sample: SampleGisaid, queries: Queries, config: Configuration):
+        GisaidProcessor.run_pipeline(sample=sample, queries=queries, config=config)
+        GisaidProcessor.load(sample=sample, queries=queries, config=config)
 
     @staticmethod
-    def run_pipeline(job: JobGisaid, queries: Queries, config: Configuration):
-        sample = queries.find_sample_by_accession(job.run_accession, source=DataSource.GISAID)
+    def run_pipeline(sample: SampleGisaid, queries: Queries, config: Configuration):
         pipeline_results = GisaidPipeline(config=config).run(sample=sample)
-        job.analysed_at = datetime.now()
-        job.vcf_path = pipeline_results.vcf_path
-        job.pangolin_path = pipeline_results.pangolin_path
-        job.fasta_path = pipeline_results.fasta_path
+        sample.analysed_at = datetime.now()
+        sample.vcf_path = pipeline_results.vcf_path
+        sample.pangolin_path = pipeline_results.pangolin_path
+        sample.fasta_path = pipeline_results.fasta_path
 
         # load pangolin results
-        GisaidProcessor.load_gisaid_pangolin(job)
+        GisaidProcessor.load_gisaid_pangolin(sample)
 
     @staticmethod
-    def load(job: JobGisaid, queries: Queries, config: Configuration):
+    def load(sample: SampleGisaid, queries: Queries, config: Configuration):
         VcfLoader().load(
-            vcf_file=job.vcf_path, run_accession=job.run_accession, source=DataSource.GISAID, session=queries.session)
-        job.loaded_at = datetime.now()
+            vcf_file=sample.vcf_path, run_accession=sample.run_accession, source=DataSource.GISAID, session=queries.session)
+        sample.loaded_at = datetime.now()
 
     @staticmethod
-    def load_gisaid_pangolin(job: JobGisaid):
+    def load_gisaid_pangolin(sample: SampleGisaid):
         try:
-            data = pd.read_csv(job.pangolin_path)
-            job.pangolin_lineage = float(data.lineage.loc[0])
-            job.pangolin_conflict = float(data.conflict.loc[0])
-            job.pangolin_ambiguity_score = float(data.ambiguity_score.loc[0])
-            job.pangolin_scorpio_call = float(data.scorpio_call.loc[0])
-            job.pangolin_scorpio_support = float(data.scorpio_support.loc[0])
-            job.pangolin_scorpio_conflict = float(data.scorpio_conflict.loc[0])
-            job.pangolin_version = float(data.version.loc[0])
-            job.pangolin_pangolin_version = float(data.pangolin_version.loc[0])
-            job.pangolin_pangoLEARN_version = float(data.pangoLEARN_version.loc[0])
-            job.pangolin_pango_version = float(data.pango_version.loc[0])
-            job.pangolin_status = float(data.status.loc[0])
-            job.pangolin_note = float(data.note.loc[0])
+            data = pd.read_csv(sample.pangolin_path)
+            sample.pangolin_lineage = float(data.lineage.loc[0])
+            sample.pangolin_conflict = float(data.conflict.loc[0])
+            sample.pangolin_ambiguity_score = float(data.ambiguity_score.loc[0])
+            sample.pangolin_scorpio_call = float(data.scorpio_call.loc[0])
+            sample.pangolin_scorpio_support = float(data.scorpio_support.loc[0])
+            sample.pangolin_scorpio_conflict = float(data.scorpio_conflict.loc[0])
+            sample.pangolin_version = float(data.version.loc[0])
+            sample.pangolin_pangolin_version = float(data.pangolin_version.loc[0])
+            sample.pangolin_pangoLEARN_version = float(data.pangoLEARN_version.loc[0])
+            sample.pangolin_pango_version = float(data.pango_version.loc[0])
+            sample.pangolin_status = float(data.status.loc[0])
+            sample.pangolin_note = float(data.note.loc[0])
         except Exception as e:
             raise CovigatorErrorProcessingPangolinResults(e)

@@ -25,8 +25,6 @@ VARIANT_TABLE_NAME = get_table_versioned_name('variant', config=config)
 SUBCLONAL_VARIANT_TABLE_NAME = get_table_versioned_name('subclonal_variant', config=config)
 LOW_FREQUENCY_VARIANT_TABLE_NAME = get_table_versioned_name('low_frequency_variant', config=config)
 GISAID_VARIANT_TABLE_NAME = get_table_versioned_name('gisaid_variant', config=config)
-JOB_ENA_TABLE_NAME = get_table_versioned_name('job_ena', config=config)
-JOB_GISAID_TABLE_NAME = get_table_versioned_name('job_gisaid', config=config)
 SAMPLE_GISAID_TABLE_NAME = get_table_versioned_name('sample_gisaid', config=config)
 SAMPLE_ENA_TABLE_NAME = get_table_versioned_name('sample_ena', config=config)
 CONSERVATION_TABLE_NAME = get_table_versioned_name('conservation', config=config)
@@ -146,6 +144,34 @@ class SampleGisaid(Base):
     count_insertions = Column(Integer)
     count_deletions = Column(Integer)
 
+    # job status
+    status = Column(Enum(JobStatus, name=JobStatus.__constraint_name__), default=JobStatus.PENDING)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.now())
+    queued_at = Column(DateTime(timezone=True))
+    analysed_at = Column(DateTime(timezone=True))
+    loaded_at = Column(DateTime(timezone=True))
+    failed_at = Column(DateTime(timezone=True))
+    error_message = Column(String)
+
+    # output files
+    vcf_path = Column(String)
+    fasta_path = Column(String)
+    pangolin_path = Column(String)
+
+    # pango output (corresponding only to LoFreq)
+    pangolin_lineage = Column(String)
+    pangolin_conflict = Column(Float)
+    pangolin_ambiguity_score = Column(Float)
+    pangolin_scorpio_call = Column(String)
+    pangolin_scorpio_support = Column(Float)
+    pangolin_scorpio_conflict = Column(Float)
+    pangolin_version = Column(String)
+    pangolin_pangolin_version = Column(String)
+    pangolin_pangoLEARN_version = Column(String)
+    pangolin_pango_version = Column(String)
+    pangolin_status = Column(String)
+    pangolin_note = Column(String)
+
 
 class SampleEna(Base):
     """
@@ -212,58 +238,6 @@ class SampleEna(Base):
     count_low_frequency_insertions = Column(Integer)
     count_low_frequency_deletions = Column(Integer)
 
-    def get_fastqs_ftp(self) -> List:
-        return self.fastq_ftp.split(SEPARATOR) if self.fastq_ftp is not None else []
-
-    def get_fastqs_md5(self) -> List:
-        return self.fastq_md5.split(SEPARATOR) if self.fastq_md5 is not None else []
-
-
-class JobGisaid(Base):
-    """
-    The table that holds an GISAID job
-    """
-    __tablename__ = JOB_GISAID_TABLE_NAME
-
-    run_accession = Column(ForeignKey("{}.run_accession".format(SampleGisaid.__tablename__)), primary_key=True)
-
-    # job status
-    status = Column(Enum(JobStatus, name=JobStatus.__constraint_name__), default=JobStatus.PENDING)
-    created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.now())
-    queued_at = Column(DateTime(timezone=True))
-    analysed_at = Column(DateTime(timezone=True))
-    loaded_at = Column(DateTime(timezone=True))
-    failed_at = Column(DateTime(timezone=True))
-    error_message = Column(String)
-
-    # output files
-    vcf_path= Column(String)
-    fasta_path = Column(String)
-    pangolin_path = Column(String)
-
-    # pango output (corresponding only to LoFreq)
-    pangolin_lineage = Column(String)
-    pangolin_conflict = Column(Float)
-    pangolin_ambiguity_score = Column(Float)
-    pangolin_scorpio_call = Column(String)
-    pangolin_scorpio_support = Column(Float)
-    pangolin_scorpio_conflict = Column(Float)
-    pangolin_version = Column(String)
-    pangolin_pangolin_version = Column(String)
-    pangolin_pangoLEARN_version = Column(String)
-    pangolin_pango_version = Column(String)
-    pangolin_status = Column(String)
-    pangolin_note = Column(String)
-
-
-class JobEna(Base):
-    """
-    The table that holds an ENA job
-    """
-    __tablename__ = JOB_ENA_TABLE_NAME
-
-    run_accession = Column(ForeignKey("{}.run_accession".format(SampleEna.__tablename__)), primary_key=True)
-
     # job status
     status = Column(Enum(JobStatus, name=JobStatus.__constraint_name__), default=JobStatus.PENDING)
     created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.now())
@@ -277,7 +251,7 @@ class JobEna(Base):
     error_message = Column(String)
 
     # local files storage
-    fastq_path = Column(String)     # the local path where FASTQ files are stored in semi colon separated list
+    fastq_path = Column(String)  # the local path where FASTQ files are stored in semi colon separated list
     lofreq_vcf_path = Column(String)
     ivar_vcf_path = Column(String)
     gatk_vcf_path = Column(String)
@@ -326,8 +300,11 @@ class JobEna(Base):
     read_pair_duplicates = Column(Integer)
     read_pair_optical_duplicates = Column(Integer)
 
-    def get_fastq_paths(self):
-        return self.fastq_path.split(SEPARATOR) if self.fastq_path is not None else []
+    def get_fastqs_ftp(self) -> List:
+        return self.fastq_ftp.split(SEPARATOR) if self.fastq_ftp is not None else []
+
+    def get_fastqs_md5(self) -> List:
+        return self.fastq_md5.split(SEPARATOR) if self.fastq_md5 is not None else []
 
     def get_fastq1_and_fastq2(self):
         fastqs = self.get_fastq_paths()

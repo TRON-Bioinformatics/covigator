@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from covigator.accessor import MINIMUM_DATE
 from covigator.exceptions import CovigatorExcludedSampleTooEarlyDateException
 from covigator.misc import backoff_retrier
-from covigator.database.model import SampleEna, JobEna, DataSource, Log, CovigatorModule
+from covigator.database.model import SampleEna, DataSource, Log, CovigatorModule
 from covigator.database.database import Database
 from logzero import logger
 from covigator.misc.country_parser import CountryParser
@@ -131,7 +131,6 @@ class EnaAccessor:
     def _process_runs(self, list_runs, existing_sample_ids, session: Session):
 
         included_samples = []
-        included_jobs = []
         for run in list_runs:
             if isinstance(run, dict):
                 if run.get("run_accession") in existing_sample_ids:
@@ -144,7 +143,6 @@ class EnaAccessor:
                     sample_ena = self._parse_ena_run(run)
                     self.included += 1
                     included_samples.append(sample_ena)
-                    included_jobs.append(JobEna(run_accession=sample_ena.run_accession))
                 except CovigatorExcludedSampleTooEarlyDateException:
                     logger.error("Excluded sample due to too early date")
                     self.excluded_by_date += 1
@@ -154,8 +152,6 @@ class EnaAccessor:
 
         if len(included_samples) > 0:
             session.add_all(included_samples)
-            session.commit()
-            session.add_all(included_jobs)
             session.commit()
             logger.info("Added {} new ENA samples".format(len(included_samples)))
         logger.info("Processed {} ENA samples".format(len(list_runs)))

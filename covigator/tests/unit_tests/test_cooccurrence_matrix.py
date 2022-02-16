@@ -19,10 +19,8 @@ class CooccurrenceMatrixTests(AbstractTest):
         variant_observations = []
         self.samples = []
         for _ in range(self.NUM_SAMPLES):
-            sample_ena, job = get_mocked_ena_sample(self.faker)
+            sample_ena = get_mocked_ena_sample(self.faker)
             self.session.add(sample_ena)
-            self.session.commit()
-            self.session.add(job)
             self.session.commit()
             self.samples.append(sample_ena)
             # mocks observed variants

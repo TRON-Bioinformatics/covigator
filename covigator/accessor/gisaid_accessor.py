@@ -2,7 +2,7 @@ from datetime import date, datetime
 from sqlalchemy.orm import Session
 
 from covigator.accessor import MINIMUM_DATE
-from covigator.database.model import SampleGisaid, JobGisaid, DataSource, Log, CovigatorModule
+from covigator.database.model import SampleGisaid, DataSource, Log, CovigatorModule
 from covigator.database.database import Database
 from logzero import logger
 from Bio import SeqIO
@@ -76,7 +76,6 @@ class GisaidAccessor:
         total_time = 0
         logger.info("Reading FASTA...")
         samples_gisaid = []
-        jobs = []
         for record in SeqIO.parse(self.input_fasta, "fasta"):
             start = time.time()
 
@@ -150,9 +149,7 @@ class GisaidAccessor:
             try:
                 self._parse_country(sample_gisaid)
                 self._parse_dates(sample_gisaid)
-                job = JobGisaid(run_accession=sample_gisaid.run_accession)
                 samples_gisaid.append(sample_gisaid)
-                jobs.append(job)
                 num_samples += 1
                 self.included += 1
                 end = time.time()
@@ -161,18 +158,13 @@ class GisaidAccessor:
                 if len(samples_gisaid) == BATCH_SIZE:
                     session.add_all(samples_gisaid)
                     session.commit()
-                    session.add_all(jobs)
-                    session.commit()
                     samples_gisaid = []
-                    jobs = []
             except CovigatorExcludedSampleTooEarlyDateException:
                 logger.error("Sample excluded due to too early date")
                 self.excluded_by_date += 0
 
         if len(samples_gisaid) > 0:
             session.add_all(samples_gisaid)
-            session.commit()
-            session.add_all(jobs)
             session.commit()
         if num_samples > 0:
             logger.info("It took {} secs/sample on average".format(float(total_time) / num_samples))

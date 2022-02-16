@@ -7,11 +7,9 @@ import covigator
 from covigator.accessor.ena_accessor import EnaAccessor
 from covigator.configuration import Configuration
 from covigator.database.database import Database
-from covigator.database.model import DataSource, JobStatus, JobEna, JobGisaid
+from covigator.database.model import DataSource, JobStatus, SampleGisaid, SampleEna
 from covigator.database.queries import Queries
-from covigator.exceptions import CovigatorExcludedSampleTooManyMutations
 from covigator.processor.abstract_processor import AbstractProcessor
-from covigator.processor.ena_processor import EnaProcessor
 from covigator.tests import SARS_COV_2_TAXID, HOMO_SAPIENS_TAXID
 
 
@@ -64,7 +62,7 @@ class FakeEnaProcessor(AbstractProcessor):
     )
 
     @staticmethod
-    def run_all(job: JobEna, queries: Queries, config: Configuration):
+    def run_all(sample: SampleEna, queries: Queries, config: Configuration):
         logger.info("Job processed!")
 
 
@@ -92,7 +90,7 @@ class FakeProcessorFailing(AbstractProcessor):
         )
 
     @staticmethod
-    def run_all(job: JobEna, queries: Queries, config: Configuration):
+    def run_all(sample: SampleEna, queries: Queries, config: Configuration):
         raise ValueError("Fail em'all")
 
 
@@ -119,5 +117,5 @@ class FakeGisaidProcessor(AbstractProcessor):
     )
 
     @staticmethod
-    def run_all(job: JobGisaid, queries: Queries, config: Configuration):
+    def run_all(sample: SampleGisaid, queries: Queries, config: Configuration):
         logger.info("Job processed!")

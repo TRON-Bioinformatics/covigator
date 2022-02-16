@@ -8,8 +8,8 @@ from sqlalchemy.engine.default import DefaultDialect
 from sqlalchemy.orm import Session, aliased
 from sqlalchemy.sql.sqltypes import NullType
 from covigator import SYNONYMOUS_VARIANT
-from covigator.database.model import DataSource, SampleEna, JobEna, JobStatus, \
-    VariantObservation, Gene, Variant, VariantCooccurrence, Conservation, JobGisaid, SampleGisaid, \
+from covigator.database.model import DataSource, SampleEna, JobStatus, \
+    VariantObservation, Gene, Variant, VariantCooccurrence, Conservation, SampleGisaid, \
     SubclonalVariantObservation, PrecomputedVariantsPerSample, PrecomputedSubstitutionsCounts, PrecomputedIndelLength, \
     VariantType, PrecomputedAnnotation, PrecomputedOccurrence, PrecomputedTableCounts, \
     PrecomputedVariantAbundanceHistogram, PrecomputedSynonymousNonSynonymousCounts, RegionType, Domain, \
@@ -52,28 +52,18 @@ class Queries:
             raise CovigatorQueryException("Bad data source: {}".format(source))
         return klass
 
-    @staticmethod
-    def get_job_klass(source: str):
-        if source == DataSource.ENA.name:
-            klass = JobEna
-        elif source == DataSource.GISAID.name:
-            klass = JobGisaid
-        else:
-            raise CovigatorQueryException("Bad data source: {}".format(source))
-        return klass
-
     def find_job_by_accession_and_status(
-            self, run_accession: str, status: JobStatus, data_source: DataSource) -> Union[JobEna, JobGisaid]:
-        klass = self.get_job_klass(source=data_source.name)
+            self, run_accession: str, status: JobStatus, data_source: DataSource) -> Union[SampleEna, SampleGisaid]:
+        klass = self.get_sample_klass(source=data_source.name)
         return self.session.query(klass)\
             .filter(and_(klass.run_accession == run_accession, klass.status == status)).first()
 
-    def find_job_by_accession(self, run_accession: str, data_source: DataSource) -> Union[JobEna, JobGisaid]:
-        klass = self.get_job_klass(source=data_source.name)
+    def find_job_by_accession(self, run_accession: str, data_source: DataSource) -> Union[SampleEna, SampleGisaid]:
+        klass = self.get_sample_klass(source=data_source.name)
         return self.session.query(klass).filter(klass.run_accession == run_accession).first()
 
-    def find_first_pending_jobs(self, data_source: DataSource, n=100) -> List[Union[JobEna, JobGisaid]]:
-        klass = self.get_job_klass(source=data_source.name)
+    def find_first_pending_jobs(self, data_source: DataSource, n=100) -> List[Union[SampleEna, SampleGisaid]]:
+        klass = self.get_sample_klass(source=data_source.name)
         return self.session.query(klass) \
             .filter(klass.status == JobStatus.PENDING) \
             .order_by(klass.created_at.desc()) \
@@ -84,7 +74,7 @@ class Queries:
         return self.count_jobs_by_status(data_source=data_source, status=JobStatus.QUEUED)
 
     def count_jobs_by_status(self, data_source: DataSource, status: JobStatus):
-        klass = self.get_job_klass(source=data_source.name)
+        klass = self.get_sample_klass(source=data_source.name)
         return self.session.query(klass).filter(klass.status == status).count()
 
     def find_sample_by_accession(self, run_accession: str, source: DataSource) -> Union[SampleEna, SampleGisaid]:

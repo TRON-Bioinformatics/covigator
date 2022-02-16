@@ -1,6 +1,5 @@
 from datetime import date
-from sqlalchemy import and_
-from covigator.database.model import SampleEna, JobEna, Log, DataSource, CovigatorModule
+from covigator.database.model import SampleEna, Log, DataSource, CovigatorModule
 from covigator.tests.unit_tests.abstract_test import AbstractTest
 from covigator.tests.unit_tests.faked_objects import FakeEnaAccessor
 
@@ -459,7 +458,6 @@ class EnaAccessorTests(AbstractTest):
 
     def _assert_entities_from_accessor(self, session, identifier):
         self.assertEqual(session.query(SampleEna).filter(SampleEna.run_accession == identifier).count(), 1)
-        self.assertEqual(session.query(JobEna).filter(JobEna.run_accession == identifier).count(), 1)
 
     def test_writing_logs(self):
         ena_accessor = FakeEnaAccessor(results=[
