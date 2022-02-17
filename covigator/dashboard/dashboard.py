@@ -26,6 +26,7 @@ from logzero import logger
 from covigator.database.model import DataSource
 from covigator.database.queries import Queries
 
+TAB_STYLE = {"color": "#003c78", 'margin-right': '15px'}
 
 ID_TAB_CONTENT = "tab-content"
 DOWNLOAD_TAB_ID = "download"
@@ -78,7 +79,7 @@ class Dashboard:
                                             None,
                                             id="tabs",
                                             active_tab=SAMPLES_TAB_ID,
-                                            style={'align': 'right', },
+                                            style={'align': 'right', 'font-size': '140%'},
                                         )],
                                     align="right",
                                     style={'margin-left': '2%', }
@@ -226,20 +227,20 @@ def set_callbacks(app, session: Session, content_folder):
         elif page == GISAID_PAGE:
             # show gisaid tabs
             return [
-                dbc.Tab(label="Overview", tab_id=GISAID_DATASET_TAB_ID, label_style={"color": "#003c78"}),
-                dbc.Tab(label="Samples", tab_id=SAMPLES_TAB_ID, label_style={"color": "#003c78"}),
-                dbc.Tab(label="Mutation statistics", tab_id=MUTATIONS_TAB_ID, label_style={"color": "#003c78"}),
-                dbc.Tab(label="Recurrent mutations", tab_id=RECURRENT_MUTATIONS_TAB_ID, label_style={"color": "#003c78"}),
+                dbc.Tab(label="Overview", tab_id=GISAID_DATASET_TAB_ID, label_style=TAB_STYLE),
+                dbc.Tab(label="Samples", tab_id=SAMPLES_TAB_ID, label_style=TAB_STYLE),
+                dbc.Tab(label="Mutation statistics", tab_id=MUTATIONS_TAB_ID, label_style=TAB_STYLE),
+                dbc.Tab(label="Recurrent mutations", tab_id=RECURRENT_MUTATIONS_TAB_ID, label_style=TAB_STYLE),
                 ], GISAID_DATASET_TAB_ID
         elif page == ENA_PAGE:
             # show ena tabs
             return [
-               dbc.Tab(label="Overview", tab_id=ENA_DATASET_TAB_ID, label_style={"color": "#003c78"}),
-                dbc.Tab(label="Samples", tab_id=SAMPLES_TAB_ID, label_style={"color": "#003c78"}),
-                dbc.Tab(label="Mutation statistics", tab_id=MUTATIONS_TAB_ID, label_style={"color": "#003c78"}),
-                dbc.Tab(label="Recurrent mutations", tab_id=RECURRENT_MUTATIONS_TAB_ID, label_style={"color": "#003c78"}),
-                dbc.Tab(label="Intrahost mutations", tab_id=INTRAHOST_MUTATIONS_TAB_ID, label_style={"color": "#003c78"}),
-                dbc.Tab(label="Download data", tab_id=DOWNLOAD_TAB_ID, label_style={"color": "#003c78"})], ENA_DATASET_TAB_ID
+               dbc.Tab(label="Overview", tab_id=ENA_DATASET_TAB_ID, label_style=TAB_STYLE),
+                dbc.Tab(label="Samples", tab_id=SAMPLES_TAB_ID, label_style=TAB_STYLE),
+                dbc.Tab(label="Mutation statistics", tab_id=MUTATIONS_TAB_ID, label_style=TAB_STYLE),
+                dbc.Tab(label="Recurrent mutations", tab_id=RECURRENT_MUTATIONS_TAB_ID, label_style=TAB_STYLE),
+                dbc.Tab(label="Intrahost mutations", tab_id=INTRAHOST_MUTATIONS_TAB_ID, label_style=TAB_STYLE),
+                dbc.Tab(label="Download data", tab_id=DOWNLOAD_TAB_ID, label_style=TAB_STYLE)], ENA_DATASET_TAB_ID
         elif page == ACKNOWLEDGEMENTS_PAGE:
             # show ena tabs
             return [
