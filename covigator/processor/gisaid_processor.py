@@ -46,29 +46,10 @@ class GisaidProcessor(AbstractProcessor):
         sample.fasta_path = pipeline_results.fasta_path
 
         # load pangolin results
-        GisaidProcessor.load_gisaid_pangolin(sample)
+        GisaidProcessor.load_pangolin(sample=sample, path=sample.pangolin_path)
 
     @staticmethod
     def load(sample: SampleGisaid, queries: Queries, config: Configuration):
         VcfLoader().load(
             vcf_file=sample.vcf_path, run_accession=sample.run_accession, source=DataSource.GISAID, session=queries.session)
         sample.loaded_at = datetime.now()
-
-    @staticmethod
-    def load_gisaid_pangolin(sample: SampleGisaid):
-        try:
-            data = pd.read_csv(sample.pangolin_path)
-            sample.pangolin_lineage = float(data.lineage.loc[0])
-            sample.pangolin_conflict = float(data.conflict.loc[0])
-            sample.pangolin_ambiguity_score = float(data.ambiguity_score.loc[0])
-            sample.pangolin_scorpio_call = float(data.scorpio_call.loc[0])
-            sample.pangolin_scorpio_support = float(data.scorpio_support.loc[0])
-            sample.pangolin_scorpio_conflict = float(data.scorpio_conflict.loc[0])
-            sample.pangolin_version = float(data.version.loc[0])
-            sample.pangolin_pangolin_version = float(data.pangolin_version.loc[0])
-            sample.pangolin_pangoLEARN_version = float(data.pangoLEARN_version.loc[0])
-            sample.pangolin_pango_version = float(data.pango_version.loc[0])
-            sample.pangolin_status = float(data.status.loc[0])
-            sample.pangolin_note = float(data.note.loc[0])
-        except Exception as e:
-            raise CovigatorErrorProcessingPangolinResults(e)

@@ -55,9 +55,15 @@ class GisaidPipeline:
                 SeqIO.write(record, output, "fasta")
 
             command = "{nextflow} run {workflow} " \
-                      "--fasta {fasta} --output {output_folder} --name {name} " \
-                      "--cpus {cpus} --memory {memory} " \
-                      "-profile conda -offline -work-dir {work_folder} -with-trace {trace_file}".format(
+                      "--fasta {fasta} " \
+                      "--output {output_folder} " \
+                      "--name {name} " \
+                      "--cpus {cpus} " \
+                      "--memory {memory} " \
+                      "-profile conda " \
+                      "-offline " \
+                      "-work-dir {work_folder} " \
+                      "-with-trace {trace_file}".format(
                 nextflow=self.config.nextflow,
                 fasta=input_fasta,
                 output_folder=sample_data_folder,
@@ -71,7 +77,7 @@ class GisaidPipeline:
             run_command(command, sample_data_folder)
 
         return GisaidPipelineResult(
-            vcf=output_vcf,
-            fasta=input_fasta,
-            pangolin=output_pangolin
+            vcf_path=output_vcf,
+            fasta_path=input_fasta,
+            pangolin_path=output_pangolin
         )

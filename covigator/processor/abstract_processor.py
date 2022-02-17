@@ -1,6 +1,7 @@
 import abc
 import time
 import traceback
+import pandas as pd
 from contextlib import suppress
 from datetime import datetime
 from typing import Callable
@@ -15,7 +16,7 @@ from covigator.database.database import Database, session_scope
 from covigator.database.model import Log, DataSource, CovigatorModule, JobStatus, SampleGisaid, \
     SampleEna
 from covigator.database.queries import Queries
-from covigator.exceptions import CovigatorExcludedSampleException
+from covigator.exceptions import CovigatorExcludedSampleException, CovigatorErrorProcessingPangolinResults
 from covigator.precomputations.loader import PrecomputationsLoader
 
 
@@ -173,3 +174,51 @@ class AbstractProcessor:
             sample.status = status
             sample.failed_at = datetime.now()
             sample.error_message = AbstractProcessor._get_traceback_from_exception(exception)
+
+    @staticmethod
+    def load_pangolin(sample: typing.Union[SampleGisaid, SampleEna], path: str):
+        try:
+            data = pd.read_csv(path,
+                               na_values=None,
+                               dtype={
+                                   'lineage': str,
+                                   'conflict': float,
+                                   'ambiguity_score': float,
+                                   'scorpio_call': str,
+                                   'scorpio_support': float,
+                                   'scorpio_conflict': float,
+                                   'version': str,
+                                   'pangolin_version': str,
+                                   'pangoLEARN_version': str,
+                                   'pango_version': str,
+                                   'status': str,
+                                   'note': str
+                               })
+
+            # fill NA values on a per column basis...
+            data.lineage.fillna(value="", inplace=True)
+            data.scorpio_call.fillna(value="", inplace=True)
+            data.version.fillna(value="", inplace=True)
+            data.pangolin_version.fillna(value="", inplace=True)
+            data.pangoLEARN_version.fillna(value="", inplace=True)
+            data.pango_version.fillna(value="", inplace=True)
+            data.note.fillna(value="", inplace=True)
+            data.conflict.fillna(value=0.0, inplace=True)
+            data.ambiguity_score.fillna(value=0.0, inplace=True)
+            data.scorpio_support.fillna(value=0.0, inplace=True)
+            data.scorpio_conflict.fillna(value=0.0, inplace=True)
+
+            sample.pangolin_lineage = data.lineage.loc[0]
+            sample.pangolin_conflict = data.conflict.loc[0]
+            sample.pangolin_ambiguity_score = data.ambiguity_score.loc[0]
+            sample.pangolin_scorpio_call = data.scorpio_call.loc[0]
+            sample.pangolin_scorpio_support = data.scorpio_support.loc[0]
+            sample.pangolin_scorpio_conflict = data.scorpio_conflict.loc[0]
+            sample.pangolin_version = data.version.loc[0]
+            sample.pangolin_pangolin_version = data.pangolin_version.loc[0]
+            sample.pangolin_pangoLEARN_version = data.pangoLEARN_version.loc[0]
+            sample.pangolin_pango_version = data.pango_version.loc[0]
+            sample.pangolin_status = data.status.loc[0]
+            sample.pangolin_note = data.note.loc[0]
+        except Exception as e:
+            raise CovigatorErrorProcessingPangolinResults(e)

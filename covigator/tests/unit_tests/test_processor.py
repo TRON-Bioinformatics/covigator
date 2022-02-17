@@ -4,7 +4,7 @@ from parameterized import parameterized
 import covigator
 import pkg_resources
 from dask.distributed import Client
-from covigator.database.model import Log, DataSource, CovigatorModule, JobStatus, SampleEna
+from covigator.database.model import Log, DataSource, CovigatorModule, JobStatus, SampleEna, SampleGisaid
 from covigator.processor.ena_processor import EnaProcessor
 from covigator.processor.gisaid_processor import GisaidProcessor
 from covigator.tests.unit_tests.abstract_test import AbstractTest
@@ -93,10 +93,27 @@ class ProcessorTests(AbstractTest):
         self.assertEqual(self.queries.count_jobs_by_status(data_source=source, status=JobStatus.FINISHED), 0)
         self.assertEqual(self.queries.count_jobs_by_status(data_source=source, status=JobStatus.FAILED_PROCESSING), 10)
 
-    def test_load_pangolin(self):
+    def test_load_pangolin_from_ena(self):
         pangolin_path = pkg_resources.resource_filename(covigator.tests.__name__, "resources/test.lofreq.pangolin.csv")
-        sample = SampleEna(run_accession="TEST", lofreq_pangolin_path=pangolin_path, fastq_ftp="", fastq_md5="", num_fastqs=1)
-        EnaProcessor.load_lofreq_pangolin(sample)
+        sample = SampleEna(run_accession="TEST", fastq_ftp="", fastq_md5="", num_fastqs=1)
+        EnaProcessor.load_pangolin(sample, path=pangolin_path)
+        self.assertEqual(sample.pangolin_pangolin_version, "3.1.19")
+        self.assertEqual(sample.pangolin_version, "PLEARN-v1.2.123")
+        self.assertEqual(sample.pangolin_pangoLEARN_version, "2022-01-20")
+        self.assertEqual(sample.pangolin_pango_version, "v1.2.123")
+        self.assertEqual(sample.pangolin_status, "passed_qc")
+        self.assertEqual(sample.pangolin_note, "")
+        self.assertEqual(sample.pangolin_lineage, "B.1.336")
+        self.assertEqual(sample.pangolin_conflict, 0.0)
+        self.assertEqual(sample.pangolin_ambiguity_score, 1.0)
+
+        self.session.add(sample)
+        self.session.commit()
+
+    def test_load_pangolin_from_gisaid(self):
+        pangolin_path = pkg_resources.resource_filename(covigator.tests.__name__, "resources/test.lofreq.pangolin.csv")
+        sample = SampleGisaid(run_accession="TEST")
+        GisaidProcessor.load_pangolin(sample, path=pangolin_path)
         self.assertEqual(sample.pangolin_pangolin_version, "3.1.19")
         self.assertEqual(sample.pangolin_version, "PLEARN-v1.2.123")
         self.assertEqual(sample.pangolin_pangoLEARN_version, "2022-01-20")
