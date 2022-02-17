@@ -5,7 +5,7 @@ import dash_html_components as html
 from covigator.dashboard.figures import VARIANT_TYPE_COLOR_MAP
 from covigator.dashboard.figures.figures import PLOTLY_CONFIG, MARGIN, TEMPLATE
 from covigator.dashboard.tabs import get_mini_container, print_number, print_date
-from covigator.database.model import DataSource, SAMPLE_ENA_TABLE_NAME, JOB_ENA_TABLE_NAME, VariantObservation
+from covigator.database.model import DataSource, SAMPLE_ENA_TABLE_NAME, VariantObservation, SampleEna
 from covigator.database.queries import Queries
 import pandas as pd
 import plotly.express as px
@@ -142,11 +142,11 @@ def get_plot_number_reads(queries: Queries):
 
 
 def get_data_number_reads(queries):
-    sql_query = """
-    select s.run_accession as run_accession, j.num_reads as num_reads_after, s.read_count as num_reads_before, s.library_strategy
-    from {samples_table} as s join {jobs_table} as j on s.run_accession = j.run_accession 
-    where s.finished""".format(samples_table=SAMPLE_ENA_TABLE_NAME, jobs_table=JOB_ENA_TABLE_NAME)
-    data = pd.read_sql_query(sql_query, queries.session.bind)
+    query = queries.session.query(
+        SampleEna.run_accession, SampleEna.num_reads.alias("num_reads_after"),
+        SampleEna.read_count.alias("num_reads_before"), SampleEna.library_strategy)\
+        .filter(SampleEna.finished)
+    data = pd.read_sql_query(query.statement, queries.session.bind)
     return data
 
 
@@ -204,11 +204,10 @@ def get_plot_coverage(queries: Queries):
 
 
 def get_data_coverage(queries):
-    sql_query = """
-    select s.run_accession, s.library_strategy, j.coverage, j.mean_depth
-    from {table} as s join {jobs_table} as j on s.run_accession = j.run_accession 
-    where finished""".format(table=SAMPLE_ENA_TABLE_NAME, jobs_table=JOB_ENA_TABLE_NAME)
-    data = pd.read_sql_query(sql_query, queries.session.bind)
+    query = queries.session.query(
+        SampleEna.run_accession, SampleEna.library_strategy, SampleEna.coverage, SampleEna.mean_depth) \
+        .filter(SampleEna.finished)
+    data = pd.read_sql_query(query.statement, queries.session.bind)
     return data
 
 
@@ -233,11 +232,11 @@ def get_plot_qualities(queries: Queries):
 
 
 def get_data_qualities(queries):
-    sql_query = """
-    select s.run_accession, s.library_strategy, j.mean_mapping_quality, j.mean_base_quality
-    from {table} as s join {jobs_table} as j on s.run_accession = j.run_accession 
-    where finished""".format(table=SAMPLE_ENA_TABLE_NAME, jobs_table=JOB_ENA_TABLE_NAME)
-    data = pd.read_sql_query(sql_query, queries.session.bind)
+    query = queries.session.query(
+        SampleEna.run_accession, SampleEna.library_strategy, SampleEna.mean_mapping_quality,
+        SampleEna.mean_base_quality)\
+        .filter(SampleEna.finished)
+    data = pd.read_sql_query(query.statement, queries.session.bind)
     return data
 
 
