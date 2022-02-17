@@ -56,43 +56,77 @@ class Dashboard:
                 dbc.CardHeader(
                     children=[
                         dcc.Location(id='url', refresh=False),
-                        dbc.Navbar([
-                            dbc.Row(
-                                [
+                        dbc.Navbar(
+                            [
+                                dbc.Row([
+                                        dbc.Col(
+                                            children=html.A(html.Img(src="/assets/CoVigator_logo_txt_reg_no_bg.png",
+                                                                     height="25px"), href="/"),
+                                            className="ml-2",
+                                            id="logo"
+                                        ),
+                                        #dbc.Col(html.Br(), className="ml-2"),
+                                        #dbc.Col(html.Br(), className="ml-2"),
+                                    ],
+                                    align="left",
+                                    className="g-0",
+                                    style={'align': 'left'}
+                                ),
+                                dbc.Row(
+                                    [
+                                        dbc.Tabs(
+                                            None,
+                                            id="tabs",
+                                            active_tab=SAMPLES_TAB_ID,
+                                            style={'align': 'right', },
+                                        )],
+                                    align="right",
+                                    style={'margin-left': '2%', }
+                                ),
+                                dbc.Row([
                                     dbc.Col(
-                                        children=html.A(html.Img(src="/assets/CoVigator_logo_txt_reg_no_bg.png",
-                                                                 height="25px"), href="/"),
+                                        None,
                                         className="ml-2",
-                                        id="logo"
+                                        id="top-right-logo",
+                                        align="left",
+                                        style={'margin-left': '2%', }
                                     ),
-                                    dbc.Col(html.Br(), className="ml-2"),
-                                    dbc.Col(html.Br(), className="ml-2"),
-                                ],
-                                align="center",
-                                no_gutters=True,
-                            ),
-                            dbc.Row(
-                                [
-                                    dbc.Tabs(None,
-                                        id="tabs",
-                                        active_tab=SAMPLES_TAB_ID,
-                                        card=True)],
-                                align="center",
-                                no_gutters=True,
-                            ),
-                            dbc.Row(
-                                [
-                                    dbc.Col(html.A(html.Img(
-                                        src="/assets/tron_logo_without_text.png", height="22px"),
-                                        href="https://tron-mainz.de", target="_blank"), className="ml-2"),
-                                    dbc.Col(html.Br(), className="ml-2")
-                                ],
-                                align="center",
-                                justify="end",
-                                no_gutters=True,
-                                style={'float': 'right', 'position': 'absolute', 'right': 0, 'text-align': 'right'}
-                            )])
-                        ],
+                                    dbc.Col(html.Br()),
+                                    dbc.Col(
+                                        dbc.DropdownMenu(
+                                            label="Menu", children=[
+                                                dbc.DropdownMenuItem(
+                                                    "Home", href="/", class_name="m-1",
+                                                    style={'font-size' : '150%', "color": "#003c78"}),
+                                                dbc.DropdownMenuItem(
+                                                    "GISAID dataset", href="/gisaid",
+                                                    style={'font-size' : '150%', "color": "#003c78"}),
+                                                dbc.DropdownMenuItem(
+                                                    "ENA dataset", href="/ena",
+                                                    style={'font-size' : '150%', "color": "#003c78"}),
+                                                dbc.DropdownMenuItem(
+                                                    "Acknowledgements", href="/acknowledgements",
+                                                    style={'font-size' : '150%', "color": "#003c78"}),
+                                            ],
+                                            align_end=True,
+                                            size="lg",
+                                            toggle_style={
+                                                "textTransform": "uppercase",
+                                                "background": "#003c78",
+                                                'font-size': '85%'
+                                            },
+                                            style={"margin-left": "15px"}
+                                        ),
+                                        style={}
+                                    )],
+                                    align="right",
+                                    justify="end",
+                                    style={'float': 'right', 'position': 'absolute', 'right': 0, 'text-align': 'right',
+                                           },
+                                    className="g-0 ms-auto flex-nowrap mt-3 mt-md-0",
+                                )
+                                ]
+                        )],
                 ),
                 dbc.CardBody(dcc.Loading(id="loading-1", children=[html.Div(id=ID_TAB_CONTENT)], style={"height": "100%"})),
                 dbc.CardFooter(footer)
@@ -166,6 +200,7 @@ def set_callbacks(app, session: Session, content_folder):
     MAIN_PAGE = "main"
     ENA_PAGE = DataSource.ENA
     GISAID_PAGE = DataSource.GISAID
+    ACKNOWLEDGEMENTS_PAGE = "acknowledgements"
 
     def _get_page(url):
         if url in ["", "/"]:
@@ -174,47 +209,71 @@ def set_callbacks(app, session: Session, content_folder):
             return GISAID_PAGE
         elif url == "/ena":
             return ENA_PAGE
+        elif url == "/acknowledgements":
+            return ACKNOWLEDGEMENTS_PAGE
         else:
             raise ValueError("This URL does not exist")
 
     @app.callback(
         Output('tabs', "children"),
+        Output('tabs', "active_tab"),
         [Input("url", "pathname")])
     def switch_page(url):
         page = _get_page(url)
         if page == MAIN_PAGE:
             # show overview with links
-            return None
+            return None, None
         elif page == GISAID_PAGE:
             # show gisaid tabs
             return [
-                dbc.Tab(label="Samples by country", tab_id=SAMPLES_TAB_ID),
-                dbc.Tab(label="Mutation statistics", tab_id=MUTATIONS_TAB_ID),
-                dbc.Tab(label="Recurrent mutations", tab_id=RECURRENT_MUTATIONS_TAB_ID),
-                dbc.Tab(label="Quality control", tab_id=GISAID_DATASET_TAB_ID),
-                dbc.Tab(label="Acknowledgements", tab_id=HELP_TAB_ID)]
+                dbc.Tab(label="Samples by country", tab_id=SAMPLES_TAB_ID, label_style={"color": "#003c78"}),
+                dbc.Tab(label="Mutation statistics", tab_id=MUTATIONS_TAB_ID, label_style={"color": "#003c78"}),
+                dbc.Tab(label="Recurrent mutations", tab_id=RECURRENT_MUTATIONS_TAB_ID, label_style={"color": "#003c78"}),
+                dbc.Tab(label="Quality control", tab_id=GISAID_DATASET_TAB_ID, label_style={"color": "#003c78"})], SAMPLES_TAB_ID
         elif page == ENA_PAGE:
             # show ena tabs
             return [
-                dbc.Tab(label="Samples by country", tab_id=SAMPLES_TAB_ID),
-                dbc.Tab(label="Mutation statistics", tab_id=MUTATIONS_TAB_ID),
-                dbc.Tab(label="Recurrent mutations", tab_id=RECURRENT_MUTATIONS_TAB_ID),
-                dbc.Tab(label="Intrahost mutations", tab_id=INTRAHOST_MUTATIONS_TAB_ID),
-                dbc.Tab(label="Quality control", tab_id=ENA_DATASET_TAB_ID),
-                dbc.Tab(label="Download data", tab_id=DOWNLOAD_TAB_ID),
-                dbc.Tab(label="Acknowledgements", tab_id=HELP_TAB_ID)]
+                dbc.Tab(label="Samples by country", tab_id=SAMPLES_TAB_ID, label_style={"color": "#003c78"}),
+                dbc.Tab(label="Mutation statistics", tab_id=MUTATIONS_TAB_ID, label_style={"color": "#003c78"}),
+                dbc.Tab(label="Recurrent mutations", tab_id=RECURRENT_MUTATIONS_TAB_ID, label_style={"color": "#003c78"}),
+                dbc.Tab(label="Intrahost mutations", tab_id=INTRAHOST_MUTATIONS_TAB_ID, label_style={"color": "#003c78"}),
+                dbc.Tab(label="Quality control", tab_id=ENA_DATASET_TAB_ID, label_style={"color": "#003c78"}),
+                dbc.Tab(label="Download data", tab_id=DOWNLOAD_TAB_ID, label_style={"color": "#003c78"})], SAMPLES_TAB_ID
+        elif page == ACKNOWLEDGEMENTS_PAGE:
+            # show ena tabs
+            return [
+                dbc.Tab(label="Acknowledgements", tab_id=HELP_TAB_ID, label_style={"color": "#003c78", 'display': 'none'})], HELP_TAB_ID
 
     @app.callback(
         Output('logo', "children"),
         [Input("url", "pathname")])
     def switch_logo(url):
         page = _get_page(url)
-        if page == MAIN_PAGE:
-            return html.A(html.Img(src="/assets/CoVigator_logo_txt_reg_no_bg.png", height="25px"), href="/")
+        if page == MAIN_PAGE or page == ACKNOWLEDGEMENTS_PAGE:
+            return html.A(html.Img(src="/assets/CoVigator_logo_GISAID_ENA.png", height="80px"), href="/")
         elif page == GISAID_PAGE:
-            return html.A(html.Img(src="/assets/CoVigator_logo_txt_reg_no_bg_gisaid.png", height="50px"), href="/")
+            return html.A(html.Img(src="/assets/CoVigator_logo_GISAID.png", height="80px"), href="/")
         elif page == ENA_PAGE:
-            return html.A(html.Img(src="/assets/CoVigator_logo_txt_reg_no_bg_ena.png", height="50px"), href="/")
+            return html.A(html.Img(src="/assets/CoVigator_logo_ENA.png", height="80px"), href="/")
+
+    @app.callback(
+        Output('top-right-logo', "children"),
+        [Input("url", "pathname")])
+    def switch_lat_update(url):
+        page = _get_page(url)
+        if page == MAIN_PAGE:
+            return None
+        elif page == GISAID_PAGE:
+            return dbc.Button(
+                "last updated {date}".format(date=queries.get_last_update(DataSource.GISAID)),
+                outline=True, color="dark", className="me-1",
+                # 'background-color': '#b71300',
+                style={"margin-right": "15px", 'font-size': '85%'})
+        elif page == ENA_PAGE:
+            return dbc.Button(
+                "last updated {date}".format(date=queries.get_last_update(DataSource.ENA)),
+                outline=True, color="dark", className="me-1",
+                style={"margin-right": "15px", 'font-size': '85%'})
 
     @app.callback(
         Output(ID_TAB_CONTENT, "children"),

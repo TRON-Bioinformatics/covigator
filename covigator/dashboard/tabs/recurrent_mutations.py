@@ -239,7 +239,7 @@ def set_callbacks_variants_tab(app, session: Session):
 
     @app.callback(
         Output(ID_TOP_OCCURRING_VARIANTS, 'children'),
-        [Input(ID_APPLY_BUTTOM, 'n_clicks')],
+        inputs=[Input(ID_APPLY_BUTTOM, 'n_clicks')],
         state=[
             State(ID_SLIDER_TOP_VARIANTS, 'value'),
             State(ID_DROPDOWN_GENE, 'value'),
@@ -257,7 +257,7 @@ def set_callbacks_variants_tab(app, session: Session):
 
     @app.callback(
         Output(ID_NEEDLE_PLOT, 'children'),
-        [Input(ID_APPLY_BUTTOM, 'n_clicks')],
+        inputs=[Input(ID_APPLY_BUTTOM, 'n_clicks')],
         state=[
             State(ID_DROPDOWN_GENE, 'value'),
             State(ID_DROPDOWN_DOMAIN, 'value'),
@@ -285,7 +285,7 @@ def set_callbacks_variants_tab(app, session: Session):
 
     @app.callback(
         Output(ID_COOCCURRENCE_HEATMAP, 'children'),
-        [Input(ID_APPLY_BUTTOM, 'n_clicks')],
+        inputs=[Input(ID_APPLY_BUTTOM, 'n_clicks')],
         state=[
             State(ID_DROPDOWN_GENE, 'value'),
             State(ID_DROPDOWN_DOMAIN, 'value'),

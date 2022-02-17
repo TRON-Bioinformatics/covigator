@@ -13,7 +13,7 @@ from covigator.database.model import DataSource, SampleEna, JobStatus, \
     SubclonalVariantObservation, PrecomputedVariantsPerSample, PrecomputedSubstitutionsCounts, PrecomputedIndelLength, \
     VariantType, PrecomputedAnnotation, PrecomputedOccurrence, PrecomputedTableCounts, \
     PrecomputedVariantAbundanceHistogram, PrecomputedSynonymousNonSynonymousCounts, RegionType, Domain, \
-    GisaidVariantObservation, GisaidVariant
+    GisaidVariantObservation, GisaidVariant, LastUpdate
 from covigator.exceptions import CovigatorQueryException, CovigatorDashboardMissingPrecomputedData
 
 
@@ -398,7 +398,12 @@ class Queries:
         result = self.session.query(klass.collection_date).filter(
             and_(klass.finished == True, klass.collection_date.isnot(None))).order_by(desc(klass.collection_date)).first()
         return result[0] if result is not None else result
-        return result[0] if result is not None else result
+
+    def get_last_update(self, data_source: DataSource) -> date:
+        result = self.session.query(LastUpdate.update_time).filter(LastUpdate.source == data_source).order_by(
+            desc(LastUpdate.update_time)).first()
+        most_recent_update = result[0] if result is not None else result
+        return most_recent_update
 
     def get_variant_counts_by_month(self, variant_id, source: str) -> pd.DataFrame:
 
