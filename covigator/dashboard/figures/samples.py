@@ -54,8 +54,8 @@ class SampleFigures(Figures):
     def _calculate_dn_ds(self, NS, S, ns, s):
         pn = float(ns) / float(NS)
         ps = float(s) / float(S)
-        dn = np.log(1 + pn)
-        ds = np.log(1 + ps)
+        dn = np.log(1 + pn) + 1
+        ds = np.log(1 + ps) + 1
         return dn / ds
 
     def get_dnds_by_gene_plot(

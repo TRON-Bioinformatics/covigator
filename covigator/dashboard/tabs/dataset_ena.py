@@ -143,8 +143,8 @@ def get_plot_number_reads(queries: Queries):
 
 def get_data_number_reads(queries):
     query = queries.session.query(
-        SampleEna.run_accession, SampleEna.num_reads.alias("num_reads_after"),
-        SampleEna.read_count.alias("num_reads_before"), SampleEna.library_strategy)\
+        SampleEna.run_accession, SampleEna.num_reads.label("num_reads_after"),
+        SampleEna.read_count.label("num_reads_before"), SampleEna.library_strategy)\
         .filter(SampleEna.finished)
     data = pd.read_sql_query(query.statement, queries.session.bind)
     return data

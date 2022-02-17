@@ -67,7 +67,7 @@ def get_variants_tab_left_bar(queries: Queries, data_source: DataSource):
 
     # removes repeated gene names (ie: ORF1ab)
     genes = sorted({c.name for c in queries.get_genes()})
-    months = queries.get_sample_months(MONTH_PATTERN, data_source=data_source)
+    months = queries.get_sample_months(MONTH_PATTERN, data_source=data_source.name)
     today = datetime.now()
     today_formatted = today.strftime(MONTH_PATTERN)
     oneyearago = today - timedelta(days=356)

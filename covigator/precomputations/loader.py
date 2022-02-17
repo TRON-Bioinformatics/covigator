@@ -4,7 +4,7 @@ from covigator.dashboard.tabs.recurrent_mutations import BIN_SIZE_VALUES
 from covigator.database.model import PrecomputedVariantsPerSample, PrecomputedSubstitutionsCounts, \
     PrecomputedIndelLength, PrecomputedAnnotation, VariantObservation, DataSource, \
     PrecomputedTableCounts, Variant, SubclonalVariantObservation, PrecomputedVariantAbundanceHistogram, \
-    SampleEna, SampleGisaid
+    SampleEna, SampleGisaid, GisaidVariantObservation, GisaidVariant
 from logzero import logger
 
 from covigator.database.queries import Queries
@@ -276,13 +276,13 @@ class PrecomputationsLoader:
                 table=Variant.__name__, count=count_variants_ena,
                 factor=PrecomputedTableCounts.FACTOR_SOURCE, value=DataSource.ENA.name),
             PrecomputedTableCounts(
-                table=Variant.__name__, count=count_variants_gisaid,
+                table=GisaidVariant.__name__, count=count_variants_gisaid,
                 factor=PrecomputedTableCounts.FACTOR_SOURCE, value=DataSource.GISAID.name),
             PrecomputedTableCounts(
                 table=VariantObservation.__name__, count=count_variant_observations_ena,
                 factor=PrecomputedTableCounts.FACTOR_SOURCE, value=DataSource.ENA.name),
             PrecomputedTableCounts(
-                table=VariantObservation.__name__, count=count_variant_observations_gisaid,
+                table=GisaidVariantObservation.__name__, count=count_variant_observations_gisaid,
                 factor=PrecomputedTableCounts.FACTOR_SOURCE, value=DataSource.GISAID.name),
             PrecomputedTableCounts(
                 table=SubclonalVariantObservation.__name__, count=count_subclonal_variant_observations),
