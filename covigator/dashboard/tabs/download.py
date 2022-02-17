@@ -14,8 +14,8 @@ def get_tab_download(content_folder):
                     ** Download the raw CoVigator data derived from ENA** 
                     
                     * `variant_observation` contains the variant calls from ENA
-                    * `subclonal_variant_observation` contains the variant calls from ENA with a VAF < 80 % and >= 0.5 %
-                    * `low_frequency_variant_observation` contains the variant calls from ENA with a VAF < 0.5 %
+                    * `subclonal_variant_observation` contains the variant calls from ENA with a VAF < 80 % and >= 5 %
+                    * `low_frequency_variant_observation` contains the variant calls from ENA with a VAF < 5 %
                     * `variant` contains the unique variants without any sample specific information
                     * `variant_cooccurrence` contains the cooccurrence matrix between ENA clonal variants
                     * `sample_ena` contains the ENA samples metadata and some sample level derived data (eg: pangolin, coverage analysis, etc.)
