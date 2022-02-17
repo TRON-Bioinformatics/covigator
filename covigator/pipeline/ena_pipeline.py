@@ -39,32 +39,21 @@ class Pipeline:
 
         logger.info("Sample data folder: {}".format(sample_data_folder))
 
-        lofreq_vcf = os.path.join(
-            self.config.storage_folder, run_accession, "{name}.lofreq.vcf.gz".format(name=run_accession))
-        ivar_vcf = os.path.join(
-            self.config.storage_folder, run_accession, "{name}.ivar.vcf.gz".format(name=run_accession))
-        gatk_vcf = os.path.join(
-            self.config.storage_folder, run_accession, "{name}.gatk.vcf.gz".format(name=run_accession))
-        bcftools_vcf = os.path.join(
-            self.config.storage_folder, run_accession, "{name}.bcftools.vcf.gz".format(name=run_accession))
+        lofreq_vcf = os.path.join(sample_data_folder, "{name}.lofreq.vcf.gz".format(name=run_accession))
+        ivar_vcf = os.path.join(sample_data_folder, "{name}.ivar.vcf.gz".format(name=run_accession))
+        gatk_vcf = os.path.join(sample_data_folder, "{name}.gatk.vcf.gz".format(name=run_accession))
+        bcftools_vcf = os.path.join(sample_data_folder, "{name}.bcftools.vcf.gz".format(name=run_accession))
 
-        lofreq_pangolin = os.path.join(
-            self.config.storage_folder, run_accession, "{name}.lofreq.pangolin.csv".format(name=run_accession))
-        ivar_pangolin = os.path.join(
-            self.config.storage_folder, run_accession, "{name}.ivar.pangolin.csv".format(name=run_accession))
-        gatk_pangolin = os.path.join(
-            self.config.storage_folder, run_accession, "{name}.gatk.pangolin.csv".format(name=run_accession))
-        bcftools_pangolin = os.path.join(
-            self.config.storage_folder, run_accession, "{name}.bcftools.pangolin.csv".format(name=run_accession))
+        lofreq_pangolin = os.path.join(sample_data_folder, "{name}.lofreq.pangolin.csv".format(name=run_accession))
+        ivar_pangolin = os.path.join(sample_data_folder, "{name}.ivar.pangolin.csv".format(name=run_accession))
+        gatk_pangolin = os.path.join(sample_data_folder, "{name}.gatk.pangolin.csv".format(name=run_accession))
+        bcftools_pangolin = os.path.join(sample_data_folder, "{name}.bcftools.pangolin.csv".format(name=run_accession))
 
-        output_qc = os.path.join(
-            self.config.storage_folder, run_accession, "{name}.fastp_stats.json".format(name=run_accession))
-        output_vertical_coverage = os.path.join(
-            self.config.storage_folder, run_accession, "{name}.depth.tsv".format(name=run_accession))
-        output_horizontal_coverage = os.path.join(
-            self.config.storage_folder, run_accession, "{name}.coverage.tsv".format(name=run_accession))
+        output_qc = os.path.join(sample_data_folder, "{name}.fastp_stats.json".format(name=run_accession))
+        output_vertical_coverage = os.path.join(sample_data_folder, "{name}.depth.tsv".format(name=run_accession))
+        output_horizontal_coverage = os.path.join(sample_data_folder, "{name}.coverage.tsv".format(name=run_accession))
         deduplication_metrics = os.path.join(
-            self.config.storage_folder, run_accession, "{name}.deduplication_metrics.txt".format(name=run_accession))
+            sample_data_folder, "{name}.deduplication_metrics.txt".format(name=run_accession))
 
         if not os.path.exists(lofreq_vcf) \
                 or not os.path.exists(output_qc) \
