@@ -108,15 +108,26 @@ class EnaProcessor(AbstractProcessor):
                                    'READ_PAIR_DUPLICATES': int,
                                    'READ_PAIR_OPTICAL_DUPLICATES': int
                                })
-            data.fillna(0, inplace=True)
+
+            # fill NA values on a per column basis...
+            data.PERCENT_DUPLICATION.fillna(value=0.0, inplace=True)
+            data.UNPAIRED_READS_EXAMINED.fillna(value=0, inplace=True)
+            data.READ_PAIRS_EXAMINED.fillna(value=0, inplace=True)
+            data.SECONDARY_OR_SUPPLEMENTARY_RDS.fillna(value=0, inplace=True)
+            data.UNMAPPED_READS.fillna(value=0, inplace=True)
+            data.UNPAIRED_READ_DUPLICATES.fillna(value=0, inplace=True)
+            data.READ_PAIR_DUPLICATES.fillna(value=0, inplace=True)
+            data.READ_PAIR_OPTICAL_DUPLICATES.fillna(value=0, inplace=True)
+
             sample.percent_duplication = data.PERCENT_DUPLICATION.loc[0]
-            sample.unpaired_reads_examined = data.UNPAIRED_READS_EXAMINED.loc[0]
-            sample.read_pairs_examined = data.READ_PAIRS_EXAMINED.loc[0]
-            sample.secondary_or_supplementary_reads = data.SECONDARY_OR_SUPPLEMENTARY_RDS.loc[0]
-            sample.unmapped_reads = data.UNMAPPED_READS.loc[0]
-            sample.unpaired_read_duplicates = data.UNPAIRED_READ_DUPLICATES.loc[0]
-            sample.read_pair_duplicates = data.READ_PAIR_DUPLICATES.loc[0]
-            sample.read_pair_optical_duplicates = data.READ_PAIR_OPTICAL_DUPLICATES.loc[0]
+            # NOTE: SQLalchemy does not play well with int64
+            sample.unpaired_reads_examined = int(data.UNPAIRED_READS_EXAMINED.loc[0])
+            sample.read_pairs_examined = int(data.READ_PAIRS_EXAMINED.loc[0])
+            sample.secondary_or_supplementary_reads = int(data.SECONDARY_OR_SUPPLEMENTARY_RDS.loc[0])
+            sample.unmapped_reads = int(data.UNMAPPED_READS.loc[0])
+            sample.unpaired_read_duplicates = int(data.UNPAIRED_READ_DUPLICATES.loc[0])
+            sample.read_pair_duplicates = int(data.READ_PAIR_DUPLICATES.loc[0])
+            sample.read_pair_optical_duplicates = int(data.READ_PAIR_OPTICAL_DUPLICATES.loc[0])
         except Exception as e:
             raise CovigatorErrorProcessingDeduplicationResults(e)
 
@@ -139,7 +150,20 @@ class EnaProcessor(AbstractProcessor):
                                    'status': str,
                                    'note': str
                                })
-            data.fillna(value="", inplace=True)
+
+            # fill NA values on a per column basis...
+            data.lineage.fillna(value="", inplace=True)
+            data.scorpio_call.fillna(value="", inplace=True)
+            data.version.fillna(value="", inplace=True)
+            data.pangolin_version.fillna(value="", inplace=True)
+            data.pangoLEARN_version.fillna(value="", inplace=True)
+            data.pango_version.fillna(value="", inplace=True)
+            data.note.fillna(value="", inplace=True)
+            data.conflict.fillna(value=0.0, inplace=True)
+            data.ambiguity_score.fillna(value=0.0, inplace=True)
+            data.scorpio_support.fillna(value=0.0, inplace=True)
+            data.scorpio_conflict.fillna(value=0.0, inplace=True)
+
             sample.pangolin_lineage = data.lineage.loc[0]
             sample.pangolin_conflict = data.conflict.loc[0]
             sample.pangolin_ambiguity_score = data.ambiguity_score.loc[0]

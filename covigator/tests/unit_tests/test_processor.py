@@ -95,7 +95,7 @@ class ProcessorTests(AbstractTest):
 
     def test_load_pangolin(self):
         pangolin_path = pkg_resources.resource_filename(covigator.tests.__name__, "resources/test.lofreq.pangolin.csv")
-        sample = SampleEna(lofreq_pangolin_path=pangolin_path)
+        sample = SampleEna(run_accession="TEST", lofreq_pangolin_path=pangolin_path, fastq_ftp="", fastq_md5="", num_fastqs=1)
         EnaProcessor.load_lofreq_pangolin(sample)
         self.assertEqual(sample.pangolin_pangolin_version, "3.1.19")
         self.assertEqual(sample.pangolin_version, "PLEARN-v1.2.123")
@@ -107,10 +107,14 @@ class ProcessorTests(AbstractTest):
         self.assertEqual(sample.pangolin_conflict, 0.0)
         self.assertEqual(sample.pangolin_ambiguity_score, 1.0)
 
+        self.session.add(sample)
+        self.session.commit()
+
     def test_load_dedup_metrics(self):
         deduplication_metrics_path = pkg_resources.resource_filename(
             covigator.tests.__name__, "resources/test.deduplication_metrics.txt")
-        sample = SampleEna(deduplication_metrics_path=deduplication_metrics_path)
+        sample = SampleEna(run_accession="TEST", deduplication_metrics_path=deduplication_metrics_path, fastq_ftp="", fastq_md5="",
+                           num_fastqs=1)
         EnaProcessor.load_deduplication_metrics(sample)
         self.assertEqual(sample.percent_duplication, 0.919339)
         self.assertEqual(sample.unpaired_reads_examined, 0)
@@ -121,9 +125,13 @@ class ProcessorTests(AbstractTest):
         self.assertEqual(sample.read_pair_duplicates, 324182)
         self.assertEqual(sample.read_pair_optical_duplicates, 0)
 
+        self.session.add(sample)
+        self.session.commit()
+
     def test_load_horizontal_coverage(self):
         horizontal_coverage_path = pkg_resources.resource_filename(covigator.tests.__name__, "resources/test.coverage.tsv")
-        sample = SampleEna(horizontal_coverage_path=horizontal_coverage_path)
+        sample = SampleEna(run_accession="TEST", horizontal_coverage_path=horizontal_coverage_path, fastq_ftp="",
+                           fastq_md5="", num_fastqs=1)
         EnaProcessor.load_coverage_results(sample)
         self.assertEqual(sample.mean_depth, 8.19399)
         self.assertEqual(sample.mean_base_quality, 35.9)
@@ -131,4 +139,7 @@ class ProcessorTests(AbstractTest):
         self.assertEqual(sample.num_reads, 1984)
         self.assertEqual(sample.covered_bases, 26057)
         self.assertEqual(sample.coverage, 87.1384)
+
+        self.session.add(sample)
+        self.session.commit()
 
