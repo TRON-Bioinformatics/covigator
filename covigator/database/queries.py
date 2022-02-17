@@ -310,15 +310,15 @@ class Queries:
 
     @functools.lru_cache()
     def count_variants(self, source: str, cache=True):
+        klass = self.get_variant_klass(source=source)
         if cache:
             result = self.session.query(PrecomputedTableCounts.count) \
                 .filter(and_(
-                PrecomputedTableCounts.table == Variant.__name__, PrecomputedTableCounts.value == source)).first()
+                PrecomputedTableCounts.table == klass.__name__, PrecomputedTableCounts.value == source)).first()
             if result is None:
                 raise CovigatorDashboardMissingPrecomputedData
             count = result.count
         else:
-            klass = self.get_variant_klass(source=source)
             count = self.session.query(klass).count()
         return count
 

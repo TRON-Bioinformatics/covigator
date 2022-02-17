@@ -28,45 +28,75 @@ LIBRARY_LAYOUT_COLOR_MAP = {
 @functools.lru_cache()
 def get_tab_dataset_ena(queries: Queries):
 
+    return dbc.CardBody(
+        children=[
+            get_ena_overview_tab_left_bar(queries),
+            html.Div(
+                className="one column",
+                children=[html.Br()]),
+            get_ena_overview_tab_graphs(queries=queries)
+        ])
+
+
+def get_ena_overview_tab_graphs(queries):
+    return html.Div(
+        className="nine columns",
+        children=get_dataset_ena_tab_graphs(queries))
+
+
+def get_ena_overview_tab_left_bar(queries: Queries):
     count_samples = queries.count_samples(source=DataSource.ENA.name)
     count_variants = queries.count_variant_observations(source=DataSource.ENA.name)
+    count_variant_observations = queries.count_variants(source=DataSource.ENA.name)
     date_of_first_sample = queries.get_date_of_first_sample(source=DataSource.ENA)
     date_of_most_recent_sample = queries.get_date_of_most_recent_sample(source=DataSource.ENA)
 
-    return dbc.CardBody(
-            children=[
-                dcc.Markdown("""
-                The ENA dataset and its metadata was downloaded using the ENA Portal API 
-                (https://www.ebi.ac.uk/ena/portal/api/). FASTQ files containing the raw reads were downloaded from the
-                 provided URLs for each sample. FASTQ files were MD5 checked after download. 
-                 All non-human host samples were excluded.
-                 """, style={"font-size": 16}),
-                html.Br(),
-                html.Div(
-                    html.Span(
-                        children=[
-                            get_mini_container(
-                                title="Samples",
-                                value=print_number(count_samples)
-                            ),
-                            get_mini_container(
-                                title="Variant calls",
-                                value=print_number(count_variants)
-                            ),
-                            get_mini_container(
-                                title="First sample",
-                                value=print_date(date_of_first_sample)
-                            ),
-                            get_mini_container(
-                                title="Latest sample",
-                                value=print_date(date_of_most_recent_sample)
-                            )
-                        ]
-                    )
-                ),
-                get_dataset_ena_tab_graphs(queries)
-            ]
-        )
+    return html.Div(
+        className="two columns",
+        children=[
+            html.Br(),
+            dcc.Markdown("""
+                        The ENA dataset and its metadata was downloaded using the ENA Portal API 
+                        (https://www.ebi.ac.uk/ena/portal/api/). FASTQ files containing the raw reads were downloaded from the
+                         provided URLs for each sample. FASTQ files were MD5 checked after download. 
+                         All non-human host samples were excluded.
+                         """, style={"font-size": 16}),
+            html.Br(),
+            html.Div(
+                html.Span(
+                    children=[
+                        get_mini_container(
+                            title="Samples",
+                            value=print_number(count_samples)
+                        ),
+                        html.Br(),
+                        html.Br(),
+                        get_mini_container(
+                            title="Unique mutations",
+                            value=print_number(count_variants)
+                        ),
+                        html.Br(),
+                        html.Br(),
+                        get_mini_container(
+                            title="Mutation calls",
+                            value=print_number(count_variant_observations)
+                        ),
+                        html.Br(),
+                        html.Br(),
+                        get_mini_container(
+                            title="First sample",
+                            value=print_date(date_of_first_sample)
+                        ),
+                        html.Br(),
+                        html.Br(),
+                        get_mini_container(
+                            title="Latest sample",
+                            value=print_date(date_of_most_recent_sample)
+                        )
+                    ]
+                )
+            ),
+        ])
 
 
 def get_dataset_ena_tab_graphs(queries: Queries):

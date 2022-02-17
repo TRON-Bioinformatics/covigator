@@ -226,19 +226,20 @@ def set_callbacks(app, session: Session, content_folder):
         elif page == GISAID_PAGE:
             # show gisaid tabs
             return [
-                dbc.Tab(label="Samples by country", tab_id=SAMPLES_TAB_ID, label_style={"color": "#003c78"}),
+                dbc.Tab(label="Overview", tab_id=GISAID_DATASET_TAB_ID, label_style={"color": "#003c78"}),
+                dbc.Tab(label="Samples", tab_id=SAMPLES_TAB_ID, label_style={"color": "#003c78"}),
                 dbc.Tab(label="Mutation statistics", tab_id=MUTATIONS_TAB_ID, label_style={"color": "#003c78"}),
                 dbc.Tab(label="Recurrent mutations", tab_id=RECURRENT_MUTATIONS_TAB_ID, label_style={"color": "#003c78"}),
-                dbc.Tab(label="Quality control", tab_id=GISAID_DATASET_TAB_ID, label_style={"color": "#003c78"})], SAMPLES_TAB_ID
+                ], GISAID_DATASET_TAB_ID
         elif page == ENA_PAGE:
             # show ena tabs
             return [
-                dbc.Tab(label="Samples by country", tab_id=SAMPLES_TAB_ID, label_style={"color": "#003c78"}),
+               dbc.Tab(label="Overview", tab_id=ENA_DATASET_TAB_ID, label_style={"color": "#003c78"}),
+                dbc.Tab(label="Samples", tab_id=SAMPLES_TAB_ID, label_style={"color": "#003c78"}),
                 dbc.Tab(label="Mutation statistics", tab_id=MUTATIONS_TAB_ID, label_style={"color": "#003c78"}),
                 dbc.Tab(label="Recurrent mutations", tab_id=RECURRENT_MUTATIONS_TAB_ID, label_style={"color": "#003c78"}),
                 dbc.Tab(label="Intrahost mutations", tab_id=INTRAHOST_MUTATIONS_TAB_ID, label_style={"color": "#003c78"}),
-                dbc.Tab(label="Quality control", tab_id=ENA_DATASET_TAB_ID, label_style={"color": "#003c78"}),
-                dbc.Tab(label="Download data", tab_id=DOWNLOAD_TAB_ID, label_style={"color": "#003c78"})], SAMPLES_TAB_ID
+                dbc.Tab(label="Download data", tab_id=DOWNLOAD_TAB_ID, label_style={"color": "#003c78"})], ENA_DATASET_TAB_ID
         elif page == ACKNOWLEDGEMENTS_PAGE:
             # show ena tabs
             return [
