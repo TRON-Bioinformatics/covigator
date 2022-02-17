@@ -129,7 +129,7 @@ class GisaidAccessor:
 
             sample_gisaid = SampleGisaid(
                 run_accession=identifier,
-                date=metadata[2],
+                collection_date=metadata[2],
                 host_tax_id=None,
                 host=host,
                 country_raw=country_raw,
