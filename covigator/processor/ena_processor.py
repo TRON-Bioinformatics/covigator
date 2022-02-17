@@ -97,6 +97,7 @@ class EnaProcessor(AbstractProcessor):
             data = pd.read_csv(sample.deduplication_metrics_path,
                                sep="\t",
                                skiprows=6,
+                               nrows=1,
                                dtype={
                                    'PERCENT_DUPLICATION': float,
                                    'UNPAIRED_READS_EXAMINED': int,
