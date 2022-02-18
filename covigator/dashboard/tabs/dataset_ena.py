@@ -46,8 +46,8 @@ def get_ena_overview_tab_graphs(queries):
 
 def get_ena_overview_tab_left_bar(queries: Queries):
     count_samples = queries.count_samples(source=DataSource.ENA.name)
-    count_variants = queries.count_variant_observations(source=DataSource.ENA.name)
-    count_variant_observations = queries.count_variants(source=DataSource.ENA.name)
+    count_variants = queries.count_variants(source=DataSource.ENA.name)
+    count_variant_observations = queries.count_variant_observations(source=DataSource.ENA.name)
     date_of_first_sample = queries.get_date_of_first_sample(source=DataSource.ENA)
     date_of_most_recent_sample = queries.get_date_of_most_recent_sample(source=DataSource.ENA)
 
