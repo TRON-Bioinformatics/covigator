@@ -86,6 +86,12 @@ class Queries:
         return [c for c, in self.session.query(klass.country).filter(
                 klass.finished).distinct().order_by(klass.country.asc()).all()]
 
+    def get_lineages(self, source: str) -> List[str]:
+        klass = self.get_sample_klass(source=source)
+        return [c for c, in self.session.query(klass.pangolin_lineage).filter(
+            and_(klass.finished, klass.pangolin_lineage != None)).distinct().order_by(
+                klass.pangolin_lineage.asc()).all()]
+
     def get_variants_per_sample(self, data_source: str, genes: List[str], variant_types: List[str]):
         """
         Returns a DataFrame with columns: number_mutations, count, type
@@ -170,7 +176,7 @@ class Queries:
         return data
 
     def get_accumulated_samples_by_country(
-            self, data_source: str, countries: List[str], min_samples=100) -> pd.DataFrame:
+            self, data_source: str, countries: List[str], lineages: List[str], min_samples=100) -> pd.DataFrame:
         """
         Returns a DataFrame with columns: data, country, cumsum, count
         """
@@ -181,6 +187,8 @@ class Queries:
             .group_by(klass.collection_date, klass.country)
         if countries:
             query = query.filter(klass.country.in_(countries))
+        if lineages:
+            query = query.filter(klass.pangolin_lineage.in_(lineages))
         samples = pd.read_sql(query.statement, self.session.bind).astype({'date': 'datetime64', 'count': 'float64'})
 
         filled_table = None

@@ -11,10 +11,11 @@ from covigator.database.model import DataSource
 
 class SampleFigures(Figures):
 
-    def get_accumulated_samples_by_country_plot(self, data_source: str, countries=None, min_samples=1000):
+    def get_accumulated_samples_by_country_plot(self, data_source: str, countries=None, min_samples=1000,
+                                                lineages=None):
         logger.debug("Getting data on samples by country...")
         data = self.queries.get_accumulated_samples_by_country(
-            data_source=data_source, countries=countries, min_samples=min_samples)
+            data_source=data_source, countries=countries, min_samples=min_samples, lineages=lineages)
         graph = dcc.Markdown("""**No data for the current selection**""")
         if data is not None and data.shape[0] > 0:
             logger.debug("Prepare plot on samples by country...")
