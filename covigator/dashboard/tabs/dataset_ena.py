@@ -56,10 +56,12 @@ def get_ena_overview_tab_left_bar(queries: Queries):
         children=[
             html.Br(),
             dcc.Markdown("""
-                        The ENA dataset and its metadata was downloaded using the ENA Portal API 
-                        (https://www.ebi.ac.uk/ena/portal/api/). FASTQ files containing the raw reads were downloaded from the
-                         provided URLs for each sample. FASTQ files were MD5 checked after download. 
-                         All non-human host samples were excluded.
+                        The ENA database provides the raw reads and metadata from SARS-CoV-2 samples through the ENA 
+                        Portal API (https://www.ebi.ac.uk/ena/portal/api/). 
+                        FASTQ files containing the raw reads were downloaded and MD5 checked.
+                        The processing pipeline runs reads trimming (fastp), alignment (BWA mem), 
+                        coverage analysis (samtools), variant calling (LoFreq), normalization (vt and BCFtools),
+                        annotation (SnpEff and VAFator) and finally lineage determination (pangolin). 
                          """, style={"font-size": 16}),
             html.Br(),
             html.Div(
@@ -72,18 +74,6 @@ def get_ena_overview_tab_left_bar(queries: Queries):
                         html.Br(),
                         html.Br(),
                         get_mini_container(
-                            title="Unique mutations",
-                            value=print_number(count_variants)
-                        ),
-                        html.Br(),
-                        html.Br(),
-                        get_mini_container(
-                            title="Mutation calls",
-                            value=print_number(count_variant_observations)
-                        ),
-                        html.Br(),
-                        html.Br(),
-                        get_mini_container(
                             title="First sample",
                             value=print_date(date_of_first_sample)
                         ),
@@ -92,10 +82,33 @@ def get_ena_overview_tab_left_bar(queries: Queries):
                         get_mini_container(
                             title="Latest sample",
                             value=print_date(date_of_most_recent_sample)
+                        ),
+                        html.Br(),
+                        html.Br(),
+                        get_mini_container(
+                            title="Unique mutations",
+                            value=print_number(count_variants)
+                        ),
+                        html.Br(),
+                        html.Br(),
+                        get_mini_container(
+                            title="Mutation calls",
+                            value=print_number(count_variant_observations)
                         )
                     ]
                 )
             ),
+            html.Br(),
+            dcc.Markdown("""
+                There are four exclusion criteria:
+                * Non-human host samples 
+                * Non Illumina sequenced samples (ie: a large proportion of nanopore sequenced samples are excluded)
+                * Horizontal coverage below 20 % of the reference genome
+                * Mean mapping quality below 10 or mean base call quality below 10
+                
+                Mutations are classified according to their VAF into clonal mutations (0.8 <= VAF <= 1.0), 
+                intrahost mutations (0.05 <= VAF < 0.8) and finally low frequency mutations (VAF < 0.05).
+                """, style={"font-size": 16}),
         ])
 
 
