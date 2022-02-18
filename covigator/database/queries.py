@@ -218,6 +218,49 @@ class Queries:
 
         return filled_table
 
+    def get_accumulated_lineages_by_country(
+            self, data_source: str, countries: List[str], lineages: List[str]) -> pd.DataFrame:
+        """
+        Returns a DataFrame with columns: data, country, cumsum, count
+        """
+        klass = self.get_sample_klass(source=data_source)
+        query = self.session.query(
+            func.count().label("count"), klass.collection_date.label("date"), klass.pangolin_lineage.label("lineage")) \
+            .filter(klass.finished) \
+            .group_by(klass.collection_date, klass.pangolin_lineage)
+        if countries:
+            query = query.filter(klass.country.in_(countries))
+        if lineages:
+            query = query.filter(klass.pangolin_lineage.in_(lineages))
+        samples = pd.read_sql(query.statement, self.session.bind).astype({'date': 'datetime64', 'count': 'float64'})
+
+        filled_table = None
+        if samples is not None and samples.shape[0] > 0:
+            # accumulates count ordered by date
+            samples['cumsum'] = samples.groupby(['lineage'])['count'].cumsum()
+
+            # creates empty table with all pairwise combinations of date and country
+            dates = samples.date[~samples.date.isna()].sort_values().unique()
+            lineages = samples[(~samples.lineage.isna())] \
+                .sort_values("cumsum", ascending=False).lineage.unique()
+
+            empty_table = pd.DataFrame(
+                index=pd.MultiIndex.from_product([dates, lineages], names=["date", "lineage"]))
+            empty_table["count"] = 0
+
+            # adds values into empty table
+            filled_table = pd.merge(
+                left=empty_table.reset_index(),
+                right=samples.loc[:, ["date", "lineage", "count"]],
+                on=["date", "lineage"],
+                how='left',
+                suffixes=("_x", "_y")).fillna(0)
+
+            filled_table["count"] = filled_table.count_x + filled_table.count_y
+            filled_table['cumsum'] = filled_table.groupby(['lineage'])['count'].cumsum()
+
+        return filled_table
+
     def get_sample_months(self, pattern, data_source: str) -> List[datetime]:
         klass = self.get_sample_klass(source=data_source)
         dates = [d.strftime(pattern) for d, in self.session.query(klass.collection_date).filter(

@@ -15,6 +15,7 @@ from covigator.dashboard.tabs.dataset_ena import get_tab_dataset_ena
 from covigator.dashboard.tabs.dataset_gisaid import get_tab_dataset_gisaid
 from covigator.dashboard.tabs.download import set_callbacks_download_tab, get_tab_download
 from covigator.dashboard.tabs.footer import get_footer
+from covigator.dashboard.tabs.lineages import set_callbacks_lineages_tab, get_tab_lineages
 from covigator.dashboard.tabs.mutation_stats import get_tab_mutation_stats, set_callbacks_mutation_stats_tab
 from covigator.dashboard.tabs.overview import get_tab_overview
 from covigator.dashboard.tabs.samples import get_tab_samples, set_callbacks_samples_tab
@@ -34,6 +35,7 @@ HELP_TAB_ID = "help"
 INTRAHOST_MUTATIONS_TAB_ID = "subclonal-variants"
 RECURRENT_MUTATIONS_TAB_ID = "variants"
 SAMPLES_TAB_ID = "samples"
+LINEAGES_TAB_ID = "lineages"
 MUTATIONS_TAB_ID = "mutation-stats"
 GISAID_DATASET_TAB_ID = "gisaid-dataset"
 ENA_DATASET_TAB_ID = "ena-dataset"
@@ -188,6 +190,7 @@ class Dashboard:
         set_callbacks(app=app, session=session, content_folder=self.config.content_folder)
         set_callbacks_variants_tab(app=app, session=session)
         set_callbacks_samples_tab(app=app, session=session)
+        set_callbacks_lineages_tab(app=app, session=session)
         set_callbacks_mutation_stats_tab(app=app, session=session)
         set_callbacks_subclonal_variants_tab(app=app, session=session)
         set_callbacks_download_tab(app=app, content_folder=self.config.content_folder)
@@ -229,6 +232,7 @@ def set_callbacks(app, session: Session, content_folder):
             return [
                 dbc.Tab(label="Overview", tab_id=GISAID_DATASET_TAB_ID, label_style=TAB_STYLE),
                 dbc.Tab(label="Samples", tab_id=SAMPLES_TAB_ID, label_style=TAB_STYLE),
+                dbc.Tab(label="Lineages", tab_id=LINEAGES_TAB_ID, label_style=TAB_STYLE),
                 dbc.Tab(label="Mutation statistics", tab_id=MUTATIONS_TAB_ID, label_style=TAB_STYLE),
                 dbc.Tab(label="Recurrent mutations", tab_id=RECURRENT_MUTATIONS_TAB_ID, label_style=TAB_STYLE),
                 ], GISAID_DATASET_TAB_ID
@@ -237,6 +241,7 @@ def set_callbacks(app, session: Session, content_folder):
             return [
                dbc.Tab(label="Overview", tab_id=ENA_DATASET_TAB_ID, label_style=TAB_STYLE),
                 dbc.Tab(label="Samples", tab_id=SAMPLES_TAB_ID, label_style=TAB_STYLE),
+                dbc.Tab(label="Lineages", tab_id=LINEAGES_TAB_ID, label_style=TAB_STYLE),
                 dbc.Tab(label="Mutation statistics", tab_id=MUTATIONS_TAB_ID, label_style=TAB_STYLE),
                 dbc.Tab(label="Recurrent mutations", tab_id=RECURRENT_MUTATIONS_TAB_ID, label_style=TAB_STYLE),
                 dbc.Tab(label="Intrahost mutations", tab_id=INTRAHOST_MUTATIONS_TAB_ID, label_style=TAB_STYLE),
@@ -301,6 +306,8 @@ def set_callbacks(app, session: Session, content_folder):
                 return get_tab_download(content_folder=content_folder)
             elif at == HELP_TAB_ID:
                 return get_tab_acknowledgements()
+            elif at == LINEAGES_TAB_ID:
+                return get_tab_lineages(queries=queries, data_source=page)
             return html.P("This shouldn't ever be displayed...")
         except Exception as e:
             logger.exception(e)
