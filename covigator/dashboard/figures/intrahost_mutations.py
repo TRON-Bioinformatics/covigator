@@ -61,7 +61,7 @@ class SubclonalVariantsQueries:
                             variant_id not in (
                                 select distinct variant_id 
                                 from {variants_table_name} 
-                                where annotation_highest_impact != 'synonymous_variant' and source='ENA' and gene_name is not null 
+                                where annotation_highest_impact != 'synonymous_variant' and gene_name is not null 
                             )
                         group by variant_id
                         {order_by}
@@ -70,7 +70,6 @@ class SubclonalVariantsQueries:
             min_vaf=min_vaf,
             subclonal_variants_table_name=SubclonalVariantObservation.__tablename__,
             variants_table_name=VariantObservation.__tablename__,
-            samples_table_name=SampleEna.__tablename__,
             top=top,
             where_gene=where_gene,
             order_by=order_by_clause
