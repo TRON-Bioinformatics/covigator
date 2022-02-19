@@ -2,9 +2,10 @@ from sqlalchemy import and_, func
 
 from covigator.database.model import PrecomputedSynonymousNonSynonymousCounts, RegionType, DataSource, \
     PrecomputedOccurrence, PrecomputedVariantsPerSample, PrecomputedSubstitutionsCounts, PrecomputedIndelLength, \
-    PrecomputedAnnotation, PrecomputedVariantAbundanceHistogram
+    PrecomputedAnnotation, PrecomputedVariantAbundanceHistogram, PrecomputedVariantsPerLineage
 from covigator.precomputations.load_ns_s_counts import NsSCountsLoader
 from covigator.precomputations.load_top_occurrences import TopOccurrencesLoader
+from covigator.precomputations.load_variants_per_lineage import VariantsPerLineageLoader
 from covigator.precomputations.loader import PrecomputationsLoader
 from covigator.tests.unit_tests.abstract_test import AbstractTest
 from covigator.tests.unit_tests.mocked import mock_samples_and_variants, MOCKED_GENES, MOCKED_DOMAINS
@@ -17,6 +18,7 @@ class TestPrecomputer(AbstractTest):
         self.ns_counts_loader = NsSCountsLoader(session=self.session)
         self.top_occurrences_loader = TopOccurrencesLoader(session=self.session)
         self.precomputations_loader = PrecomputationsLoader(session=self.session)
+        self.precomputations_lineage = VariantsPerLineageLoader(session=self.session)
 
     def test_load_dn_ds(self):
         self.ns_counts_loader.load()
@@ -163,3 +165,13 @@ class TestPrecomputer(AbstractTest):
             self.assertIsNotNone(p.source)
             self.assertIsNotNone(p.bin_size)
             self.assertIsNotNone(p.position_bin)
+
+    def test_load_variants_per_lineage(self):
+        self.assertEqual(self.session.query(PrecomputedVariantsPerLineage).count(), 0)
+        self.precomputations_lineage.load()
+        self.assertGreater(self.session.query(PrecomputedVariantsPerLineage).count(), 0)
+        for p in self.session.query(PrecomputedVariantsPerLineage).all():
+            self.assertGreater(p.count_observations, 0)
+            self.assertIsNotNone(p.lineage)
+            self.assertNotEqual(p.lineage, "")
+            self.assertIsNotNone(p.variant_id)

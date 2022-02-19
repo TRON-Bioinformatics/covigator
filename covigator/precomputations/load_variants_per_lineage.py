@@ -1,6 +1,6 @@
 import pandas as pd
 from logzero import logger
-from sqlalchemy import func
+from sqlalchemy import func, and_
 from sqlalchemy.orm import Session
 from covigator import SYNONYMOUS_VARIANT
 from covigator.database.model import DataSource, PrecomputedVariantsPerLineage
@@ -66,7 +66,10 @@ class VariantsPerLineageLoader:
             klass_variant_observation.variant_id,
             klass_sample.pangolin_lineage.label("lineage"),
             func.count().label('count_observations'))\
-            .filter(klass_variant_observation.annotation_highest_impact != SYNONYMOUS_VARIANT) \
+            .filter(and_(
+                klass_variant_observation.annotation_highest_impact != SYNONYMOUS_VARIANT,
+                klass_sample.pangolin_lineage != None,
+                klass_sample.pangolin_lineage != "")) \
             .join(klass_sample, klass_variant_observation.sample == klass_sample.run_accession) \
             .group_by(klass_sample.pangolin_lineage,
                       klass_variant_observation.variant_id)

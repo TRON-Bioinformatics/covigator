@@ -13,6 +13,7 @@ from covigator.database.queries import Queries
 
 MOCKED_GENES = ["S", "N", "E", "M", "ORF3a", "ORF1ab", "ORF7b", "ORF10", "ORF6", "ORF8", "ORF7a"]
 MOCKED_DOMAINS = ["CoV_S2", "bCoV_S1_RBD", "bCoV_S1_N", "CoV_S1_C"]
+MOCKED_LINEAGES = ["A", "B", "C", "D", "E", "F", ""]
 
 
 def get_mocked_variant(faker: Faker, chromosome=None, gene_name=None, source=DataSource.ENA.name, session: Session = None) -> Variant:
@@ -87,7 +88,8 @@ def get_mocked_sample(faker: Faker, source: DataSource, job_status=JobStatus.FIN
             fastq_md5=faker.md5(),
             num_fastqs=1,
             status=job_status,
-            finished=job_status == JobStatus.FINISHED
+            finished=job_status == JobStatus.FINISHED,
+            pangolin_lineage=faker.random_choices(MOCKED_LINEAGES, length=1)[0]
         )
     elif source == DataSource.GISAID:
         sample = SampleGisaid(
@@ -95,7 +97,8 @@ def get_mocked_sample(faker: Faker, source: DataSource, job_status=JobStatus.FIN
             collection_date=faker.date_time(),
             country=faker.country(),
             status=job_status,
-            finished=job_status == JobStatus.FINISHED
+            finished=job_status == JobStatus.FINISHED,
+            pangolin_lineage=faker.random_choices(MOCKED_LINEAGES, length=1)[0]
         )
     else:
         raise ValueError("Bad data source")

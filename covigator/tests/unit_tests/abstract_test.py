@@ -6,7 +6,7 @@ from covigator.database.model import VariantCooccurrence, SampleEna, VariantObse
     SampleGisaid, SubclonalVariantObservation, Variant, PrecomputedVariantAbundanceHistogram, PrecomputedTableCounts, \
     PrecomputedSynonymousNonSynonymousCounts, PrecomputedOccurrence, PrecomputedAnnotation, PrecomputedIndelLength, \
     PrecomputedSubstitutionsCounts, PrecomputedVariantsPerSample, Log, GisaidVariant, GisaidVariantObservation, \
-    LowFrequencyVariantObservation, LowFrequencyVariant, SubclonalVariant
+    LowFrequencyVariantObservation, LowFrequencyVariant, SubclonalVariant, PrecomputedVariantsPerLineage
 from covigator.database.queries import Queries
 from covigator.tests.unit_tests.faked_objects import FakeConfiguration
 
@@ -59,6 +59,7 @@ class AbstractTest(TestCase):
             self._clean_table(PrecomputedSynonymousNonSynonymousCounts)
             self._clean_table(PrecomputedTableCounts)
             self._clean_table(PrecomputedVariantAbundanceHistogram)
+            self._clean_table(PrecomputedVariantsPerLineage)
             self._clean_table(Log)
         except Exception as e:
             logger.error("Error cleaning the database")
