@@ -10,6 +10,7 @@ from logzero import logger
 from covigator.database.queries import Queries
 from covigator.precomputations.load_ns_s_counts import NsSCountsLoader
 from covigator.precomputations.load_top_occurrences import TopOccurrencesLoader
+from covigator.precomputations.load_variants_per_lineage import VariantsPerLineageLoader
 
 
 class PrecomputationsLoader:
@@ -19,25 +20,28 @@ class PrecomputationsLoader:
         self.queries = Queries(session=self.session)
         self.ns_s_counts_loader = NsSCountsLoader(session=session)
         self.top_occurrences_loader = TopOccurrencesLoader(session=session)
+        self.variants_per_lineage_loader = VariantsPerLineageLoader(session=session)
 
     def load(self):
         logger.info("Starting precomputations...")
         self.load_table_counts()
-        logger.info("Done with table counts (1/8)")
+        logger.info("Done with table counts (1/9)")
         self.load_variant_abundance_histogram()
-        logger.info("Done with variant abundance histogram (2/8)")
+        logger.info("Done with variant abundance histogram (2/9)")
         self.load_counts_variants_per_sample()
-        logger.info("Done with count variants per sample (3/8)")
+        logger.info("Done with count variants per sample (3/9)")
         self.load_count_substitutions()
-        logger.info("Done with count base subsitutions (4/8)")
+        logger.info("Done with count base subsitutions (4/9)")
         self.load_indel_length()
-        logger.info("Done with indel length (5/8)")
+        logger.info("Done with indel length (5/9)")
         self.load_annotation()
-        logger.info("Done with effect annotations (6/8)")
+        logger.info("Done with effect annotations (6/9)")
         self.top_occurrences_loader.load()
-        logger.info("Done with top occurrent variants (7/8)")
+        logger.info("Done with top occurrent variants (7/9)")
         self.ns_s_counts_loader.load()
-        logger.info("Done with NS S counts (8/8)")
+        logger.info("Done with NS S counts (8/9)")
+        self.variants_per_lineage_loader.load()
+        logger.info("Done with variants per lineage (9/9)")
 
     def load_counts_variants_per_sample(self):
 

@@ -38,6 +38,7 @@ PRECOMPUTED_NS_S_COUNTS_TABLE_NAME = get_table_versioned_name('precomputed_ns_s_
 PRECOMPUTED_DN_DS_BY_DOMAIN_TABLE_NAME = get_table_versioned_name('precomputed_dn_ds_by_domain', config=config)
 PRECOMPUTED_TABLE_COUNTS_TABLE_NAME = get_table_versioned_name('precomputed_table_counts', config=config)
 PRECOMPUTED_VARIANT_ABUNDANCE_HIST_TABLE_NAME = get_table_versioned_name('precomputed_variant_abundance_histogram', config=config)
+PRECOMPUTED_VARIANTS_PER_LINEAGE_TABLE_NAME = get_table_versioned_name('precomputed_variants_per_lineage', config=config)
 JOB_STATUS_CONSTRAINT_NAME = get_table_versioned_name('job_status', config=config)
 DATA_SOURCE_CONSTRAINT_NAME = get_table_versioned_name('data_source', config=config)
 COVIGATOR_MODULE_CONSTRAINT_NAME = get_table_versioned_name('covigator_module', config=config)
@@ -944,3 +945,13 @@ class PrecomputedVariantAbundanceHistogram(Base):
     bin_size = Column(Integer)
     source = Column(Enum(DataSource, name=DataSource.__constraint_name__))
 
+
+class PrecomputedVariantsPerLineage(Base):
+
+    __tablename__ = PRECOMPUTED_VARIANTS_PER_LINEAGE_TABLE_NAME
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    lineage = Column(String)
+    variant_id = Column(String)
+    count_observations = Column(Integer)
+    source = Column(Enum(DataSource, name=DataSource.__constraint_name__))
