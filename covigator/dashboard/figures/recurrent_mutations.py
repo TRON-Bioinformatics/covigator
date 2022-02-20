@@ -12,7 +12,8 @@ from sklearn.cluster import OPTICS
 
 from covigator import MISSENSE_VARIANT, DISRUPTIVE_INFRAME_DELETION, CONSERVATIVE_INFRAME_DELETION, \
     CONSERVATIVE_INFRAME_INSERTION, DISRUPTIVE_INFRAME_INSERTION
-from covigator.dashboard.figures.figures import Figures, PLOTLY_CONFIG, TEMPLATE, MARGIN, STYLES_STRIPPED, STYLE_HEADER
+from covigator.dashboard.figures.figures import Figures, PLOTLY_CONFIG, TEMPLATE, MARGIN, STYLES_STRIPPED, STYLE_HEADER, \
+    STYLE_CELL
 import plotly
 import plotly.express as px
 import plotly.graph_objects as go
@@ -119,15 +120,10 @@ class RecurrentMutationsFigures(Figures):
                             {"name": ["", "Count"], "id": "total"},
                         ] + month_columns,
                 style_data_conditional=STYLES_STRIPPED + styles_counts + styles_frequency + styles_total_count,
-                style_cell_conditional=[
-                    {
-                        'if': {'column_id': c},
-                        'textAlign': 'left'
-                    } for c in ['gene_name', 'dna_mutation', 'hgvs_p', 'annotation']
-                ],
                 style_table={'overflowX': 'auto'},
                 style_as_list_view=True,
                 style_header=STYLE_HEADER,
+                style_cell=STYLE_CELL,
                 sort_by=[{"column_id": "frequency", "direction": "desc"}],
                 row_selectable='multi'
             )

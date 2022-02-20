@@ -1,12 +1,18 @@
 from typing import List
+
+import colorlover
+import dash_table
 import numpy as np
 import pandas as pd
 from logzero import logger
-from covigator.dashboard.figures.figures import Figures, PLOTLY_CONFIG, MARGIN, TEMPLATE
+from sqlalchemy import and_
+
+from covigator.dashboard.figures.figures import Figures, PLOTLY_CONFIG, MARGIN, TEMPLATE, STYLES_STRIPPED, STYLE_HEADER, \
+    STYLE_CELL
 import plotly.express as px
 import dash_core_components as dcc
 
-from covigator.database.model import DataSource
+from covigator.database.model import DataSource, PrecomputedVariantsPerLineage, Variant
 
 
 class LineageFigures(Figures):
@@ -50,42 +56,83 @@ class LineageFigures(Figures):
             ]
         return graph
 
-    def get_lineages_variants_table(
-            self, data_source: str, countries: List[str] =None, lineages: List[str] = None):
+    def discrete_background_color_bins(self, df, n_bins=5, columns='all', colors='Blues'):
+        bounds = [i * (1.0 / n_bins) for i in range(n_bins + 1)]
+        if columns == 'all':
+            if 'id' in df:
+                df_numeric_columns = df.select_dtypes('number').drop(['id'], axis=1)
+            else:
+                df_numeric_columns = df.select_dtypes('number')
+        else:
+            df_numeric_columns = df[columns]
+        df_max = df_numeric_columns.max().max()
+        df_min = df_numeric_columns.min().min()
+        ranges = [
+            ((df_max - df_min) * i) + df_min
+            for i in bounds
+        ]
+        styles = []
+        for i in range(1, len(bounds)):
+            min_bound = ranges[i - 1]
+            max_bound = ranges[i]
+            backgroundColor = colorlover.scales[str(n_bins)]['seq'][colors][i - 1]
+            color = 'white' if i > len(bounds) / 2. else 'inherit'
 
-        logger.debug("Getting data on dN/dS...")
-        #data = self.queries.get_dnds_table(
-        #    source=data_source, countries=countries, genes=genes)
-        graph = dcc.Markdown("""**No data for the current selection**""")
-        #if data is not None and data.shape[0] > 0:
-        #    logger.debug("Prepare plot on dN/dS...")
-        #    genes = pd.concat([
-        #        self.queries.get_genes_df(),
-        #        self.queries.get_domains_df()
-        #    ])
-        #    # prepares the data and calculates the dN/dS
-        #    data_to_plot = data.groupby(["month", "region_name"]).sum().reset_index().sort_values("month")
-        #    data_to_plot = pd.merge(left=genes, right=data_to_plot, left_on="name", right_on="region_name")
-        #    data_to_plot["dn_ds"] = data_to_plot[["ns", "s", "fraction_non_synonymous", "fraction_synonymous"]].apply(
-        #        lambda x: self._calculate_dn_ds(ns=x[0], s=x[1], NS=x[2], S=x[3]), axis=1)##
+            for column in df_numeric_columns:
+                styles.append({
+                    'if': {
+                        'filter_query': (
+                                '{{{column}}} >= {min_bound}' +
+                                (' && {{{column}}} < {max_bound}' if (i < len(bounds) - 1) else '')
+                        ).format(column=column, min_bound=min_bound, max_bound=max_bound),
+                        'column_id': column
+                    },
+                    'backgroundColor': backgroundColor,
+                    'color': color
+                })
 
-        #    fig = px.line(data_to_plot, x='month', y='dn_ds', color='region_name',
-        #                  symbol='region_name', line_dash='region_name', line_dash_sequence=['dash'],
-        #                  labels={"dn_ds": "dN/dS", "region_name": "gene"},
-        #                  hover_data=["region_name", "dn_ds"],
-        #                  color_discrete_sequence=px.colors.qualitative.Vivid)
-        #    fig.update_traces(line=dict(width=0.5), marker=dict(size=10))
-        #    fig.update_layout(
-        #        margin=MARGIN,
-        #        template=TEMPLATE,
-        #        legend={'title': None},
-        #        xaxis={'title': None},
-        #    )
+        return styles
 
-        #    graph = [
-        #        dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
-        #        dcc.Markdown("""
-        #        **dN/dS by gene**
-        #        """)
-        #    ]
-        return graph
+    def get_lineages_variants_table(self, data_source: str, lineages: List[str] = None):
+
+        result = None
+        if lineages is not None and len(lineages) == 1:
+            query = self.queries.session.query(
+                PrecomputedVariantsPerLineage.variant_id,
+                PrecomputedVariantsPerLineage.count_observations,
+                #Variant.variant_type,
+                Variant.gene_name,
+                Variant.hgvs_p,
+                Variant.annotation_highest_impact
+            )\
+                .filter(and_(
+                    PrecomputedVariantsPerLineage.source == data_source,
+                    PrecomputedVariantsPerLineage.lineage == lineages[0]))\
+                .join(Variant, PrecomputedVariantsPerLineage.variant_id == Variant.variant_id)\
+                .order_by(Variant.position.asc())
+            data = pd.read_sql(query.statement, self.queries.session.bind)
+
+            styles_counts = self.discrete_background_color_bins(data, columns=["count_observations"])
+
+            fig = dash_table.DataTable(
+                id='lineages-variants-table',
+                data=data.to_dict('records'),
+                columns=[
+                    {"name": ["Gene"], "id": "gene_name"},
+                    {"name": ["DNA mutation"], "id": "variant_id"},
+                    {"name": ["Protein change"], "id": "hgvs_p"},
+                    {"name": ["Annotation"], "id": "annotation_highest_impact"},
+                    {"name": ["Count observations"], "id": "count_observations"}
+                ],
+                style_data_conditional=STYLES_STRIPPED + styles_counts,
+                style_as_list_view=True,
+                style_header=STYLE_HEADER,
+                style_cell=STYLE_CELL,
+                css=[{'selector': '.dash-cell div.dash-cell-value',
+                      'rule': 'display: inline; white-space: inherit; overflow: inherit; text-overflow: inherit;'}],
+                style_table={'overflowX': 'auto'},
+                style_data={'whiteSpace': 'normal', 'height': 'auto'},
+            )
+            result = [fig, dcc.Markdown("**Mutations in lineage {lineage}**".format(lineage=lineages[0]))]
+
+        return result

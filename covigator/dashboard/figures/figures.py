@@ -15,9 +15,13 @@ STYLES_STRIPPED = [{
                 'backgroundColor': 'rgb(248, 248, 248)'
             }]
 STYLE_HEADER = {
-                'backgroundColor': 'rgb(230, 230, 230)',
-                'fontWeight': 'bold'
-            }
+    'backgroundColor': 'white',
+    'fontWeight': 'bold'
+}
+STYLE_CELL = {
+    'padding': '5px',
+    'maxWidth': '100px'
+}
 
 
 class Figures:
