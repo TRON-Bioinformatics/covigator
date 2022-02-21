@@ -11,10 +11,11 @@ from covigator.database.model import DataSource
 
 class SampleFigures(Figures):
 
-    def get_accumulated_samples_by_country_plot(self, data_source: str = None, countries=None, min_samples=1000):
+    def get_accumulated_samples_by_country_plot(self, data_source: str, countries=None, min_samples=1000,
+                                                lineages=None):
         logger.debug("Getting data on samples by country...")
         data = self.queries.get_accumulated_samples_by_country(
-            data_source=data_source, countries=countries, min_samples=min_samples)
+            data_source=data_source, countries=countries, min_samples=min_samples, lineages=lineages)
         graph = dcc.Markdown("""**No data for the current selection**""")
         if data is not None and data.shape[0] > 0:
             logger.debug("Prepare plot on samples by country...")
@@ -54,12 +55,12 @@ class SampleFigures(Figures):
     def _calculate_dn_ds(self, NS, S, ns, s):
         pn = float(ns) / float(NS)
         ps = float(s) / float(S)
-        dn = np.log(1 + pn)
-        ds = np.log(1 + ps)
+        dn = np.log(1 + pn) + 1
+        ds = np.log(1 + ps) + 1
         return dn / ds
 
     def get_dnds_by_gene_plot(
-            self, data_source: DataSource = None, countries: List[str] =None, genes: List[str] = None):
+            self, data_source: str, countries: List[str] =None, genes: List[str] = None):
 
         logger.debug("Getting data on dN/dS...")
         data = self.queries.get_dnds_table(

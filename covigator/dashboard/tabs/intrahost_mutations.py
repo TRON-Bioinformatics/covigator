@@ -42,44 +42,8 @@ def get_tab_subclonal_variants(queries: Queries):
 
 def get_subclonal_variants_tab_graphs(queries):
 
-    count_subclonal_variant_observations = queries.count_subclonal_variant_observations()
-    count_unique_subclonal_variant = queries.count_unique_subclonal_variant()
-    count_unique_only_subclonal_variant = queries.count_unique_only_subclonal_variant()
-
     return html.Div(
         children=[
-            dcc.Markdown("""
-                            LoFreq variant calls with a VAF lower than 80 % are considered intrahost variants. 
-                            All variant calls with a higher VAF are considered clonal.
-                            Intrahost mutations can only be detected in the ENA dataset.
-                            The dataset of intrahost mutations is enriched for false positive calls due to the lower 
-                            Variant Allele Frequency (VAF). (Lythgoe, 2021) and (Valesano, 2021) reported that SARS-CoV-2 
-                            intrahost variant calls with a VAF below 2 % and 3 % respectively had not enough quality; 
-                            although the variant calling methods differ between them and with CoVigator.
-    
-                            Here we provide a tool to explore those intrahost mutations that have not been observed 
-                            as clonal variants.
-                             """, style={"font-size": 16}),
-            html.Br(),
-            html.Div(
-                html.Span(
-                    children=[
-                        get_mini_container(
-                            title="Unique mutations",
-                            value=print_number(count_unique_subclonal_variant)
-                        ),
-                        get_mini_container(
-                            title="Only intrahost mutations",
-                            value=print_number(count_unique_only_subclonal_variant)
-                        ),
-                        get_mini_container(
-                            title="Mutation observations",
-                            value=print_number(count_subclonal_variant_observations)
-                        ),
-                    ]
-                )
-            ),
-            html.Br(),
             html.Div(id=ID_TOP_OCCURRING_SUBCLONAL_VARIANTS,
                      children=dash_table.DataTable(id=ID_TOP_OCCURRING_SUBCLONAL_VARIANTS_TABLE)),
             html.Br(),
@@ -98,8 +62,46 @@ def get_subclonal_variants_tab_graphs(queries):
 def get_subclonal_variants_tab_left_bar(queries: Queries):
 
     genes = queries.get_genes()
+    count_subclonal_variant_observations = queries.count_subclonal_variant_observations()
+    count_unique_subclonal_variant = queries.count_unique_subclonal_variant()
+    count_unique_only_subclonal_variant = queries.count_unique_only_subclonal_variant()
 
     return html.Div(children=[
+        dcc.Markdown("""
+                    Mutations with a VAF within the interval [0.05, 0.8) are considered intrahost variants. 
+                    Intrahost mutations can only be detected when the raw reads are available.
+                    The dataset of intrahost mutations is enriched for false positive calls due to the lower 
+                    Variant Allele Frequency (VAF). (Lythgoe, 2021) and (Valesano, 2021) reported that SARS-CoV-2 
+                    intrahost variant calls with a VAF below 0.02 and 0.03 respectively had not enough quality; 
+                    although the variant calling methods differ between them and with CoVigator.
+
+                    Here we provide a tool to explore most frequent intrahost mutations that have not been observed 
+                    before as clonal variants.
+                     """, style={"font-size": 16}),
+        html.Br(),
+        html.Div(
+            html.Span(
+                children=[
+                    get_mini_container(
+                        title="Unique mutations",
+                        value=print_number(count_unique_subclonal_variant)
+                    ),
+                    html.Br(),
+                    html.Br(),
+                    get_mini_container(
+                        title="Only intrahost",
+                        value=print_number(count_unique_only_subclonal_variant)
+                    ),
+                    html.Br(),
+                    html.Br(),
+                    get_mini_container(
+                        title="Mutation calls",
+                        value=print_number(count_subclonal_variant_observations)
+                    ),
+                    html.Br(),
+                ]
+            )
+        ),
         html.Br(),
         dcc.Markdown("Select a gene"),
         dcc.Dropdown(
@@ -170,7 +172,7 @@ def set_callbacks_subclonal_variants_tab(app, session: Session):
 
     @app.callback(
         Output(ID_TOP_OCCURRING_SUBCLONAL_VARIANTS, 'children'),
-        [Input(ID_APPLY_BUTTOM, 'n_clicks')],
+        inputs=[Input(ID_APPLY_BUTTOM, 'n_clicks')],
         state=[
             State(ID_SLIDER_SUBCLONAL_VARIANTS_VAF, 'value'),
             State(ID_DROPDOWN_GENE_SUBCLONAL_VARIANTS, 'value'),
@@ -185,7 +187,7 @@ def set_callbacks_subclonal_variants_tab(app, session: Session):
 
     @app.callback(
         Output(ID_HIST_LIBRARY_STRATEGY, 'children'),
-        [Input(ID_APPLY_BUTTOM, 'n_clicks')],
+        inputs=[Input(ID_APPLY_BUTTOM, 'n_clicks')],
         state=[
             State(ID_SLIDER_SUBCLONAL_VARIANTS_VAF, 'value'),
             State(ID_TOP_OCCURRING_SUBCLONAL_VARIANTS_TABLE, "derived_virtual_data"),
@@ -203,7 +205,7 @@ def set_callbacks_subclonal_variants_tab(app, session: Session):
 
     @app.callback(
         Output(ID_HIST_COUNTRIES, 'children'),
-        [Input(ID_APPLY_BUTTOM, 'n_clicks')],
+        inputs=[Input(ID_APPLY_BUTTOM, 'n_clicks')],
         state=[
             State(ID_SLIDER_SUBCLONAL_VARIANTS_VAF, 'value'),
             State(ID_TOP_OCCURRING_SUBCLONAL_VARIANTS_TABLE, "derived_virtual_data"),
@@ -221,7 +223,7 @@ def set_callbacks_subclonal_variants_tab(app, session: Session):
 
     @app.callback(
         Output(TOP_COOCCURRING_CLONAL_VARIANTS, 'children'),
-        [Input(ID_APPLY_BUTTOM, 'n_clicks')],
+        inputs=[Input(ID_APPLY_BUTTOM, 'n_clicks')],
         state=[
             State(ID_SLIDER_SUBCLONAL_VARIANTS_VAF, 'value'),
             State(ID_DROPDOWN_GENE_SUBCLONAL_VARIANTS, 'value'),

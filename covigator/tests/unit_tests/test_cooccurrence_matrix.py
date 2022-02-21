@@ -1,4 +1,4 @@
-from covigator.database.model import Sample, VariantCooccurrence
+from covigator.database.model import VariantCooccurrence, DataSource
 from covigator.pipeline.cooccurrence_matrix import CooccurrenceMatrix
 from covigator.tests.unit_tests.abstract_test import AbstractTest
 from covigator.tests.unit_tests.mocked import get_mocked_ena_sample, get_mocked_variant, get_mocked_variant_observation
@@ -19,18 +19,14 @@ class CooccurrenceMatrixTests(AbstractTest):
         variant_observations = []
         self.samples = []
         for _ in range(self.NUM_SAMPLES):
-            sample_ena, sample, job = get_mocked_ena_sample(self.faker)
+            sample_ena = get_mocked_ena_sample(self.faker)
             self.session.add(sample_ena)
             self.session.commit()
-            self.session.add(sample)
-            self.session.commit()
-            self.session.add(job)
-            self.session.commit()
-            self.samples.append(sample)
+            self.samples.append(sample_ena)
             # mocks observed variants
             for vo in self.faker.random_elements(
                     self.mocked_variants, length=self.NUM_VARIANT_OBSERVATIONS_PER_SAMPLE, unique=True):
-                variant_observations.append(get_mocked_variant_observation(sample, vo))
+                variant_observations.append(get_mocked_variant_observation(sample_ena, vo))
             self.session.add_all(variant_observations)
             self.session.commit()
 
@@ -38,20 +34,22 @@ class CooccurrenceMatrixTests(AbstractTest):
         self.assertRaises(
             AssertionError,
             CooccurrenceMatrix().compute,
-            None,
-            self.session)
+            run_accession=None,
+            source=None,
+            session=self.session)
 
     def test_missing_session(self):
         self.assertRaises(
             AssertionError,
             CooccurrenceMatrix().compute,
-            Sample(id="12345"),
-            None)
+            run_accession="12345",
+            source=DataSource.ENA,
+            session=None)
 
     def test_non_existing_sample_does_not_add_new_entries(self):
         count = self.session.query(VariantCooccurrence).count()
         self.assertEqual(count, 0)
-        CooccurrenceMatrix().compute(Sample(id="12345"), self.session)
+        CooccurrenceMatrix().compute(run_accession="12345", source=DataSource.ENA, session=self.session)
         self.session.commit()
         count = self.session.query(VariantCooccurrence).count()
         self.assertEqual(count, 0)
@@ -59,7 +57,8 @@ class CooccurrenceMatrixTests(AbstractTest):
     def test_one_existing_sample(self):
         count = self.session.query(VariantCooccurrence).count()
         self.assertEqual(count, 0)
-        CooccurrenceMatrix().compute(self.samples[0], self.session)
+        CooccurrenceMatrix().compute(
+            run_accession=self.samples[0].run_accession, source=DataSource.ENA, session=self.session)
         self.session.commit()
         count = self.session.query(VariantCooccurrence).count()
         # size of matrix = n*(n-1)/2 + n (one half of matrix + diagonal)
@@ -73,7 +72,7 @@ class CooccurrenceMatrixTests(AbstractTest):
         count = self.session.query(VariantCooccurrence).count()
         self.assertEqual(count, 0)
         for s in self.samples:
-            CooccurrenceMatrix().compute(s, self.session)
+            CooccurrenceMatrix().compute(run_accession=s.run_accession, source=DataSource.ENA, session=self.session)
             self.session.commit()
         count = self.session.query(VariantCooccurrence).count()
         self.assertLess(

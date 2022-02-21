@@ -1,28 +1,42 @@
 import numpy as np
 from itertools import combinations
-from typing import Tuple
+from typing import Tuple, Union
 from faker import Faker
 from sqlalchemy.orm import Session
 
 from covigator import MISSENSE_VARIANT, SYNONYMOUS_VARIANT, INFRAME_INSERTION, INFRAME_DELETION
-from covigator.database.model import SampleEna, Sample, DataSource, JobEna, JobStatus, Log, CovigatorModule, Variant, \
-    VariantObservation, VariantCooccurrence, VariantType, SampleGisaid, JobGisaid
+from covigator.database.model import SampleEna, DataSource, JobStatus, Log, CovigatorModule, Variant, \
+    VariantCooccurrence, VariantType, SampleGisaid, GisaidVariant
 from Bio.Alphabet.IUPAC import IUPACData
 
+from covigator.database.queries import Queries
 
 MOCKED_GENES = ["S", "N", "E", "M", "ORF3a", "ORF1ab", "ORF7b", "ORF10", "ORF6", "ORF8", "ORF7a"]
 MOCKED_DOMAINS = ["CoV_S2", "bCoV_S1_RBD", "bCoV_S1_N", "CoV_S1_C"]
+MOCKED_LINEAGES = ["A", "B", "C", "D", "E", "F", ""]
 
 
-def get_mocked_variant(faker: Faker, chromosome=None, gene_name=None) -> Variant:
+def get_mocked_variant(faker: Faker, chromosome=None, gene_name=None, source=DataSource.ENA.name, session: Session = None) -> Variant:
+
     if gene_name is None:
         gene_name = faker.random_choices(MOCKED_GENES, length=1)[0]
     domain_name = faker.random_choices(MOCKED_DOMAINS, length=1)[0]
     annotation = faker.random_choices(
             [MISSENSE_VARIANT, SYNONYMOUS_VARIANT, INFRAME_DELETION, INFRAME_INSERTION], length=1)[0]
-    variant = Variant(
+
+    if session:
+        queries = Queries(session=session)
+        gene = queries.get_gene(gene_name=gene_name)
+        start = gene.start
+        end = gene.end
+    else:
+        start = 1
+        end = 30000
+
+    klass = Queries.get_variant_klass(source)
+    variant = klass(
         chromosome=chromosome if chromosome else faker.bothify(text="chr##"),
-        position=faker.random_int(min=1, max=30000),
+        position=faker.random_int(min=start, max=end),
         reference=faker.random_choices(list(IUPACData.unambiguous_dna_letters), length=1)[0],
         # TODO: reference and alternate could be equal!
         alternate=faker.random_choices(list(IUPACData.unambiguous_dna_letters), length=1)[0],
@@ -41,10 +55,13 @@ def get_mocked_variant(faker: Faker, chromosome=None, gene_name=None) -> Variant
     return variant
 
 
-def get_mocked_variant_observation(sample: Sample, variant: Variant, faker=Faker()):
-    return VariantObservation(
-        sample=sample.id if sample else faker.unique.uuid4(),
-        source=sample.source if sample else faker.random_choices((DataSource.ENA, DataSource.GISAID)),
+def get_mocked_variant_observation(
+        sample: Union[SampleEna, SampleGisaid], variant: Union[Variant or GisaidVariant], faker=Faker()):
+
+    klass = Queries.get_variant_observation_klass(
+        DataSource.ENA.name if isinstance(sample, SampleEna) else DataSource.GISAID.name)
+    return klass(
+        sample=sample.run_accession if sample else faker.unique.uuid4(),
         variant_id=variant.variant_id,
         chromosome=variant.chromosome,
         position=variant.position,
@@ -55,57 +72,45 @@ def get_mocked_variant_observation(sample: Sample, variant: Variant, faker=Faker
         annotation_highest_impact=variant.annotation_highest_impact,
         gene_name=variant.gene_name,
         pfam_name=variant.pfam_name,
-        date=faker.date_time()
-    )
-
-
-def get_mocked_ena_sample(faker: Faker, job_status=JobStatus.FINISHED) -> Tuple[SampleEna, Sample, JobEna]:
-    """
-    Returns a triple of SampleEna, Sample and Job with the same sample identifier
-    """
-    identifier = faker.unique.uuid4()
-    sample_ena = SampleEna(
-        run_accession=identifier,
-        collection_date=faker.date_time(),
-        country=faker.country(),
-        fastq_ftp=faker.uri(),
-        fastq_md5=faker.md5(),
-        num_fastqs=1,
-        finished=job_status == JobStatus.FINISHED
-    )
-    sample = Sample(
-        id=identifier,
-        source=DataSource.ENA,
-        ena_id=identifier
-    )
-    job = JobEna(
-        run_accession=identifier,
-        status=job_status
-    )
-    return sample_ena, sample, job
-
-
-def get_mocked_gisaid_sample(faker: Faker, job_status=JobStatus.FINISHED) -> Tuple[SampleGisaid, Sample, JobGisaid]:
-    """
-    Returns a triple of SampleEna, Sample and Job with the same sample identifier
-    """
-    identifier = faker.unique.uuid4()
-    sample_gisaid = SampleGisaid(
-        run_accession=identifier,
         date=faker.date_time(),
-        country=faker.country(),
-        finished=job_status == JobStatus.FINISHED
+        hgvs_p=variant.hgvs_p
     )
-    sample = Sample(
-        id=identifier,
-        source=DataSource.GISAID,
-        gisaid_id=identifier
-    )
-    job = JobGisaid(
-        run_accession=identifier,
-        status=job_status
-    )
-    return sample_gisaid, sample, job
+
+
+def get_mocked_sample(faker: Faker, source: DataSource, job_status=JobStatus.FINISHED) -> Union[SampleEna, SampleGisaid]:
+    identifier = faker.unique.uuid4()
+    if source == DataSource.ENA:
+        sample = SampleEna(
+            run_accession=identifier,
+            collection_date=faker.date_time(),
+            country=faker.country(),
+            fastq_ftp=faker.uri(),
+            fastq_md5=faker.md5(),
+            num_fastqs=1,
+            status=job_status,
+            finished=job_status == JobStatus.FINISHED,
+            pangolin_lineage=faker.random_choices(MOCKED_LINEAGES, length=1)[0]
+        )
+    elif source == DataSource.GISAID:
+        sample = SampleGisaid(
+            run_accession=identifier,
+            collection_date=faker.date_time(),
+            country=faker.country(),
+            status=job_status,
+            finished=job_status == JobStatus.FINISHED,
+            pangolin_lineage=faker.random_choices(MOCKED_LINEAGES, length=1)[0]
+        )
+    else:
+        raise ValueError("Bad data source")
+    return sample
+
+
+def get_mocked_ena_sample(faker: Faker, job_status=JobStatus.FINISHED) -> SampleEna:
+    return get_mocked_sample(faker=faker, source=DataSource.ENA, job_status=job_status)
+
+
+def get_mocked_gisaid_sample(faker: Faker, job_status=JobStatus.FINISHED) -> SampleGisaid:
+    return get_mocked_sample(faker=faker, source=DataSource.GISAID, job_status=job_status)
 
 
 def get_mocked_log(faker: Faker, source: DataSource = None, module: CovigatorModule = None) -> Log:
@@ -139,14 +144,18 @@ def get_mocked_variant_cooccurrence(faker: Faker, variant_one: Variant, variant_
 
 
 def mock_samples_and_variants(faker, session: Session, num_samples=10):
-    existing_variants = set()
+    existing_variants = {DataSource.ENA.name: set(), DataSource.GISAID.name: set()}
     samples = mock_samples(faker=faker, session=session, num_samples=num_samples)
-    for sample_ena, sample, job in samples:
-        variants = [get_mocked_variant(faker=faker) for _ in range(10)]
-        new_variants = list(filter(lambda x: x.variant_id not in existing_variants, variants))
+    for sample in samples:
+        source = DataSource.ENA if isinstance(sample, SampleEna) else DataSource.GISAID
+        variants = [get_mocked_variant(faker=faker, source=source.name, session=session) for _ in range(10)]
+        # this aims at removing potentially repeated variants
+        variants_dict = {v.variant_id: v for v in variants}
+        variants = variants_dict.values()
+        new_variants = list(filter(lambda x: x.variant_id not in existing_variants.get(source.name), variants))
         session.add_all(new_variants)
         session.commit()
-        existing_variants.update([v.variant_id for v in variants])
+        existing_variants.get(source.name).update([v.variant_id for v in variants])
 
         variants_observations = [get_mocked_variant_observation(faker=faker, variant=v, sample=sample)
                                  for v in variants]
@@ -155,28 +164,21 @@ def mock_samples_and_variants(faker, session: Session, num_samples=10):
 
 
 def mock_samples(faker, session: Session, num_samples=10, job_status=JobStatus.FINISHED, source=None):
-    samples_source = []
     samples = []
-    jobs = []
     for _ in range(num_samples):
         if source is not None:
             selected_source = source
         else:
             selected_source = faker.random_choices([DataSource.ENA.name, DataSource.GISAID.name], length=1)[0]
         if selected_source == DataSource.ENA.name:
-            sample_source, sample, job = get_mocked_ena_sample(faker=faker, job_status=job_status)
+            sample= get_mocked_ena_sample(faker=faker, job_status=job_status)
         else:   # GISAID
-            sample_source, sample, job = get_mocked_gisaid_sample(faker=faker, job_status=job_status)
-        samples_source.append(sample_source)
+            sample = get_mocked_gisaid_sample(faker=faker, job_status=job_status)
         samples.append(sample)
-        jobs.append(job)
 
-    session.add_all(samples_source)
-    session.commit()
     session.add_all(samples)
-    session.add_all(jobs)
     session.commit()
-    return [(se, s, j) for se, s, j in zip(samples_source, samples, jobs)]
+    return samples
 
 
 def mock_cooccurrence_matrix(faker, session: Session):

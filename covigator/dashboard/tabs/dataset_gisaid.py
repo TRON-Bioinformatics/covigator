@@ -15,38 +15,78 @@ import plotly.express as px
 
 @functools.lru_cache()
 def get_tab_dataset_gisaid(queries: Queries):
-
     count_samples = queries.count_samples(source=DataSource.GISAID.name)
-    count_variants = queries.count_variant_observations(source=DataSource.GISAID.name)
+
+    return dbc.CardBody(
+        children=[
+            get_gisaid_overview_tab_left_bar(queries, count_samples),
+            html.Div(
+                className="one column",
+                children=[html.Br()]),
+            get_gisaid_overview_tab_graphs(queries=queries, count_samples=count_samples)
+        ])
+
+
+def get_gisaid_overview_tab_graphs(queries, count_samples):
+    return html.Div(
+        className="nine columns",
+        children=get_dataset_gisaid_tab_graphs(queries, count_samples=count_samples))
+
+
+def get_gisaid_overview_tab_left_bar(queries: Queries, count_samples):
+    count_variants = queries.count_variants(source=DataSource.GISAID.name)
+    count_variant_observations = queries.count_variant_observations(source=DataSource.GISAID.name)
     date_of_first_gisaid_sample = queries.get_date_of_first_sample(source=DataSource.GISAID)
     date_of_most_recent_gisaid_sample = queries.get_date_of_most_recent_sample(source=DataSource.GISAID)
 
-    return dbc.CardBody(
-            children=[
-                dcc.Markdown("""
-                    The GISAID dataset was manually downloaded from the site https://www.gisaid.org/.
-                    DNA assemblies and metadata were matched together and variant calling was done after performing 
-                    a global alignment to the reference genome.
+    return html.Div(
+        className="two columns",
+        children=[
+            html.Br(),
+            dcc.Markdown("""
+                The GISAID database (https://www.gisaid.org/) provides DNA assemblies, geographical information and
+                other metadata about SARS-CoV-2 samples. 
+                The processing pipeline runs alignment to the reference genome (bioypthon), 
+                variant calling (custom code), normalization (vt and BCFtools), annotation (SnpEff) 
+                and finally lineage determination (pangolin). 
+                """, style={"font-size": 16}),
+            html.Br(),
+            html.Div(
+                html.Span(
+                    children=[
+                        get_mini_container(
+                            title="Samples",
+                            value=print_number(count_samples)),
+                        html.Br(),
+                        html.Br(),
+                        get_mini_container(
+                            title="First sample",
+                            value=print_date(date_of_first_gisaid_sample)),
+                        html.Br(),
+                        html.Br(),
+                        get_mini_container(
+                            title="Latest sample",
+                            value=print_date(date_of_most_recent_gisaid_sample)),
+                        html.Br(),
+                        html.Br(),
+                        get_mini_container(
+                            title="Unique mutations",
+                            value=print_number(count_variants)),
+                        html.Br(),
+                        html.Br(),
+                        get_mini_container(
+                            title="Mutation calls",
+                            value=print_number(count_variant_observations)),
+                    ])
+            ),
+            html.Br(),
+            dcc.Markdown("""
+                    There are two sample exclusion criteria: 
+                    * Horizontal coverage below 20 % of the reference genome
+                    * A ratio of ambiguous bases greater than 0.2 
+                    
+                    Furthermore, all mutations involving ambiguous bases are excluded. 
                     """, style={"font-size": 16}),
-                html.Br(),
-                html.Div(
-                    html.Span(
-                        children=[
-                            get_mini_container(
-                                title="Samples",
-                                value=print_number(count_samples)),
-                            get_mini_container(
-                                title="Variant calls",
-                                value=print_number(count_variants)),
-                            get_mini_container(
-                                title="First sample",
-                                value=print_date(date_of_first_gisaid_sample)),
-                            get_mini_container(
-                                title="Latest sample",
-                                value=print_date(date_of_most_recent_gisaid_sample))
-                            ])
-                ),
-                get_dataset_gisaid_tab_graphs(queries=queries, count_samples=count_samples)
         ])
 
 
@@ -87,8 +127,7 @@ def get_plot_coverage(queries: Queries):
         **Horizontal coverage (%)**
         
         Horizontal coverage is estimated as the sequence length divided by the reference genome length.
-        Some samples have thus an horizontal coverage larger than 100 %.
-        Samples covering less than 20% of the whole genome are excluded. 
+        Some samples have thus an horizontal coverage larger than 100 %. 
         """)
     ]
 
@@ -119,7 +158,5 @@ def get_plot_bad_bases_ratio(queries: Queries, count_samples):
 
         The ratio of N and ambiguous bases over the whole sequence length measures the quality of the assembly sequence.
         {} % of samples have a ratio <= 5 %.
-        Samples with a ratio higher than 0.2 are excluded.
-        All variant calls that contain a N or an ambiguous base are filtered out.
         """.format(round(float(data[data["bad_bases_ratio"] <= 5]["count"].sum()) / count_samples), 1))
     ]

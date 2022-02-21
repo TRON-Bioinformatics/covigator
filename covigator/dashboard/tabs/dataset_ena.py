@@ -5,8 +5,7 @@ import dash_html_components as html
 from covigator.dashboard.figures import VARIANT_TYPE_COLOR_MAP
 from covigator.dashboard.figures.figures import PLOTLY_CONFIG, MARGIN, TEMPLATE
 from covigator.dashboard.tabs import get_mini_container, print_number, print_date
-from covigator.database.model import DataSource, SAMPLE_ENA_TABLE_NAME, JOB_ENA_TABLE_NAME, \
-    VARIANT_OBSERVATION_TABLE_NAME
+from covigator.database.model import DataSource, SAMPLE_ENA_TABLE_NAME, VariantObservation, SampleEna
 from covigator.database.queries import Queries
 import pandas as pd
 import plotly.express as px
@@ -29,45 +28,88 @@ LIBRARY_LAYOUT_COLOR_MAP = {
 @functools.lru_cache()
 def get_tab_dataset_ena(queries: Queries):
 
+    return dbc.CardBody(
+        children=[
+            get_ena_overview_tab_left_bar(queries),
+            html.Div(
+                className="one column",
+                children=[html.Br()]),
+            get_ena_overview_tab_graphs(queries=queries)
+        ])
+
+
+def get_ena_overview_tab_graphs(queries):
+    return html.Div(
+        className="nine columns",
+        children=get_dataset_ena_tab_graphs(queries))
+
+
+def get_ena_overview_tab_left_bar(queries: Queries):
     count_samples = queries.count_samples(source=DataSource.ENA.name)
-    count_variants = queries.count_variant_observations(source=DataSource.ENA.name)
+    count_variants = queries.count_variants(source=DataSource.ENA.name)
+    count_variant_observations = queries.count_variant_observations(source=DataSource.ENA.name)
     date_of_first_sample = queries.get_date_of_first_sample(source=DataSource.ENA)
     date_of_most_recent_sample = queries.get_date_of_most_recent_sample(source=DataSource.ENA)
 
-    return dbc.CardBody(
-            children=[
-                dcc.Markdown("""
-                The ENA dataset and its metadata was downloaded using the ENA Portal API 
-                (https://www.ebi.ac.uk/ena/portal/api/). FASTQ files containing the raw reads were downloaded from the
-                 provided URLs for each sample. FASTQ files were MD5 checked after download. 
-                 All non-human host samples were excluded.
-                 """, style={"font-size": 16}),
-                html.Br(),
-                html.Div(
-                    html.Span(
-                        children=[
-                            get_mini_container(
-                                title="Samples",
-                                value=print_number(count_samples)
-                            ),
-                            get_mini_container(
-                                title="Variant calls",
-                                value=print_number(count_variants)
-                            ),
-                            get_mini_container(
-                                title="First sample",
-                                value=print_date(date_of_first_sample)
-                            ),
-                            get_mini_container(
-                                title="Latest sample",
-                                value=print_date(date_of_most_recent_sample)
-                            )
-                        ]
-                    )
-                ),
-                get_dataset_ena_tab_graphs(queries)
-            ]
-        )
+    return html.Div(
+        className="two columns",
+        children=[
+            html.Br(),
+            dcc.Markdown("""
+                        The ENA database provides the raw reads and metadata from SARS-CoV-2 samples through the ENA 
+                        Portal API (https://www.ebi.ac.uk/ena/portal/api/). 
+                        FASTQ files containing the raw reads were downloaded and MD5 checked.
+                        The processing pipeline runs reads trimming (fastp), alignment (BWA mem), 
+                        coverage analysis (samtools), variant calling (LoFreq), normalization (vt and BCFtools),
+                        annotation (SnpEff and VAFator) and finally lineage determination (pangolin). 
+                         """, style={"font-size": 16}),
+            html.Br(),
+            html.Div(
+                html.Span(
+                    children=[
+                        get_mini_container(
+                            title="Samples",
+                            value=print_number(count_samples)
+                        ),
+                        html.Br(),
+                        html.Br(),
+                        get_mini_container(
+                            title="First sample",
+                            value=print_date(date_of_first_sample)
+                        ),
+                        html.Br(),
+                        html.Br(),
+                        get_mini_container(
+                            title="Latest sample",
+                            value=print_date(date_of_most_recent_sample)
+                        ),
+                        html.Br(),
+                        html.Br(),
+                        get_mini_container(
+                            title="Unique mutations",
+                            value=print_number(count_variants)
+                        ),
+                        html.Br(),
+                        html.Br(),
+                        get_mini_container(
+                            title="Mutation calls",
+                            value=print_number(count_variant_observations)
+                        )
+                    ]
+                )
+            ),
+            html.Br(),
+            dcc.Markdown("""
+                There are four exclusion criteria:
+                * Non-human host samples 
+                * Non Illumina sequenced samples (ie: a large proportion of nanopore sequenced samples are excluded)
+                * Horizontal coverage below 20 % of the reference genome
+                * Mean mapping quality below 10 or mean base call quality below 10
+                
+                Mutations are classified according to their VAF into clonal mutations (0.8 <= VAF <= 1.0), 
+                intrahost mutations (0.05 <= VAF < 0.8) and finally low frequency mutations (VAF < 0.05).
+                """, style={"font-size": 16}),
+        ])
 
 
 def get_dataset_ena_tab_graphs(queries: Queries):
@@ -143,11 +185,11 @@ def get_plot_number_reads(queries: Queries):
 
 
 def get_data_number_reads(queries):
-    sql_query = """
-    select s.run_accession as run_accession, j.num_reads as num_reads_after, s.read_count as num_reads_before, s.library_strategy
-    from {samples_table} as s join {jobs_table} as j on s.run_accession = j.run_accession 
-    where s.finished""".format(samples_table=SAMPLE_ENA_TABLE_NAME, jobs_table=JOB_ENA_TABLE_NAME)
-    data = pd.read_sql_query(sql_query, queries.session.bind)
+    query = queries.session.query(
+        SampleEna.run_accession, SampleEna.num_reads.label("num_reads_after"),
+        SampleEna.read_count.label("num_reads_before"), SampleEna.library_strategy)\
+        .filter(SampleEna.finished)
+    data = pd.read_sql_query(query.statement, queries.session.bind)
     return data
 
 
@@ -205,11 +247,10 @@ def get_plot_coverage(queries: Queries):
 
 
 def get_data_coverage(queries):
-    sql_query = """
-    select s.run_accession, s.library_strategy, j.coverage, j.mean_depth
-    from {table} as s join {jobs_table} as j on s.run_accession = j.run_accession 
-    where finished""".format(table=SAMPLE_ENA_TABLE_NAME, jobs_table=JOB_ENA_TABLE_NAME)
-    data = pd.read_sql_query(sql_query, queries.session.bind)
+    query = queries.session.query(
+        SampleEna.run_accession, SampleEna.library_strategy, SampleEna.coverage, SampleEna.mean_depth) \
+        .filter(SampleEna.finished)
+    data = pd.read_sql_query(query.statement, queries.session.bind)
     return data
 
 
@@ -234,11 +275,11 @@ def get_plot_qualities(queries: Queries):
 
 
 def get_data_qualities(queries):
-    sql_query = """
-    select s.run_accession, s.library_strategy, j.mean_mapping_quality, j.mean_base_quality
-    from {table} as s join {jobs_table} as j on s.run_accession = j.run_accession 
-    where finished""".format(table=SAMPLE_ENA_TABLE_NAME, jobs_table=JOB_ENA_TABLE_NAME)
-    data = pd.read_sql_query(sql_query, queries.session.bind)
+    query = queries.session.query(
+        SampleEna.run_accession, SampleEna.library_strategy, SampleEna.mean_mapping_quality,
+        SampleEna.mean_base_quality)\
+        .filter(SampleEna.finished)
+    data = pd.read_sql_query(query.statement, queries.session.bind)
     return data
 
 
@@ -266,11 +307,9 @@ def get_plot_clonal_variants(queries: Queries):
 
 
 def get_data_clonal_variants(queries):
-    sql_query = """
-    select variant_id, vaf, dp, variant_type
-    from {table} 
-    where source='ENA'""".format(table=VARIANT_OBSERVATION_TABLE_NAME)
-    data = pd.read_sql_query(sql_query, queries.session.bind)
+    query = queries.session.query(
+        VariantObservation.variant_id, VariantObservation.vaf, VariantObservation.dp, VariantObservation.variant_type)
+    data = pd.read_sql_query(query.statement, queries.session.bind)
     return data
 
 

@@ -76,7 +76,7 @@ class MutationStatsFigures(Figures):
             ]
         return graph
 
-    def get_substitutions_plot(self, variant_types: List[str], data_source: str = None, genes: List[str] = None):
+    def get_substitutions_plot(self, data_source: str, variant_types: List[str], genes: List[str] = None):
         logger.debug("Getting data on substitutions plot...")
         data = self.queries.get_substitutions(data_source=data_source, genes=genes, variant_types=variant_types)
         graph = dcc.Markdown("""**No data for the current selection**""")
@@ -108,7 +108,7 @@ class MutationStatsFigures(Figures):
         return graph
 
     def get_variants_per_sample_plot(
-            self, data_source: str = None, genes: List[str] = None, variant_types: List[str] = None):
+            self, data_source: str, genes: List[str] = None, variant_types: List[str] = None):
 
         logger.debug("Getting data on variants per sample...")
         data = self.queries.get_variants_per_sample(data_source=data_source, genes=genes, variant_types=variant_types)

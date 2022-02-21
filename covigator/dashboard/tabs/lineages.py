@@ -5,49 +5,61 @@ import dash_bootstrap_components as dbc
 import dash_html_components as html
 from dash.dependencies import Output, Input, State
 from sqlalchemy.orm import Session
-from covigator.dashboard.figures.samples import SampleFigures
+from covigator.dashboard.figures.lineages import LineageFigures
+from covigator.dashboard.tabs import get_mini_container, print_number
 from covigator.database.model import DataSource
 from covigator.database.queries import Queries
 
-ID_APPLY_BUTTOM = 's-apply-buttom'
+ID_APPLY_BUTTOM = 'lineages-apply-buttom'
 
 
-ID_SLIDER_MIN_SAMPLES = 'slider-min-samples-per-country'
-ID_DROPDOWN_DATA_SOURCE = "dropdown-data-source"
-ID_DROPDOWN_COUNTRY = 'dropdown-country'
-ID_DROPDOWN_LINEAGE = 'dropdown-lineage'
-ID_DROPDOWN_GENE = 'dropdown-gene-overall-mutations'
-ID_ACCUMULATED_SAMPLES_GRAPH = 'accumulated-samples-per-country'
-ID_DN_DS_GRAPH = 'dn_ds_graph'
+ID_DROPDOWN_DATA_SOURCE = "lineages-dropdown-data-source"
+ID_DROPDOWN_COUNTRY = 'lineages-dropdown-country'
+ID_DROPDOWN_LINEAGE = 'lineages-dropdown-lineage'
+ID_LINEAGES_GRAPH = 'lineages-graph'
+ID_LINEAGES_TABLE = 'lineages-table'
 
 
 @functools.lru_cache()
-def get_tab_samples(queries: Queries, data_source: DataSource):
+def get_tab_lineages(queries: Queries, data_source: DataSource):
     return dbc.CardBody(
             children=[
-                get_samples_tab_left_bar(queries, data_source),
+                get_lineages_tab_left_bar(queries, data_source),
                 html.Div(
                     className="one column",
                     children=[html.Br()]),
-                get_samples_tab_graphs()
+                get_lineages_tab_graphs()
         ])
 
 
-def get_samples_tab_graphs():
+def get_lineages_tab_graphs():
     return html.Div(
         className="nine columns",
         children=[
             html.Br(),
-            html.Div(id=ID_ACCUMULATED_SAMPLES_GRAPH),
+            html.Div(id=ID_LINEAGES_GRAPH),
             html.Br(),
-            html.Div(id=ID_DN_DS_GRAPH),
+            html.Div(id=ID_LINEAGES_TABLE),
         ])
 
 
-def get_samples_tab_left_bar(queries: Queries, data_source: DataSource):
+def get_lineages_tab_left_bar(queries: Queries, data_source: DataSource):
+
+    lineages = queries.get_lineages(source=data_source.name)
+
     return html.Div(
         className="two columns",
         children=[
+            html.P("Lineage information is derived from the mutated sequence using Pangolin."),
+            html.Br(),
+            html.Div(
+                html.Span(
+                    children=[
+                        get_mini_container(
+                            title="Lineages",
+                            value=print_number(len(lineages))
+                        )
+                        ])),
             html.Br(),
             html.Div(
                 dcc.Dropdown(
@@ -74,34 +86,15 @@ def get_samples_tab_left_bar(queries: Queries, data_source: DataSource):
                 multi=True
             ),
             html.Br(),
-            dcc.Markdown("""Minimum number of samples per country"""),
-            dcc.Slider(
-                id=ID_SLIDER_MIN_SAMPLES,
-                min=0,
-                max=10000,
-                step=100,
-                value=100,
-                dots=False,
-                marks={i: '{}'.format(i) for i in [0, 2500, 5000, 7500, 10000]},
-                tooltip=dict(always_visible=True, placement="right")
-            ),
-            html.Br(),
-            dcc.Markdown("""Select one or more genes to show the dN/dS ratio on protein domains"""),
-            dcc.Dropdown(
-                id=ID_DROPDOWN_GENE,
-                options=[{'label': g2, 'value': g2} for g2 in sorted([g.name for g in queries.get_genes()])],
-                value=None,
-                multi=True
-            ),
-            html.Br(),
+            html.P("Select a single lineage to explore its corresponding mutations."),
             html.Button('Apply', id=ID_APPLY_BUTTOM),
         ])
 
 
-def set_callbacks_samples_tab(app, session: Session):
+def set_callbacks_lineages_tab(app, session: Session):
 
     queries = Queries(session=session)
-    figures = SampleFigures(queries)
+    figures = LineageFigures(queries)
 
     countries_ena = queries.get_countries(DataSource.ENA.name)
     countries_gisaid = queries.get_countries(DataSource.GISAID.name)
@@ -137,47 +130,30 @@ def set_callbacks_samples_tab(app, session: Session):
         return lineages
 
     @app.callback(
-        Output(ID_SLIDER_MIN_SAMPLES, 'disabled'),
-        Input(ID_DROPDOWN_COUNTRY, 'value'),
-        Input(ID_DROPDOWN_LINEAGE, 'value')
-    )
-    def disable_minimum_number_samples(countries, lineages):
-        """
-        Disables the minimum number of samples option when countries are provided
-        """
-        return not _is_empty_list(countries) or not _is_empty_list(lineages)
-
-    def _is_empty_list(my_list):
-        return my_list is None or len(my_list) == 0
-
-    @app.callback(
-        Output(ID_ACCUMULATED_SAMPLES_GRAPH, 'children'),
+        Output(ID_LINEAGES_GRAPH, 'children'),
         inputs=[Input(ID_APPLY_BUTTOM, 'n_clicks')],
         state=[
             State(ID_DROPDOWN_DATA_SOURCE, 'value'),
             State(ID_DROPDOWN_COUNTRY, 'value'),
-            State(ID_SLIDER_MIN_SAMPLES, 'value'),
             State(ID_DROPDOWN_LINEAGE, 'value'),
         ],
         suppress_callback_exceptions=True
     )
-    def update_accumulated_samples_by_country(_, data_source, countries, min_samples, lineages):
-        return html.Div(children=figures.get_accumulated_samples_by_country_plot(
+    def update_lineages_plot(_, data_source, countries, lineages):
+        return html.Div(children=figures.get_lineages_plot(
             data_source=data_source,
             countries=countries,
-            min_samples=min_samples if _is_empty_list(countries) and _is_empty_list(lineages) else 0,
             lineages=lineages))
 
     @app.callback(
-        Output(ID_DN_DS_GRAPH, 'children'),
+        Output(ID_LINEAGES_TABLE, 'children'),
         inputs=[Input(ID_APPLY_BUTTOM, 'n_clicks')],
         state=[
             State(ID_DROPDOWN_DATA_SOURCE, 'value'),
-            State(ID_DROPDOWN_COUNTRY, 'value'),
-            State(ID_DROPDOWN_GENE, 'value'),
+            State(ID_DROPDOWN_LINEAGE, 'value'),
         ],
         suppress_callback_exceptions=True
     )
-    def update_dn_ds_graph(_, data_source, countries, genes):
-        return html.Div(children=figures.get_dnds_by_gene_plot(
-            data_source=data_source, countries=countries, genes=genes))
+    def update_lineages_table(_, data_source, lineages):
+        return html.Div(children=figures.get_lineages_variants_table(
+            data_source=data_source, lineages=lineages))

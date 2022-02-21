@@ -13,7 +13,10 @@ def print_number(value):
     return '{:,}'.format(value)
 
 
-def get_mini_container(title, value, font_size=20):
+def get_mini_container(title, value):
     return dbc.Button(
-        [title + " ", dbc.Badge(value, color="light", className="ml-1")],
-        color="warning", size='lg',  style={"margin-left": "20px", "font-size": font_size})
+        "{title}: {value}".format(title=title, value=value),
+        outline=True,
+        color="dark",
+        className="me-1",
+        style={"margin-right": "30px", "margin-left": "30px", 'font-size': '110%'})
