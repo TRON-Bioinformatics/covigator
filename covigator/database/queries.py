@@ -226,7 +226,7 @@ class Queries:
         klass = self.get_sample_klass(source=data_source)
         query = self.session.query(
             func.count().label("count"), klass.collection_date.label("date"), klass.pangolin_lineage.label("lineage")) \
-            .filter(klass.finished) \
+            .filter(and_(klass.finished, klass.pangolin_lineage != None)) \
             .group_by(klass.collection_date, klass.pangolin_lineage)
         if countries:
             query = query.filter(klass.country.in_(countries))
@@ -258,6 +258,16 @@ class Queries:
 
             filled_table["count"] = filled_table.count_x + filled_table.count_y
             filled_table['cumsum'] = filled_table.groupby(['lineage'])['count'].cumsum()
+
+            # add total samples per day
+            counts_per_date = filled_table[["date", "count"]].groupby("date").sum().reset_index()
+            counts_per_date.rename(columns={'count': 'total_per_date'}, inplace=True)
+            filled_table = pd.merge(
+                left=filled_table,
+                right=counts_per_date,
+                on="date")
+            filled_table['ratio_per_date'] = filled_table[["count", "total_per_date"]].apply(
+                lambda x: float(x[0]) / x[1], axis=1)
 
         return filled_table
 

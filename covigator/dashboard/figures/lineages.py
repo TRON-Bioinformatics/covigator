@@ -2,9 +2,9 @@ from typing import List
 
 import colorlover
 import dash_table
-import numpy as np
 import pandas as pd
 from logzero import logger
+from plotly.subplots import make_subplots
 from sqlalchemy import and_
 
 from covigator.dashboard.figures.figures import Figures, PLOTLY_CONFIG, MARGIN, TEMPLATE, STYLES_STRIPPED, STYLE_HEADER, \
@@ -12,7 +12,7 @@ from covigator.dashboard.figures.figures import Figures, PLOTLY_CONFIG, MARGIN, 
 import plotly.express as px
 import dash_core_components as dcc
 
-from covigator.database.model import DataSource, PrecomputedVariantsPerLineage, Variant
+from covigator.database.model import PrecomputedVariantsPerLineage, Variant
 
 
 class LineageFigures(Figures):
@@ -25,19 +25,46 @@ class LineageFigures(Figures):
         if data is not None and data.shape[0] > 0:
             logger.debug("Prepare plot on samples by lineage...")
             lineages = list(data.sort_values("cumsum", ascending=False).lineage.unique())
-            fig = px.area(data, x="date", y="cumsum", color="lineage",
-                          category_orders={
-                              "lineage": lineages[::-1]},
-                          labels={"cumsum": "num. samples", "count": "increment"},
-                          hover_data=["count"],
-                          color_discrete_sequence=px.colors.qualitative.Vivid)
-            fig.update_traces(line=dict(width=0.5))
+
+            fig = make_subplots(rows=2, cols=1)
+
+            fig1 = px.area(
+                data, x="date", y="cumsum", color="lineage",
+                category_orders={"lineage": lineages[::-1]},
+                labels={"ratio_per_date": "% daily samples", "cumsum": "num. samples", "count": "increment"},
+                hover_data=["ratio_per_date", "count"],
+                color_discrete_sequence=px.colors.qualitative.Vivid)
+            fig1.update_traces(line=dict(width=0.5), showlegend=False)
+
+            fig2 = px.area(
+                data, x="date", y="ratio_per_date", color="lineage",
+                category_orders={"lineage": lineages[::-1]},
+                labels={"ratio_per_date": "% daily samples", "cumsum": "num. samples", "count": "increment"},
+                hover_data=["cumsum", "count"],
+                color_discrete_sequence=px.colors.qualitative.Vivid)
+            fig2.update_traces(line=dict(width=0.5))
+
+            for trace in fig1["data"]:
+                fig.append_trace(trace, row=1, col=1)
+            for trace in fig2["data"]:
+                fig.append_trace(trace, row=2, col=1)
+
             fig.update_layout(
                 margin=MARGIN,
                 template=TEMPLATE,
                 legend={'traceorder': 'reversed', 'title': None},
                 xaxis={'title': None},
+                yaxis={
+                    'title': 'num. samples'
+                },
+                yaxis2={
+                    'tickformat': ',.0%',
+                    'range': [0, 1],
+                    'title': '% samples'
+                },
+                height=700,
             )
+            fig.update_xaxes(showspikes=True)
 
             top_lineages = lineages[0: min(5, len(lineages))]
             top_lineages_and_cumsum = data[data.lineage.isin(top_lineages)][["lineage", "cumsum"]] \
@@ -48,9 +75,9 @@ class LineageFigures(Figures):
             graph = [
                 dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
                 dcc.Markdown("""
-                **Accumulated samples by lineages**
-
-                *Top {} lineages: {}.
+                **Samples by lineages**
+                
+                Top {} lineages: {}.
                 """.format(len(top_lineages_tooltip),
                            ", ".join(top_lineages_tooltip)))
             ]

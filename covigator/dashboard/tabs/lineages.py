@@ -6,6 +6,7 @@ import dash_html_components as html
 from dash.dependencies import Output, Input, State
 from sqlalchemy.orm import Session
 from covigator.dashboard.figures.lineages import LineageFigures
+from covigator.dashboard.tabs import get_mini_container, print_number
 from covigator.database.model import DataSource
 from covigator.database.queries import Queries
 
@@ -43,9 +44,22 @@ def get_lineages_tab_graphs():
 
 
 def get_lineages_tab_left_bar(queries: Queries, data_source: DataSource):
+
+    lineages = queries.get_lineages(source=data_source.name)
+
     return html.Div(
         className="two columns",
         children=[
+            html.P("Lineage information is derived from the mutated sequence using Pangolin."),
+            html.Br(),
+            html.Div(
+                html.Span(
+                    children=[
+                        get_mini_container(
+                            title="Lineages",
+                            value=print_number(len(lineages))
+                        )
+                        ])),
             html.Br(),
             html.Div(
                 dcc.Dropdown(
@@ -72,6 +86,7 @@ def get_lineages_tab_left_bar(queries: Queries, data_source: DataSource):
                 multi=True
             ),
             html.Br(),
+            html.P("Select a single lineage to explore its corresponding mutations."),
             html.Button('Apply', id=ID_APPLY_BUTTOM),
         ])
 
