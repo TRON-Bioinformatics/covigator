@@ -953,5 +953,6 @@ class PrecomputedVariantsPerLineage(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     lineage = Column(String)
     variant_id = Column(String)
+    country = Column(String)
     count_observations = Column(Integer)
     source = Column(Enum(DataSource, name=DataSource.__constraint_name__))
