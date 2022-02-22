@@ -150,10 +150,11 @@ def set_callbacks_lineages_tab(app, session: Session):
         inputs=[Input(ID_APPLY_BUTTOM, 'n_clicks')],
         state=[
             State(ID_DROPDOWN_DATA_SOURCE, 'value'),
+            State(ID_DROPDOWN_COUNTRY, 'value'),
             State(ID_DROPDOWN_LINEAGE, 'value'),
         ],
         suppress_callback_exceptions=True
     )
-    def update_lineages_table(_, data_source, lineages):
+    def update_lineages_table(_, data_source, countries, lineages):
         return html.Div(children=figures.get_lineages_variants_table(
-            data_source=data_source, lineages=lineages))
+            data_source=data_source, lineages=lineages, countries=countries))

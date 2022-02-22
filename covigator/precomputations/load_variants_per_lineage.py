@@ -55,6 +55,7 @@ class VariantsPerLineageLoader:
         return PrecomputedVariantsPerLineage(
             lineage=row["lineage"],
             variant_id=row["variant_id"],
+            country=row["country"],
             count_observations=row["count_observations"],
             source=source
         )
@@ -64,6 +65,7 @@ class VariantsPerLineageLoader:
         klass_sample = self.queries.get_sample_klass(source)
         query = self.session.query(
             klass_variant_observation.variant_id,
+            klass_sample.country,
             klass_sample.pangolin_lineage.label("lineage"),
             func.count().label('count_observations'))\
             .filter(and_(
@@ -72,6 +74,7 @@ class VariantsPerLineageLoader:
                 klass_sample.pangolin_lineage != "")) \
             .join(klass_sample, klass_variant_observation.sample == klass_sample.run_accession) \
             .group_by(klass_sample.pangolin_lineage,
+                      klass_sample.country,
                       klass_variant_observation.variant_id)
         variants_per_lineage = pd.read_sql(query.statement, self.session.bind)
         return variants_per_lineage
