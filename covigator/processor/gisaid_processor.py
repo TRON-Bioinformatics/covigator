@@ -42,6 +42,7 @@ class GisaidProcessor(AbstractProcessor):
     def run_pipeline(sample: SampleGisaid, queries: Queries, config: Configuration):
         pipeline_results = GisaidPipeline(config=config).run(sample=sample)
         sample.analysed_at = datetime.now()
+        sample.sample_folder = sample.get_sample_folder(config.storage_folder)
         sample.vcf_path = pipeline_results.vcf_path
         sample.pangolin_path = pipeline_results.pangolin_path
         sample.fasta_path = pipeline_results.fasta_path

@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 from typing import List
 from sqlalchemy.ext.declarative import declarative_base
@@ -156,6 +157,7 @@ class SampleGisaid(Base):
     error_message = Column(String)
 
     # output files
+    sample_folder = Column(String)
     vcf_path = Column(String)
     fasta_path = Column(String)
     pangolin_path = Column(String)
@@ -176,6 +178,12 @@ class SampleGisaid(Base):
 
     covigator_accessor_version = Column(String)
     covigator_processor_version = Column(String)
+
+    def get_sample_folder(self, base_folder):
+        return os.path.join(
+            base_folder,
+            self.collection_date.strftime("%Y%m%d") if self.collection_date is not None else "nodate",
+            self.run_accession)
 
 
 class SampleEna(Base):
@@ -256,6 +264,7 @@ class SampleEna(Base):
     error_message = Column(String)
 
     # local files storage
+    sample_folder = Column(String)
     fastq_path = Column(String)  # the local path where FASTQ files are stored in semi colon separated list
     lofreq_vcf_path = Column(String)
     ivar_vcf_path = Column(String)
@@ -307,6 +316,12 @@ class SampleEna(Base):
 
     covigator_accessor_version = Column(String)
     covigator_processor_version = Column(String)
+
+    def get_sample_folder(self, base_folder):
+        return os.path.join(
+            base_folder,
+            self.collection_date.strftime("%Y%m%d") if self.collection_date is not None else "nodate",
+            self.run_accession)
 
     def get_fastqs_ftp(self) -> List:
         return self.fastq_ftp.split(SEPARATOR) if self.fastq_ftp is not None else []

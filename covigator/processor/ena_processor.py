@@ -59,6 +59,7 @@ class EnaProcessor(AbstractProcessor):
         downloader = Downloader(config=config)
         download_with_retries = backoff_retrier.wrapper(downloader.download, NUMBER_RETRIES_DOWNLOADER)
         paths = download_with_retries(sample_ena=sample)
+        sample.sample_folder = sample.get_sample_folder(config.storage_folder)
         sample.fastq_path = paths
         sample.downloaded_at = datetime.now()
 
