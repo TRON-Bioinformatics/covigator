@@ -174,6 +174,9 @@ class SampleGisaid(Base):
     pangolin_status = Column(String)
     pangolin_note = Column(String)
 
+    covigator_accessor_version = Column(String)
+    covigator_processor_version = Column(String)
+
 
 class SampleEna(Base):
     """
@@ -301,6 +304,9 @@ class SampleEna(Base):
     unpaired_read_duplicates = Column(Integer)
     read_pair_duplicates = Column(Integer)
     read_pair_optical_duplicates = Column(Integer)
+
+    covigator_accessor_version = Column(String)
+    covigator_processor_version = Column(String)
 
     def get_fastqs_ftp(self) -> List:
         return self.fastq_ftp.split(SEPARATOR) if self.fastq_ftp is not None else []

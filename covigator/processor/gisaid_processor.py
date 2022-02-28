@@ -1,6 +1,7 @@
 import pandas as pd
 from datetime import datetime
 
+import covigator
 from covigator.configuration import Configuration
 from covigator.database.model import JobStatus, DataSource, SampleGisaid
 from covigator.database.database import Database
@@ -44,6 +45,9 @@ class GisaidProcessor(AbstractProcessor):
         sample.vcf_path = pipeline_results.vcf_path
         sample.pangolin_path = pipeline_results.pangolin_path
         sample.fasta_path = pipeline_results.fasta_path
+
+        # stores the covigator version
+        sample.covigator_processor_version = covigator.VERSION
 
         # load pangolin results
         GisaidProcessor.load_pangolin(sample=sample, path=sample.pangolin_path)

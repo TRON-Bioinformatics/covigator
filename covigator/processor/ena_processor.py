@@ -4,6 +4,7 @@ from datetime import datetime
 
 import pandas as pd
 
+import covigator
 from covigator.configuration import Configuration
 from covigator.database.queries import Queries
 from covigator.exceptions import CovigatorErrorProcessingCoverageResults, CovigatorExcludedSampleBadQualityReads, \
@@ -81,6 +82,9 @@ class EnaProcessor(AbstractProcessor):
         sample.horizontal_coverage_path = pipeline_result.horizontal_coverage
         sample.vertical_coverage_path = pipeline_result.vertical_coverage
         sample.deduplication_metrics_path = pipeline_result.deduplication_metrics
+
+        # stores the covigator version
+        sample.covigator_processor_version = covigator.VERSION
 
         # load FAST JSON into the DB
         sample.qc = json.load(open(pipeline_result.fastp_qc))
