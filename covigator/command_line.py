@@ -11,6 +11,7 @@ from covigator.configuration import Configuration
 from covigator.database.database import Database
 from covigator.pipeline.ena_pipeline import Pipeline
 from covigator.pipeline.gisaid_pipeline import GisaidPipeline
+from covigator.processor.ena_downloader import EnaDownloader
 from covigator.processor.ena_processor import EnaProcessor
 from covigator.processor.gisaid_processor import GisaidProcessor
 from logzero import logger
@@ -104,6 +105,15 @@ def processor():
                 scheduler_options={"dashboard_address": ':{}'.format(config.dask_port)}) as cluster:
             cluster.scale(jobs=int(args.num_jobs))
             _start_dask_processor(args, config, cluster=cluster)
+
+
+def ena_downloader():
+    parser = ArgumentParser(
+        description="Covigator {} ENA downloader".format(covigator.VERSION))
+
+    config = Configuration()
+    covigator.configuration.initialise_logs(config.logfile_accesor)
+    EnaDownloader(database=Database(config=config, initialize=True), config=config).process()
 
 
 def _start_dask_processor(args, config, cluster=None, num_local_cpus=1):

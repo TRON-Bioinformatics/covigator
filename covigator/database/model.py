@@ -88,11 +88,13 @@ class JobStatus(enum.Enum):
     __constraint_name__ = JOB_STATUS_CONSTRAINT_NAME
 
     PENDING = 1
-    QUEUED = 2
-    FAILED_PROCESSING = 3
-    FINISHED = 4
-    HOLD = 5
-    EXCLUDED = 6
+    FAILED_DOWNLOAD = 2
+    DOWNLOADED = 3
+    QUEUED = 4
+    FAILED_PROCESSING = 5
+    FINISHED = 6
+    HOLD = 7
+    EXCLUDED = 8
 
 
 class DataSource(enum.Enum):
@@ -810,6 +812,7 @@ class CovigatorModule(enum.Enum):
 
     ACCESSOR = 1
     PROCESSOR = 2
+    DOWNLOADER = 3
 
 
 class Log(Base):

@@ -1,8 +1,6 @@
 import os
 import pathlib
 import urllib.request as request
-from contextlib import closing
-import shutil
 import hashlib
 from logzero import logger
 from covigator.configuration import Configuration

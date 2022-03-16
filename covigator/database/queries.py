@@ -62,13 +62,19 @@ class Queries:
         klass = self.get_sample_klass(source=data_source.name)
         return self.session.query(klass).filter(klass.run_accession == run_accession).first()
 
-    def find_first_pending_jobs(self, data_source: DataSource, n=100) -> List[Union[SampleEna, SampleGisaid]]:
+    def find_first_by_status(self, data_source: DataSource, status, n=100) -> List[Union[SampleEna, SampleGisaid]]:
         klass = self.get_sample_klass(source=data_source.name)
         return self.session.query(klass) \
-            .filter(klass.status == JobStatus.PENDING) \
+            .filter(klass.status.in_(status)) \
             .order_by(klass.created_at.desc()) \
             .limit(n) \
             .all()
+
+    def find_first_pending_jobs(self, data_source: DataSource, n=100) -> List[Union[SampleEna, SampleGisaid]]:
+        return self.find_first_by_status(data_source=data_source, status=[JobStatus.PENDING, JobStatus.DOWNLOADED], n=n)
+
+    def find_first_jobs_to_download(self, data_source: DataSource, n=100) -> List[Union[SampleEna, SampleGisaid]]:
+        return self.find_first_by_status(data_source=data_source, status=[JobStatus.PENDING], n=n)
 
     def count_jobs_in_queue(self, data_source):
         return self.count_jobs_by_status(data_source=data_source, status=JobStatus.QUEUED)
