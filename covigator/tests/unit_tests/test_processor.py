@@ -84,7 +84,7 @@ class ProcessorTests(AbstractTest):
 
         self.assertEqual(self.queries.count_jobs_by_status(data_source=source, status=JobStatus.PENDING), 1)
         self.assertEqual(self.queries.count_jobs_by_status(data_source=source, status=JobStatus.FINISHED), 0)
-        self.processors.get(source).process()
+        self.fake_processors.get(source).process()
         self.assertEqual(self.queries.count_jobs_by_status(data_source=source, status=JobStatus.PENDING), 0)
         self.assertEqual(self.queries.count_jobs_by_status(data_source=source, status=JobStatus.FINISHED), 1)
 

@@ -2,6 +2,8 @@ import logging
 import os
 import logzero
 from logzero import logger
+
+import covigator
 from covigator.exceptions import CovigatorDashBoardInitialisationError
 
 DEFAULT_SUBCLONAL_AF_THR = 0.8
@@ -93,7 +95,9 @@ class Configuration:
 
         # pipeline
         self.nextflow = os.getenv(self.ENV_COVIGATOR_NEXTFLOW, "nextflow")
-        self.workflow = os.getenv(self.ENV_COVIGATOR_WORKFLOW, "tron-bioinformatics/covigator-ngs-pipeline -r v0.9.0")
+        self.workflow = os.getenv(self.ENV_COVIGATOR_WORKFLOW,
+                                  "tron-bioinformatics/covigator-ngs-pipeline -r {version}".format(
+                                      version=covigator.ANALYSIS_PIPELINE_VERSION))
         self.workflow_cpus = os.getenv(self.ENV_COVIGATOR_WORKFLOW_CPUS, "1")
         self.workflow_memory = os.getenv(self.ENV_COVIGATOR_WORKFLOW_MEMORY, "3g")
         self.batch_size = self.load_numeric_value(variable=self.ENV_COVIGATOR_BATCH_SIZE, default=1000)
@@ -115,7 +119,7 @@ class Configuration:
                                                          default=DEFAULT_MINIMUM_SEQUENCE_SIZE)
 
         # NOTE: the defaults are already set in the workflow config
-        self.temp_folder = os.getenv(self.ENV_COVIGATOR_TEMP_FOLDER, "/data/covigator-tmp")
+        self.temp_folder = os.getenv(self.ENV_COVIGATOR_TEMP_FOLDER, "data/covigator-tmp")
 
         if verbose:
             self.log_configuration()
