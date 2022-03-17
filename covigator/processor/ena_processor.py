@@ -22,7 +22,7 @@ from covigator.pipeline.ena_pipeline import Pipeline
 from covigator.pipeline.vcf_loader import VcfLoader
 
 
-NUMBER_RETRIES_DOWNLOADER = 10
+NUMBER_RETRIES_DOWNLOADER = 3
 
 
 class EnaProcessor(AbstractProcessor):
