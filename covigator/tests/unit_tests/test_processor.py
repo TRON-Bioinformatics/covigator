@@ -62,18 +62,18 @@ class ProcessorTests(AbstractTest):
 
     @parameterized.expand([(DataSource.ENA, ), (DataSource.GISAID, )])
     def test_fake_processor(self, source):
-        mock_samples(faker=self.faker, session=self.session, num_samples=10, job_status=JobStatus.PENDING,
+        mock_samples(faker=self.faker, session=self.session, num_samples=10, job_status=JobStatus.DOWNLOADED,
                      source=source.name)
 
-        self.assertEqual(self.queries.count_jobs_by_status(data_source=source, status=JobStatus.PENDING), 10)
+        self.assertEqual(self.queries.count_jobs_by_status(data_source=source, status=JobStatus.DOWNLOADED), 10)
         self.assertEqual(self.queries.count_jobs_by_status(data_source=source, status=JobStatus.FINISHED), 0)
         self.fake_processors.get(source).process()
-        self.assertEqual(self.queries.count_jobs_by_status(data_source=source, status=JobStatus.PENDING), 0)
+        self.assertEqual(self.queries.count_jobs_by_status(data_source=source, status=JobStatus.DOWNLOADED), 0)
         self.assertEqual(self.queries.count_jobs_by_status(data_source=source, status=JobStatus.FINISHED), 10)
 
     # @parameterized.expand([(DataSource.ENA,), (DataSource.GISAID,)])
     def test_processor(self, source=DataSource.ENA):
-        samples = mock_samples(faker=self.faker, session=self.session, num_samples=1, job_status=JobStatus.PENDING,
+        samples = mock_samples(faker=self.faker, session=self.session, num_samples=1, job_status=JobStatus.DOWNLOADED,
                      source=source.name)
         sample = samples[0]
 
@@ -82,10 +82,10 @@ class ProcessorTests(AbstractTest):
         sample.fastq_path = "{fastq1},{fastq2}".format(fastq1=fastq1, fastq2=fastq2)
         self.session.merge(sample)
 
-        self.assertEqual(self.queries.count_jobs_by_status(data_source=source, status=JobStatus.PENDING), 1)
+        self.assertEqual(self.queries.count_jobs_by_status(data_source=source, status=JobStatus.DOWNLOADED), 1)
         self.assertEqual(self.queries.count_jobs_by_status(data_source=source, status=JobStatus.FINISHED), 0)
         self.fake_processors.get(source).process()
-        self.assertEqual(self.queries.count_jobs_by_status(data_source=source, status=JobStatus.PENDING), 0)
+        self.assertEqual(self.queries.count_jobs_by_status(data_source=source, status=JobStatus.DOWNLOADED), 0)
         self.assertEqual(self.queries.count_jobs_by_status(data_source=source, status=JobStatus.FINISHED), 1)
 
     @parameterized.expand([(DataSource.ENA, ), (DataSource.GISAID, )])
@@ -101,12 +101,12 @@ class ProcessorTests(AbstractTest):
 
     @parameterized.expand([(DataSource.ENA, ), (DataSource.GISAID, )])
     def test_failed_sample(self, source):
-        mock_samples(faker=self.faker, session=self.session, num_samples=10, job_status=JobStatus.PENDING,
+        mock_samples(faker=self.faker, session=self.session, num_samples=10, job_status=JobStatus.DOWNLOADED,
                      source=source.name)
 
-        self.assertEqual(self.queries.count_jobs_by_status(data_source=source, status=JobStatus.PENDING), 10)
+        self.assertEqual(self.queries.count_jobs_by_status(data_source=source, status=JobStatus.DOWNLOADED), 10)
         self.failing_processors.get(source).process()
-        self.assertEqual(self.queries.count_jobs_by_status(data_source=source, status=JobStatus.PENDING), 0)
+        self.assertEqual(self.queries.count_jobs_by_status(data_source=source, status=JobStatus.DOWNLOADED), 0)
         self.assertEqual(self.queries.count_jobs_by_status(data_source=source, status=JobStatus.FINISHED), 0)
         self.assertEqual(self.queries.count_jobs_by_status(data_source=source, status=JobStatus.FAILED_PROCESSING), 10)
 
