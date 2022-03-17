@@ -22,9 +22,6 @@ from covigator.pipeline.ena_pipeline import Pipeline
 from covigator.pipeline.vcf_loader import VcfLoader
 
 
-NUMBER_RETRIES_DOWNLOADER = 3
-
-
 class EnaProcessor(AbstractProcessor):
 
     def __init__(self, database: Database, dask_client: Client, config: Configuration, wait_time=60):
@@ -57,7 +54,7 @@ class EnaProcessor(AbstractProcessor):
     def download(sample: SampleEna, queries: Queries, config: Configuration):
         # ensures that the download is done with retries, even after MD5 check sum failure
         downloader = Downloader(config=config)
-        download_with_retries = backoff_retrier.wrapper(downloader.download, NUMBER_RETRIES_DOWNLOADER)
+        download_with_retries = backoff_retrier.wrapper(downloader.download, config.retries_download)
         paths = download_with_retries(sample_ena=sample)
         sample.sample_folder = sample.get_sample_folder(config.storage_folder)
         sample.fastq_path = paths

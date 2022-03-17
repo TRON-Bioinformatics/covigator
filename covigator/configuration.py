@@ -101,7 +101,7 @@ class Configuration:
         self.workflow_cpus = os.getenv(self.ENV_COVIGATOR_WORKFLOW_CPUS, "1")
         self.workflow_memory = os.getenv(self.ENV_COVIGATOR_WORKFLOW_MEMORY, "3g")
         self.batch_size = self.load_numeric_value(variable=self.ENV_COVIGATOR_BATCH_SIZE, default=1000)
-        self.retries_download = self.load_numeric_value(variable=self.ENV_COVIGATOR_RETRIES_DOWNLOAD, default=10)
+        self.retries_download = self.load_numeric_value(variable=self.ENV_COVIGATOR_RETRIES_DOWNLOAD, default=3)
         self.low_coverage_threshold = self.load_float_value(
             variable=self.ENV_COVIGATOR_LOW_COVERAGE_THR, default=DEFAULT_LOW_COVERAGE_AF_THR)
         self.subclonal_threshold = self.load_float_value(

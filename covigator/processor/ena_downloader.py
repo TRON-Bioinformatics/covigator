@@ -38,7 +38,7 @@ class EnaDownloader:
                 for sample in samples:
                     # downloads
                     try:
-                        download_with_retries = backoff_retrier.wrapper(self.downloader.download, NUMBER_RETRIES_DOWNLOADER)
+                        download_with_retries = backoff_retrier.wrapper(self.downloader.download, self.config.retries_download)
                         fastq_path = download_with_retries(sample_ena=sample)
                         sample.fastq_path = fastq_path
                         sample.downloaded_at = datetime.now()
