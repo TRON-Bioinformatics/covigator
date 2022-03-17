@@ -8,7 +8,6 @@ from covigator.database.model import Log, DataSource, CovigatorModule, JobStatus
 from covigator.database.queries import Queries
 from covigator.misc import backoff_retrier
 from covigator.pipeline.downloader import Downloader
-from covigator.processor.ena_processor import NUMBER_RETRIES_DOWNLOADER
 
 
 class EnaDownloader:
