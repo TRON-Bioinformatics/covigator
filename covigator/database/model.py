@@ -113,6 +113,7 @@ class VariantType(enum.Enum):
     SNV = 1
     INSERTION = 2
     DELETION = 3
+    MNV = 4
 
 
 class SampleGisaid(Base):

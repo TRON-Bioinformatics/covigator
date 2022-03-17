@@ -81,6 +81,7 @@ def get_samples_tab_left_bar(queries: Queries, data_source: DataSource):
                 id=ID_DROPDOWN_VARIANT_TYPE,
                 options=[
                     {'label': VariantType.SNV.name, 'value': VariantType.SNV.name},
+                    {'label': VariantType.MNV.name, 'value': VariantType.MNV.name},
                     {'label': VariantType.INSERTION.name, 'value': VariantType.INSERTION.name},
                     {'label': VariantType.DELETION.name, 'value': VariantType.DELETION.name}
                 ],

@@ -190,6 +190,8 @@ class VcfLoader:
     def _get_variant_type(self, reference, alternate):
         if len(reference) == 1 and len(alternate) == 1:
             return VariantType.SNV
+        elif len(reference) == len(alternate):
+            return VariantType.MNV
         elif len(reference) == 1 and len(alternate) > 1:
             return VariantType.INSERTION
         elif len(reference) > 1 and len(alternate) == 1:
