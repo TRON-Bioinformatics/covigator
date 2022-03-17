@@ -71,7 +71,7 @@ class Queries:
             .all()
 
     def find_first_pending_jobs(self, data_source: DataSource, n=100) -> List[Union[SampleEna, SampleGisaid]]:
-        return self.find_first_by_status(data_source=data_source, status=[JobStatus.PENDING, JobStatus.DOWNLOADED], n=n)
+        return self.find_first_by_status(data_source=data_source, status=[JobStatus.DOWNLOADED], n=n)
 
     def find_first_jobs_to_download(self, data_source: DataSource, n=100) -> List[Union[SampleEna, SampleGisaid]]:
         return self.find_first_by_status(data_source=data_source, status=[JobStatus.PENDING], n=n)
