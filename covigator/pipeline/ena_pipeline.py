@@ -69,6 +69,8 @@ class Pipeline:
                       "--subclonal_variant_threshold {af_subclonal_thr} " \
                       "--cpus {cpus} " \
                       "--memory {memory} " \
+                      "--skip_bcftools " \
+                      "--skip_gatk " \
                       "-profile conda " \
                       "-offline " \
                       "-work-dir {work_folder} " \
