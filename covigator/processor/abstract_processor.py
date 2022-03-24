@@ -87,7 +87,7 @@ class AbstractProcessor:
             time.sleep(self.wait_time)
             logger.info("Shutting down cluster and database session...")
             with suppress(Exception):
-                self.dask_client.shutdown()
+                self.dask_client.close(60)
                 self.session.close()
             logger.info("Cluster and database sessions closed")
 
