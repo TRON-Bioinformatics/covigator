@@ -44,14 +44,15 @@ class EnaProcessor(AbstractProcessor):
             function=EnaProcessor.run_all)
 
     @staticmethod
-    def run_all(sample: SampleEna, queries: Queries, config: Configuration):
-        EnaProcessor.download(sample=sample, queries=queries, config=config)
-        EnaProcessor.run_pipeline(sample=sample, queries=queries, config=config)
-        EnaProcessor.load(sample=sample, queries=queries, config=config)
-        EnaProcessor.compute_cooccurrence(sample=sample, queries=queries, config=config)
+    def run_all(sample: SampleEna, queries: Queries, config: Configuration) -> SampleEna:
+        sample = EnaProcessor.download(sample=sample, queries=queries, config=config)
+        sample = EnaProcessor.run_pipeline(sample=sample, queries=queries, config=config)
+        sample = EnaProcessor.load(sample=sample, queries=queries, config=config)
+        sample = EnaProcessor.compute_cooccurrence(sample=sample, queries=queries, config=config)
+        return sample
 
     @staticmethod
-    def download(sample: SampleEna, queries: Queries, config: Configuration):
+    def download(sample: SampleEna, queries: Queries, config: Configuration) -> SampleEna:
         # ensures that the download is done with retries, even after MD5 check sum failure
         downloader = Downloader(config=config)
         download_with_retries = backoff_retrier.wrapper(downloader.download, config.retries_download)
@@ -59,9 +60,10 @@ class EnaProcessor(AbstractProcessor):
         sample.sample_folder = sample.get_sample_folder(config.storage_folder)
         sample.fastq_path = paths
         sample.downloaded_at = datetime.now()
+        return sample
 
     @staticmethod
-    def run_pipeline(sample: SampleEna, queries: Queries, config: Configuration):
+    def run_pipeline(sample: SampleEna, queries: Queries, config: Configuration) -> SampleEna:
         fastq1, fastq2 = sample.get_fastq1_and_fastq2()
         pipeline_result = Pipeline(config=config)\
             .run(run_accession=sample.run_accession, fastq1=fastq1, fastq2=fastq2)
@@ -87,14 +89,16 @@ class EnaProcessor(AbstractProcessor):
         # load FAST JSON into the DB
         sample.qc = json.load(open(pipeline_result.fastp_qc))
         # load horizontal coverage values in the database
-        EnaProcessor.load_coverage_results(sample)
+        sample = EnaProcessor.load_coverage_results(sample)
         # load deduplication metrics
-        EnaProcessor.load_deduplication_metrics(sample)
+        sample = EnaProcessor.load_deduplication_metrics(sample)
         # load pangolin results
-        EnaProcessor.load_pangolin(sample=sample, path=sample.lofreq_pangolin_path)
+        sample = EnaProcessor.load_pangolin(sample=sample, path=sample.lofreq_pangolin_path)
+
+        return sample
 
     @staticmethod
-    def load_deduplication_metrics(sample: SampleEna):
+    def load_deduplication_metrics(sample: SampleEna) -> SampleEna:
         try:
             data = pd.read_csv(sample.deduplication_metrics_path,
                                sep="\t",
@@ -133,8 +137,10 @@ class EnaProcessor(AbstractProcessor):
         except Exception as e:
             raise CovigatorErrorProcessingDeduplicationResults(e)
 
+        return sample
+
     @staticmethod
-    def load_coverage_results(sample: SampleEna):
+    def load_coverage_results(sample: SampleEna) -> SampleEna:
         try:
             data = pd.read_csv(sample.horizontal_coverage_path,
                                sep="\t",
@@ -157,8 +163,10 @@ class EnaProcessor(AbstractProcessor):
         except Exception as e:
             raise CovigatorErrorProcessingCoverageResults(e)
 
+        return sample
+
     @staticmethod
-    def load(sample: SampleEna, queries: Queries, config: Configuration):
+    def load(sample: SampleEna, queries: Queries, config: Configuration) -> SampleEna:
         if sample.mean_mapping_quality < config.mean_mq_thr or sample.mean_base_quality < config.mean_bq_thr:
             raise CovigatorExcludedSampleBadQualityReads("Mean MQ: {}; mean BCQ: {}".format(
                 sample.mean_mapping_quality, sample.mean_base_quality))
@@ -168,7 +176,11 @@ class EnaProcessor(AbstractProcessor):
             vcf_file=sample.lofreq_vcf_path, run_accession=sample.run_accession, source=DataSource.ENA, session=queries.session)
         sample.loaded_at = datetime.now()
 
+        return sample
+
     @staticmethod
-    def compute_cooccurrence(sample: SampleEna, queries: Queries, config: Configuration):
+    def compute_cooccurrence(sample: SampleEna, queries: Queries, config: Configuration) -> SampleEna:
         CooccurrenceMatrix().compute(run_accession=sample.run_accession, source=DataSource.ENA, session=queries.session)
         sample.cooccurrence_at = datetime.now()
+
+        return sample

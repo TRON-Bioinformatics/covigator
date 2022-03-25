@@ -35,11 +35,12 @@ class GisaidProcessor(AbstractProcessor):
 
     @staticmethod
     def run_all(sample: SampleGisaid, queries: Queries, config: Configuration):
-        GisaidProcessor.run_pipeline(sample=sample, queries=queries, config=config)
-        GisaidProcessor.load(sample=sample, queries=queries, config=config)
+        sample = GisaidProcessor.run_pipeline(sample=sample, queries=queries, config=config)
+        sample = GisaidProcessor.load(sample=sample, queries=queries, config=config)
+        return sample
 
     @staticmethod
-    def run_pipeline(sample: SampleGisaid, queries: Queries, config: Configuration):
+    def run_pipeline(sample: SampleGisaid, queries: Queries, config: Configuration) -> SampleGisaid:
         pipeline_results = GisaidPipeline(config=config).run(sample=sample)
         sample.analysed_at = datetime.now()
         sample.sample_folder = sample.get_sample_folder(config.storage_folder)
@@ -51,10 +52,13 @@ class GisaidProcessor(AbstractProcessor):
         sample.covigator_processor_version = covigator.VERSION
 
         # load pangolin results
-        GisaidProcessor.load_pangolin(sample=sample, path=sample.pangolin_path)
+        sample = GisaidProcessor.load_pangolin(sample=sample, path=sample.pangolin_path)
+
+        return sample
 
     @staticmethod
-    def load(sample: SampleGisaid, queries: Queries, config: Configuration):
+    def load(sample: SampleGisaid, queries: Queries, config: Configuration) -> SampleGisaid:
         VcfLoader().load(
             vcf_file=sample.vcf_path, run_accession=sample.run_accession, source=DataSource.GISAID, session=queries.session)
         sample.loaded_at = datetime.now()
+        return sample

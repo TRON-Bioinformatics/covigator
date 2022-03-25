@@ -101,7 +101,8 @@ class AbstractProcessor:
     @staticmethod
     def run_job(config: Configuration, run_accession: str, start_status: JobStatus, end_status: JobStatus,
                 error_status: JobStatus, data_source: DataSource,
-                function: Callable[[typing.Union[SampleEna, SampleGisaid], Queries, Configuration], None]) -> str or None:
+                function: Callable[[typing.Union[SampleEna, SampleGisaid] , Queries, Configuration],
+                                   typing.Union[SampleEna, SampleGisaid]]) -> str or None:
         """
         Runs a function on a job, if anything goes wrong or does not fit in the DB it returns None in order to
         stop the execution of subsequent jobs.
@@ -114,7 +115,7 @@ class AbstractProcessor:
                     sample = queries.find_job_by_accession_and_status(
                         run_accession=run_accession, status=start_status, data_source=data_source)
                     if sample is not None:
-                        function(sample, queries, config)
+                        sample = function(sample, queries, config)
                         if end_status is not None:
                             sample.status = end_status
                             if sample.status == JobStatus.FINISHED:
@@ -176,7 +177,7 @@ class AbstractProcessor:
             sample.error_message = AbstractProcessor._get_traceback_from_exception(exception)
 
     @staticmethod
-    def load_pangolin(sample: typing.Union[SampleGisaid, SampleEna], path: str):
+    def load_pangolin(sample: typing.Union[SampleGisaid, SampleEna], path: str) -> typing.Union[SampleGisaid, SampleEna]:
         try:
             data = pd.read_csv(path,
                                na_values=None,
@@ -222,3 +223,5 @@ class AbstractProcessor:
             sample.pangolin_note = data.note.loc[0]
         except Exception as e:
             raise CovigatorErrorProcessingPangolinResults(e)
+
+        return sample
