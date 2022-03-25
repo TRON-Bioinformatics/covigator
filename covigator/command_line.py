@@ -126,10 +126,12 @@ def ena_downloader():
 def _start_dask_processor(args, config, download, cluster=None, num_local_cpus=1):
     with Client(cluster) if cluster is not None else Client(n_workers=num_local_cpus, threads_per_worker=1) as client:
         if args.data_source == "ENA":
-            EnaProcessor(database=Database(initialize=True, config=config, download=download), dask_client=client, config=config) \
+            EnaProcessor(database=Database(initialize=True, config=config),
+                         dask_client=client, config=config, download=download) \
                 .process()
         elif args.data_source == "GISAID":
-            GisaidProcessor(database=Database(initialize=True, config=config), dask_client=client, config=config) \
+            GisaidProcessor(database=Database(initialize=True, config=config),
+                            dask_client=client, config=config) \
                 .process()
         else:
             logger.error("Unknown data source. Please choose either ENA or GISAID")
