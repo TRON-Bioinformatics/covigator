@@ -70,6 +70,11 @@ class ProcessorTests(AbstractTest):
         self.fake_processors.get(source).process()
         self.assertEqual(self.queries.count_jobs_by_status(data_source=source, status=JobStatus.DOWNLOADED), 0)
         self.assertEqual(self.queries.count_jobs_by_status(data_source=source, status=JobStatus.FINISHED), 10)
+        finished_jobs = self.queries.find_first_by_status(data_source=source, status=[JobStatus.FINISHED], n=10)
+        for j in finished_jobs:
+            self.assertEqual(j.status, JobStatus.FINISHED)
+            self.assertIsNotNone(j.analysed_at)
+            self.assertIsNotNone(j.pangolin_lineage)
 
     # @parameterized.expand([(DataSource.ENA,), (DataSource.GISAID,)])
     def test_processor(self, source=DataSource.ENA):

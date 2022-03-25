@@ -1,3 +1,4 @@
+import datetime
 import os
 import pkg_resources
 from dask.distributed import Client
@@ -62,8 +63,11 @@ class FakeEnaProcessor(AbstractProcessor):
     )
 
     @staticmethod
-    def run_all(sample: SampleEna, queries: Queries, config: Configuration):
+    def run_all(sample: SampleEna, queries: Queries, config: Configuration) -> SampleEna:
         logger.info("Job processed!")
+        sample.analysed_at = datetime.datetime.now()
+        sample.pangolin_lineage = "B.TEST"
+        return sample
 
 
 class FakeProcessorFailing(AbstractProcessor):
@@ -90,7 +94,7 @@ class FakeProcessorFailing(AbstractProcessor):
         )
 
     @staticmethod
-    def run_all(sample: SampleEna, queries: Queries, config: Configuration):
+    def run_all(sample: SampleEna, queries: Queries, config: Configuration) -> SampleEna:
         raise ValueError("Fail em'all")
 
 
@@ -117,5 +121,8 @@ class FakeGisaidProcessor(AbstractProcessor):
     )
 
     @staticmethod
-    def run_all(sample: SampleGisaid, queries: Queries, config: Configuration):
+    def run_all(sample: SampleGisaid, queries: Queries, config: Configuration) -> SampleGisaid:
         logger.info("Job processed!")
+        sample.analysed_at = datetime.datetime.now()
+        sample.pangolin_lineage = "B.TEST"
+        return sample
