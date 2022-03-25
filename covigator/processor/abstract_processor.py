@@ -22,7 +22,8 @@ from covigator.precomputations.loader import PrecomputationsLoader
 
 class AbstractProcessor:
 
-    def __init__(self, database: Database, dask_client: Client, data_source: DataSource, config: Configuration, wait_time=60):
+    def __init__(self, database: Database, dask_client: Client, data_source: DataSource, config: Configuration,
+                 download : bool = False, wait_time=60):
         self.data_source = data_source
         self.config = config
         self.start_time = datetime.now()
@@ -35,6 +36,7 @@ class AbstractProcessor:
         self.session = self.database.get_database_session()
         self.queries = Queries(self.session)
         self.wait_time = wait_time
+        self.download = download
 
     def process(self):
         logger.info("Starting processor")
@@ -43,7 +45,10 @@ class AbstractProcessor:
         try:
             while True:
                 # queries 100 jobs every time to make sending to queue faster
-                jobs = self.queries.find_first_pending_jobs(self.data_source, n=1000)
+                jobs = self.queries.find_first_pending_jobs(
+                    self.data_source, n=1000,
+                    # only reads jobs in PENDING status if --download is indicated
+                    status=[JobStatus.PENDING, JobStatus.DOWNLOADED] if self.download else [JobStatus.DOWNLOADED])
                 if jobs is None or len(jobs) == 0:
                     logger.info("No more jobs to process after sending {} runs to process".format(count))
                     break
