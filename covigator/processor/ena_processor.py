@@ -48,8 +48,8 @@ class EnaProcessor(AbstractProcessor):
     def run_all(sample: SampleEna, queries: Queries, config: Configuration) -> SampleEna:
         sample = EnaProcessor.download(sample=sample, queries=queries, config=config)
         sample = EnaProcessor.run_pipeline(sample=sample, queries=queries, config=config)
-        #sample = EnaProcessor.load(sample=sample, queries=queries, config=config)
-        #sample = EnaProcessor.compute_cooccurrence(sample=sample, queries=queries, config=config)
+        sample = EnaProcessor.load(sample=sample, queries=queries, config=config)
+        sample = EnaProcessor.compute_cooccurrence(sample=sample, queries=queries, config=config)
         return sample
 
     @staticmethod
