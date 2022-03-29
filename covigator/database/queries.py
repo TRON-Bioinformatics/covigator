@@ -226,7 +226,7 @@ class Queries:
         return filled_table
 
     def get_accumulated_lineages_by_country(
-            self, data_source: str, countries: List[str], lineages: List[str]) -> pd.DataFrame:
+            self, data_source: str, countries: List[str], lineages: List[str], min_samples=100) -> pd.DataFrame:
         """
         Returns a DataFrame with columns: data, country, cumsum, count
         """
@@ -248,7 +248,8 @@ class Queries:
 
             # creates empty table with all pairwise combinations of date and country
             dates = samples.date[~samples.date.isna()].sort_values().unique()
-            lineages = samples[(~samples.lineage.isna())] \
+
+            lineages = samples[(~samples.lineage.isna()) & (samples["cumsum"] >= min_samples)] \
                 .sort_values("cumsum", ascending=False).lineage.unique()
 
             empty_table = pd.DataFrame(
