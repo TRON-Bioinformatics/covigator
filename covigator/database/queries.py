@@ -91,12 +91,12 @@ class Queries:
     def get_countries(self, source: str) -> List[str]:
         klass = self.get_sample_klass(source=source)
         return [c for c, in self.session.query(klass.country).filter(
-                klass.finished).distinct().order_by(klass.country.asc()).all()]
+                klass.status == JobStatus.FINISHED.name).distinct().order_by(klass.country.asc()).all()]
 
     def get_lineages(self, source: str) -> List[str]:
         klass = self.get_sample_klass(source=source)
         return [c for c, in self.session.query(klass.pangolin_lineage).filter(
-            and_(klass.finished, klass.pangolin_lineage != None)).distinct().order_by(
+            and_(klass.status == JobStatus.FINISHED.name, klass.pangolin_lineage != None)).distinct().order_by(
                 klass.pangolin_lineage.asc()).all()]
 
     def get_variants_per_sample(self, data_source: str, genes: List[str], variant_types: List[str]):
@@ -190,7 +190,7 @@ class Queries:
         klass = self.get_sample_klass(source=data_source)
         query = self.session.query(
             func.count().label("count"), klass.collection_date.label("date"), klass.country) \
-            .filter(klass.finished) \
+            .filter(klass.status == JobStatus.FINISHED.name) \
             .group_by(klass.collection_date, klass.country)
         if countries:
             query = query.filter(klass.country.in_(countries))
@@ -233,7 +233,7 @@ class Queries:
         klass = self.get_sample_klass(source=data_source)
         query = self.session.query(
             func.count().label("count"), klass.collection_date.label("date"), klass.pangolin_lineage.label("lineage")) \
-            .filter(and_(klass.finished, klass.pangolin_lineage != None)) \
+            .filter(and_(klass.status == JobStatus.FINISHED.name, klass.pangolin_lineage != None)) \
             .group_by(klass.collection_date, klass.pangolin_lineage)
         if countries:
             query = query.filter(klass.country.in_(countries))
@@ -281,7 +281,7 @@ class Queries:
     def get_sample_months(self, pattern, data_source: str) -> List[datetime]:
         klass = self.get_sample_klass(source=data_source)
         dates = [d.strftime(pattern) for d, in self.session.query(klass.collection_date).filter(
-            and_(klass.finished, klass.collection_date.isnot(None))).distinct().all()]
+            and_(klass.status == JobStatus.FINISHED.name, klass.collection_date.isnot(None))).distinct().all()]
         return sorted(dates)
 
     @functools.lru_cache()
@@ -357,7 +357,7 @@ class Queries:
             count = result.count
         else:
             klass = self.get_sample_klass(source=source)
-            count = self.session.query(klass).filter(klass.finished).count()
+            count = self.session.query(klass).filter(klass.status == JobStatus.FINISHED.name).count()
         return count
 
     @functools.lru_cache()
@@ -454,7 +454,7 @@ class Queries:
         """
         klass = self.get_sample_klass(source=source.name)
         result = self.session.query(klass.collection_date).filter(
-            and_(klass.finished, klass.collection_date.isnot(None))).order_by(asc(klass.collection_date)).first()
+            and_(klass.status == JobStatus.FINISHED.name, klass.collection_date.isnot(None))).order_by(asc(klass.collection_date)).first()
         return result[0] if result is not None else result
 
     @functools.lru_cache()
@@ -464,7 +464,7 @@ class Queries:
         """
         klass = self.get_sample_klass(source=source.name)
         result = self.session.query(klass.collection_date).filter(
-            and_(klass.finished == True, klass.collection_date.isnot(None))).order_by(desc(klass.collection_date)).first()
+            and_(klass.status == JobStatus.FINISHED.name, klass.collection_date.isnot(None))).order_by(desc(klass.collection_date)).first()
         return result[0] if result is not None else result
 
     def get_last_update(self, data_source: DataSource) -> date:
@@ -494,7 +494,7 @@ class Queries:
         query = self.session.query(
             func.date_trunc('month', klass.collection_date).label("month"),
             func.count().label("sample_count"))\
-            .filter(klass.finished) \
+            .filter(klass.status == JobStatus.FINISHED.name) \
             .group_by(func.date_trunc('month', klass.collection_date))
         counts = pd.read_sql(query.statement, self.session.bind)
         counts['month'] = pd.to_datetime(counts['month'], utc=True)
