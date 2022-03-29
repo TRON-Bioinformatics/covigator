@@ -176,7 +176,7 @@ class EnaAccessor:
     def _parse_dates(self, ena_run):
         ena_run.collection_date = self._parse_abstract(ena_run.collection_date, date.fromisoformat)
         ena_run.first_created = self._parse_abstract(ena_run.first_created, date.fromisoformat)
-        if ena_run.first_created is not None and ena_run.first_created < MINIMUM_DATE:
+        if ena_run.collection_date is not None and ena_run.collection_date < MINIMUM_DATE:
             raise CovigatorExcludedSampleTooEarlyDateException
 
     def _parse_ena_run(self, run):
