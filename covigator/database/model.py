@@ -175,6 +175,7 @@ class SampleGisaid(Base):
     pangolin_scorpio_conflict = Column(Float)
     pangolin_version = Column(String)
     pangolin_pangolin_version = Column(String)
+    # TODO: remove upper case from here, it confuses SQL for some operations
     pangolin_pangoLEARN_version = Column(String)
     pangolin_pango_version = Column(String)
     pangolin_status = Column(String)
@@ -304,6 +305,7 @@ class SampleEna(Base):
     pangolin_scorpio_conflict = Column(Float)
     pangolin_version = Column(String)
     pangolin_pangolin_version = Column(String)
+    # TODO: remove upper case from here, it confuses SQL for some operations
     pangolin_pangoLEARN_version = Column(String)
     pangolin_pango_version = Column(String)
     pangolin_status = Column(String)
