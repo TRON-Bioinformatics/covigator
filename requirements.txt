@@ -2,9 +2,10 @@ numpy==1.21.0
 pandas==1.3.3
 requests==2.25.0
 sqlalchemy==1.3.20
-dask[complete]==2021.06.02
-dask_jobqueue==0.7.2
-distributed==2021.06.2
+dask[complete]==2022.1.1
+dask_jobqueue==0.7.3
+distributed==2022.1.1
+Werkzeug==2.0.1
 cytoolz==0.11.0
 logzero==1.6.3
 psycopg2-binary==2.8.6
@@ -22,3 +23,4 @@ biopython==1.76
 lz4==3.1.3
 scikit-bio==0.5.6
 ipywidgets==7.6.3
+parameterized==0.8.1

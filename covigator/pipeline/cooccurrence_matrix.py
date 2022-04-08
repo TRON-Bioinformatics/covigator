@@ -1,6 +1,8 @@
 from itertools import combinations
+from typing import Union
+
 from sqlalchemy.orm import Session
-from covigator.database.model import Sample, VariantCooccurrence
+from covigator.database.model import VariantCooccurrence, DataSource
 from logzero import logger
 from covigator.database.queries import Queries
 from sqlalchemy.exc import IntegrityError
@@ -12,18 +14,17 @@ class CooccurrenceMatrixException(Exception):
 
 class CooccurrenceMatrix:
 
-    def compute(self, sample: Sample, session: Session):
+    def compute(self, run_accession: str, source: DataSource, session: Session):
 
-        assert sample is not None, "Missing sample"
-        assert sample.id is not None or sample.id == "", "Missing sample identifier"
+        assert run_accession is not None or run_accession == "", "Missing sample identifier"
         assert session is not None, "Missing DB session"
 
         queries = Queries(session=session)
-        sample_id = sample.id
+        sample_id = run_accession
         logger.info("Processing cooccurrent variants for sample {}".format(sample_id))
 
         # the order by position is important to ensure we store only half the matrix and the same half of the matrix
-        variants = queries.get_variants_by_sample(sample_id)
+        variants = queries.get_variants_by_sample(sample_id, source=source.name)
         failed_variants = []
 
         # process all pairwise combinations without repetitions including the diagoonal

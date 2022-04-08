@@ -1,12 +1,15 @@
+import pandas as pd
 from datetime import datetime
 
+import covigator
 from covigator.configuration import Configuration
-from covigator.database.model import JobStatus, JobGisaid, Sample, DataSource
+from covigator.database.model import JobStatus, DataSource, SampleGisaid
 from covigator.database.database import Database
 from logzero import logger
 from dask.distributed import Client
 
 from covigator.database.queries import Queries
+from covigator.exceptions import CovigatorErrorProcessingPangolinResults
 from covigator.processor.abstract_processor import AbstractProcessor
 from covigator.pipeline.gisaid_pipeline import GisaidPipeline
 from covigator.pipeline.vcf_loader import VcfLoader
@@ -14,9 +17,9 @@ from covigator.pipeline.vcf_loader import VcfLoader
 
 class GisaidProcessor(AbstractProcessor):
 
-    def __init__(self, database: Database, dask_client: Client, config: Configuration):
+    def __init__(self, database: Database, dask_client: Client, config: Configuration, wait_time=60):
         logger.info("Initialising GISAID processor")
-        super().__init__(database, dask_client, DataSource.GISAID, config=config)
+        super().__init__(database, dask_client, DataSource.GISAID, config=config, wait_time=wait_time)
 
     def _process_run(self, run_accession: str):
         # NOTE: here we set the priority of each step to ensure a depth first processing
@@ -31,21 +34,31 @@ class GisaidProcessor(AbstractProcessor):
             function=GisaidProcessor.run_all)
 
     @staticmethod
-    def run_all(job: JobGisaid, queries: Queries, config: Configuration):
-        GisaidProcessor.run_pipeline(job=job, queries=queries, config=config)
-        GisaidProcessor.load(job=job, queries=queries, config=config)
+    def run_all(sample: SampleGisaid, queries: Queries, config: Configuration):
+        sample = GisaidProcessor.run_pipeline(sample=sample, queries=queries, config=config)
+        sample = GisaidProcessor.load(sample=sample, queries=queries, config=config)
+        return sample
 
     @staticmethod
-    def run_pipeline(job: JobGisaid, queries: Queries, config: Configuration):
-        sample = queries.find_sample_by_accession(job.run_accession, source=DataSource.GISAID)
-        vcf = GisaidPipeline(config=config).run(sample=sample)
-        job.analysed_at = datetime.now()
-        job.vcf_path = vcf
+    def run_pipeline(sample: SampleGisaid, queries: Queries, config: Configuration) -> SampleGisaid:
+        pipeline_results = GisaidPipeline(config=config).run(sample=sample)
+        sample.analysed_at = datetime.now()
+        sample.sample_folder = sample.get_sample_folder(config.storage_folder)
+        sample.vcf_path = pipeline_results.vcf_path
+        sample.pangolin_path = pipeline_results.pangolin_path
+        sample.fasta_path = pipeline_results.fasta_path
+
+        # stores the covigator version
+        sample.covigator_processor_version = covigator.VERSION
+
+        # load pangolin results
+        sample = GisaidProcessor.load_pangolin(sample=sample, path=sample.pangolin_path)
+
+        return sample
 
     @staticmethod
-    def load(job: JobGisaid, queries: Queries, config: Configuration):
+    def load(sample: SampleGisaid, queries: Queries, config: Configuration) -> SampleGisaid:
         VcfLoader().load(
-            vcf_file=job.vcf_path, sample=Sample(id=job.run_accession, source=DataSource.GISAID),
-            session=queries.session,
-            max_snvs=config.max_snvs, max_deletions=config.max_deletions, max_insertions=config.max_insertions)
-        job.loaded_at = datetime.now()
+            vcf_file=sample.vcf_path, run_accession=sample.run_accession, source=DataSource.GISAID, session=queries.session)
+        sample.loaded_at = datetime.now()
+        return sample

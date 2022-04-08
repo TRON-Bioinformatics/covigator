@@ -5,15 +5,17 @@ import requests
 from requests import Response
 from sqlalchemy.orm import Session
 
+import covigator
 from covigator.accessor import MINIMUM_DATE
-from covigator.exceptions import CovigatorExcludedSampleTooEarlyDateException, CovigatorException
+from covigator.exceptions import CovigatorExcludedSampleTooEarlyDateException
 from covigator.misc import backoff_retrier
-from covigator.database.model import SampleEna, JobEna, Sample, DataSource, Log, CovigatorModule
+from covigator.database.model import SampleEna, DataSource, Log, CovigatorModule
 from covigator.database.database import Database
 from logzero import logger
 from covigator.misc.country_parser import CountryParser
 
 NUMBER_RETRIES = 5
+BATCH_SIZE = 1000
 
 
 class EnaAccessor:
@@ -131,8 +133,6 @@ class EnaAccessor:
     def _process_runs(self, list_runs, existing_sample_ids, session: Session):
 
         included_samples = []
-        included_samples_ena = []
-        included_jobs = []
         for run in list_runs:
             if isinstance(run, dict):
                 if run.get("run_accession") in existing_sample_ids:
@@ -143,11 +143,8 @@ class EnaAccessor:
                 # NOTE: this parse operation is costly
                 try:
                     sample_ena = self._parse_ena_run(run)
-                    sample = self._build_sample(sample_ena)
                     self.included += 1
-                    included_samples_ena.append(sample_ena)
-                    included_samples.append(sample)
-                    included_jobs.append(JobEna(run_accession=sample_ena.run_accession))
+                    included_samples.append(sample_ena)
                 except CovigatorExcludedSampleTooEarlyDateException:
                     logger.error("Excluded sample due to too early date")
                     self.excluded_by_date += 1
@@ -155,21 +152,16 @@ class EnaAccessor:
             else:
                 logger.error("Run from ENA without the expected format")
 
+            if len(included_samples) >= BATCH_SIZE:
+                session.add_all(included_samples)
+                session.commit()
+                included_samples = []
+
         if len(included_samples) > 0:
-            session.add_all(included_samples_ena)
-            session.commit()
             session.add_all(included_samples)
-            session.add_all(included_jobs)
             session.commit()
             logger.info("Added {} new ENA samples".format(len(included_samples)))
         logger.info("Processed {} ENA samples".format(len(list_runs)))
-
-    def _build_sample(self, sample_ena):
-        return Sample(
-            id=sample_ena.run_accession,
-            source=DataSource.ENA,
-            ena_id=sample_ena.run_accession
-        )
 
     def _parse_country(self, sample: SampleEna):
         parsed_country = self.country_parser.parse_country(
@@ -184,7 +176,7 @@ class EnaAccessor:
     def _parse_dates(self, ena_run):
         ena_run.collection_date = self._parse_abstract(ena_run.collection_date, date.fromisoformat)
         ena_run.first_created = self._parse_abstract(ena_run.first_created, date.fromisoformat)
-        if ena_run.first_created is not None and ena_run.first_created < MINIMUM_DATE:
+        if ena_run.collection_date is not None and ena_run.collection_date < MINIMUM_DATE:
             raise CovigatorExcludedSampleTooEarlyDateException
 
     def _parse_ena_run(self, run):
@@ -195,6 +187,7 @@ class EnaAccessor:
         fastqs = sample.get_fastqs_ftp()
         # annotates with the number of FASTQ files, this is useful as we hold the FASTQs in a single string
         sample.num_fastqs = 0 if fastqs is None or fastqs == [""] else len(fastqs)
+        sample.covigator_accessor_version = covigator.VERSION
         return sample
 
     def _parse_numeric_fields(self, ena_run):

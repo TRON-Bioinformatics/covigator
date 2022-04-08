@@ -1,3 +1,4 @@
+import datetime
 import os
 import pkg_resources
 from dask.distributed import Client
@@ -7,11 +8,9 @@ import covigator
 from covigator.accessor.ena_accessor import EnaAccessor
 from covigator.configuration import Configuration
 from covigator.database.database import Database
-from covigator.database.model import DataSource, JobStatus, JobEna, JobGisaid
+from covigator.database.model import DataSource, JobStatus, SampleGisaid, SampleEna
 from covigator.database.queries import Queries
-from covigator.exceptions import CovigatorExcludedSampleTooManyMutations
 from covigator.processor.abstract_processor import AbstractProcessor
-from covigator.processor.ena_processor import EnaProcessor
 from covigator.tests import SARS_COV_2_TAXID, HOMO_SAPIENS_TAXID
 
 
@@ -45,7 +44,7 @@ class FakeEnaProcessor(AbstractProcessor):
 
     def __init__(self, database: Database, dask_client: Client, config: Configuration):
         logger.info("Initialising ENA processor")
-        super().__init__(database, dask_client, DataSource.ENA, config)
+        super().__init__(database, dask_client, DataSource.ENA, config, wait_time=1)
 
     def _process_run(self, run_accession: str):
         """
@@ -64,61 +63,38 @@ class FakeEnaProcessor(AbstractProcessor):
     )
 
     @staticmethod
-    def run_all(job: JobEna, queries: Queries, config: Configuration):
+    def run_all(sample: SampleEna, queries: Queries, config: Configuration) -> SampleEna:
         logger.info("Job processed!")
+        sample.analysed_at = datetime.datetime.now()
+        sample.pangolin_lineage = "B.TEST"
+        return sample
 
 
-class FakeEnaProcessorExcludingSamples(AbstractProcessor):
+class FakeProcessorFailing(AbstractProcessor):
 
-    def __init__(self, database: Database, dask_client: Client, config: Configuration):
-        logger.info("Initialising ENA processor")
-        super().__init__(database, dask_client, DataSource.ENA, config)
-
-    def _process_run(self, run_accession: str):
-        """
-        Launches all jobs and returns the futures for the final job only
-        """
-        # NOTE: here we set the priority of each step to ensure a depth first processing
-        future = self.dask_client.submit(FakeEnaProcessorExcludingSamples.job, self.config, run_accession, priority=1)
-        return future
-
-    @staticmethod
-    def job(config: Configuration, run_accession):
-        return FakeEnaProcessorExcludingSamples.run_job(
-            config, run_accession, start_status=JobStatus.QUEUED, end_status=JobStatus.FINISHED,
-            error_status=JobStatus.FAILED_PROCESSING, data_source=DataSource.ENA,
-            function=FakeEnaProcessorExcludingSamples.run_all
-        )
-
-    @staticmethod
-    def run_all(job: JobEna, queries: Queries, config: Configuration):
-        raise CovigatorExcludedSampleTooManyMutations("Exclude em'all")
-
-
-class FakeEnaProcessorFailing(AbstractProcessor):
-
-    def __init__(self, database: Database, dask_client: Client, config: Configuration):
-        logger.info("Initialising ENA processor")
-        super().__init__(database, dask_client, DataSource.ENA, config)
+    def __init__(self, database: Database, dask_client: Client, config: Configuration, source: DataSource):
+        logger.info("Initialising fake failing processor")
+        super().__init__(database, dask_client, source, config, wait_time=1)
+        self.source = source
 
     def _process_run(self, run_accession: str):
         """
         Launches all jobs and returns the futures for the final job only
         """
         # NOTE: here we set the priority of each step to ensure a depth first processing
-        future = self.dask_client.submit(FakeEnaProcessorFailing.job, self.config, run_accession, priority=1)
+        future = self.dask_client.submit(FakeProcessorFailing.job, self.config, run_accession, self.source, priority=1)
         return future
 
     @staticmethod
-    def job(config: Configuration, run_accession):
-        return FakeEnaProcessorFailing.run_job(
+    def job(config: Configuration, run_accession, source: DataSource):
+        return FakeProcessorFailing.run_job(
             config, run_accession, start_status=JobStatus.QUEUED, end_status=JobStatus.FINISHED,
-            error_status=JobStatus.FAILED_PROCESSING, data_source=DataSource.ENA,
-            function=FakeEnaProcessorFailing.run_all
+            error_status=JobStatus.FAILED_PROCESSING, data_source=source,
+            function=FakeProcessorFailing.run_all
         )
 
     @staticmethod
-    def run_all(job: JobEna, queries: Queries, config: Configuration):
+    def run_all(sample: SampleEna, queries: Queries, config: Configuration) -> SampleEna:
         raise ValueError("Fail em'all")
 
 
@@ -126,7 +102,7 @@ class FakeGisaidProcessor(AbstractProcessor):
 
     def __init__(self, database: Database, dask_client: Client, config: Configuration):
         logger.info("Initialising GISAID processor")
-        super().__init__(database, dask_client, DataSource.GISAID, config)
+        super().__init__(database, dask_client, DataSource.GISAID, config, wait_time=1)
 
     def _process_run(self, run_accession: str):
         """
@@ -145,5 +121,8 @@ class FakeGisaidProcessor(AbstractProcessor):
     )
 
     @staticmethod
-    def run_all(job: JobGisaid, queries: Queries, config: Configuration):
+    def run_all(sample: SampleGisaid, queries: Queries, config: Configuration) -> SampleGisaid:
         logger.info("Job processed!")
+        sample.analysed_at = datetime.datetime.now()
+        sample.pangolin_lineage = "B.TEST"
+        return sample

@@ -1,15 +1,13 @@
 from unittest import TestCase
 from faker import Faker
 from logzero import logger
-from sqlalchemy import MetaData
-
 from covigator.database.database import Database
-from covigator.database.model import VariantCooccurrence, SampleEna, Sample, JobEna, JobGisaid, VariantObservation, \
+from covigator.database.model import VariantCooccurrence, SampleEna, VariantObservation, \
     SampleGisaid, SubclonalVariantObservation, Variant, PrecomputedVariantAbundanceHistogram, PrecomputedTableCounts, \
     PrecomputedSynonymousNonSynonymousCounts, PrecomputedOccurrence, PrecomputedAnnotation, PrecomputedIndelLength, \
-    PrecomputedSubstitutionsCounts, PrecomputedVariantsPerSample, Log
+    PrecomputedSubstitutionsCounts, PrecomputedVariantsPerSample, Log, GisaidVariant, GisaidVariantObservation, \
+    LowFrequencyVariantObservation, LowFrequencyVariant, SubclonalVariant, PrecomputedVariantsPerLineage
 from covigator.database.queries import Queries
-from covigator.pipeline.cooccurrence_matrix import CooccurrenceMatrix
 from covigator.tests.unit_tests.faked_objects import FakeConfiguration
 
 
@@ -42,15 +40,17 @@ class AbstractTest(TestCase):
 
     def _clean_test_database(self):
         try:
+            self._clean_table(GisaidVariantObservation)
             self._clean_table(VariantObservation)
             self._clean_table(SubclonalVariantObservation)
-            self._clean_table(Sample)
-            self._clean_table(JobEna)
-            self._clean_table(JobGisaid)
+            self._clean_table(LowFrequencyVariantObservation)
             self._clean_table(SampleEna)
             self._clean_table(SampleGisaid)
             self._clean_table(VariantCooccurrence)
             self._clean_table(Variant)
+            self._clean_table(SubclonalVariant)
+            self._clean_table(LowFrequencyVariant)
+            self._clean_table(GisaidVariant)
             self._clean_table(PrecomputedVariantsPerSample)
             self._clean_table(PrecomputedSubstitutionsCounts)
             self._clean_table(PrecomputedIndelLength)
@@ -59,6 +59,7 @@ class AbstractTest(TestCase):
             self._clean_table(PrecomputedSynonymousNonSynonymousCounts)
             self._clean_table(PrecomputedTableCounts)
             self._clean_table(PrecomputedVariantAbundanceHistogram)
+            self._clean_table(PrecomputedVariantsPerLineage)
             self._clean_table(Log)
         except Exception as e:
             logger.error("Error cleaning the database")

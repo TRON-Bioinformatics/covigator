@@ -28,6 +28,14 @@ class CovigatorErrorProcessingCoverageResults(CovigatorException):
     pass
 
 
+class CovigatorErrorProcessingPangolinResults(CovigatorException):
+    pass
+
+
+class CovigatorErrorProcessingDeduplicationResults(CovigatorException):
+    pass
+
+
 class CovigatorDashboardMissingPrecomputedData(CovigatorException):
     pass
 

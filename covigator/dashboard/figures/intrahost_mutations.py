@@ -6,7 +6,8 @@ import dash_core_components as dcc
 import dash_table
 from logzero import logger
 from sqlalchemy.orm import Session
-from covigator.dashboard.figures.figures import Figures, MARGIN, TEMPLATE, PLOTLY_CONFIG, STYLES_STRIPPED, STYLE_HEADER
+from covigator.dashboard.figures.figures import Figures, MARGIN, TEMPLATE, PLOTLY_CONFIG, STYLES_STRIPPED, STYLE_HEADER, \
+    STYLE_CELL
 from covigator.database.model import SubclonalVariantObservation, VariantObservation, SampleEna
 from covigator.exceptions import CovigatorQueryException
 import plotly.express as px
@@ -61,7 +62,7 @@ class SubclonalVariantsQueries:
                             variant_id not in (
                                 select distinct variant_id 
                                 from {variants_table_name} 
-                                where annotation_highest_impact != 'synonymous_variant' and source='ENA' and gene_name is not null 
+                                where annotation_highest_impact != 'synonymous_variant' and gene_name is not null 
                             )
                         group by variant_id
                         {order_by}
@@ -70,7 +71,6 @@ class SubclonalVariantsQueries:
             min_vaf=min_vaf,
             subclonal_variants_table_name=SubclonalVariantObservation.__tablename__,
             variants_table_name=VariantObservation.__tablename__,
-            samples_table_name=SampleEna.__tablename__,
             top=top,
             where_gene=where_gene,
             order_by=order_by_clause
@@ -229,12 +229,6 @@ class IntrahostMutationsFigures(Figures):
                             {"name": ["Score"], "id": "score"},
                         ],
                 style_data_conditional=STYLES_STRIPPED,
-                style_cell_conditional=[
-                    {
-                        'if': {'column_id': c},
-                        'textAlign': 'left'
-                    } for c in ['gene_name', 'pfam_description', 'variant_id', 'hgvs_p', 'annotation_highest_impact']
-                ],
                 style_as_list_view=True,
                 style_header=STYLE_HEADER,
                 row_selectable='single',
@@ -316,19 +310,13 @@ class IntrahostMutationsFigures(Figures):
                 {"name": ["Count samples"], "id": "count_samples"},
             ],
             style_data_conditional=STYLES_STRIPPED,
-            style_cell_conditional=[
-                {
-                    'if': {'column_id': c},
-                    'textAlign': 'left'
-                } for c in ['gene_name', 'variant_id', 'hgvs_p', 'annotation_highest_impact']
-            ],
             style_as_list_view=True,
             style_header=STYLE_HEADER,
             css=[{'selector': '.dash-cell div.dash-cell-value',
                   'rule': 'display: inline; white-space: inherit; overflow: inherit; text-overflow: inherit;'}],
             style_table={'overflowX': 'auto'},
             style_data={'whiteSpace': 'normal', 'height': 'auto'},
-            style_cell={'maxWidth': '100px'},
+            style_cell=STYLE_CELL,
         )
 
         return [
