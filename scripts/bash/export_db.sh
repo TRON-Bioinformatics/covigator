@@ -68,7 +68,7 @@ sample_gisaid_fields="run_accession, finished, collection_date, host_tax_id, hos
  count_insertions, count_deletions, status, created_at, queued_at, analysed_at, loaded_at, failed_at, \
  error_message, sample_folder, vcf_path, fasta_path, pangolin_path, pangolin_lineage, \
  pangolin_conflict, pangolin_ambiguity_score, pangolin_scorpio_call, pangolin_scorpio_support, \
- pangolin_scorpio_conflict, pangolin_version, pangolin_pangolin_version, pangolin_pangoLEARN_version, \
+ pangolin_scorpio_conflict, pangolin_version, pangolin_pangolin_version, \
  pangolin_pango_version, pangolin_status, pangolin_note, covigator_accessor_version, covigator_processor_version"
 psql $pg_uri -c "\\copy sample_gisaid$version($sample_gisaid_fields) to program 'gzip > $output/sample_gisaid.csv.gz' csv header;"
 psql $pg_uri -c "`get_export_command "gisaid_variant"`"
