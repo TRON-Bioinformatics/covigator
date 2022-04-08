@@ -5,6 +5,7 @@ import requests
 from requests import Response
 from sqlalchemy.orm import Session
 
+import covigator
 from covigator.accessor import MINIMUM_DATE
 from covigator.exceptions import CovigatorExcludedSampleTooEarlyDateException
 from covigator.misc import backoff_retrier
@@ -175,7 +176,7 @@ class EnaAccessor:
     def _parse_dates(self, ena_run):
         ena_run.collection_date = self._parse_abstract(ena_run.collection_date, date.fromisoformat)
         ena_run.first_created = self._parse_abstract(ena_run.first_created, date.fromisoformat)
-        if ena_run.first_created is not None and ena_run.first_created < MINIMUM_DATE:
+        if ena_run.collection_date is not None and ena_run.collection_date < MINIMUM_DATE:
             raise CovigatorExcludedSampleTooEarlyDateException
 
     def _parse_ena_run(self, run):
@@ -186,6 +187,7 @@ class EnaAccessor:
         fastqs = sample.get_fastqs_ftp()
         # annotates with the number of FASTQ files, this is useful as we hold the FASTQs in a single string
         sample.num_fastqs = 0 if fastqs is None or fastqs == [""] else len(fastqs)
+        sample.covigator_accessor_version = covigator.VERSION
         return sample
 
     def _parse_numeric_fields(self, ena_run):

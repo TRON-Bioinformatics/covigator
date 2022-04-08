@@ -61,15 +61,37 @@ class ProcessorTests(AbstractTest):
         self.assertEqual(data.get("processed"), 0)
 
     @parameterized.expand([(DataSource.ENA, ), (DataSource.GISAID, )])
-    def test_processor(self, source):
-        mock_samples(faker=self.faker, session=self.session, num_samples=10, job_status=JobStatus.PENDING,
+    def test_fake_processor(self, source):
+        mock_samples(faker=self.faker, session=self.session, num_samples=10, job_status=JobStatus.DOWNLOADED,
                      source=source.name)
 
-        self.assertEqual(self.queries.count_jobs_by_status(data_source=source, status=JobStatus.PENDING), 10)
+        self.assertEqual(self.queries.count_jobs_by_status(data_source=source, status=JobStatus.DOWNLOADED), 10)
         self.assertEqual(self.queries.count_jobs_by_status(data_source=source, status=JobStatus.FINISHED), 0)
         self.fake_processors.get(source).process()
-        self.assertEqual(self.queries.count_jobs_by_status(data_source=source, status=JobStatus.PENDING), 0)
+        self.assertEqual(self.queries.count_jobs_by_status(data_source=source, status=JobStatus.DOWNLOADED), 0)
         self.assertEqual(self.queries.count_jobs_by_status(data_source=source, status=JobStatus.FINISHED), 10)
+        finished_jobs = self.queries.find_first_by_status(data_source=source, status=[JobStatus.FINISHED], n=10)
+        for j in finished_jobs:
+            self.assertEqual(j.status, JobStatus.FINISHED)
+            self.assertIsNotNone(j.analysed_at)
+            self.assertIsNotNone(j.pangolin_lineage)
+
+    # @parameterized.expand([(DataSource.ENA,), (DataSource.GISAID,)])
+    def test_processor(self, source=DataSource.ENA):
+        samples = mock_samples(faker=self.faker, session=self.session, num_samples=1, job_status=JobStatus.DOWNLOADED,
+                     source=source.name)
+        sample = samples[0]
+
+        fastq1 = pkg_resources.resource_filename(covigator.tests.__name__, "resources/test_data_1.fastq.gz")
+        fastq2 = pkg_resources.resource_filename(covigator.tests.__name__, "resources/test_data_2.fastq.gz")
+        sample.fastq_path = "{fastq1},{fastq2}".format(fastq1=fastq1, fastq2=fastq2)
+        self.session.merge(sample)
+
+        self.assertEqual(self.queries.count_jobs_by_status(data_source=source, status=JobStatus.DOWNLOADED), 1)
+        self.assertEqual(self.queries.count_jobs_by_status(data_source=source, status=JobStatus.FINISHED), 0)
+        self.fake_processors.get(source).process()
+        self.assertEqual(self.queries.count_jobs_by_status(data_source=source, status=JobStatus.DOWNLOADED), 0)
+        self.assertEqual(self.queries.count_jobs_by_status(data_source=source, status=JobStatus.FINISHED), 1)
 
     @parameterized.expand([(DataSource.ENA, ), (DataSource.GISAID, )])
     def test_does_not_process_already_queued(self, source):
@@ -84,12 +106,12 @@ class ProcessorTests(AbstractTest):
 
     @parameterized.expand([(DataSource.ENA, ), (DataSource.GISAID, )])
     def test_failed_sample(self, source):
-        mock_samples(faker=self.faker, session=self.session, num_samples=10, job_status=JobStatus.PENDING,
+        mock_samples(faker=self.faker, session=self.session, num_samples=10, job_status=JobStatus.DOWNLOADED,
                      source=source.name)
 
-        self.assertEqual(self.queries.count_jobs_by_status(data_source=source, status=JobStatus.PENDING), 10)
+        self.assertEqual(self.queries.count_jobs_by_status(data_source=source, status=JobStatus.DOWNLOADED), 10)
         self.failing_processors.get(source).process()
-        self.assertEqual(self.queries.count_jobs_by_status(data_source=source, status=JobStatus.PENDING), 0)
+        self.assertEqual(self.queries.count_jobs_by_status(data_source=source, status=JobStatus.DOWNLOADED), 0)
         self.assertEqual(self.queries.count_jobs_by_status(data_source=source, status=JobStatus.FINISHED), 0)
         self.assertEqual(self.queries.count_jobs_by_status(data_source=source, status=JobStatus.FAILED_PROCESSING), 10)
 

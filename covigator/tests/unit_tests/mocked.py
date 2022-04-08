@@ -88,7 +88,6 @@ def get_mocked_sample(faker: Faker, source: DataSource, job_status=JobStatus.FIN
             fastq_md5=faker.md5(),
             num_fastqs=1,
             status=job_status,
-            finished=job_status == JobStatus.FINISHED,
             pangolin_lineage=faker.random_choices(MOCKED_LINEAGES, length=1)[0]
         )
     elif source == DataSource.GISAID:
@@ -97,7 +96,6 @@ def get_mocked_sample(faker: Faker, source: DataSource, job_status=JobStatus.FIN
             collection_date=faker.date_time(),
             country=faker.country(),
             status=job_status,
-            finished=job_status == JobStatus.FINISHED,
             pangolin_lineage=faker.random_choices(MOCKED_LINEAGES, length=1)[0]
         )
     else:
