@@ -50,7 +50,7 @@ gatk_pangolin_path, bcftools_pangolin_path, fastp_path, deduplication_metrics_pa
 vertical_coverage_path, num_reads, covered_bases, coverage, mean_depth, mean_base_quality, \
 mean_mapping_quality, pangolin_lineage, pangolin_conflict, pangolin_ambiguity_score, pangolin_scorpio_call, \
 pangolin_scorpio_support, pangolin_scorpio_conflict, pangolin_version, pangolin_pangolin_version, \
-pangolin_pangoLEARN_version, pangolin_pango_version, pangolin_status, pangolin_note, percent_duplication, \
+pangolin_pango_version, pangolin_status, pangolin_note, percent_duplication, \
 unpaired_reads_examined, read_pairs_examined, secondary_or_supplementary_reads, unmapped_reads, \
 unpaired_read_duplicates, read_pair_duplicates, read_pair_optical_duplicates, covigator_accessor_version, \
 covigator_processor_version"
