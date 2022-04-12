@@ -7,7 +7,7 @@ import plotly
 
 from covigator.dashboard.figures.figures import PLOTLY_CONFIG, MARGIN, TEMPLATE
 from covigator.dashboard.tabs import get_mini_container, print_number, print_date
-from covigator.database.model import DataSource, SAMPLE_GISAID_TABLE_NAME
+from covigator.database.model import DataSource, SAMPLE_GISAID_TABLE_NAME, JobStatus
 from covigator.database.queries import Queries
 import pandas as pd
 import plotly.express as px
@@ -108,9 +108,9 @@ def get_plot_coverage(queries: Queries):
     sql_query = """
     select count(*), (sequence_length::float / 29903 * 100)::int as coverage
     from {table} 
-    where finished
+    where status = '{status}'
     group by coverage
-    """.format(table=SAMPLE_GISAID_TABLE_NAME)
+    """.format(table=SAMPLE_GISAID_TABLE_NAME, status=JobStatus.FINISHED.name)
     data = pd.read_sql_query(sql_query, queries.session.bind)
     fig = px.bar(data_frame=data, x="coverage", y="count", log_y=True, color="count",
                  color_continuous_scale=plotly.colors.sequential.Brwnyl)
@@ -136,9 +136,9 @@ def get_plot_bad_bases_ratio(queries: Queries, count_samples):
     sql_query = """
     select count(*), ((count_n_bases + count_ambiguous_bases)::float / sequence_length * 100)::int as bad_bases_ratio
     from {table} 
-    where finished
+    where status = '{status}'
     group by bad_bases_ratio
-    """.format(table=SAMPLE_GISAID_TABLE_NAME)
+    """.format(table=SAMPLE_GISAID_TABLE_NAME, status=JobStatus.FINISHED.name)
     data = pd.read_sql_query(sql_query, queries.session.bind)
     fig = px.bar(data_frame=data, x="bad_bases_ratio", y="count", log_y=True, color="count",
                  color_continuous_scale=plotly.colors.sequential.Brwnyl)

@@ -5,7 +5,7 @@ import dash_html_components as html
 from covigator.dashboard.figures import VARIANT_TYPE_COLOR_MAP
 from covigator.dashboard.figures.figures import PLOTLY_CONFIG, MARGIN, TEMPLATE
 from covigator.dashboard.tabs import get_mini_container, print_number, print_date
-from covigator.database.model import DataSource, SAMPLE_ENA_TABLE_NAME, VariantObservation, SampleEna
+from covigator.database.model import DataSource, SAMPLE_ENA_TABLE_NAME, VariantObservation, SampleEna, JobStatus
 from covigator.database.queries import Queries
 import pandas as pd
 import plotly.express as px
@@ -156,8 +156,11 @@ def get_data_library_strategies(queries):
     sql_query = """
     select count(*) as count, library_strategy, library_layout
     from {table} 
-    where finished
-    group by library_strategy, library_layout""".format(table=SAMPLE_ENA_TABLE_NAME)
+    where status = '{status}'
+    group by library_strategy, library_layout""".format(
+        table=SAMPLE_ENA_TABLE_NAME,
+        status=JobStatus.FINISHED.name
+    )
     data = pd.read_sql_query(sql_query, queries.session.bind)
     return data
 
@@ -188,7 +191,7 @@ def get_data_number_reads(queries):
     query = queries.session.query(
         SampleEna.run_accession, SampleEna.num_reads.label("num_reads_after"),
         SampleEna.read_count.label("num_reads_before"), SampleEna.library_strategy)\
-        .filter(SampleEna.finished)
+        .filter(SampleEna.status == JobStatus.FINISHED.name)
     data = pd.read_sql_query(query.statement, queries.session.bind)
     return data
 
@@ -249,7 +252,7 @@ def get_plot_coverage(queries: Queries):
 def get_data_coverage(queries):
     query = queries.session.query(
         SampleEna.run_accession, SampleEna.library_strategy, SampleEna.coverage, SampleEna.mean_depth) \
-        .filter(SampleEna.finished)
+        .filter(SampleEna.status == JobStatus.FINISHED.name)
     data = pd.read_sql_query(query.statement, queries.session.bind)
     return data
 
@@ -278,7 +281,7 @@ def get_data_qualities(queries):
     query = queries.session.query(
         SampleEna.run_accession, SampleEna.library_strategy, SampleEna.mean_mapping_quality,
         SampleEna.mean_base_quality)\
-        .filter(SampleEna.finished)
+        .filter(SampleEna.status == JobStatus.FINISHED.name)
     data = pd.read_sql_query(query.statement, queries.session.bind)
     return data
 

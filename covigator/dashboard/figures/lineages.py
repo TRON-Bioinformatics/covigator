@@ -120,7 +120,7 @@ class LineageFigures(Figures):
 
         return styles
 
-    def get_lineages_variants_table(self, data_source: str, lineages: List[str] = None):
+    def get_lineages_variants_table(self, data_source: str, lineages: List[str] = None, countries: List[str] = None):
 
         result = None
         if lineages is not None and len(lineages) == 1:
@@ -134,10 +134,17 @@ class LineageFigures(Figures):
             )\
                 .filter(and_(
                     PrecomputedVariantsPerLineage.source == data_source,
-                    PrecomputedVariantsPerLineage.lineage == lineages[0]))\
-                .join(Variant, PrecomputedVariantsPerLineage.variant_id == Variant.variant_id)\
+                    PrecomputedVariantsPerLineage.lineage == lineages[0]))
+
+            if countries is not None and len(countries) > 0:
+                query = query.filter(PrecomputedVariantsPerLineage.country.in_(countries))
+
+            query = query.join(Variant, PrecomputedVariantsPerLineage.variant_id == Variant.variant_id)\
                 .order_by(Variant.position.asc())
             data = pd.read_sql(query.statement, self.queries.session.bind)
+
+            # adds together the counts from multiple countries
+            data = data.groupby(["variant_id", "gene_name", "hgvs_p", "annotation_highest_impact"]).sum().reset_index()
 
             styles_counts = self.discrete_background_color_bins(data, columns=["count_observations"])
 

@@ -1,8 +1,9 @@
 from datetime import date, datetime
 from sqlalchemy.orm import Session
 
+import covigator
 from covigator.accessor import MINIMUM_DATE
-from covigator.database.model import SampleGisaid, DataSource, Log, CovigatorModule
+from covigator.database.model import SampleGisaid, DataSource, Log, CovigatorModule, JobStatus
 from covigator.database.database import Database
 from logzero import logger
 from Bio import SeqIO
@@ -144,7 +145,9 @@ class GisaidAccessor:
                 sequence={CHROMOSOME: compress_sequence(record.seq)},
                 sequence_length=sequence_length,
                 count_n_bases=count_n_bases,
-                count_ambiguous_bases=count_ambiguous_bases
+                count_ambiguous_bases=count_ambiguous_bases,
+                covigator_accessor_version=covigator.VERSION,
+                status=JobStatus.DOWNLOADED
             )
             try:
                 self._parse_country(sample_gisaid)

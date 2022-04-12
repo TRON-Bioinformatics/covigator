@@ -1,8 +1,6 @@
 import os
 import pathlib
 import urllib.request as request
-from contextlib import closing
-import shutil
 import hashlib
 from logzero import logger
 from covigator.configuration import Configuration
@@ -45,10 +43,7 @@ class Downloader:
             url = FTP_PROTOCOL + url
         local_filename = url.split('/')[-1]
         # NOTE: sample folder date/run_accession
-        local_folder = os.path.join(
-            self.storage_folder,
-            sample.collection_date.strftime("%Y%m%d") if sample.collection_date is not None else "nodate",
-            sample.run_accession)
+        local_folder = sample.get_sample_folder(self.storage_folder)
         local_full_path = os.path.join(local_folder, local_filename)
         # avoids downloading the same files over and over
         if not os.path.exists(local_full_path):

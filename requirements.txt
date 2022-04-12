@@ -5,6 +5,7 @@ sqlalchemy==1.3.20
 dask[complete]==2022.1.1
 dask_jobqueue==0.7.3
 distributed==2022.1.1
+Werkzeug==2.0.1
 cytoolz==0.11.0
 logzero==1.6.3
 psycopg2-binary==2.8.6

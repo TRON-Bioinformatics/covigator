@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 from typing import List
 from sqlalchemy.ext.declarative import declarative_base
@@ -87,11 +88,13 @@ class JobStatus(enum.Enum):
     __constraint_name__ = JOB_STATUS_CONSTRAINT_NAME
 
     PENDING = 1
-    QUEUED = 2
-    FAILED_PROCESSING = 3
-    FINISHED = 4
-    HOLD = 5
-    EXCLUDED = 6
+    FAILED_DOWNLOAD = 2
+    DOWNLOADED = 3
+    QUEUED = 4
+    FAILED_PROCESSING = 5
+    FINISHED = 6
+    HOLD = 7
+    EXCLUDED = 8
 
 
 class DataSource(enum.Enum):
@@ -110,6 +113,7 @@ class VariantType(enum.Enum):
     SNV = 1
     INSERTION = 2
     DELETION = 3
+    MNV = 4
 
 
 class SampleGisaid(Base):
@@ -119,6 +123,7 @@ class SampleGisaid(Base):
     __tablename__ = SAMPLE_GISAID_TABLE_NAME
 
     run_accession = Column(String, primary_key=True)
+    # DEPRECATED
     finished = Column(Boolean)
     collection_date = Column(Date)
     # Host information
@@ -156,6 +161,7 @@ class SampleGisaid(Base):
     error_message = Column(String)
 
     # output files
+    sample_folder = Column(String)
     vcf_path = Column(String)
     fasta_path = Column(String)
     pangolin_path = Column(String)
@@ -169,10 +175,20 @@ class SampleGisaid(Base):
     pangolin_scorpio_conflict = Column(Float)
     pangolin_version = Column(String)
     pangolin_pangolin_version = Column(String)
+    # TODO: remove upper case from here, it confuses SQL for some operations
     pangolin_pangoLEARN_version = Column(String)
     pangolin_pango_version = Column(String)
     pangolin_status = Column(String)
     pangolin_note = Column(String)
+
+    covigator_accessor_version = Column(String)
+    covigator_processor_version = Column(String)
+
+    def get_sample_folder(self, base_folder):
+        return os.path.join(
+            base_folder,
+            self.collection_date.strftime("%Y%m%d") if self.collection_date is not None else "nodate",
+            self.run_accession)
 
 
 class SampleEna(Base):
@@ -184,6 +200,7 @@ class SampleEna(Base):
     # data on run
     # TODO: add foreign keys to jobs
     run_accession = Column(String, primary_key=True)            # 'ERR4080473',
+    # DEPRECATED
     finished = Column(Boolean)
     sample_accession = Column(String)                           # 'SAMEA6798401',
     scientific_name = Column(String)
@@ -253,6 +270,7 @@ class SampleEna(Base):
     error_message = Column(String)
 
     # local files storage
+    sample_folder = Column(String)
     fastq_path = Column(String)  # the local path where FASTQ files are stored in semi colon separated list
     lofreq_vcf_path = Column(String)
     ivar_vcf_path = Column(String)
@@ -287,6 +305,7 @@ class SampleEna(Base):
     pangolin_scorpio_conflict = Column(Float)
     pangolin_version = Column(String)
     pangolin_pangolin_version = Column(String)
+    # TODO: remove upper case from here, it confuses SQL for some operations
     pangolin_pangoLEARN_version = Column(String)
     pangolin_pango_version = Column(String)
     pangolin_status = Column(String)
@@ -301,6 +320,15 @@ class SampleEna(Base):
     unpaired_read_duplicates = Column(Integer)
     read_pair_duplicates = Column(Integer)
     read_pair_optical_duplicates = Column(Integer)
+
+    covigator_accessor_version = Column(String)
+    covigator_processor_version = Column(String)
+
+    def get_sample_folder(self, base_folder):
+        return os.path.join(
+            base_folder,
+            self.collection_date.strftime("%Y%m%d") if self.collection_date is not None else "nodate",
+            self.run_accession)
 
     def get_fastqs_ftp(self) -> List:
         return self.fastq_ftp.split(SEPARATOR) if self.fastq_ftp is not None else []
@@ -789,6 +817,7 @@ class CovigatorModule(enum.Enum):
 
     ACCESSOR = 1
     PROCESSOR = 2
+    DOWNLOADER = 3
 
 
 class Log(Base):
@@ -953,5 +982,6 @@ class PrecomputedVariantsPerLineage(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     lineage = Column(String)
     variant_id = Column(String)
+    country = Column(String)
     count_observations = Column(Integer)
     source = Column(Enum(DataSource, name=DataSource.__constraint_name__))

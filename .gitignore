@@ -16,4 +16,5 @@ logs
 data
 docs/build
 *.dirlock
+**/__pycache__
 

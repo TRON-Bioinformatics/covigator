@@ -62,13 +62,20 @@ class Queries:
         klass = self.get_sample_klass(source=data_source.name)
         return self.session.query(klass).filter(klass.run_accession == run_accession).first()
 
-    def find_first_pending_jobs(self, data_source: DataSource, n=100) -> List[Union[SampleEna, SampleGisaid]]:
+    def find_first_by_status(self, data_source: DataSource, status, n=100) -> List[Union[SampleEna, SampleGisaid]]:
         klass = self.get_sample_klass(source=data_source.name)
         return self.session.query(klass) \
-            .filter(klass.status == JobStatus.PENDING) \
+            .filter(klass.status.in_(status)) \
             .order_by(klass.created_at.desc()) \
             .limit(n) \
             .all()
+
+    def find_first_pending_jobs(
+            self, data_source: DataSource, n=100, status: List = [JobStatus.DOWNLOADED]) -> List[Union[SampleEna, SampleGisaid]]:
+        return self.find_first_by_status(data_source=data_source, status=status, n=n)
+
+    def find_first_jobs_to_download(self, data_source: DataSource, n=100) -> List[Union[SampleEna, SampleGisaid]]:
+        return self.find_first_by_status(data_source=data_source, status=[JobStatus.PENDING], n=n)
 
     def count_jobs_in_queue(self, data_source):
         return self.count_jobs_by_status(data_source=data_source, status=JobStatus.QUEUED)
@@ -84,12 +91,12 @@ class Queries:
     def get_countries(self, source: str) -> List[str]:
         klass = self.get_sample_klass(source=source)
         return [c for c, in self.session.query(klass.country).filter(
-                klass.finished).distinct().order_by(klass.country.asc()).all()]
+                klass.status == JobStatus.FINISHED.name).distinct().order_by(klass.country.asc()).all()]
 
     def get_lineages(self, source: str) -> List[str]:
         klass = self.get_sample_klass(source=source)
         return [c for c, in self.session.query(klass.pangolin_lineage).filter(
-            and_(klass.finished, klass.pangolin_lineage != None)).distinct().order_by(
+            and_(klass.status == JobStatus.FINISHED.name, klass.pangolin_lineage != None)).distinct().order_by(
                 klass.pangolin_lineage.asc()).all()]
 
     def get_variants_per_sample(self, data_source: str, genes: List[str], variant_types: List[str]):
@@ -183,7 +190,7 @@ class Queries:
         klass = self.get_sample_klass(source=data_source)
         query = self.session.query(
             func.count().label("count"), klass.collection_date.label("date"), klass.country) \
-            .filter(klass.finished) \
+            .filter(klass.status == JobStatus.FINISHED.name) \
             .group_by(klass.collection_date, klass.country)
         if countries:
             query = query.filter(klass.country.in_(countries))
@@ -219,14 +226,14 @@ class Queries:
         return filled_table
 
     def get_accumulated_lineages_by_country(
-            self, data_source: str, countries: List[str], lineages: List[str]) -> pd.DataFrame:
+            self, data_source: str, countries: List[str], lineages: List[str], min_samples=100) -> pd.DataFrame:
         """
         Returns a DataFrame with columns: data, country, cumsum, count
         """
         klass = self.get_sample_klass(source=data_source)
         query = self.session.query(
             func.count().label("count"), klass.collection_date.label("date"), klass.pangolin_lineage.label("lineage")) \
-            .filter(and_(klass.finished, klass.pangolin_lineage != None)) \
+            .filter(and_(klass.status == JobStatus.FINISHED.name, klass.pangolin_lineage != None)) \
             .group_by(klass.collection_date, klass.pangolin_lineage)
         if countries:
             query = query.filter(klass.country.in_(countries))
@@ -241,7 +248,8 @@ class Queries:
 
             # creates empty table with all pairwise combinations of date and country
             dates = samples.date[~samples.date.isna()].sort_values().unique()
-            lineages = samples[(~samples.lineage.isna())] \
+
+            lineages = samples[(~samples.lineage.isna()) & (samples["cumsum"] >= min_samples)] \
                 .sort_values("cumsum", ascending=False).lineage.unique()
 
             empty_table = pd.DataFrame(
@@ -274,7 +282,7 @@ class Queries:
     def get_sample_months(self, pattern, data_source: str) -> List[datetime]:
         klass = self.get_sample_klass(source=data_source)
         dates = [d.strftime(pattern) for d, in self.session.query(klass.collection_date).filter(
-            and_(klass.finished, klass.collection_date.isnot(None))).distinct().all()]
+            and_(klass.status == JobStatus.FINISHED.name, klass.collection_date.isnot(None))).distinct().all()]
         return sorted(dates)
 
     @functools.lru_cache()
@@ -350,7 +358,7 @@ class Queries:
             count = result.count
         else:
             klass = self.get_sample_klass(source=source)
-            count = self.session.query(klass).filter(klass.finished).count()
+            count = self.session.query(klass).filter(klass.status == JobStatus.FINISHED.name).count()
         return count
 
     @functools.lru_cache()
@@ -447,7 +455,7 @@ class Queries:
         """
         klass = self.get_sample_klass(source=source.name)
         result = self.session.query(klass.collection_date).filter(
-            and_(klass.finished, klass.collection_date.isnot(None))).order_by(asc(klass.collection_date)).first()
+            and_(klass.status == JobStatus.FINISHED.name, klass.collection_date.isnot(None))).order_by(asc(klass.collection_date)).first()
         return result[0] if result is not None else result
 
     @functools.lru_cache()
@@ -457,7 +465,7 @@ class Queries:
         """
         klass = self.get_sample_klass(source=source.name)
         result = self.session.query(klass.collection_date).filter(
-            and_(klass.finished == True, klass.collection_date.isnot(None))).order_by(desc(klass.collection_date)).first()
+            and_(klass.status == JobStatus.FINISHED.name, klass.collection_date.isnot(None))).order_by(desc(klass.collection_date)).first()
         return result[0] if result is not None else result
 
     def get_last_update(self, data_source: DataSource) -> date:
@@ -487,7 +495,7 @@ class Queries:
         query = self.session.query(
             func.date_trunc('month', klass.collection_date).label("month"),
             func.count().label("sample_count"))\
-            .filter(klass.finished) \
+            .filter(klass.status == JobStatus.FINISHED.name) \
             .group_by(func.date_trunc('month', klass.collection_date))
         counts = pd.read_sql(query.statement, self.session.bind)
         counts['month'] = pd.to_datetime(counts['month'], utc=True)

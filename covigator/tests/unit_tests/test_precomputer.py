@@ -175,3 +175,4 @@ class TestPrecomputer(AbstractTest):
             self.assertIsNotNone(p.lineage)
             self.assertNotEqual(p.lineage, "")
             self.assertIsNotNone(p.variant_id)
+            self.assertIsNotNone(p.country)
