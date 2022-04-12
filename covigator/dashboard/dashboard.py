@@ -108,6 +108,10 @@ class Dashboard:
                                                     "ENA dataset", href="/ena",
                                                     style={'font-size' : '150%', "color": "#003c78"}),
                                                 dbc.DropdownMenuItem(
+                                                    "Documentation", href="https://covigator.readthedocs.io/en/latest",
+                                                    target="_blank",
+                                                    style={'font-size': '150%', "color": "#003c78"}),
+                                                dbc.DropdownMenuItem(
                                                     "Acknowledgements", href="/acknowledgements",
                                                     style={'font-size' : '150%', "color": "#003c78"}),
                                             ],
