@@ -6,11 +6,12 @@
 
 ![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/tron-bioinformatics/covigator-ngs-pipeline)
 [![DOI](https://zenodo.org/badge/374669617.svg)](https://zenodo.org/badge/latestdoi/374669617)
-[![Run tests](https://github.com/TRON-Bioinformatics/covigator-ngs-pipeline/actions/workflows/unit_tests.yml/badge.svg?branch=master)](https://github.com/TRON-Bioinformatics/covigator-ngs-pipeline/actions/workflows/unit_tests.yml)
+[![Run tests](https://github.com/TRON-Bioinformatics/covigator-ngs-pipeline/actions/workflows/automated_tests.yml/badge.svg?branch=master)](https://github.com/TRON-Bioinformatics/covigator-ngs-pipeline/actions/workflows/unit_tests.yml)
 [![Powered by NumFOCUS](https://img.shields.io/badge/powered%20by-Nextflow-orange.svg?style=flat&colorA=E1523D&colorB=007D8A)](https://www.nextflow.io/)
 [![License](https://img.shields.io/badge/license-MIT-green)](https://opensource.org/licenses/MIT)
 
-The Covigator pipeline processes SARS-CoV-2 FASTQ or FASTA files into annotated and normalized analysis ready VCF files. 
+The Covigator pipeline processes SARS-CoV-2 FASTQ or FASTA files into annotated and normalized analysis ready VCF files.
+It also classifies samples into lineages using pangolin.
 The pipeline is implemented in the Nextflow framework (Di Tommaso, 2017), it is a stand-alone pipeline that can be
 used independently of the CoVigator dashboard and knowledge base. 
 The code is open sourced in a repository of its own [https://github.com/TRON-Bioinformatics/covigator-ngs-pipeline](https://github.com/TRON-Bioinformatics/covigator-ngs-pipeline).
@@ -26,46 +27,52 @@ The result of the pipeline is one or more annotated VCFs with the list of SNVs a
 2. [Implementation](#id2)
 3. [How to run](#id3)
 4. [Understanding the output](#id4)
-5. [Intrahost mutations](#id5)
-6. [Annotation resources](#id6)
-7. [Future work](#id7)
-8. [References](#id8)
+6. [Annotation resources](#id5)
+7. [Future work](#id6)
+8. [Bibliography](#id7)
 
 
 ## Two pipelines in one
 
 In CoVigator we analyse samples from two different sources, ENA and GISAID. While from the first we get the raw reads in
-FASTQ format, from the second we obtain already assembled sequences in FASTA format. Each of these formats has to be 
+FASTQ format, from the second we obtain already assembled genomes in FASTA format. Each of these formats has to be 
 analysed differently. Also, the output data that we can obtain from each of these is different.
+
+![CoVigator pipeline](_static/figures/pipeline.drawio.png)
 
 ### Pipeline for FASTQ files
 
-The FASTQ pipeline includes the following steps:
+When FASTQ files are provided the pipeline includes the following steps:
 - **Trimming**. `fastp` is used to trim reads with default values. This step also includes QC filtering.
 - **Alignment**. `BWA mem` is used for the alignment of single or paired end samples.
 - **BAM preprocessing**. BAM files are prepared and duplicate reads are marked using GATK and Picard tools.
+- **Primer trimming**. When a BED with primers is provided, these are trimmed from the reads using iVar. This is applicable to the results from all variant callers.
 - **Coverage analysis**. `samtools coverage` and `samtools depth` are used to compute the horizontal and vertical 
   coverage respectively.
 - **Variant calling**. Four different variant callers are employed: BCFtools, LoFreq, iVar and GATK. 
-  Subsequent processing of resulting VCF files is independent for each caller, except for iVar which does not produce a VCF file but a custom TSV file.
-- **Variant normalization**. `bcftools norm` and `vt` tools are employed to left align indels, trim variant calls and remove variant duplicates.
-- **Variant annotation**. `SnpEff` is employed to annotate the variant consequences of variants, 
+  Subsequent processing of resulting VCF files is independent for each caller.
+- **Variant normalization**. `bcftools norm` is employed to left align indels, trim variant calls and remove variant duplicates.
+- **Phasing**. Clonal mutations (ie: VAF >= 0.8) occurring in the same amino acid are merged for its correct functional annotation.
+- **Variant annotation**. `SnpEff` is employed to annotate the variant consequences of variants,
+  `VAFator` is employed to add technical annotations and finally
   `bcftools annotate` is employed to add additional annotations.
+- **Lineage determination**. `pangolin` is used for this purpose, this runs over the results from each of the variant callers separately.
 
 Both single end and paired end FASTQ files are supported.
 
 ### Pipeline for FASTA files
 
-The FASTA pipeline includes the following steps:
-- **Global Alignment**. A Smith-Waterman global alignment is performed against the reference sequence.
-- **Variant calling**. Based on the alignment we call point mutations and small indels. 
-  Indels longer than 50 bp and at the beginning or end of the assembly sequence are excluded. Any mutation where
-  either reference or assembly contain a N is excluded.
-- **Variant normalization**. `bcftools norm` and `vt` tools are employed to left align indels, trim variant calls and remove variant duplicates.
-- **Variant annotation**. `SnpEff` is employed to annotate the variant consequences of mutations, 
-  `bcftools annotate` is employed to add additional annotations.
+When a FASTA file is provided with a single assembly sequence the pipeline includes the following steps:
+- **Variant calling**. A Smith-Waterman global alignment is performed against the reference sequence to call SNVs and 
+  indels. Indels longer than 50 bp and at the beginning or end of the assembly sequence are excluded. Any mutation where
+  either reference or assembly contain an N is excluded.
+- **Variant normalization**. Same as described above.
+- **Phasing**. mutations occurring in the same amino acid are merged for its correct annotation.
+- **Variant annotation**. Same as described above with the exception of `VAFator`.
+- **Lineage determination**. `pangolin` is used for this purpose.
 
-The FASTA file is expected to contain a single assembly sequence.
+The FASTA file is expected to contain a single assembly sequence. 
+Bear in mind that only clonal variants can be called on the assembly.
 
 ## Implementation
 
@@ -83,230 +90,24 @@ in GitHub.
 The alignment, BAM preprocessing and variant normalization pipelines are based on the implementations in additional 
 Nextflow pipelines within the TronFlow initiative [https://tronflow-docs.readthedocs.io/](https://tronflow-docs.readthedocs.io/). 
 
+### Variant annotations
 
-## How to run
+The variants derived from a FASTQ file are annotated on the `FILTER` column using the VAFator 
+(https://github.com/TRON-Bioinformatics/vafator) variant allele frequency 
+(VAF) into `LOW_FREQUENCY`, `SUBCLONAL` and finally `PASS` variants correspond to clonal variants. By default, 
+variants with a VAF < 5 % are considered `LOW_FREQUENCY` and variants with a VAF >= 5 % and < 80 % are considered 
+`SUBCLONAL`. This thresholds can be changed with the parameters `--low_frequency_variant_threshold` and
+`--subclonal_variant_threshold`.
 
-### Requirements
+VAFator technical annotations:
 
-- Nextflow >= 20.07.1
-- Java >= 8
-- Conda >=4.9
+- `INFO/vafator_af`: variant allele frequency of the mutation 
+- `INFO/vafator_ac`: number of reads supporting the mutation 
+- `INFO/vafator_dp`: total number of reads at the position, in the case of indels this represents the number of reads in the previous position
 
-### Initializing the conda environments
-
-If you are planning to use it concurrently on multiple samples with conda, first initialize the conda environment, 
-otherwise concurrent sample executions will clash trying to create the same conda environment. Run:
-```
-nextflow main.nf -profile conda --initialize
-```
-
-To make sure that all your executions use the same conda environment we recommend using the directive `conda.cacheDir`
-[https://www.nextflow.io/docs/latest/config.html#scope-conda](https://www.nextflow.io/docs/latest/config.html#scope-conda).
-Otherwise, your conda environment will be stored in the execution folder under `work/conda`.
-
-### Running it
-
-All options available with the `--help` option:
-```
-$ nextflow run tron-bioinformatics/covigator-ngs-pipeline --help
-
-
-Usage:
-    nextflow run tron-bioinformatics/covigator-ngs-pipeline -profile conda --help
-
-Input:
-    * --fastq1: the first input FASTQ file (not compatible with --fasta)
-    * --fasta: the FASTA file containing the assembly sequence (not compatible with --fastq1)
-    * --name: the sample name, output files will be named after this name
-    * --reference: the reference genome FASTA file, *.fai, *.dict and bwa indexes are required.
-    * --gff: the GFFv3 gene annotations file (only required with --fastq1)
-    * --output: the folder where to publish output
-    * --input_fastqs_list: alternative to --name and --fastq1 for batch processing
-    * --library: required only when using --input_fastqs
-    * --input_fastas_list: alternative to --name and --fasta for batch processing
-
-Optional input:
-    * --fastq2: the second input FASTQ file
-    * --min_base_quality: minimum base call quality to take a base into account (default: 20)
-    * --min_mapping_quality: minimum mapping quality to take a read into account (default: 20)
-    * --low_frequency_variant_threshold: VAF threshold to mark a variant as low frequency (default: 0.2)
-    * --subclonal_variant_threshold: VAF superior threshold to mark a variant as subclonal (default: 0.8)
-    * --memory: the ammount of memory used by each job (default: 3g)
-    * --cpus: the number of CPUs used by each job (default: 1)
-    * --initialize: initialize the conda environment
-    * --skip_lofreq: skips calling variants with LoFreq
-    * --skip_gatk: skips calling variants with GATK
-    * --skip_bcftools: skips calling variants with BCFTools
-    * --skip_ivar: skips calling variants with iVar
-    * --match_score: global alignment match score, only applicable for assemblies (default: 2)
-    * --mismatch_score: global alignment mismatch score, only applicable for assemblies (default: -1)
-    * --open_gap_score: global alignment open gap score, only applicable for assemblies (default: -3)
-    * --extend_gap_score: global alignment extend gap score, only applicable for assemblies (default: -0.1)
-    * --chromosome: chromosome for variant calls, only applicable for assemblies (default: "MN908947.3")
-    * --skip_sarscov2_annotations: skip some of the SARS-CoV-2 specific annotations (default: false)
-    * --snpeff_data: path to the SnpEff data folder, it will be useful to use the pipeline on other virus than SARS-CoV-2
-    * --snpeff_config: path to the SnpEff config file, it will be useful to use the pipeline on other virus than SARS-CoV-2
-    * --snpeff_organism: organism to annotate with SnpEff, it will be useful to use the pipeline on other virus than SARS-CoV-2
-
-Output:
-    * Output a normalized, phased and annotated VCF file for each of BCFtools, GATK and LoFreq when FASTQ files are
-    provided or a single VCF obtained from a global alignment when a FASTA file is provided
-    * Output a TSV file output from iVar
-```
-
-It is recommended to specify the pipeline version explicitly for reproducibility purposes:
-
-```
-$ nextflow run tron-bioinformatics/covigator-ngs-pipeline -r v0.7.0 ...
-```
-
-In order to update your cached version of the pipeline to a specific version use:
-```
-nextflow pull tron-bioinformatics/covigator-ngs-pipeline -r v0.7.0
-```
-
-We recommend using the provided `conda` profile (`-profile conda`), otherwise all dependencies will need to be installed manually and 
-made available on the path. In order to combine the `conda` profile with any other custom Nextflow configuration 
-(e.g.: a computational cluster queue like Slurm), you will need to use more than one profile. But beware that the 
-order matters, the profiles are applied from left to right. A typical situation would be to use the CoVigator conda 
-profile plus your default configuration, `-profile conda,standard`.
-
-For paired end reads (ie: two FASTQ files):
-```
-nextflow run tron-bioinformatics/covigator-ngs-pipeline [-profile conda] \
---fastq1 <FASTQ_FILE> \
---fastq2 <FASTQ_FILE> \
---name example_run \
---output <OUTPUT_FOLDER> \
-[--reference <path_to_reference>/Sars_cov_2.ASM985889v3.fa] \
-[--gff <path_to_reference>/Sars_cov_2.ASM985889v3.gff3]
-```
-
-For single end reads (ie: one FASTQ file):
-```
-nextflow run tron-bioinformatics/covigator-ngs-pipeline [-profile conda] \
---fastq1 <FASTQ_FILE> \
---name example_run \
---output <OUTPUT_FOLDER> \
-[--reference <path_to_reference>/Sars_cov_2.ASM985889v3.fa] \
-[--gff <path_to_reference>/Sars_cov_2.ASM985889v3.gff3]
-```
-
-For assemblies (ie: FASTA files):
-```
-nextflow run tron-bioinformatics/covigator-ngs-pipeline [-profile conda] \
---fasta <FASTA_FILE> \
---name example_run \
---output <OUTPUT_FOLDER> \
-[--reference <path_to_reference>/Sars_cov_2.ASM985889v3.fa] \
-[--gff <path_to_reference>/Sars_cov_2.ASM985889v3.gff3]
-```
-
-Sometimes it may be useful to run a batch of samples and not just one by one. The CoVigator pipeline supports this use
-case through a tab-separated values file.
-
-For batch processing of reads (ie: FASTQ files) use `--input_fastqs_list` and `--library`: 
-```
-nextflow run tron-bioinformatics/covigator-ngs-pipeline [-profile conda] \
---input_fastqs_list <TSV_FILE> \
---library <paired|single> \
---output <OUTPUT_FOLDER> \
-[--reference <path_to_reference>/Sars_cov_2.ASM985889v3.fa] \
-[--gff <path_to_reference>/Sars_cov_2.ASM985889v3.gff3]
-```
-where the TSV file contains two or three columns tab-separated columns **without header**. 
-Columns: sample name, path to FASTQ 1 and optionally path to FASTQ 2.
-
-| name | FASTQ 1 | FASTQ 2 |
-|---------|-----------------|-----------------|
-| sample1 | /path/to/sample1.1.fastq | /path/to/sample1.2.fastq |
-| sample2 | /path/to/sample2.1.fastq | /path/to/sample2.2.fastq |
-
-Beware that the library only needs to be provided for batch processing. This implies that you cannot process in the 
-same batch single and paired-end samples.
-
-For batch processing of assemblies use `--input_fastas_list`.
-```
-nextflow run tron-bioinformatics/covigator-ngs-pipeline [-profile conda] \
---input_fastas_list <TSV_FILE> \
---library <paired|single> \
---output <OUTPUT_FOLDER> \
-[--reference <path_to_reference>/Sars_cov_2.ASM985889v3.fa] \
-[--gff <path_to_reference>/Sars_cov_2.ASM985889v3.gff3]
-```
-where the TSV file contains two columns tab-separated columns **without header**. Columns: sample name and path to FASTA.
-
-| name | FASTA |
-|---------|-----------------|
-| sample1 | /path/to/sample1.fasta |
-| sample2 | /path/to/sample2.fasta |
-
-
-### Using a custom reference
-
-The CoVigator pipeline is applicable to other virus or to other SARS-CoV-2 references. If you want to use CoVigator 
-to analyse other virus you will need to specify the reference genome FASTA and GFF files and the chromosome name 
-through the parameters `--reference`, `--gff` and `--chromosome`. Notice that it is assumed a single chromosome, 
-organisms with multiple chromosomes are not supported.
-
-Additionally, the FASTA needs bwa indexes and .fai index.
-These indexes can be generated with the following two commands:
-```
-bwa index reference.fasta
-samtools faidx reference.fasta
-```
-
-Furthermore, you will need to provide the adequate SnpEff resources through `--snpeff_data`, `--snpeff_config` and 
-`--snpeff_organism`. This is documented in SnpEff 
-[https://pcingola.github.io/SnpEff/se_buildingdb/#reference-genome-gtf-gff-refseq-or-genbank](https://pcingola.github.io/SnpEff/se_buildingdb/#reference-genome-gtf-gff-refseq-or-genbank)
-
-Last, but not least, you will need to disable the SARS-CoV-2 specific annotations on conservation and protein domains 
-with the flag `--skip_sarscov2_annotations`.
-
-If all this process is obscure to you we will be happy to help you, please, contact us through our GitHub or send us 
-an email.
-
-## Understanding the output
-
-Although the VCFs are normalized for both pipelines, the FASTQ pipeline runs four variant callers, while the FASTA
-pipeline runs a single variant caller. Also, there are several metrics in the FASTQ pipeline that are not present
-in the output of the FASTA pipeline. Here we will describe these outputs.
-
-### FASTQ pipeline output
-
-Find in the table below a description of each of the expected files and a link to a sample file for the FASTQ pipeline.
-The VCF files will be described in more detail later.
-
-| Name                        | Description                                                  | Sample file                                                                                          |
-|-----------------------------|--------------------------------------------------------------|------------------------------------------------------------------------------------------------------|
-| $NAME.fastp_stats.json | Output metrics of the fastp trimming process in JSON format | [ERR4145453.fastp_stats.json](_static/covigator_pipeline_sample_output_reads/ERR4145453.fastp_stats.json) |
-| $NAME.fastp_stats.html | Output metrics of the fastp trimming process in HTML format | [ERR4145453.fastp_stats.html](_static/covigator_pipeline_sample_output_reads/ERR4145453.fastp_stats.html) |
-| $NAME.deduplication_metrics.txt | Deduplication metrics | [ERR4145453.deduplication_metrics.txt](_static/covigator_pipeline_sample_output_reads/ERR4145453.deduplication_metrics.txt) |
-| $NAME.coverage.tsv | Coverage metrics (eg: mean depth, % horizontal coverage) | [ERR4145453.coverage.tsv](_static/covigator_pipeline_sample_output_reads/ERR4145453.coverage.tsv) |
-| $NAME.depth.tsv | Depth of coverage per position | [ERR4145453.depth.tsv](_static/covigator_pipeline_sample_output_reads/ERR4145453.depth.tsv) |
-| $NAME.bcftools.normalized.annotated.vcf.gz | Bgzipped, tabix-indexed and annotated output VCF from BCFtools | [ERR4145453.bcftools.normalized.annotated.vcf.gz](_static/covigator_pipeline_sample_output_reads/ERR4145453.bcftools.normalized.annotated.vcf.gz) |
-| $NAME.gatk.normalized.annotated.vcf.gz | Bgzipped, tabix-indexed and annotated output VCF from GATK | [ERR4145453.gatk.normalized.annotated.vcf.gz](_static/covigator_pipeline_sample_output_reads/ERR4145453.gatk.normalized.annotated.vcf.gz) |
-| $NAME.lofreq.normalized.annotated.vcf.gz | Bgzipped, tabix-indexed and annotated output VCF from LoFreq | [ERR4145453.lofreq.normalized.annotated.vcf.gz](_static/covigator_pipeline_sample_output_reads/ERR4145453.lofreq.normalized.annotated.vcf.gz) |
-| $NAME.ivar.tsv | Output table from iVar | [ERR4145453.ivar.tsv](_static/covigator_pipeline_sample_output_reads/ERR4145453.ivar.tsv) |
-
-**NOTE**: iVar variant caller output mutations in a custom format, in particular the indel representation is not 
-comparable to the representation of indels in a VCF file. In the future we may parse this format into a VCF file.
-
-### FASTA pipeline output
-
-The FASTA pipeline returns a single VCF file. The VCF files will be described in more detail later.
-
-| Name                        | Description                                                  | Sample file                                                                                          |
-|-----------------------------|--------------------------------------------------------------|------------------------------------------------------------------------------------------------------|
-| $NAME.assembly.normalized.annotated.vcf.gz | Bgzipped, tabix-indexed and annotated output VCF | [ERR4145453.assembly.normalized.annotated.vcf.gz](_static/covigator_pipeline_sample_output_assembly/hCoV-19_NTXX.assembly.normalized.annotated.vcf.gz) |
-
-### Understanding the output VCF files
-
-All VCFs from BCFtools, GATK, LoFreq and assemblies are normalized as described in (Tan, 2015). 
-Thus their results are comparable. The annotations are in the VCF INFO field.
-Although some technical annotations in the VCF are specific to the variant caller, the biological annotations
-are shared between all VCFs: ConsHMM conservation scores as reported in (Kwon, 2021), Pfam domains as reported in 
-Ensemble annotations and SnpEff effect annotations.
+SnpEff provides the functional annotations. And all mutations are additionally annotated with the following SARS-CoV-2 specific annotations:
+- ConsHMM conservation scores as reported in (Kwon, 2021)
+- Pfam domains as reported in Ensemble annotations.
 
 Biological annotations: 
 
@@ -325,37 +126,269 @@ p.D40N|118/3822|118/3822|40/1273||;CONS_HMM_SARS_COV_2=0.57215;CONS_HMM_SARBECOV
 PFAM_NAME=bCoV_S1_N;PFAM_DESCRIPTION=Betacoronavirus-like spike glycoprotein S1, N-terminal
 ```
 
-The different technical annotations from the different variant callers are out of the scope of this documentation.
-For illustration purpose see an example from each of the callers on the FASTQ pipeline.
 
-- BCFtools: `DP=137;VDB=0.648575;SGB=-0.693147;MQSB=1;MQ0F=0;AC=1;AN=1;DP4=0,0,109,23;MQ=60;`
-- GATK: `AC=1;AF=1;AN=1;BaseQRankSum=2.481;DP=261;FS=2.061;MLEAC=1;MLEAF=1;MQ=60;MQRankSum=0;QD=28.2;ReadPosRankSum=2.858;SOR=0.23;`
-- LoFreq: `DP=245;AF=0.020408;SB=0;DP4=113,127,2,3`
+### Phasing limitations
 
+The phasing implementation is applicable only to clonal mutations. It assumes all clonal mutations are in phase and 
+hence it merges those occurring in the same amino acid.
+In order to phase intrahost mutations we would need to implement a read-backed phasing approach such as in WhatsHap 
+or GATK's ReadBackedPhasing. Unfortunately these tools do not support the scenario of a haploid organism with an
+undefined number of subclones.
+For this reason, phasing is implemented with custom Python code at `bin/phasing.py`.
 
-## Intrahost mutations
+### Primers trimming
+
+With some library preparation protocols such as ARTIC it is recommended to trim the primers from the reads.
+We have observed that if primers are not trimmed spurious mutations are being called specially SNVs with lower frequencies and long deletions.
+Also the variant allele frequencies of clonal mutations are underestimated.
+
+The BED files containing the primers for each ARTIC version can be found at https://github.com/artic-network/artic-ncov2019/tree/master/primer_schemes/nCoV-2019.
+
+If the adequate BED file is provided to the CoVigator pipeline with `--primers` the primers will be trimmed with iVar. 
+This affects the output of every variant caller, not only iVar.
+
+### Reference data
+
+The default SARS-CoV-2 reference files correspond to Sars_cov_2.ASM985889v3 and were downloaded from Ensembl servers.
+No additional parameter needs to be provided to use the default SARS-CoV-2 reference genome.
+
+#### Using a custom reference genome
+
+These references can be customised to use a different SARS-CoV-2 reference or to analyse a different virus.
+Two files need to be provided:
+- Use a custom reference genome by providing the parameter `--reference your.fasta`.
+- Gene annotation file in GFFv3 format `--gff your.gff`. This is only required to run iVar
+
+Additionally, the FASTA needs bwa indexes, .fai index and a .dict index.
+These indexes can be generated with the following two commands:
+```
+bwa index reference.fasta
+samtools faidx reference.fasta
+gatk CreateSequenceDictionary --REFERENCE your.fasta
+```
+
+**NOTE**: beware that for Nextflow to find these indices the reference needs to be passed as an absolute path.
+
+The SARS-CoV-2 specific annotations will be skipped when using a custom genome.
+
+In order to have SnpEff functional annotations available you will also need to provide three parameters:
+- `--snpeff_organism`: organism to annotate with SnpEff (ie: as registered in SnpEff)
+- `--snpeff_data`: path to the SnpEff data folder
+- `--snpeff_config`: path to the SnpEff config file
+
+### Intrahost mutations
 
 Some mutations may be observed in a subset of the virus sample, this may arise through intrahost virus evolution or
-co-infection. These mutations observed at a frequency lower than 100 % can only be detected when analysing the raw 
-reads (ie: the FASTQs) as in the assembly (ie: the FASTA file) a single virus consensus sequence is represented.
+co-infection. Intrahost mutations can only be detected when analysing the raw reads (ie: the FASTQs) 
+as in the assembly (ie: the FASTA file) a single virus consensus sequence is represented. 
+BCFtools and GATK do not normally capture intrahost mutations; on the other hand LoFreq and iVar both capture
+mutations that deviate from a clonal-like VAF. 
+Nevertheless, mutations with lower variant allele frequency (VAF) are challenging to distinguish from sequencing and
+analytical errors.  
 
-These intrahost lower variant allele frequency (VAF) mutations are challenging to distinguish from sequencing and
-analytical errors. The variant caller best suited for this purpose is LoFreq. 
-Also, LoFreq provides among its technical annotations the VAF and depth of coverage of every mutation.
-- `INFO/DP` is the number of reads overlapping this position
-- `INFO/AF` is the VAF as reported by LoFreq (only avalable in LoFreq calls)
+Mutations are annotated on the `FILTER` column using the VAF into three categories: 
+- `LOW_FREQUENCY`: subset of intrahost mutations with lowest frequencies, potentially enriched with bad calls (VAF < 5 %).
+- `SUBCLONAL`: subset of intrahost mutations with higher frequencies (5 % <= VAF < 80 %).
+- `PASS` clonal mutations (VAF >= 80 %)
 
-The LoFreq variants are annotated on the `FILTER` column using the reported VAF into three categories: 
-- `LOW_FREQUENCY`
-- `SUBCLONAL`
-- `PASS` variants corresponding to clonal variants 
+Other low quality mutations are removed from the output.
 
-By default, variants with a VAF < 20 % are considered `LOW_FREQUENCY` and variants with a VAF >= 20 % and < 80 % are considered 
-`SUBCLONAL`. This thresholds can be changed with the parameters `--low_frequency_variant_threshold` and
+The VAF thresholds can be changed with the parameters `--low_frequency_variant_threshold` and
 `--subclonal_variant_threshold`.
 
-Thus all variants with a VAF lower than 0.8 could be considered as intrahost variants. Beware that the lower the VAF
-the higher the enrichment for false positive calls.
+
+## How to run
+
+### Requirements
+
+- Nextflow >= 20.07.1
+- Java >= 8
+- Conda >=4.9
+
+### Testing
+
+To run the workflow on a test assembly dataset run:
+```
+nextflow run tron-bioinformatics/covigator-ngs-pipeline -profile conda,test_fasta
+```
+
+Find the output in the folder `covigator_test_fasta`.
+
+To run the workflow on a test raw reads dataset run:
+```
+nextflow run tron-bioinformatics/covigator-ngs-pipeline -profile conda,test_fastq
+```
+
+Find the output in the folder `covigator_test_fastq`.
+
+The above commands are useful to create the conda environments before hand.
+
+**NOTE**: pangolin is the most time-consuming step of the whole pipeline. To make it faster, locate the conda 
+environment that Nextflow created with pangolin (eg: `find $YOUR_NEXTFOW_CONDA_ENVS_FOLDER -name pangolin`) and run
+`pangolin --decompress-model`.
+
+### Running
+
+For paired end reads:
+```
+nextflow run tron-bioinformatics/covigator-ngs-pipeline \
+[-r v0.9.3] \
+[-profile conda] \
+--fastq1 <FASTQ_FILE> \
+--fastq2 <FASTQ_FILE> \
+--name example_run \
+--output <OUTPUT_FOLDER> \
+[--reference <path_to_reference>/Sars_cov_2.ASM985889v3.fa] \
+[--gff <path_to_reference>/Sars_cov_2.ASM985889v3.gff3]
+```
+
+For single end reads:
+```
+nextflow run tron-bioinformatics/covigator-ngs-pipeline \
+[-r v0.9.3] \
+[-profile conda] \
+--fastq1 <FASTQ_FILE> \
+--name example_run \
+--output <OUTPUT_FOLDER> \
+[--reference <path_to_reference>/Sars_cov_2.ASM985889v3.fa] \
+[--gff <path_to_reference>/Sars_cov_2.ASM985889v3.gff3]
+```
+
+For assembly:
+```
+nextflow run tron-bioinformatics/covigator-ngs-pipeline \
+[-r v0.9.3] \
+[-profile conda] \
+--fasta <FASTA_FILE> \
+--name example_run \
+--output <OUTPUT_FOLDER> \
+[--reference <path_to_reference>/Sars_cov_2.ASM985889v3.fa] \
+[--gff <path_to_reference>/Sars_cov_2.ASM985889v3.gff3]
+```
+
+**NOTE**: We recommend using the provided `conda` profile (`-profile conda`), otherwise all dependencies will need to be installed manually and 
+made available on the path. In order to combine the `conda` profile with any other custom Nextflow configuration 
+(e.g.: a computational cluster queue like Slurm), you will need to use more than one profile. But beware that the 
+order matters, the profiles are applied from left to right. A typical situation would be to use the CoVigator conda 
+profile plus your default configuration, `-profile conda,standard`.
+
+For batch processing of reads use `--input_fastqs_list` and `--name`.
+```
+nextflow run tron-bioinformatics/covigator-ngs-pipeline [-profile conda] --input_fastqs_list <TSV_FILE> --library <paired|single> --output <OUTPUT_FOLDER> [--reference <path_to_reference>/Sars_cov_2.ASM985889v3.fa] [--gff <path_to_reference>/Sars_cov_2.ASM985889v3.gff3]
+```
+where the TSV file contains two or three columns tab-separated columns **without header**. Columns: sample name, path to FASTQ 1 and optionally path to FASTQ 2. 
+
+| Sample    | FASTQ 1                       | FASTQ 2 (optional column)     |
+|-----------|-------------------------------|-------------------------------|
+| sample1   | /path/to/sample1_fastq1.fastq | /path/to/sample1_fastq2.fastq |
+| sample2   | /path/to/sample2_fastq1.fastq | /path/to/sample2_fastq2.fastq |
+| ...       | ...                           | ...                           |
+
+
+For batch processing of assemblies use `--input_fastas_list`.
+```
+nextflow run tron-bioinformatics/covigator-ngs-pipeline [-profile conda] --input_fastas_list <TSV_FILE> --library <paired|single> --output <OUTPUT_FOLDER> [--reference <path_to_reference>/Sars_cov_2.ASM985889v3.fa] [--gff <path_to_reference>/Sars_cov_2.ASM985889v3.gff3]
+```
+where the TSV file contains two columns tab-separated columns **without header**. Columns: sample name and path to FASTA.
+
+| Sample    | FASTA                  | 
+|-----------|------------------------|
+| sample1   | /path/to/sample1.fasta |
+| sample2   | /path/to/sample2.fasta |
+| ...       | ...                    |
+
+
+### Getting help
+
+You can always contact us directly or create a GitHub issue, otherwise see all available options using `--help`:
+```
+$ nextflow run tron-bioinformatics/covigator-ngs-pipeline -profile conda --help
+
+Usage:
+    nextflow run tron-bioinformatics/covigator-ngs-pipeline -profile conda --help
+
+Input:
+    * --fastq1: the first input FASTQ file (not compatible with --fasta)
+    * --fasta: the FASTA file containing the assembly sequence (not compatible with --fastq1)
+    * --name: the sample name, output files will be named after this name
+    * --output: the folder where to publish output
+    * --input_fastqs_list: alternative to --name and --fastq1 for batch processing
+    * --library: required only when using --input_fastqs
+    * --input_fastas_list: alternative to --name and --fasta for batch processing
+
+Optional input only required to use a custom reference:
+    * --reference: the reference genome FASTA file, *.fai, *.dict and bwa indexes are required.
+    * --gff: the GFFv3 gene annotations file (required to run iVar and to phase mutations from all variant callers)    
+    * --snpeff_data: path to the SnpEff data folder, it will be useful to use the pipeline on other virus than SARS-CoV-2
+    * --snpeff_config: path to the SnpEff config file, it will be useful to use the pipeline on other virus than SARS-CoV-2
+    * --snpeff_organism: organism to annotate with SnpEff, it will be useful to use the pipeline on other virus than SARS-CoV-2
+
+Optional input:
+    * --fastq2: the second input FASTQ file
+    * --primers: a BED file containing the primers used during library preparation. If provided primers are trimmed from the reads.
+    * --min_base_quality: minimum base call quality to take a base into account for variant calling (default: 20)
+    * --min_mapping_quality: minimum mapping quality to take a read into account for variant calling (default: 20)
+    * --vafator_min_base_quality: minimum base call quality to take a base into account for VAF annotation (default: 0)
+    * --vafator_min_mapping_quality: minimum mapping quality to take a read into account for VAF annotation (default: 0)
+    * --low_frequency_variant_threshold: VAF threshold to mark a variant as low frequency (default: 0.2)
+    * --subclonal_variant_threshold: VAF superior threshold to mark a variant as subclonal (default: 0.8)
+    * --memory: the ammount of memory used by each job (default: 3g)
+    * --cpus: the number of CPUs used by each job (default: 1)
+    * --skip_lofreq: skips calling variants with LoFreq
+    * --skip_gatk: skips calling variants with GATK
+    * --skip_bcftools: skips calling variants with BCFTools
+    * --skip_ivar: skips calling variants with iVar
+    * --match_score: global alignment match score, only applicable for assemblies (default: 2)
+    * --mismatch_score: global alignment mismatch score, only applicable for assemblies (default: -1)
+    * --open_gap_score: global alignment open gap score, only applicable for assemblies (default: -3)
+    * --extend_gap_score: global alignment extend gap score, only applicable for assemblies (default: -0.1)
+    * --skip_sarscov2_annotations: skip some of the SARS-CoV-2 specific annotations (default: false)
+    * --keep_intermediate: keep intermediate files (ie: BAM files and intermediate VCF files)
+
+Output:
+    * Output a VCF file for each of BCFtools, GATK, LoFreq and iVar when FASTQ files are
+    provided or a single VCF obtained from a global alignment when a FASTA file is provided.
+    * A pangolin results file for each of the VCF files.
+    * Only when FASTQs are provided:
+      * FASTP statistics
+      * Depth and breadth of coverage analysis results
+      * Picard's deduplication metrics
+      
+```
+
+## Understanding the output
+
+Although the VCFs are normalized for both pipelines, the FASTQ pipeline runs four variant callers, while the FASTA
+pipeline runs a single variant caller. Also, there are several metrics in the FASTQ pipeline that are not present
+in the output of the FASTA pipeline. Here we will describe these outputs.
+
+### FASTQ pipeline output
+
+Find in the table below a description of each of the expected files and a link to a sample file for the FASTQ pipeline.
+The VCF files will be described in more detail later.
+
+| Name                            | Description                                                    | Sample file                                                                                                                                       |
+|---------------------------------|----------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------|
+| $NAME.fastp_stats.json          | Output metrics of the fastp trimming process in JSON format    | [ERR4145453.fastp_stats.json](_static/covigator_pipeline_sample_output_reads/ERR4145453.fastp_stats.json)                                         |
+| $NAME.fastp_stats.html          | Output metrics of the fastp trimming process in HTML format    | [ERR4145453.fastp_stats.html](_static/covigator_pipeline_sample_output_reads/ERR4145453.fastp_stats.html)                                         |
+| $NAME.deduplication_metrics.txt | Deduplication metrics                                          | [ERR4145453.deduplication_metrics.txt](_static/covigator_pipeline_sample_output_reads/ERR4145453.deduplication_metrics.txt)                       |
+| $NAME.coverage.tsv              | Coverage metrics (eg: mean depth, % horizontal coverage)       | [ERR4145453.coverage.tsv](_static/covigator_pipeline_sample_output_reads/ERR4145453.coverage.tsv)                                                 |
+| $NAME.depth.tsv                 | Depth of coverage per position                                 | [ERR4145453.depth.tsv](_static/covigator_pipeline_sample_output_reads/ERR4145453.depth.tsv)                                                       |
+| $NAME.bcftools.vcf.gz           | Bgzipped, tabix-indexed and annotated output VCF from BCFtools | [ERR4145453.bcftools.normalized.annotated.vcf.gz](_static/covigator_pipeline_sample_output_reads/ERR4145453.bcftools.normalized.annotated.vcf.gz) |
+| $NAME.gatk.vcf.gz               | Bgzipped, tabix-indexed and annotated output VCF from GATK     | [ERR4145453.gatk.normalized.annotated.vcf.gz](_static/covigator_pipeline_sample_output_reads/ERR4145453.gatk.normalized.annotated.vcf.gz)         |
+| $NAME.lofreq.vcf.gz             | Bgzipped, tabix-indexed and annotated output VCF from LoFreq   | [ERR4145453.lofreq.normalized.annotated.vcf.gz](_static/covigator_pipeline_sample_output_reads/ERR4145453.lofreq.normalized.annotated.vcf.gz)     |
+| $NAME.ivar.vcf.gz               | Bgzipped, tabix-indexed and annotated output VCF from LoFreq   | [ERR4145453.ivar.tsv](_static/covigator_pipeline_sample_output_reads/ERR4145453.ivar.tsv)                                                         |
+| $NAME.lofreq.pangolin.csv       | Pangolin CSV output file derived from LoFreq mutations         | [ERR4145453.lofreq.pangolin.csv](_static/covigator_pipeline_sample_output_reads/ERR4145453.lofreq.pangolin.csv)                                              |
+
+
+### FASTA pipeline output
+
+The FASTA pipeline returns a single VCF file. The VCF files will be described in more detail later.
+
+| Name                        | Description                                                  | Sample file                                                                                          |
+|-----------------------------|--------------------------------------------------------------|------------------------------------------------------------------------------------------------------|
+| $NAME.assembly.vcf.gz | Bgzipped, tabix-indexed and annotated output VCF | [ERR4145453.assembly.normalized.annotated.vcf.gz](_static/covigator_pipeline_sample_output_assembly/hCoV-19_NTXX.assembly.normalized.annotated.vcf.gz) |
+
 
 ## Annotations resources
 
@@ -374,16 +407,14 @@ Gene annotations including Pfam domains downloaded from Ensembl on 25th of Febru
 
 ## Future work
 
-- Normalization of iVar results into a standard annotated VCF file
-- Validation of intrahost variant calls
-- Pipeline for Oxford Nanopore technology
-- Homogeneisation of the technical annotations between variant callers
-- Annotation of variants with known lineages + pangolin integration
+- Primer trimming on an arbitrary sequencing library.
+- Validation of intrahost variant calls.
+- Pipeline for Oxford Nanopore technology.
 - Variant calls from assemblies contain an abnormally high number of deletions of size greater than 3 bp. This
-is a technical artifact that would need to be avoided
+is a technical artifact that would need to be avoided.
 
 
-## References
+## Bibliography
 
 - Di Tommaso, P., Chatzou, M., Floden, E. W., Barja, P. P., Palumbo, E., & Notredame, C. (2017). Nextflow enables reproducible computational workflows. Nature Biotechnology, 35(4), 316–319. https://doi.org/10.1038/nbt.3820
 - Li H. and Durbin R. (2009) Fast and accurate short read alignment with Burrows-Wheeler Transform. Bioinformatics, 25:1754-60. [PMID: 19451168]

@@ -96,12 +96,24 @@ CoVigator is configured through environment variables.
 - `COVIGATOR_MAX_DELETIONS` : all samples with a number of deletions above this number are excluded
 - `COVIGATOR_REF_FASTA` : the reference fasta file (a default SARS-CoV-2 reference genome is provided)
 - `COVIGATOR_DASK_PORT` : the port where the dask dashboard will be available
+- `COVIGATOR_LOW_COVERAGE_THR` : VAF threshold for low frequency mutations (default: 0.05)
+- `COVIGATOR_SUBCLONAL_THR` : VAF threshold for subclonal mutations (default: 0.8)
+- `COVIGATOR_WORKFLOW_CPUS` : number of CPUs per sample (default: 1)
+- `COVIGATOR_WORKFLOW_MEMORY` : memory per sample (default: 3g)
+
+### Sample exclusion
+
+- `COVIGATOR_MEAN_MQ_THR` : samples with a mean MQ below this value will be excluded (default: 10)
+- `COVIGATOR_MEAN_BQ_THR` :  samples with a mean BQ below this value will be excluded (default: 10)
+- `COVIGATOR_HORIZONTAL_COVERAGE_THR` : samples with an horizontal coverage below this value will be excluded (default: 20 %)
 
 ## How to run
 
 ### Accessor
 
-For ENA:
+
+#### ENA
+
 `covigator-ena-accessor --tax-id 2697049 --host-tax-id 9606`
 
 - The organism taxonomic identifier (eg: for SARS-CoV-2 the taxonomic identifier is 2697049)
@@ -109,8 +121,13 @@ For ENA:
 
 The taxonomic identifiers for the different organisms is available through EMBL-EBI as described here https://ena-docs.readthedocs.io/en/latest/retrieval/programmatic-access/taxon-api.html or through NCBI here https://www.ncbi.nlm.nih.gov/taxonomy.
 
+Only for ENA an additional step to download samples is required. This has been removed from the processor as 
+distributed downloading does not scale up as well as processing does.
 
-For GISAID:
+`covigator-download`
+
+#### GISAID
+
 `covigator-gisaid-accessor --input-fasta gisaid_dna.fasta --input-metadata gisaid.tsv`
 
 The input files for GISAID need to be downloaded manually from GISAID site after accepting their license.
@@ -124,6 +141,7 @@ through its life cycle.
 
 The happy path of a job is the following:
 - `PENDING`: newly created job by the accessor
+- `DOWNLOADED`: in the case of ENA samples there is an intermediate state for the download
 - `QUEUED`: the job has already been read by the processor and the subsequent actions are scheduled
 - `FINISHED`: final state
   
