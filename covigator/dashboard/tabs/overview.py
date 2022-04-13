@@ -50,19 +50,46 @@ def get_tab_overview():
                        temporal spread of SARS-CoV-2.
                        """),
                             html.Br(),
-                            html.P([
-                                dbc.Button(
-                                    "Explore data derived from GISAID",
-                                    color="warning", size='lg',
-                                    style={"margin-left": "20px", "margin-right": "20px", "font-size": 20},
-                                    href="/gisaid"),
-                                "or",
-                                dbc.Button(
-                                    "Explore data derived from ENA",
-                                    color="warning", size='lg',
-                                    style={"margin-left": "20px", "margin-right": "20px", "font-size": 20},
-                                    href="/ena")
-                                ]),
+                            dbc.CardBody(
+                                dbc.Row([
+                                    dbc.Col(
+                                        dbc.Card(
+                                            [
+                                                dbc.CardImg(src="/assets/gisaid.png", top=True,
+                                                            style={"width": "18rem", "margin-left": "20px",
+                                                                   "margin-top": "10px"}, ),
+                                                dbc.CardBody(
+                                                    [
+                                                        dbc.Button(
+                                                            "Explore data derived from GISAID", color="warning", href="/gisaid",
+                                                            style={"margin-left": "20px", "margin-right": "20px",
+                                                                   "font-size": 20}, ),
+                                                    ]
+                                                ),
+                                            ],
+                                            outline=False,
+                                            style={"width": "40rem", "height": "15rem"},
+                                        )
+                                    ),
+                                dbc.Col(
+                                    dbc.Card(
+                                        [
+                                            dbc.CardImg(src="/assets/ENA_logo_2021.png", top=True,
+                                                        style={"width": "23rem", "margin-left": "20px",
+                                                               "margin-top": "10px"}, ),
+                                            dbc.CardBody(
+                                                [
+                                                    dbc.Button(
+                                                        "Explore data derived from ENA", color="warning", href="/ena",
+                                                        style={"margin-left": "20px", "margin-right": "20px",
+                                                               "font-size": 20}, ),
+                                                ]
+                                            ),
+                                        ],
+                                        outline=False,
+                                        style={"width": "40rem", "height": "15rem"},
+                                    )
+                                )])),
                             html.Br(),
                             html.Br(),
                             html.Br(),

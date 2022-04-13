@@ -261,7 +261,7 @@ def set_callbacks(app, session: Session, content_folder):
     def switch_logo(url):
         page = _get_page(url)
         if page == MAIN_PAGE or page == ACKNOWLEDGEMENTS_PAGE:
-            return html.A(html.Img(src="/assets/CoVigator_logo_GISAID_ENA.png", height="80px"), href="/")
+            return html.A(html.Img(src="/assets/CoVigator_logo_txt_reg_no_bg.png", height="80px"), href="/")
         elif page == GISAID_PAGE:
             return html.A(html.Img(src="/assets/CoVigator_logo_GISAID.png", height="80px"), href="/")
         elif page == ENA_PAGE:
