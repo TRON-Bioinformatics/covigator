@@ -67,6 +67,7 @@ psql $pg_uri -c "\\copy sample_ena$version($sample_ena_fields) from program 'gzi
 load_table "variant"
 load_table "variant_cooccurrence"
 load_table "variant_observation"
+load_table "subclonal_variant"
 load_table "subclonal_variant_observation"
 load_table "low_frequency_variant_observation"
 
