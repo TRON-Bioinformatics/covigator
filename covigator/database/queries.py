@@ -1,4 +1,3 @@
-import functools
 from datetime import date, datetime
 from typing import List, Union
 import pandas as pd
@@ -285,35 +284,34 @@ class Queries:
             and_(klass.status == JobStatus.FINISHED.name, klass.collection_date.isnot(None))).distinct().all()]
         return sorted(list(set(dates)))
 
-    @functools.lru_cache()
     def get_gene(self, gene_name: str) -> Gene:
         return self.session.query(Gene).filter(Gene.name == gene_name).first()
 
-    @functools.lru_cache()
+    
     def get_genes(self) -> List[Gene]:
         return self.session.query(Gene).order_by(Gene.start).all()
 
-    @functools.lru_cache()
+    
     def get_genes_df(self) -> pd.DataFrame:
         return pd.read_sql(self.session.query(Gene).order_by(Gene.start).statement, self.session.bind)
 
-    @functools.lru_cache()
+    
     def get_domains_df(self) -> pd.DataFrame:
         return pd.read_sql(self.session.query(Domain).order_by(Domain.start).statement, self.session.bind)
 
-    @functools.lru_cache()
+    
     def get_domain(self, domain_name: str) -> Domain:
         return self.session.query(Domain).filter(Domain.name == domain_name).first()
 
-    @functools.lru_cache()
+    
     def get_domains(self) -> List[Domain]:
         return self.session.query(Domain).order_by(Domain.gene_name, Domain.start).all()
 
-    @functools.lru_cache()
+    
     def get_domains_by_gene(self, gene_name: str) -> List[Domain]:
         return self.session.query(Domain).filter(Domain.gene_name == gene_name).order_by(Domain.start).all()
 
-    @functools.lru_cache()
+    
     def get_non_synonymous_variants_by_region(self, start, end, source) -> pd.DataFrame:
 
         klass = self.get_variant_observation_klass(source)
@@ -336,8 +334,7 @@ class Queries:
             .filter(and_(VariantCooccurrence.variant_id_one == variant_one.variant_id,
                          VariantCooccurrence.variant_id_two == variant_two.variant_id)) \
             .first()
-
-    @functools.lru_cache()
+    
     def count_samples(self, source: str, cache=True) -> int:
         self._assert_data_source(source)
         if cache:
@@ -361,7 +358,6 @@ class Queries:
             count = self.session.query(klass).filter(klass.status == JobStatus.FINISHED.name).count()
         return count
 
-    @functools.lru_cache()
     def count_countries(self, source: str = None, cache=True):
         if cache:
             query = self.session.query(PrecomputedTableCounts.count).filter(and_(
@@ -377,7 +373,6 @@ class Queries:
             count = len(self.get_countries(source=source))
         return count
 
-    @functools.lru_cache()
     def count_variants(self, source: str, cache=True):
         klass = self.get_variant_klass(source=source)
         if cache:
@@ -391,7 +386,6 @@ class Queries:
             count = self.session.query(klass).count()
         return count
 
-    @functools.lru_cache()
     def count_variant_observations(self, source: str = None, cache=True):
         klass = self.get_variant_observation_klass(source)
         if cache:
@@ -404,7 +398,6 @@ class Queries:
             count = self.session.query(klass).count()
         return count
 
-    @functools.lru_cache()
     def count_subclonal_variant_observations(self, cache=True):
         if cache:
             query = self.session.query(PrecomputedTableCounts.count) \
@@ -415,7 +408,6 @@ class Queries:
             count = self.session.query(SubclonalVariantObservation).count()
         return count
 
-    @functools.lru_cache()
     def count_unique_subclonal_variant(self, cache=True):
         if cache:
             query = self.session.query(PrecomputedTableCounts.count) \
@@ -448,7 +440,6 @@ class Queries:
             count = int(pd.read_sql_query(sql_query, self.session.bind)["count"][0])
         return count
 
-    @functools.lru_cache()
     def get_date_of_first_sample(self, source: DataSource = DataSource.ENA) -> date:
         """
         Returns the date of the earliest ENA sample loaded in the database
@@ -458,7 +449,6 @@ class Queries:
             and_(klass.status == JobStatus.FINISHED.name, klass.collection_date.isnot(None))).order_by(asc(klass.collection_date)).first()
         return result[0] if result is not None else result
 
-    @functools.lru_cache()
     def get_date_of_most_recent_sample(self, source: DataSource = DataSource.ENA) -> date:
         """
         Returns the date of the latest ENA sample loaded in the database
@@ -501,7 +491,6 @@ class Queries:
         counts['month'] = pd.to_datetime(counts['month'], utc=True)
         return counts
 
-    @functools.lru_cache()
     def get_sparse_cooccurrence_matrix(self, gene_name, domain, min_cooccurrence=5) -> pd.DataFrame:
         """
         Returns the sparse cooccurrence matrix of all non synonymous variants in a gene or domain with at least

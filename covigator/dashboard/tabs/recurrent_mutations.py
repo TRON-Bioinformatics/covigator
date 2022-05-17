@@ -1,4 +1,3 @@
-import functools
 from datetime import timedelta, datetime
 import dash_core_components as dcc
 import dash_bootstrap_components as dbc
@@ -32,8 +31,6 @@ ID_DROPDOWN_DATA_SOURCE = "dropdown-data-source-variants-tab"
 ID_APPLY_BUTTOM = 'rm-apply-buttom'
 
 
-
-@functools.lru_cache()
 def get_tab_variants(queries: Queries, data_source: DataSource):
 
     return dbc.CardBody(

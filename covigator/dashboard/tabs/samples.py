@@ -1,5 +1,3 @@
-import functools
-
 import dash_core_components as dcc
 import dash_bootstrap_components as dbc
 import dash_html_components as html
@@ -21,7 +19,6 @@ ID_ACCUMULATED_SAMPLES_GRAPH = 'accumulated-samples-per-country'
 ID_DN_DS_GRAPH = 'dn_ds_graph'
 
 
-@functools.lru_cache()
 def get_tab_samples(queries: Queries, data_source: DataSource):
     return dbc.CardBody(
             children=[

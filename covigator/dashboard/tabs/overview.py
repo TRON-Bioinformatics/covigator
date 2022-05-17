@@ -1,9 +1,7 @@
-import functools
 import dash_bootstrap_components as dbc
 import dash_html_components as html
 
 
-@functools.lru_cache()
 def get_tab_overview():
 
     return dbc.CardBody([

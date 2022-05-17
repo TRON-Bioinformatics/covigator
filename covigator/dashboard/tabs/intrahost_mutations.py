@@ -1,4 +1,3 @@
-import functools
 import dash_core_components as dcc
 import dash_bootstrap_components as dbc
 import dash_html_components as html
@@ -27,7 +26,6 @@ ID_TOP_OCCURRING_SUBCLONAL_VARIANTS_TABLE = 'top-occurring-subclonal-variants-ta
 ID_APPLY_BUTTOM = 'im-apply-buttom'
 
 
-@functools.lru_cache()
 def get_tab_subclonal_variants(queries: Queries):
 
     return dbc.CardBody(
