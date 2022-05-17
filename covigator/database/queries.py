@@ -283,7 +283,7 @@ class Queries:
         klass = self.get_sample_klass(source=data_source)
         dates = [d.strftime(pattern) for d, in self.session.query(klass.collection_date).filter(
             and_(klass.status == JobStatus.FINISHED.name, klass.collection_date.isnot(None))).distinct().all()]
-        return sorted(dates)
+        return sorted(list(set(dates)))
 
     @functools.lru_cache()
     def get_gene(self, gene_name: str) -> Gene:

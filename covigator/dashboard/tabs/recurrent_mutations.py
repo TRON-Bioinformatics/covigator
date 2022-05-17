@@ -225,9 +225,9 @@ def set_callbacks_variants_tab(app, session: Session):
         today = datetime.now()
         today_formatted = today.strftime(MONTH_PATTERN)
         months = []
-        if data_source == DataSource.ENA:
+        if data_source == DataSource.ENA.name:
             months = [m for m in months_from_db_ena if m >= start_date]
-        elif data_source == DataSource.GISAID:
+        elif data_source == DataSource.GISAID.name:
             months = [m for m in months_from_db_gisaid if m >= start_date]
         return dcc.Dropdown(
             id=ID_DROPDOWN_DATE_RANGE_END,
