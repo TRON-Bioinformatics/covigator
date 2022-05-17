@@ -1,4 +1,3 @@
-import functools
 from datetime import timedelta, datetime
 import dash_core_components as dcc
 import dash_bootstrap_components as dbc
@@ -32,8 +31,6 @@ ID_DROPDOWN_DATA_SOURCE = "dropdown-data-source-variants-tab"
 ID_APPLY_BUTTOM = 'rm-apply-buttom'
 
 
-
-@functools.lru_cache()
 def get_tab_variants(queries: Queries, data_source: DataSource):
 
     return dbc.CardBody(
@@ -225,9 +222,9 @@ def set_callbacks_variants_tab(app, session: Session):
         today = datetime.now()
         today_formatted = today.strftime(MONTH_PATTERN)
         months = []
-        if data_source == DataSource.ENA:
+        if data_source == DataSource.ENA.name:
             months = [m for m in months_from_db_ena if m >= start_date]
-        elif data_source == DataSource.GISAID:
+        elif data_source == DataSource.GISAID.name:
             months = [m for m in months_from_db_gisaid if m >= start_date]
         return dcc.Dropdown(
             id=ID_DROPDOWN_DATE_RANGE_END,

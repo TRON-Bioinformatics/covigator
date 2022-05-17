@@ -1,5 +1,3 @@
-import functools
-
 import pandas as pd
 import numpy as np
 import dash_core_components as dcc
@@ -18,7 +16,6 @@ class SubclonalVariantsQueries:
     def __init__(self, session: Session):
         self.session = session
 
-    @functools.lru_cache()
     def get_top_occurring_subclonal_variants(self, top, gene_name, domain, min_vaf, order_by):
 
         if order_by == "score":
@@ -166,7 +163,6 @@ class SubclonalVariantsQueries:
 
 class IntrahostMutationsFigures(Figures):
 
-    @functools.lru_cache()
     def get_top_occurring_subclonal_variants_plot(self, top, gene_name, domain, min_vaf, order_by):
 
         logger.debug("Getting data on top occurring intrahost mutations...")

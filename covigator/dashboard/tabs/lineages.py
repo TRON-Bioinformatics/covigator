@@ -1,5 +1,3 @@
-import functools
-
 import dash_core_components as dcc
 import dash_bootstrap_components as dbc
 import dash_html_components as html
@@ -20,7 +18,6 @@ ID_LINEAGES_GRAPH = 'lineages-graph'
 ID_LINEAGES_TABLE = 'lineages-table'
 
 
-@functools.lru_cache()
 def get_tab_lineages(queries: Queries, data_source: DataSource):
     return dbc.CardBody(
             children=[
