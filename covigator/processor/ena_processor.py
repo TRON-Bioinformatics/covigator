@@ -173,15 +173,10 @@ class EnaProcessor(AbstractProcessor):
                 sample.mean_mapping_quality, sample.mean_base_quality))
         if sample.coverage < config.horizontal_coverage_thr:
             raise CovigatorExcludedSampleNarrowCoverage("Horizontal coverage {} %".format(sample.coverage))
-        try:
+        if not config.skip_vcf_loading:
             VcfLoader().load(
                 vcf_file=sample.lofreq_vcf_path, run_accession=sample.run_accession, source=DataSource.ENA, session=queries.session)
             sample.loaded_at = datetime.now()
-        except Exception as e:
-            if not config.skip_error_loading:
-                raise e
-            # else the error is skipped
-
         return sample
 
     @staticmethod

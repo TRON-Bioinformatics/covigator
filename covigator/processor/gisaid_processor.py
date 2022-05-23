@@ -58,12 +58,8 @@ class GisaidProcessor(AbstractProcessor):
 
     @staticmethod
     def load(sample: SampleGisaid, queries: Queries, config: Configuration) -> SampleGisaid:
-        try:
+        if not config.skip_vcf_loading:
             VcfLoader().load(
                 vcf_file=sample.vcf_path, run_accession=sample.run_accession, source=DataSource.GISAID, session=queries.session)
             sample.loaded_at = datetime.now()
-        except Exception as e:
-            if not config.skip_error_loading:
-                raise e
-            # else the error is skipped
         return sample
