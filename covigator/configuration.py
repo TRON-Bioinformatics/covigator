@@ -40,6 +40,7 @@ class Configuration:
     ENV_COVIGATOR_NEXTFLOW = "COVIGATOR_NEXTFLOW"
     ENV_COVIGATOR_WORKFLOW = "COVIGATOR_WORKFLOW"
     ENV_COVIGATOR_FORCE_PIPELINE = "COVIGATOR_FORCE_PIPELINE"
+    ENV_COVIGATOR_SKIP_ERROR_LOADING = "COVIGATOR_SKIP_ERROR_LOADING"
     ENV_COVIGATOR_WORKFLOW_CPUS = "COVIGATOR_WORKFLOW_CPUS"
     ENV_COVIGATOR_WORKFLOW_MEMORY = "COVIGATOR_WORKFLOW_MEMORY"
     ENV_COVIGATOR_BATCH_SIZE = "COVIGATOR_BATCH_SIZE"
@@ -74,6 +75,8 @@ class Configuration:
         self.db_max_overflow = int(os.getenv(self.ENV_COVIGATOR_DB_MAX_OVERFLOW, 10))
         self.db_table_version = os.environ.get(self.ENV_COVIGATOR_TABLE_VERSION, "_test")
         self.force_pipeline = os.environ.get(self.ENV_COVIGATOR_FORCE_PIPELINE, False)
+        # this is useful for reloading metadata into the DB
+        self.skip_error_loading = os.environ.get(self.ENV_COVIGATOR_SKIP_ERROR_LOADING, True)
 
         # dashboard
         self.dash_host = os.getenv(self.ENV_COVIGATOR_DASHBOARD_HOST, "0.0.0.0")
