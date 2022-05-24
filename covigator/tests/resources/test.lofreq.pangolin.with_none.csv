@@ -1,0 +1,2 @@
+taxon,lineage,conflict,ambiguity_score,scorpio_call,scorpio_support,scorpio_conflict,version,pangolin_version,pangoLEARN_version,pango_version,status,note
+MN908947.3_dna:primary_assembly_primary_assembly:ASM985889v3:MN908947.3:1:29903:1_REF,None,0.0,1.0,,,,PLEARN-v1.2.123,3.1.19,2022-01-20,v1.2.123,passed_qc,
