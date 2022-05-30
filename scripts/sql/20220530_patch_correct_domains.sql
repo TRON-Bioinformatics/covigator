@@ -1,4 +1,3 @@
-update variant_observation_v16 set pfam_name=pfam where pfam_name=interpro;
 update variant_observation_v16 set pfam_name='bCoV_NSP1' where pfam_name='NSP1_bCoV';
 update variant_observation_v16 set pfam_name='bCoV_NSP1' where pfam_name='NSP1_bCoV';
 update variant_observation_v16 set pfam_name='CoV_NSP2_N' where pfam_name='CoV_NSP2_N';
@@ -55,7 +54,7 @@ update variant_observation_v16 set pfam_name='bCoV_NS7A' where pfam_name='NS7A_C
 update variant_observation_v16 set pfam_name='bCoV_NS7B' where pfam_name='NS7B_SARS-like';
 update variant_observation_v16 set pfam_name='bCoV_NS8' where pfam_name='NS8_bCoV';
 update variant_observation_v16 set pfam_name='CoV_nucleocap' where pfam_name='Nucleocap_CoV';
-update gisaid_variant_observation_v16 set pfam_name=pfam where pfam_name=interpro;
+
 update gisaid_variant_observation_v16 set pfam_name='bCoV_NSP1' where pfam_name='NSP1_bCoV';
 update gisaid_variant_observation_v16 set pfam_name='bCoV_NSP1' where pfam_name='NSP1_bCoV';
 update gisaid_variant_observation_v16 set pfam_name='CoV_NSP2_N' where pfam_name='CoV_NSP2_N';
@@ -112,7 +111,7 @@ update gisaid_variant_observation_v16 set pfam_name='bCoV_NS7A' where pfam_name=
 update gisaid_variant_observation_v16 set pfam_name='bCoV_NS7B' where pfam_name='NS7B_SARS-like';
 update gisaid_variant_observation_v16 set pfam_name='bCoV_NS8' where pfam_name='NS8_bCoV';
 update gisaid_variant_observation_v16 set pfam_name='CoV_nucleocap' where pfam_name='Nucleocap_CoV';
-update variant_v16 set pfam_name=pfam where pfam_name=interpro;
+
 update variant_v16 set pfam_name='bCoV_NSP1' where pfam_name='NSP1_bCoV';
 update variant_v16 set pfam_name='bCoV_NSP1' where pfam_name='NSP1_bCoV';
 update variant_v16 set pfam_name='CoV_NSP2_N' where pfam_name='CoV_NSP2_N';
@@ -169,7 +168,7 @@ update variant_v16 set pfam_name='bCoV_NS7A' where pfam_name='NS7A_CoV';
 update variant_v16 set pfam_name='bCoV_NS7B' where pfam_name='NS7B_SARS-like';
 update variant_v16 set pfam_name='bCoV_NS8' where pfam_name='NS8_bCoV';
 update variant_v16 set pfam_name='CoV_nucleocap' where pfam_name='Nucleocap_CoV';
-update gisaid_variant_v16 set pfam_name=pfam where pfam_name=interpro;
+
 update gisaid_variant_v16 set pfam_name='bCoV_NSP1' where pfam_name='NSP1_bCoV';
 update gisaid_variant_v16 set pfam_name='bCoV_NSP1' where pfam_name='NSP1_bCoV';
 update gisaid_variant_v16 set pfam_name='CoV_NSP2_N' where pfam_name='CoV_NSP2_N';
