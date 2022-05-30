@@ -199,6 +199,7 @@ class AbstractProcessor:
 
             # fill NA values on a per column basis...
             data.lineage.fillna(value="", inplace=True)
+            data.lineage = data.lineage.transform(lambda x: "" if x == 'None' else x)   # replace "None" values
             data.scorpio_call.fillna(value="", inplace=True)
             data.version.fillna(value="", inplace=True)
             data.pangolin_version.fillna(value="", inplace=True)

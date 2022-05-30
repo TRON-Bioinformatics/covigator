@@ -132,6 +132,15 @@ class ProcessorTests(AbstractTest):
         self.session.add(sample)
         self.session.commit()
 
+    def test_load_pangolin_with_none(self):
+        pangolin_path = pkg_resources.resource_filename(covigator.tests.__name__, "resources/test.lofreq.pangolin.with_none.csv")
+        sample = SampleEna(run_accession="TEST", fastq_ftp="", fastq_md5="", num_fastqs=1)
+        EnaProcessor.load_pangolin(sample, path=pangolin_path)
+        self.assertEqual(sample.pangolin_lineage, "")
+
+        self.session.add(sample)
+        self.session.commit()
+
     def test_load_pangolin_from_gisaid(self):
         pangolin_path = pkg_resources.resource_filename(covigator.tests.__name__, "resources/test.lofreq.pangolin.csv")
         sample = SampleGisaid(run_accession="TEST")
