@@ -92,7 +92,12 @@ class RecurrentMutationsFigures(Figures):
 
     def get_top_occurring_variants_plot(self, top, gene_name, domain, date_range_start, date_range_end, metric, source):
         data = self.queries.get_top_occurring_variants_precomputed(top, gene_name, domain, metric, source)
-        fig = dcc.Markdown("""**No mutations for the current selection**""")
+
+        fig = [
+            dash_table.DataTable(id="top-occurring-variants-table"),
+            dcc.Markdown("""**No mutations for the current selection**""")
+        ]
+
         if data is not None and data.shape[0] > 0:
             # removes the columns from the months out of the range
             month_columns = [c for c in data.columns if MONTH_PATTERN.match(c)]
@@ -107,37 +112,38 @@ class RecurrentMutationsFigures(Figures):
             month_columns = [{'name': ["", i], 'id': i} for i in data.columns if i.startswith("20")]
             month_columns[0]['name'][0] = 'Monthly counts' if metric == "count" else 'Monthly frequencies'
 
-            fig = dash_table.DataTable(
-                id="top-occurring-variants-table",
-                data=data.to_dict('records'),
-                sort_action='native',
-                columns=[
-                            {"name": ["Variant", "Gene"], "id": "gene_name"},
-                            {"name": ["", "DNA mutation"], "id": "dna_mutation"},
-                            {"name": ["", "Protein mutation"], "id": "hgvs_p"},
-                            {"name": ["", "Effect"], "id": "annotation"},
-                            {"name": ["", "Frequency"], "id": "frequency"},
-                            {"name": ["", "Count"], "id": "total"},
-                        ] + month_columns,
-                style_data_conditional=STYLES_STRIPPED + styles_counts + styles_frequency + styles_total_count,
-                style_table={'overflowX': 'auto'},
-                style_as_list_view=True,
-                style_header=STYLE_HEADER,
-                style_cell=STYLE_CELL,
-                sort_by=[{"column_id": "frequency", "direction": "desc"}],
-                row_selectable='multi'
-            )
+            fig = [
+                dash_table.DataTable(
+                    # this cannot be imported from the tab definition due to a circular import...
+                    id="top-occurring-variants-table",
+                    data=data.to_dict('records'),
+                    sort_action='native',
+                    columns=[
+                                {"name": ["Variant", "Gene"], "id": "gene_name"},
+                                {"name": ["", "DNA mutation"], "id": "dna_mutation"},
+                                {"name": ["", "Protein mutation"], "id": "hgvs_p"},
+                                {"name": ["", "Effect"], "id": "annotation"},
+                                {"name": ["", "Frequency"], "id": "frequency"},
+                                {"name": ["", "Count"], "id": "total"},
+                            ] + month_columns,
+                    style_data_conditional=STYLES_STRIPPED + styles_counts + styles_frequency + styles_total_count,
+                    style_table={'overflowX': 'auto'},
+                    style_as_list_view=True,
+                    style_header=STYLE_HEADER,
+                    style_cell=STYLE_CELL,
+                    sort_by=[{"column_id": "frequency", "direction": "desc"}],
+                    row_selectable='multi'
+                ),
+                dcc.Markdown("""
+                    **Top occurring mutations table** 
+                    *table shows the {} mutations{} with the highest frequency across all samples.*
+                    *The counts and frequencies per month are only shown between {} and {}.*
+                    *Selections in this table will be highlighted in the genome view and in the co-occurrence matrix.*
+                    """.format(top, " in gene {}".format(gene_name) if gene_name else "",
+                               date_range_start, date_range_end))
+            ]
 
-        return [
-            fig,
-            dcc.Markdown("""
-                            **Top occurring mutations table** 
-                            *table shows the {} mutations{} with the highest frequency across all samples.*
-                            *The counts and frequencies per month are only shown between {} and {}.*
-                            *Selections in this table will be highlighted in the genome view and in the co-occurrence matrix.*
-                            """.format(top, " in gene {}".format(gene_name) if gene_name else "",
-                                       date_range_start, date_range_end))
-        ]
+        return fig
 
     def discrete_background_color_bins(self, df, n_bins=5, columns='all', colors='Blues'):
         bounds = [i * (1.0 / n_bins) for i in range(n_bins + 1)]
@@ -649,27 +655,28 @@ class RecurrentMutationsFigures(Figures):
         data = self._get_mds(sparse_matrix=sparse_matrix, min_samples=min_samples)
 
         tables = []
-        for c in data.cluster.unique():
-            tables.append(dash_table.DataTable(
-                id="cluster{}-variants-table".format(c),
-                data=data[data.cluster == c].to_dict('records'),
-                columns=[
-                    {"name": [
-                        "Cluster {} (mean Jaccard={})".format(c, data[data.cluster == c].cluster_jaccard_mean.iloc[0]),
-                        "DNA mutation"], "id": "variant_id"},
-                    {"name": ["", "Protein mutation"], "id": "hgvs_p"},
-                ],
-                fixed_columns={'headers': True, 'data': 1},
-                style_table={'overflowX': 'auto'},
-                style_cell={'minWidth': '50px', 'width': '50px', 'maxWidth': '50px'},
-                style_as_list_view=True,
-                style_header={
-                    'backgroundColor': 'rgb(230, 230, 230)',
-                    'fontWeight': 'bold'
-                },
-                sort_by=[{"column_id": "variant_id", "direction": "asc"}],
-            ))
-            tables.append(html.Br())
+        if data is not None:
+            for c in data.cluster.unique():
+                tables.append(dash_table.DataTable(
+                    id="cluster{}-variants-table".format(c),
+                    data=data[data.cluster == c].to_dict('records'),
+                    columns=[
+                        {"name": [
+                            "Cluster {} (mean Jaccard={})".format(c, data[data.cluster == c].cluster_jaccard_mean.iloc[0]),
+                            "DNA mutation"], "id": "variant_id"},
+                        {"name": ["", "Protein mutation"], "id": "hgvs_p"},
+                    ],
+                    fixed_columns={'headers': True, 'data': 1},
+                    style_table={'overflowX': 'auto'},
+                    style_cell={'minWidth': '50px', 'width': '50px', 'maxWidth': '50px'},
+                    style_as_list_view=True,
+                    style_header={
+                        'backgroundColor': 'rgb(230, 230, 230)',
+                        'fontWeight': 'bold'
+                    },
+                    sort_by=[{"column_id": "variant_id", "direction": "asc"}],
+                ))
+                tables.append(html.Br())
 
         return html.Div(children=[
             html.Div(children=tables),
@@ -689,76 +696,80 @@ class RecurrentMutationsFigures(Figures):
 
     def _get_mds(self, sparse_matrix, min_samples) -> pd.DataFrame:
 
-        diagonal = sparse_matrix.loc[sparse_matrix.variant_id_one == sparse_matrix.variant_id_two,
-                                     ["variant_id_one", "variant_id_two", "count"]]
-        sparse_matrix_with_diagonal = pd.merge(
-            left=sparse_matrix, right=diagonal, on="variant_id_one", how="left", suffixes=("", "_one"))
-        sparse_matrix_with_diagonal = pd.merge(
-            left=sparse_matrix_with_diagonal, right=diagonal, on="variant_id_two", how="left", suffixes=("", "_two"))
+        data = None
 
-        # calculate Jaccard index
-        sparse_matrix_with_diagonal["count_union"] = sparse_matrix_with_diagonal["count_one"] + \
-                                                     sparse_matrix_with_diagonal["count_two"] - \
-                                                     sparse_matrix_with_diagonal["count"]
-        sparse_matrix_with_diagonal["jaccard_similarity"] = sparse_matrix_with_diagonal["count"] / \
-                                                            sparse_matrix_with_diagonal.count_union
-        sparse_matrix_with_diagonal["jaccard_dissimilarity"] = 1 - sparse_matrix_with_diagonal.jaccard_similarity
+        if sparse_matrix is not None and sparse_matrix.shape[0] > 0:
+            diagonal = sparse_matrix.loc[sparse_matrix.variant_id_one == sparse_matrix.variant_id_two,
+                                         ["variant_id_one", "variant_id_two", "count"]]
+            sparse_matrix_with_diagonal = pd.merge(
+                left=sparse_matrix, right=diagonal, on="variant_id_one", how="left", suffixes=("", "_one"))
+            sparse_matrix_with_diagonal = pd.merge(
+                left=sparse_matrix_with_diagonal, right=diagonal, on="variant_id_two", how="left", suffixes=("", "_two"))
 
-        # calculate Cohen's kappa
-        sparse_matrix_with_diagonal["chance_agreement"] = np.exp(-sparse_matrix_with_diagonal["count"])
-        sparse_matrix_with_diagonal["kappa"] = 1 - ((1 - sparse_matrix_with_diagonal.jaccard_similarity) / (
-                1 - sparse_matrix_with_diagonal.chance_agreement))
-        sparse_matrix_with_diagonal["kappa"] = sparse_matrix_with_diagonal["kappa"].transform(
-            lambda k: k if k > 0 else 0)
-        sparse_matrix_with_diagonal["kappa_dissimilarity"] = 1 - sparse_matrix_with_diagonal.kappa
+            # calculate Jaccard index
+            sparse_matrix_with_diagonal["count_union"] = sparse_matrix_with_diagonal["count_one"] + \
+                                                         sparse_matrix_with_diagonal["count_two"] - \
+                                                         sparse_matrix_with_diagonal["count"]
+            sparse_matrix_with_diagonal["jaccard_similarity"] = sparse_matrix_with_diagonal["count"] / \
+                                                                sparse_matrix_with_diagonal.count_union
+            sparse_matrix_with_diagonal["jaccard_dissimilarity"] = 1 - sparse_matrix_with_diagonal.jaccard_similarity
 
-        dissimilarity_metric = "kappa_dissimilarity"
+            # calculate Cohen's kappa
+            sparse_matrix_with_diagonal["chance_agreement"] = np.exp(-sparse_matrix_with_diagonal["count"])
+            sparse_matrix_with_diagonal["kappa"] = 1 - ((1 - sparse_matrix_with_diagonal.jaccard_similarity) / (
+                    1 - sparse_matrix_with_diagonal.chance_agreement))
+            sparse_matrix_with_diagonal["kappa"] = sparse_matrix_with_diagonal["kappa"].transform(
+                lambda k: k if k > 0 else 0)
+            sparse_matrix_with_diagonal["kappa_dissimilarity"] = 1 - sparse_matrix_with_diagonal.kappa
 
-        # build upper diagonal matrix
-        all_variants = sparse_matrix_with_diagonal.variant_id_one.unique()
-        empty_full_matrix = pd.DataFrame(index=pd.MultiIndex.from_product(
-            [all_variants, all_variants], names=["variant_id_one", "variant_id_two"])).reset_index()
-        upper_diagonal_matrix = pd.merge(
-            # gets only the inferior matrix without the diagnonal
-            left=empty_full_matrix.loc[empty_full_matrix.variant_id_one < empty_full_matrix.variant_id_two, :],
-            right=sparse_matrix_with_diagonal.loc[:, ["variant_id_one", "variant_id_two", dissimilarity_metric]],
-            on=["variant_id_one", "variant_id_two"], how='left')
-        upper_diagonal_matrix.fillna(1.0, inplace=True)
-        upper_diagonal_matrix.sort_values(by=["variant_id_one", "variant_id_two"], inplace=True)
+            dissimilarity_metric = "kappa_dissimilarity"
 
-        logger.debug("Building square distance matrix...")
-        distance_matrix = squareform(upper_diagonal_matrix[dissimilarity_metric])
-        # this ensures the order of variants ids is coherent with the non redundant form of the distance matrix
-        ids = np.array([list(upper_diagonal_matrix.variant_id_one[0])[0]] + \
-                       list(upper_diagonal_matrix.variant_id_two[0:len(upper_diagonal_matrix.variant_id_two.unique())]))
-        distance_matrix_with_ids = DissimilarityMatrix(data=distance_matrix, ids=ids)
+            # build upper diagonal matrix
+            all_variants = sparse_matrix_with_diagonal.variant_id_one.unique()
+            empty_full_matrix = pd.DataFrame(index=pd.MultiIndex.from_product(
+                [all_variants, all_variants], names=["variant_id_one", "variant_id_two"])).reset_index()
+            upper_diagonal_matrix = pd.merge(
+                # gets only the inferior matrix without the diagnonal
+                left=empty_full_matrix.loc[empty_full_matrix.variant_id_one < empty_full_matrix.variant_id_two, :],
+                right=sparse_matrix_with_diagonal.loc[:, ["variant_id_one", "variant_id_two", dissimilarity_metric]],
+                on=["variant_id_one", "variant_id_two"], how='left')
+            upper_diagonal_matrix.fillna(1.0, inplace=True)
+            upper_diagonal_matrix.sort_values(by=["variant_id_one", "variant_id_two"], inplace=True)
 
-        logger.debug("Clustering...")
-        clusters = OPTICS(min_samples=min_samples, max_eps=1.4).fit_predict(distance_matrix_with_ids.data)
+            logger.debug("Building square distance matrix...")
+            distance_matrix = squareform(upper_diagonal_matrix[dissimilarity_metric])
+            # this ensures the order of variants ids is coherent with the non redundant form of the distance matrix
+            ids = np.array([list(upper_diagonal_matrix.variant_id_one[0])[0]] + \
+                           list(upper_diagonal_matrix.variant_id_two[0:len(upper_diagonal_matrix.variant_id_two.unique())]))
+            distance_matrix_with_ids = DissimilarityMatrix(data=distance_matrix, ids=ids)
 
-        logger.debug("Building clustering dataframe...")
-        data = pd.DataFrame({'variant_id': distance_matrix_with_ids.ids, 'cluster': clusters})
+            logger.debug("Clustering...")
+            clusters = OPTICS(min_samples=min_samples, max_eps=1.4).fit_predict(distance_matrix_with_ids.data)
 
-        logger.debug("Annotate with HGVS.p ...")
-        annotations = pd.concat([
-            sparse_matrix.loc[:, ["variant_id_one", "hgvs_p_one"]].rename(
-                columns={"variant_id_one": "variant_id", "hgvs_p_one": "hgvs_p"}),
-            sparse_matrix.loc[:, ["variant_id_two", "hgvs_p_two"]].rename(
-                columns={"variant_id_two": "variant_id", "hgvs_p_two": "hgvs_p"})])
-        data = pd.merge(left=data, right=annotations, on="variant_id", how="left")
+            logger.debug("Building clustering dataframe...")
+            data = pd.DataFrame({'variant_id': distance_matrix_with_ids.ids, 'cluster': clusters})
 
-        logger.debug("Annotate with cluster mean Jaccard index...")
-        data["cluster_jaccard_mean"] = 1.0
-        for c in data.cluster.unique():
-            variants_in_cluster = data[data.cluster == c].variant_id.unique()
-            data.cluster_jaccard_mean = np.where(data.cluster == c, sparse_matrix_with_diagonal[
-                (sparse_matrix.variant_id_one.isin(variants_in_cluster)) &
-                (sparse_matrix.variant_id_two.isin(variants_in_cluster)) &
-                (sparse_matrix.variant_id_one != sparse_matrix.variant_id_two)
-                ].jaccard_dissimilarity.mean(), data.cluster_jaccard_mean)
+            logger.debug("Annotate with HGVS.p ...")
+            annotations = pd.concat([
+                sparse_matrix.loc[:, ["variant_id_one", "hgvs_p_one"]].rename(
+                    columns={"variant_id_one": "variant_id", "hgvs_p_one": "hgvs_p"}),
+                sparse_matrix.loc[:, ["variant_id_two", "hgvs_p_two"]].rename(
+                    columns={"variant_id_two": "variant_id", "hgvs_p_two": "hgvs_p"})])
+            data = pd.merge(left=data, right=annotations, on="variant_id", how="left")
 
-        data.cluster_jaccard_mean = data.cluster_jaccard_mean.transform(lambda x: round(x, 3))
+            logger.debug("Annotate with cluster mean Jaccard index...")
+            data["cluster_jaccard_mean"] = 1.0
+            for c in data.cluster.unique():
+                variants_in_cluster = data[data.cluster == c].variant_id.unique()
+                data.cluster_jaccard_mean = np.where(data.cluster == c, sparse_matrix_with_diagonal[
+                    (sparse_matrix.variant_id_one.isin(variants_in_cluster)) &
+                    (sparse_matrix.variant_id_two.isin(variants_in_cluster)) &
+                    (sparse_matrix.variant_id_one != sparse_matrix.variant_id_two)
+                    ].jaccard_dissimilarity.mean(), data.cluster_jaccard_mean)
 
-        data = data.set_index("variant_id").drop_duplicates().reset_index().sort_values("cluster")
+            data.cluster_jaccard_mean = data.cluster_jaccard_mean.transform(lambda x: round(x, 3))
 
-        return data[data.cluster != -1].loc[:, ["cluster", "variant_id", "hgvs_p", "cluster_jaccard_mean"]]
+            data = data.set_index("variant_id").drop_duplicates().reset_index().sort_values("cluster")
+            data = data[data.cluster != -1].loc[:, ["cluster", "variant_id", "hgvs_p", "cluster_jaccard_mean"]]
+
+        return data
