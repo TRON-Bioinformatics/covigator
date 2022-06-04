@@ -258,13 +258,14 @@ def set_callbacks_variants_tab(app, session: Session):
         state=[
             State(ID_DROPDOWN_GENE, 'value'),
             State(ID_DROPDOWN_DOMAIN, 'value'),
+            State(ID_TOP_OCCURRING_VARIANTS, "value"),  # this param is needed to ensure order of callbacks
             State(ID_TOP_OCCURRING_VARIANTS_TABLE, "derived_virtual_data"),
             State(ID_TOP_OCCURRING_VARIANTS_TABLE, "derived_virtual_selected_rows"),
             State(ID_SLIDER_BIN_SIZE, 'value'),
             State(ID_DROPDOWN_DATA_SOURCE, 'value'),
         ]
     )
-    def update_needle_plot(_, gene_name, domain, rows, selected_rows_indices, bin_size, source):
+    def update_needle_plot(_, gene_name, domain, dummy, rows, selected_rows_indices, bin_size, source):
         if gene_name is not None or domain is not None:
             selected_rows = [rows[s] for s in selected_rows_indices] if selected_rows_indices else None
             plot = html.Div(
@@ -286,6 +287,7 @@ def set_callbacks_variants_tab(app, session: Session):
         state=[
             State(ID_DROPDOWN_GENE, 'value'),
             State(ID_DROPDOWN_DOMAIN, 'value'),
+            State(ID_TOP_OCCURRING_VARIANTS, "value"),  # this param is needed to ensure order of callbacks
             State(ID_TOP_OCCURRING_VARIANTS_TABLE, "derived_virtual_data"),
             State(ID_TOP_OCCURRING_VARIANTS_TABLE, "derived_virtual_selected_rows"),
             State(ID_DROPDOWN_SIMILARITY_METRIC, 'value'),
@@ -295,12 +297,12 @@ def set_callbacks_variants_tab(app, session: Session):
         ]
     )
     def update_cooccurrence_heatmap(
-            _, gene_name, domain, rows, selected_rows_indices, metric, min_cooccurrences, min_samples, source):
+            _, gene_name, domain, dummy, rows, selected_rows_indices, metric, min_cooccurrences, min_samples, source):
         if source != DataSource.ENA.name:
             plot = html.Div(
                 children=[dcc.Markdown(
                     """**The co-occurrence analysis is currently only available for the ENA dataset**""")])
-        elif gene_name is None:
+        elif gene_name is None and domain is None:
             plot = html.Div(
                 children=[dcc.Markdown(
                     """**Please, select a gene or domain to explore the co-occurrence analysis**""")])
