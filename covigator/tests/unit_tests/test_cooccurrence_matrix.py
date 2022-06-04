@@ -49,7 +49,7 @@ class CooccurrenceMatrixTests(AbstractTest):
     def test_non_existing_sample_does_not_add_new_entries(self):
         count = self.session.query(VariantCooccurrence).count()
         self.assertEqual(count, 0)
-        CooccurrenceMatrix().compute(run_accession="12345", source=DataSource.ENA, session=self.session)
+        CooccurrenceMatrix().compute(run_accession="12345", source=DataSource.ENA.name, session=self.session)
         self.session.commit()
         count = self.session.query(VariantCooccurrence).count()
         self.assertEqual(count, 0)
@@ -58,7 +58,7 @@ class CooccurrenceMatrixTests(AbstractTest):
         count = self.session.query(VariantCooccurrence).count()
         self.assertEqual(count, 0)
         CooccurrenceMatrix().compute(
-            run_accession=self.samples[0].run_accession, source=DataSource.ENA, session=self.session)
+            run_accession=self.samples[0].run_accession, source=DataSource.ENA.name, session=self.session)
         self.session.commit()
         count = self.session.query(VariantCooccurrence).count()
         # size of matrix = n*(n-1)/2 + n (one half of matrix + diagonal)
@@ -72,7 +72,7 @@ class CooccurrenceMatrixTests(AbstractTest):
         count = self.session.query(VariantCooccurrence).count()
         self.assertEqual(count, 0)
         for s in self.samples:
-            CooccurrenceMatrix().compute(run_accession=s.run_accession, source=DataSource.ENA, session=self.session)
+            CooccurrenceMatrix().compute(run_accession=s.run_accession, source=DataSource.ENA.name, session=self.session)
             self.session.commit()
         count = self.session.query(VariantCooccurrence).count()
         self.assertLess(

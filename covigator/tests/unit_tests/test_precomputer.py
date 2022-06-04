@@ -1,8 +1,10 @@
+from parameterized import parameterized
 from sqlalchemy import and_, func
 
 from covigator.database.model import PrecomputedSynonymousNonSynonymousCounts, RegionType, DataSource, \
     PrecomputedOccurrence, PrecomputedVariantsPerSample, PrecomputedSubstitutionsCounts, PrecomputedIndelLength, \
-    PrecomputedAnnotation, PrecomputedVariantAbundanceHistogram, PrecomputedVariantsPerLineage
+    PrecomputedAnnotation, PrecomputedVariantAbundanceHistogram, PrecomputedVariantsPerLineage, VariantCooccurrence
+from covigator.precomputations.load_cooccurrences import CooccurrenceMatrixLoader
 from covigator.precomputations.load_ns_s_counts import NsSCountsLoader
 from covigator.precomputations.load_top_occurrences import TopOccurrencesLoader
 from covigator.precomputations.load_variants_per_lineage import VariantsPerLineageLoader
@@ -176,3 +178,16 @@ class TestPrecomputer(AbstractTest):
             self.assertNotEqual(p.lineage, "")
             self.assertIsNotNone(p.variant_id)
             self.assertIsNotNone(p.country)
+
+    @parameterized.expand([DataSource.ENA.name, DataSource.GISAID.name])
+    def test_load_cooccurrence_matrix(self, source):
+
+        variant_cooccurrence_klass = self.queries.get_variant_cooccurrence_klass(source)
+
+        self.assertEqual(self.session.query(variant_cooccurrence_klass).count(), 0)
+        CooccurrenceMatrixLoader(self.session).load(data_source=source, maximum_length=10)
+        self.assertGreater(self.session.query(variant_cooccurrence_klass).count(), 0)
+        for p in self.session.query(variant_cooccurrence_klass).all():
+            self.assertGreater(p.count, 0)
+            self.assertIsNotNone(p.variant_id_one)
+            self.assertIsNotNone(p.variant_id_two)

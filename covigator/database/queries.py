@@ -2,6 +2,7 @@ from datetime import date, datetime
 from typing import List, Union
 import pandas as pd
 from logzero import logger
+import sqlalchemy
 from sqlalchemy import and_, desc, asc, func, String, DateTime
 from sqlalchemy.engine.default import DefaultDialect
 from sqlalchemy.orm import Session, aliased
@@ -12,7 +13,7 @@ from covigator.database.model import DataSource, SampleEna, JobStatus, \
     SubclonalVariantObservation, PrecomputedVariantsPerSample, PrecomputedSubstitutionsCounts, PrecomputedIndelLength, \
     VariantType, PrecomputedAnnotation, PrecomputedOccurrence, PrecomputedTableCounts, \
     PrecomputedVariantAbundanceHistogram, PrecomputedSynonymousNonSynonymousCounts, RegionType, Domain, \
-    GisaidVariantObservation, GisaidVariant, LastUpdate
+    GisaidVariantObservation, GisaidVariant, LastUpdate, GisaidVariantCooccurrence
 from covigator.exceptions import CovigatorQueryException, CovigatorDashboardMissingPrecomputedData
 
 
@@ -47,6 +48,16 @@ class Queries:
             klass = SampleEna
         elif source == DataSource.GISAID.name:
             klass = SampleGisaid
+        else:
+            raise CovigatorQueryException("Bad data source: {}".format(source))
+        return klass
+
+    @staticmethod
+    def get_variant_cooccurrence_klass(source: str):
+        if source == DataSource.ENA.name:
+            klass = VariantCooccurrence
+        elif source == DataSource.GISAID.name:
+            klass = GisaidVariantCooccurrence
         else:
             raise CovigatorQueryException("Bad data source: {}".format(source))
         return klass
@@ -324,16 +335,33 @@ class Queries:
         return pd.read_sql(
             self.session.query(subquery).filter(subquery.c.count_occurrences > 1).statement, self.session.bind)
 
-    def get_variants_by_sample(self, sample_id, source: str) -> List[VariantObservation]:
+    def get_variant_ids_by_sample(self, sample_id, source: str, maximum_length: int) -> List[str]:
         klass = self.get_variant_observation_klass(source=source)
-        return self.session.query(klass) \
-            .filter(klass.sample == sample_id).order_by(klass.position, klass.reference, klass.alternate).all()
+        return self.session.query(klass.variant_id) \
+            .filter(and_(klass.sample == sample_id, klass.length < maximum_length, klass.length > -maximum_length)) \
+            .order_by(klass.position, klass.reference, klass.alternate) \
+            .all()
 
-    def get_variant_cooccurrence(self, variant_one: Variant, variant_two: Variant) -> VariantCooccurrence:
-        return self.session.query(VariantCooccurrence) \
-            .filter(and_(VariantCooccurrence.variant_id_one == variant_one.variant_id,
-                         VariantCooccurrence.variant_id_two == variant_two.variant_id)) \
+    def increment_variant_cooccurrence(
+            self, variant_id_one: str, variant_id_two: str, source: str):
+
+        klazz = self.get_variant_cooccurrence_klass(source=source)
+        variant_cooccurrence = self.session.query(klazz) \
+            .filter(and_(klazz.variant_id_one == variant_id_one,
+                         klazz.variant_id_two == variant_id_two)) \
             .first()
+        if variant_cooccurrence is None:
+            variant_cooccurrence = klazz(
+                variant_id_one=variant_id_one,
+                variant_id_two=variant_id_two,
+                count=1)
+            self.session.add(variant_cooccurrence)
+        else:
+            # NOTE: it is important to increase the counter like this to avoid race conditions
+            # the increase happens in the database server and not in python
+            # see https://stackoverflow.com/questions/2334824/how-to-increase-a-counter-in-sqlalchemy
+            variant_cooccurrence.count = klazz.count + 1
+        self.session.commit()
     
     def count_samples(self, source: str, cache=True) -> int:
         self._assert_data_source(source)
@@ -700,3 +728,57 @@ class Queries:
         logger.info(query.statement.compile(
             dialect=LiteralDialect(),
             compile_kwargs={'literal_binds': True}).string)
+
+    def column_windows(self, session, column, windowsize):
+        """Return a series of WHERE clauses against
+        a given column that break it into windows.
+
+        Result is an iterable of tuples, consisting of
+        ((start, end), whereclause), where (start, end) are the ids.
+
+        Requires a database that supports window functions,
+        i.e. Postgresql, SQL Server, Oracle.
+
+        Enhance this yourself !  Add a "where" argument
+        so that windows of just a subset of rows can
+        be computed.
+
+        """
+        def int_for_range(start_id, end_id):
+            if end_id:
+                return and_(
+                    column >= start_id,
+                    column < end_id
+                )
+            else:
+                return column >= start_id
+
+        q = session.query(
+            column,
+            func.row_number(). \
+                over(order_by=column). \
+                label('rownum')
+        ). \
+            from_self(column)
+        if windowsize > 1:
+            q = q.filter(sqlalchemy.text("rownum %% %d=1" % windowsize))
+
+        intervals = [id for id, in q]
+
+        while intervals:
+            start = intervals.pop(0)
+            if intervals:
+                end = intervals[0]
+            else:
+                end = None
+            yield int_for_range(start, end)
+
+    def windowed_query(self, query, column, windowsize):
+        """"
+        Break a Query into windows on a given column.
+
+        This magic comes from here: https://github.com/sqlalchemy/sqlalchemy/wiki/RangeQuery-and-WindowedRangeQuery
+        """
+        for whereclause in self.column_windows(query.session, column, windowsize):
+            for row in query.filter(whereclause).order_by(column):
+                yield row

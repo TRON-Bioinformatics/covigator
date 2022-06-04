@@ -1,5 +1,6 @@
 from argparse import ArgumentParser
 
+from covigator.precomputations.load_cooccurrences import CooccurrenceMatrixLoader
 from covigator.precomputations.loader import PrecomputationsLoader
 from dask.distributed import Client
 from dask_jobqueue import SLURMCluster
@@ -170,4 +171,27 @@ def precompute_queries():
     loader = PrecomputationsLoader(session=database.get_database_session())
     logger.info("Starting precomputation...")
     loader.load()
+    logger.info("Done precomputing")
+
+
+def cooccurrence():
+    parser = ArgumentParser(description="Precompute cooccurrence of mutations")
+    parser.add_argument(
+        "--source",
+        dest="data_source",
+        help="Specify data source. This can be either ENA or GISAID",
+        required=True
+    )
+    parser.add_argument(
+        "--maximum-mutation-length",
+        dest="maximum_length",
+        help="Only mutations with this maximum size will be included in the cooccurence matrix",
+        default=10
+    )
+    args = parser.parse_args()
+
+    database = Database(initialize=True, config=Configuration())
+    loader = CooccurrenceMatrixLoader(session=database.get_database_session())
+    logger.info("Starting precomputation...")
+    loader.load(data_source=args.data_source, maximum_length=args.maximum_length)
     logger.info("Done precomputing")

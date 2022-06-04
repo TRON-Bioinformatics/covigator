@@ -34,12 +34,14 @@ def get_mocked_variant(faker: Faker, chromosome=None, gene_name=None, source=Dat
         end = 30000
 
     klass = Queries.get_variant_klass(source)
+    reference = faker.random_choices(list(IUPACData.unambiguous_dna_letters), length=1)[0]
+    alternate = faker.random_choices(list(IUPACData.unambiguous_dna_letters), length=1)[0]
     variant = klass(
         chromosome=chromosome if chromosome else faker.bothify(text="chr##"),
         position=faker.random_int(min=start, max=end),
-        reference=faker.random_choices(list(IUPACData.unambiguous_dna_letters), length=1)[0],
+        reference=reference,
         # TODO: reference and alternate could be equal!
-        alternate=faker.random_choices(list(IUPACData.unambiguous_dna_letters), length=1)[0],
+        alternate=alternate,
         variant_type=VariantType.SNV,
         gene_name=gene_name,
         hgvs_p="p.{}{}{}".format(
@@ -49,7 +51,8 @@ def get_mocked_variant(faker: Faker, chromosome=None, gene_name=None, source=Dat
         ),
         annotation=annotation,
         annotation_highest_impact=annotation,
-        pfam_name=domain_name
+        pfam_name=domain_name,
+        length=len(reference) - len(alternate)
     )
     variant.variant_id = variant.get_variant_id()
     return variant
@@ -73,7 +76,8 @@ def get_mocked_variant_observation(
         gene_name=variant.gene_name,
         pfam_name=variant.pfam_name,
         date=faker.date_time(),
-        hgvs_p=variant.hgvs_p
+        hgvs_p=variant.hgvs_p,
+        length=len(variant.reference) - len(variant.alternate)
     )
 
 

@@ -49,7 +49,6 @@ class EnaProcessor(AbstractProcessor):
         sample = EnaProcessor.download(sample=sample, queries=queries, config=config)
         sample = EnaProcessor.run_pipeline(sample=sample, queries=queries, config=config)
         sample = EnaProcessor.load(sample=sample, queries=queries, config=config)
-        sample = EnaProcessor.compute_cooccurrence(sample=sample, queries=queries, config=config)
         return sample
 
     @staticmethod
@@ -177,11 +176,4 @@ class EnaProcessor(AbstractProcessor):
             VcfLoader().load(
                 vcf_file=sample.lofreq_vcf_path, run_accession=sample.run_accession, source=DataSource.ENA, session=queries.session)
             sample.loaded_at = datetime.now()
-        return sample
-
-    @staticmethod
-    def compute_cooccurrence(sample: SampleEna, queries: Queries, config: Configuration) -> SampleEna:
-        CooccurrenceMatrix().compute(run_accession=sample.run_accession, source=DataSource.ENA, session=queries.session)
-        sample.cooccurrence_at = datetime.now()
-
         return sample
