@@ -19,6 +19,7 @@ DOMAIN_TABLE_NAME = get_table_versioned_name('domain', config=config)
 LOG_TABLE_NAME = get_table_versioned_name('log', config=config)
 LAST_UPDATE_TABLE_NAME = get_table_versioned_name('last_update', config=config)
 VARIANT_COOCCURRENCE_TABLE_NAME = get_table_versioned_name('variant_cooccurrence', config=config)
+GISAID_VARIANT_COOCCURRENCE_TABLE_NAME = get_table_versioned_name('gisaid_variant_cooccurrence', config=config)
 VARIANT_OBSERVATION_TABLE_NAME = get_table_versioned_name('variant_observation', config=config)
 SUBCLONAL_VARIANT_OBSERVATION_TABLE_NAME = get_table_versioned_name('subclonal_variant_observation', config=config)
 LOW_FREQUENCY_VARIANT_OBSERVATION_TABLE_NAME = get_table_versioned_name('low_frequency_variant_observation', config=config)
@@ -809,6 +810,18 @@ class VariantCooccurrence(Base):
 
     ForeignKeyConstraint([variant_id_one], [Variant.variant_id])
     ForeignKeyConstraint([variant_id_two], [Variant.variant_id])
+
+
+class GisaidVariantCooccurrence(Base):
+
+    __tablename__ = GISAID_VARIANT_COOCCURRENCE_TABLE_NAME
+
+    variant_id_one = Column(String, primary_key=True)
+    variant_id_two = Column(String, primary_key=True)
+    count = Column(Integer, default=0)
+
+    ForeignKeyConstraint([variant_id_one], [GisaidVariant.variant_id])
+    ForeignKeyConstraint([variant_id_two], [GisaidVariant.variant_id])
 
 
 class CovigatorModule(enum.Enum):

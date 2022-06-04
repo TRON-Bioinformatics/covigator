@@ -6,7 +6,8 @@ from covigator.database.model import VariantCooccurrence, SampleEna, VariantObse
     SampleGisaid, SubclonalVariantObservation, Variant, PrecomputedVariantAbundanceHistogram, PrecomputedTableCounts, \
     PrecomputedSynonymousNonSynonymousCounts, PrecomputedOccurrence, PrecomputedAnnotation, PrecomputedIndelLength, \
     PrecomputedSubstitutionsCounts, PrecomputedVariantsPerSample, Log, GisaidVariant, GisaidVariantObservation, \
-    LowFrequencyVariantObservation, LowFrequencyVariant, SubclonalVariant, PrecomputedVariantsPerLineage
+    LowFrequencyVariantObservation, LowFrequencyVariant, SubclonalVariant, PrecomputedVariantsPerLineage, \
+    GisaidVariantCooccurrence
 from covigator.database.queries import Queries
 from covigator.tests.unit_tests.faked_objects import FakeConfiguration
 
@@ -47,6 +48,7 @@ class AbstractTest(TestCase):
             self._clean_table(SampleEna)
             self._clean_table(SampleGisaid)
             self._clean_table(VariantCooccurrence)
+            self._clean_table(GisaidVariantCooccurrence)
             self._clean_table(Variant)
             self._clean_table(SubclonalVariant)
             self._clean_table(LowFrequencyVariant)
