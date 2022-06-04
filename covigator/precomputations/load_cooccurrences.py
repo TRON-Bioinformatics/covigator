@@ -12,7 +12,7 @@ class CooccurrenceMatrixLoader:
         self.queries = Queries(session=self.session)
         self.cooccurrence_matrix = CooccurrenceMatrix()
 
-    def load(self, data_source: str):
+    def load(self, data_source: str, maximum_length: int):
 
         # deletes the database before loading
         self.session.query(self.queries.get_variant_cooccurrence_klass(data_source)).delete()
@@ -23,7 +23,8 @@ class CooccurrenceMatrixLoader:
         computed = 0
         query = self.session.query(sample_klass).filter(sample_klass.status == JobStatus.FINISHED)
         for sample in self.queries.windowed_query(query=query, column=sample_klass.run_accession, windowsize=1000):
-            self.cooccurrence_matrix.compute(sample.run_accession, data_source, self.session)
+            self.cooccurrence_matrix.compute(sample.run_accession, data_source, self.session,
+                                             maximum_length=maximum_length)
             computed += 1
             if computed % 1000 == 0:
                 logger.info('Processed cooccurrence over {}/{} ({}) samples'.format(

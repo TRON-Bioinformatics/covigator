@@ -182,10 +182,16 @@ def cooccurrence():
         help="Specify data source. This can be either ENA or GISAID",
         required=True
     )
+    parser.add_argument(
+        "--maximum-mutation-length",
+        dest="maximum_length",
+        help="Only mutations with this maximum size will be included in the cooccurence matrix",
+        default=10
+    )
     args = parser.parse_args()
 
     database = Database(initialize=True, config=Configuration())
     loader = CooccurrenceMatrixLoader(session=database.get_database_session())
     logger.info("Starting precomputation...")
-    loader.load(data_source=args.data_source)
+    loader.load(data_source=args.data_source, maximum_length=args.maximum_length)
     logger.info("Done precomputing")

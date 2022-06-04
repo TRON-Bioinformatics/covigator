@@ -335,19 +335,33 @@ class Queries:
         return pd.read_sql(
             self.session.query(subquery).filter(subquery.c.count_occurrences > 1).statement, self.session.bind)
 
-    def get_variant_ids_by_sample(self, sample_id, source: str) -> List[str]:
+    def get_variant_ids_by_sample(self, sample_id, source: str, maximum_length: int) -> List[str]:
         klass = self.get_variant_observation_klass(source=source)
         return self.session.query(klass.variant_id) \
-            .filter(klass.sample == sample_id).order_by(klass.position, klass.reference, klass.alternate).all()
+            .filter(and_(klass.sample == sample_id, klass.length < maximum_length, klass.length > -maximum_length)) \
+            .order_by(klass.position, klass.reference, klass.alternate) \
+            .all()
 
-    def get_variant_cooccurrence(
-            self, variant_one: Variant, variant_two: Variant, source: str) -> \
-            Union[VariantCooccurrence, GisaidVariantCooccurrence]:
+    def increment_variant_cooccurrence(
+            self, variant_id_one: str, variant_id_two: str, source: str):
+
         klazz = self.get_variant_cooccurrence_klass(source=source)
-        return self.session.query(klazz) \
-            .filter(and_(klazz.variant_id_one == variant_one.variant_id,
-                         klazz.variant_id_two == variant_two.variant_id)) \
+        variant_cooccurrence = self.session.query(klazz) \
+            .filter(and_(klazz.variant_id_one == variant_id_one,
+                         klazz.variant_id_two == variant_id_two)) \
             .first()
+        if variant_cooccurrence is None:
+            variant_cooccurrence = klazz(
+                variant_id_one=variant_id_one,
+                variant_id_two=variant_id_two,
+                count=1)
+            self.session.add(variant_cooccurrence)
+        else:
+            # NOTE: it is important to increase the counter like this to avoid race conditions
+            # the increase happens in the database server and not in python
+            # see https://stackoverflow.com/questions/2334824/how-to-increase-a-counter-in-sqlalchemy
+            variant_cooccurrence.count = klazz.count + 1
+        self.session.commit()
     
     def count_samples(self, source: str, cache=True) -> int:
         self._assert_data_source(source)
