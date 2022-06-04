@@ -17,5 +17,11 @@ class CooccurrenceMatrix:
         variant_ids = queries.get_variant_ids_by_sample(sample_id, source=source, maximum_length=maximum_length)
 
         # process all pairwise combinations without repetitions including the diagoonal
+        new_coocurrences = []
         for (variant_id_one, variant_id_two) in list(combinations(variant_ids, 2)) + list(zip(variant_ids, variant_ids)):
-            queries.increment_variant_cooccurrence(variant_id_one, variant_id_two, source)
+            vc = queries.increment_variant_cooccurrence(variant_id_one, variant_id_two, source)
+            if vc is not None:
+                new_coocurrences.append(vc)
+
+        session.add_all(new_coocurrences)
+        session.commit()

@@ -28,4 +28,4 @@ class CooccurrenceMatrixLoader:
             computed += 1
             if computed % 1000 == 0:
                 logger.info('Processed cooccurrence over {}/{} ({}) samples'.format(
-                    computed, count_samples, round(float(computed) / count_samples, 3)))
+                    computed, count_samples, round(float(computed) / count_samples * 100, 3)))
