@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
-import dash_core_components as dcc
-import dash_table
+from dash import dcc
+from dash import dash_table
 from logzero import logger
 from sqlalchemy.orm import Session
 from covigator.dashboard.figures.figures import Figures, MARGIN, TEMPLATE, PLOTLY_CONFIG, STYLES_STRIPPED, STYLE_HEADER, \

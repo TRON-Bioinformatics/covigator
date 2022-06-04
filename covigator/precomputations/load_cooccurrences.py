@@ -27,5 +27,5 @@ class CooccurrenceMatrixLoader:
                                              maximum_length=maximum_length)
             computed += 1
             if computed % 1000 == 0:
-                logger.info('Processed cooccurrence over {}/{} ({}) samples'.format(
+                logger.info('Processed cooccurrence over {}/{} ({} %) samples'.format(
                     computed, count_samples, round(float(computed) / count_samples * 100, 3)))

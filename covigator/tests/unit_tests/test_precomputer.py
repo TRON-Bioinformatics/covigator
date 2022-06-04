@@ -187,7 +187,10 @@ class TestPrecomputer(AbstractTest):
         self.assertEqual(self.session.query(variant_cooccurrence_klass).count(), 0)
         CooccurrenceMatrixLoader(self.session).load(data_source=source, maximum_length=10)
         self.assertGreater(self.session.query(variant_cooccurrence_klass).count(), 0)
+        found_greater_one = False
         for p in self.session.query(variant_cooccurrence_klass).all():
             self.assertGreater(p.count, 0)
+            found_greater_one = p.count > 1 or found_greater_one
             self.assertIsNotNone(p.variant_id_one)
             self.assertIsNotNone(p.variant_id_two)
+        self.assertTrue(found_greater_one)

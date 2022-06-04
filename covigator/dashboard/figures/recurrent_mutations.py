@@ -1,6 +1,6 @@
 from itertools import cycle
 import colorlover
-import dash_table
+from dash import dash_table
 import numpy as np
 import re
 
@@ -17,8 +17,8 @@ from covigator.dashboard.figures.figures import Figures, PLOTLY_CONFIG, TEMPLATE
 import plotly
 import plotly.express as px
 import plotly.graph_objects as go
-import dash_html_components as html
-import dash_core_components as dcc
+from dash import html
+from dash import dcc
 from covigator.database.model import Gene, Domain, DataSource
 
 VARIANT_TOOLTIP = '<b>%{text}</b><br>' + 'Allele frequency: %{y:.5f}<br>' + 'Genomic Position: %{x}'
