@@ -193,5 +193,5 @@ def cooccurrence():
     database = Database(initialize=True, config=Configuration())
     loader = CooccurrenceMatrixLoader(session=database.get_database_session())
     logger.info("Starting precomputation...")
-    loader.load(data_source=args.data_source, maximum_length=args.maximum_length)
+    loader.load(data_source=args.data_source, maximum_length=int(args.maximum_length))
     logger.info("Done precomputing")
