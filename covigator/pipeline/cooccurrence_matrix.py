@@ -5,7 +5,7 @@ from covigator.database.queries import Queries
 
 class CooccurrenceMatrix:
 
-    def compute(self, run_accession: str, source: str, session: Session, maximum_length: int):
+    def compute(self, run_accession: str, source: str, session: Session, maximum_length: int = 10):
 
         assert run_accession is not None or run_accession == "", "Missing sample identifier"
         assert session is not None, "Missing DB session"
