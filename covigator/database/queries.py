@@ -348,6 +348,7 @@ class Queries:
 
         # NOTE: this method does not commit to DB due to performance reasons
         klazz = self.get_variant_cooccurrence_klass(source=source)
+
         variant_cooccurrence = self.session.query(klazz) \
             .filter(and_(klazz.variant_id_one == variant_id_one,
                          klazz.variant_id_two == variant_id_two)) \
@@ -359,10 +360,7 @@ class Queries:
                 count=1)
             return variant_cooccurrence
         else:
-            # NOTE: it is important to increase the counter like this to avoid race conditions
-            # the increase happens in the database server and not in python
-            # see https://stackoverflow.com/questions/2334824/how-to-increase-a-counter-in-sqlalchemy
-            variant_cooccurrence.count = klazz.count + 1
+            variant_cooccurrence.count = variant_cooccurrence.count + 1
             return None
     
     def count_samples(self, source: str, cache=True) -> int:
