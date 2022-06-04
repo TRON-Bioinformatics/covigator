@@ -8,7 +8,7 @@ from covigator.dashboard.figures import VARIANT_TYPE_COLOR_MAP
 from covigator.dashboard.figures.figures import Figures, PLOTLY_CONFIG, MARGIN, TEMPLATE
 import plotly.express as px
 import plotly.graph_objects as go
-import dash_core_components as dcc
+from dash import dcc
 
 
 INDEL_TYPE_COLOR_MAP = {

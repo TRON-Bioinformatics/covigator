@@ -1,7 +1,7 @@
 from typing import List
 
 import colorlover
-import dash_table
+from dash import dash_table
 import pandas as pd
 from logzero import logger
 from plotly.subplots import make_subplots
@@ -10,7 +10,7 @@ from sqlalchemy import and_
 from covigator.dashboard.figures.figures import Figures, PLOTLY_CONFIG, MARGIN, TEMPLATE, STYLES_STRIPPED, STYLE_HEADER, \
     STYLE_CELL
 import plotly.express as px
-import dash_core_components as dcc
+from dash import dcc
 
 from covigator.database.model import PrecomputedVariantsPerLineage, Variant
 

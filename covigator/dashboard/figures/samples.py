@@ -4,7 +4,7 @@ import pandas as pd
 from logzero import logger
 from covigator.dashboard.figures.figures import Figures, PLOTLY_CONFIG, MARGIN, TEMPLATE
 import plotly.express as px
-import dash_core_components as dcc
+from dash import dcc
 
 from covigator.database.model import DataSource
 
