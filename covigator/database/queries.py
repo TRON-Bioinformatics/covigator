@@ -343,8 +343,10 @@ class Queries:
             .all()
 
     def increment_variant_cooccurrence(
-            self, variant_id_one: str, variant_id_two: str, source: str):
+            self, variant_id_one: str, variant_id_two: str, source: str) -> \
+            Union[VariantCooccurrence, GisaidVariantCooccurrence, None]:
 
+        # NOTE: this method does not commit to DB due to performance reasons
         klazz = self.get_variant_cooccurrence_klass(source=source)
         variant_cooccurrence = self.session.query(klazz) \
             .filter(and_(klazz.variant_id_one == variant_id_one,
@@ -355,13 +357,13 @@ class Queries:
                 variant_id_one=variant_id_one,
                 variant_id_two=variant_id_two,
                 count=1)
-            self.session.add(variant_cooccurrence)
+            return variant_cooccurrence
         else:
             # NOTE: it is important to increase the counter like this to avoid race conditions
             # the increase happens in the database server and not in python
             # see https://stackoverflow.com/questions/2334824/how-to-increase-a-counter-in-sqlalchemy
             variant_cooccurrence.count = klazz.count + 1
-        self.session.commit()
+            return None
     
     def count_samples(self, source: str, cache=True) -> int:
         self._assert_data_source(source)
