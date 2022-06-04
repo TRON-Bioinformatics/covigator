@@ -335,9 +335,9 @@ class Queries:
         return pd.read_sql(
             self.session.query(subquery).filter(subquery.c.count_occurrences > 1).statement, self.session.bind)
 
-    def get_variants_by_sample(self, sample_id, source: str) -> List[VariantObservation]:
+    def get_variant_ids_by_sample(self, sample_id, source: str) -> List[str]:
         klass = self.get_variant_observation_klass(source=source)
-        return self.session.query(klass) \
+        return self.session.query(klass.variant_id) \
             .filter(klass.sample == sample_id).order_by(klass.position, klass.reference, klass.alternate).all()
 
     def get_variant_cooccurrence(
