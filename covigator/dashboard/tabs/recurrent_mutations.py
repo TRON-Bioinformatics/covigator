@@ -168,7 +168,7 @@ Paiwise co-occurrence metric"""),
         dcc.Markdown("""Minimum pairwise co-occurrences"""),
         dcc.Slider(
             id=ID_SLIDER_MIN_COOCCURRENCES,
-            min=1,
+            min=2,
             max=100,
             step=5,
             value=10,

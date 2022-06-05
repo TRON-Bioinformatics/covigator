@@ -29,3 +29,10 @@ class CooccurrenceMatrixLoader:
             if computed % 1000 == 0:
                 logger.info('Processed cooccurrence over {}/{} ({} %) samples'.format(
                     computed, count_samples, round(float(computed) / count_samples * 100, 3)))
+
+        # once finished deletes the unique observations
+        variant_cooccurrence_klazz = self.queries.get_variant_cooccurrence_klass(source=data_source)
+        self.session.query(self.queries.get_variant_cooccurrence_klass(data_source)) \
+            .filter(variant_cooccurrence_klazz.count == 1) \
+            .delete()
+        self.session.commit()
