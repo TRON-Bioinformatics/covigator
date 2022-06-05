@@ -22,7 +22,7 @@ def get_mocked_variant(faker: Faker, chromosome=None, gene_name=None, source=Dat
         gene_name = faker.random_choices(MOCKED_GENES, length=1)[0]
     domain_name = faker.random_choices(MOCKED_DOMAINS, length=1)[0]
     annotation = faker.random_choices(
-            [MISSENSE_VARIANT, SYNONYMOUS_VARIANT, INFRAME_DELETION, INFRAME_INSERTION], length=1)[0]
+            [MISSENSE_VARIANT, INFRAME_DELETION, INFRAME_INSERTION], length=1)[0] #SYNONYMOUS_VARIANT
 
     if session:
         queries = Queries(session=session)

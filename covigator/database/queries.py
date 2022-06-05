@@ -336,9 +336,17 @@ class Queries:
             self.session.query(subquery).filter(subquery.c.count_occurrences > 1).statement, self.session.bind)
 
     def get_variant_ids_by_sample(self, sample_id, source: str, maximum_length: int) -> List[str]:
+        """
+        Returns the variant ids of all mutations in a given sample after filtering out:
+        mutations not overlapping any gene, synonymous mutations, long indels according to maximum_length parameter
+        """
         klass = self.get_variant_observation_klass(source=source)
         return self.session.query(klass.variant_id) \
-            .filter(and_(klass.sample == sample_id, klass.length < maximum_length, klass.length > -maximum_length)) \
+            .filter(and_(klass.sample == sample_id,
+                         klass.gene_name != None,
+                         klass.annotation_highest_impact != SYNONYMOUS_VARIANT,
+                         klass.length < maximum_length,
+                         klass.length > -maximum_length)) \
             .order_by(klass.position, klass.reference, klass.alternate) \
             .all()
 
@@ -543,19 +551,11 @@ class Queries:
         if domain is not None:
             query = query.filter(and_(
                 variant_one.pfam_name == domain,
-                variant_one.annotation != SYNONYMOUS_VARIANT,
-                variant_two.pfam_name == domain,
-                variant_two.annotation != SYNONYMOUS_VARIANT))
+                variant_two.pfam_name == domain))
         elif gene_name is not None:
             query = query.filter(and_(
                 variant_one.gene_name == gene_name,
-                variant_one.annotation != SYNONYMOUS_VARIANT,
-                variant_two.gene_name == gene_name,
-                variant_two.annotation != SYNONYMOUS_VARIANT))
-        else:
-            query = query.filter(and_(
-                variant_one.annotation != SYNONYMOUS_VARIANT,
-                variant_two.annotation != SYNONYMOUS_VARIANT))
+                variant_two.gene_name == gene_name))
 
         self._print_query(query=query)
         data = pd.read_sql(query.statement, self.session.bind)

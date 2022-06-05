@@ -189,7 +189,7 @@ class TestPrecomputer(AbstractTest):
         self.assertGreater(self.session.query(variant_cooccurrence_klass).count(), 0)
         found_greater_one = False
         for p in self.session.query(variant_cooccurrence_klass).all():
-            self.assertGreater(p.count, 0)
+            self.assertGreater(p.count, 1)  # unique observations are deleted
             found_greater_one = p.count > 1 or found_greater_one
             self.assertIsNotNone(p.variant_id_one)
             self.assertIsNotNone(p.variant_id_two)
