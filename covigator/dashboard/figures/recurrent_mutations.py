@@ -184,7 +184,7 @@ class RecurrentMutationsFigures(Figures):
 
     def get_cooccurrence_heatmap(self, sparse_matrix, selected_variants, metric="jaccard", min_cooccurrences=5):
         data = self._get_variants_cooccurrence_matrix(data=sparse_matrix)
-        graph = dcc.Markdown("""**No co-occurrent mutations for the current selection**""")
+        graph = [dcc.Markdown("""**No co-occurrent mutations for the current selection**""")]
         if data is not None and data.shape[0] > 0:
 
             all_variants = data.variant_id_one.unique()
@@ -242,21 +242,21 @@ class RecurrentMutationsFigures(Figures):
 
             # the y index is reversed in plotly heatmap
             fig.update_yaxes(autorange="reversed")
-            graph = dcc.Graph(figure=fig, config=PLOTLY_CONFIG)
+            graph = [
+                dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
+                dcc.Markdown("""
+                                    ***Co-occurrence matrix*** *showing variant pairs co-occurring in at least {} samples (this value is configurable).*
+                                    *The metric in the co-occurrence matrix can be chosen among counts, frequencies, Jaccard index or 
+                                    Cohen's kappa coefficient. The Cohen's kappa coefficient introduces a correction to the Jaccard index for
+                                    mutations with low occurrence.*
+                                    *The diagonal contains the total counts or just 1.0 in the other metrics.*
+                                    *The upper diagonal is not shown for clarity.*
+                                    *Synonymous mutations are excluded.*
+                                    *Different genomic mutations causing the same protein variant are not grouped.*
+                                    """.format(min_cooccurrences))
+            ]
 
-        return html.Div(children=[
-            graph,
-            dcc.Markdown("""
-                        ***Co-occurrence matrix*** *showing variant pairs co-occurring in at least {} samples (this value is configurable).*
-                        *The metric in the co-occurrence matrix can be chosen among counts, frequencies, Jaccard index or 
-                        Cohen's kappa coefficient. The Cohen's kappa coefficient introduces a correction to the Jaccard index for
-                        mutations with low occurrence.*
-                        *The diagonal contains the total counts or just 1.0 in the other metrics.*
-                        *The upper diagonal is not shown for clarity.*
-                        *Synonymous mutations are excluded.*
-                        *Different genomic mutations causing the same protein variant are not grouped.*
-                        """.format(min_cooccurrences))
-        ])
+        return html.Div(children=graph)
 
     def _get_variants_cooccurrence_matrix(self, data) -> pd.DataFrame:
         """
@@ -652,7 +652,7 @@ class RecurrentMutationsFigures(Figures):
 
     def get_variants_clustering(self, sparse_matrix, min_cooccurrence, min_samples):
 
-        data = self._get_mds(sparse_matrix=sparse_matrix, min_samples=min_samples)
+        data = self._run_clustering(sparse_matrix=sparse_matrix, min_samples=min_samples)
 
         tables = []
         if data is not None:
@@ -677,10 +677,10 @@ class RecurrentMutationsFigures(Figures):
                     sort_by=[{"column_id": "variant_id", "direction": "asc"}],
                 ))
                 tables.append(html.Br())
-
-        return html.Div(children=[
-            html.Div(children=tables),
-            dcc.Markdown("""
+            tables.append(html.Button("Download CSV", id="btn_csv"))
+            tables.append(dcc.Download(id="download-dataframe-csv"))
+            tables.append(dcc.Store(id="memory", data=data.to_dict('records')))
+            tables.append(dcc.Markdown("""
             ***Co-occurrence clustering*** *shows the resulting clusters from the
             co-occurrence matrix with the Jaccard index corrected with the Cohen's kappa coefficient. 
             The co-occurrence matrix is built taking into account only mutations with at least {} pairwise 
@@ -692,9 +692,11 @@ class RecurrentMutationsFigures(Figures):
             *
 
             *Ankerst et al. “OPTICS: ordering points to identify the clustering structure.” ACM SIGMOD Record 28, no. 2 (1999): 49-60.*
-            """.format(min_cooccurrence, min_samples))])
+            """.format(min_cooccurrence, min_samples)))
 
-    def _get_mds(self, sparse_matrix, min_samples) -> pd.DataFrame:
+        return html.Div(children=tables)
+
+    def _run_clustering(self, sparse_matrix, min_samples) -> pd.DataFrame:
 
         data = None
 

@@ -1,3 +1,4 @@
+import pandas as pd
 from datetime import timedelta, datetime
 from dash import dcc
 import dash_bootstrap_components as dbc
@@ -321,3 +322,15 @@ def set_callbacks_variants_tab(app, session: Session):
             ]
             )
         return plot
+
+    @app.callback(
+        Output("download-dataframe-csv", "data"),
+        inputs=[
+            Input("btn_csv", "n_clicks"),
+            Input("memory", "data")
+            ],
+        prevent_initial_call=True,
+    )
+    def func(n_clicks, df):
+        return dcc.send_data_frame(pd.DataFrame.from_dict(df).to_csv, "covigator_clustering_results_{}.csv".format(
+            datetime.now().strftime("%Y%m%d%H%M%S)")))
