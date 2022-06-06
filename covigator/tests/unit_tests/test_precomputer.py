@@ -185,7 +185,7 @@ class TestPrecomputer(AbstractTest):
         variant_cooccurrence_klass = self.queries.get_variant_cooccurrence_klass(source)
 
         self.assertEqual(self.session.query(variant_cooccurrence_klass).count(), 0)
-        CooccurrenceMatrixLoader(self.session).load(data_source=source, maximum_length=10)
+        CooccurrenceMatrixLoader(self.session, source=source).load(maximum_length=10)
         self.assertGreater(self.session.query(variant_cooccurrence_klass).count(), 0)
         found_greater_one = False
         for p in self.session.query(variant_cooccurrence_klass).all():

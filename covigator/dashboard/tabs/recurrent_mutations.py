@@ -332,5 +332,8 @@ def set_callbacks_variants_tab(app, session: Session):
         prevent_initial_call=True,
     )
     def func(n_clicks, df):
-        return dcc.send_data_frame(pd.DataFrame.from_dict(df).to_csv, "covigator_clustering_results_{}.csv".format(
-            datetime.now().strftime("%Y%m%d%H%M%S)")))
+        return dcc.send_data_frame(
+            pd.DataFrame.from_dict(df).to_csv,
+            "covigator_clustering_results_{}.csv".format(datetime.now().strftime("%Y%m%d%H%M%S")),
+            index=False
+        )

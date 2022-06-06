@@ -1,5 +1,4 @@
 import json
-import numpy as np
 from datetime import datetime
 
 import pandas as pd
@@ -8,7 +7,7 @@ import covigator
 from covigator.configuration import Configuration
 from covigator.database.queries import Queries
 from covigator.exceptions import CovigatorErrorProcessingCoverageResults, CovigatorExcludedSampleBadQualityReads, \
-    CovigatorExcludedSampleNarrowCoverage, CovigatorErrorProcessingPangolinResults, \
+    CovigatorExcludedSampleNarrowCoverage, \
     CovigatorErrorProcessingDeduplicationResults
 from covigator.misc import backoff_retrier
 from covigator.database.model import JobStatus, DataSource, SampleEna
@@ -16,7 +15,6 @@ from covigator.database.database import Database
 from logzero import logger
 from dask.distributed import Client
 from covigator.processor.abstract_processor import AbstractProcessor
-from covigator.pipeline.cooccurrence_matrix import CooccurrenceMatrix
 from covigator.pipeline.downloader import Downloader
 from covigator.pipeline.ena_pipeline import Pipeline
 from covigator.pipeline.vcf_loader import VcfLoader

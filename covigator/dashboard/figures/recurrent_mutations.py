@@ -680,6 +680,7 @@ class RecurrentMutationsFigures(Figures):
             tables.append(html.Button("Download CSV", id="btn_csv"))
             tables.append(dcc.Download(id="download-dataframe-csv"))
             tables.append(dcc.Store(id="memory", data=data.to_dict('records')))
+            tables.append(html.Br()),
             tables.append(dcc.Markdown("""
             ***Co-occurrence clustering*** *shows the resulting clusters from the
             co-occurrence matrix with the Jaccard index corrected with the Cohen's kappa coefficient. 
