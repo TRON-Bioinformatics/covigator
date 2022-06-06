@@ -1,5 +1,5 @@
 from itertools import combinations
-from typing import Union
+from typing import Union, List
 
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
