@@ -334,42 +334,6 @@ class Queries:
         subquery = query.group_by(klass.position, klass.annotation_highest_impact, klass.hgvs_p).subquery()
         return pd.read_sql(
             self.session.query(subquery).filter(subquery.c.count_occurrences > 1).statement, self.session.bind)
-
-    def get_variant_ids_by_sample(self, sample_id, source: str, maximum_length: int) -> List[str]:
-        """
-        Returns the variant ids of all mutations in a given sample after filtering out:
-        mutations not overlapping any gene, synonymous mutations, long indels according to maximum_length parameter
-        """
-        klass = self.get_variant_observation_klass(source=source)
-        return self.session.query(klass.variant_id) \
-            .filter(and_(klass.sample == sample_id,
-                         klass.gene_name != None,
-                         klass.annotation_highest_impact != SYNONYMOUS_VARIANT,
-                         klass.length < maximum_length,
-                         klass.length > -maximum_length)) \
-            .order_by(klass.position, klass.reference, klass.alternate) \
-            .all()
-
-    def increment_variant_cooccurrence(
-            self, variant_id_one: str, variant_id_two: str, source: str) -> \
-            Union[VariantCooccurrence, GisaidVariantCooccurrence, None]:
-
-        # NOTE: this method does not commit to DB due to performance reasons
-        klazz = self.get_variant_cooccurrence_klass(source=source)
-
-        variant_cooccurrence = self.session.query(klazz) \
-            .filter(and_(klazz.variant_id_one == variant_id_one,
-                         klazz.variant_id_two == variant_id_two)) \
-            .first()
-        if variant_cooccurrence is None:
-            variant_cooccurrence = klazz(
-                variant_id_one=variant_id_one,
-                variant_id_two=variant_id_two,
-                count=1)
-            return variant_cooccurrence
-        else:
-            variant_cooccurrence.count = variant_cooccurrence.count + 1
-            return None
     
     def count_samples(self, source: str, cache=True) -> int:
         self._assert_data_source(source)
