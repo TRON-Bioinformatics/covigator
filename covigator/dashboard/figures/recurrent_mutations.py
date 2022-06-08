@@ -134,6 +134,12 @@ class RecurrentMutationsFigures(Figures):
                     sort_by=[{"column_id": "frequency", "direction": "desc"}],
                     row_selectable='multi'
                 ),
+                html.Br(),
+                html.Div(children=[
+                    html.Button("Download CSV", id="btn_csv2"),
+                    dcc.Download(id="download-dataframe-csv2"),
+                    dcc.Store(id="memory2", data=data.to_dict('records'))]),
+                html.Br(),
                 dcc.Markdown("""
                     **Top occurring mutations table** 
                     *table shows the {} mutations{} with the highest frequency across all samples.*
@@ -677,9 +683,10 @@ class RecurrentMutationsFigures(Figures):
                     sort_by=[{"column_id": "variant_id", "direction": "asc"}],
                 ))
                 tables.append(html.Br())
-            tables.append(html.Button("Download CSV", id="btn_csv"))
-            tables.append(dcc.Download(id="download-dataframe-csv"))
-            tables.append(dcc.Store(id="memory", data=data.to_dict('records')))
+            tables.append(html.Div(children=[
+                html.Button("Download CSV", id="btn_csv"),
+                dcc.Download(id="download-dataframe-csv"),
+                dcc.Store(id="memory", data=data.to_dict('records'))]))
             tables.append(html.Br()),
             tables.append(dcc.Markdown("""
             ***Co-occurrence clustering*** *shows the resulting clusters from the

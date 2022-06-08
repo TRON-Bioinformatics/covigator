@@ -73,4 +73,5 @@ sample_gisaid_fields="run_accession, finished, collection_date, host_tax_id, hos
 psql $pg_uri -c "\\copy sample_gisaid$version($sample_gisaid_fields) to program 'gzip > $output/sample_gisaid.csv.gz' csv header;"
 psql $pg_uri -c "`get_export_command "gisaid_variant"`"
 psql $pg_uri -c "`get_export_command "gisaid_variant_observation"`"
+psql $pg_uri -c "`get_export_command "gisaid_variant_cooccurrence"`"
 

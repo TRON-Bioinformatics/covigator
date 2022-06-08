@@ -23,7 +23,6 @@ ID_DROPDOWN_DATE_RANGE_END = 'dropdown-date-range-end'
 ID_DROPDOWN_DATE_RANGE_START = 'dropdown-date-range-start'
 ID_TOP_VARIANTS_METRIC = 'dropdown-top-variants-metric'
 ID_SLIDER_TOP_VARIANTS = 'slider-top-variants'
-ID_VARIANTS_MDS = 'variants-mds'
 ID_COOCCURRENCE_HEATMAP = 'cooccurrence-heatmap'
 ID_NEEDLE_PLOT = 'needle-plot'
 ID_TOP_OCCURRING_VARIANTS = 'top-occurring-variants'
@@ -49,12 +48,12 @@ def get_variants_tab_graphs():
         children=[
             html.Br(),
             html.Div(id=ID_TOP_OCCURRING_VARIANTS, children=dash_table.DataTable(id=ID_TOP_OCCURRING_VARIANTS_TABLE)),
+            html.Hr(),
             html.Br(),
             html.Div(id=ID_NEEDLE_PLOT),
+            html.Hr(),
             html.Br(),
             html.Div(id=ID_COOCCURRENCE_HEATMAP),
-            html.Br(),
-            html.Div(id=ID_VARIANTS_MDS),
             html.Br(),
         ],
         className="nine columns",
@@ -299,11 +298,8 @@ def set_callbacks_variants_tab(app, session: Session):
     )
     def update_cooccurrence_heatmap(
             _, gene_name, domain, dummy, rows, selected_rows_indices, metric, min_cooccurrences, min_samples, source):
-        if source != DataSource.ENA.name:
-            plot = html.Div(
-                children=[dcc.Markdown(
-                    """**The co-occurrence analysis is currently only available for the ENA dataset**""")])
-        elif gene_name is None and domain is None:
+
+        if gene_name is None and domain is None:
             plot = html.Div(
                 children=[dcc.Markdown(
                     """**Please, select a gene or domain to explore the co-occurrence analysis**""")])
@@ -317,6 +313,8 @@ def set_callbacks_variants_tab(app, session: Session):
                     selected_variants=selected_rows,
                     metric=metric,
                     min_cooccurrences=min_cooccurrences),
+                html.Hr(),
+                html.Br(),
                 figures.get_variants_clustering(
                     sparse_matrix=sparse_matrix, min_cooccurrence=min_cooccurrences, min_samples=min_samples)
             ]
@@ -331,9 +329,24 @@ def set_callbacks_variants_tab(app, session: Session):
             ],
         prevent_initial_call=True,
     )
-    def func(n_clicks, df):
+    def download_clustering_results(n_clicks, df):
         return dcc.send_data_frame(
             pd.DataFrame.from_dict(df).to_csv,
             "covigator_clustering_results_{}.csv".format(datetime.now().strftime("%Y%m%d%H%M%S")),
+            index=False
+        )
+
+    @app.callback(
+        Output("download-dataframe-csv2", "data"),
+        inputs=[
+            Input("btn_csv2", "n_clicks"),
+            Input("memory2", "data")
+        ],
+        prevent_initial_call=True,
+    )
+    def download_top_recurrent_mutations(n_clicks, df):
+        return dcc.send_data_frame(
+            pd.DataFrame.from_dict(df).to_csv,
+            "covigator_top_recurrent_mutations_{}.csv".format(datetime.now().strftime("%Y%m%d%H%M%S")),
             index=False
         )
