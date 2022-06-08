@@ -35,6 +35,7 @@ def get_lineages_tab_graphs():
         children=[
             html.Br(),
             html.Div(id=ID_LINEAGES_GRAPH),
+            html.Hr(),
             html.Br(),
             html.Div(id=ID_LINEAGES_TABLE),
         ])

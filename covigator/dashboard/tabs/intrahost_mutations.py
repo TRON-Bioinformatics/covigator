@@ -44,11 +44,13 @@ def get_subclonal_variants_tab_graphs(queries):
         children=[
             html.Div(id=ID_TOP_OCCURRING_SUBCLONAL_VARIANTS,
                      children=dash_table.DataTable(id=ID_TOP_OCCURRING_SUBCLONAL_VARIANTS_TABLE)),
+            html.Hr(),
             html.Br(),
             html.Div(id=ID_HIST_LIBRARY_STRATEGY,
                      className="five columns", style={"margin-left": 0, "margin-right": "1%", "width": "48%"}),
             html.Div(id=ID_HIST_COUNTRIES,
                      className="five columns", style={"margin-left": 0, "margin-right": "1%", "width": "48%"}),
+            html.Hr(),
             html.Br(),
             html.Div(id=TOP_COOCCURRING_CLONAL_VARIANTS,
                      className="five columns", style={"margin-left": 0, "margin-right": "1%", "width": "48%"}),

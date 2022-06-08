@@ -36,6 +36,7 @@ def get_samples_tab_graphs():
         children=[
             html.Br(),
             html.Div(id=ID_ACCUMULATED_SAMPLES_GRAPH),
+            html.Hr(),
             html.Br(),
             html.Div(id=ID_DN_DS_GRAPH),
         ])
