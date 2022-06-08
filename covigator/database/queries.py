@@ -491,15 +491,16 @@ class Queries:
         counts['month'] = pd.to_datetime(counts['month'], utc=True)
         return counts
 
-    def get_sparse_cooccurrence_matrix(self, gene_name, domain, min_cooccurrence=5) -> pd.DataFrame:
+    def get_sparse_cooccurrence_matrix(self, gene_name, domain, source: str, min_cooccurrence=5) -> pd.DataFrame:
         """
         Returns the sparse cooccurrence matrix of all non synonymous variants in a gene or domain with at least
         min_occurrences occurrences.
         """
         # query for cooccurrence matrix
+        variant_cooccurrence_klass = self.get_variant_cooccurrence_klass(source=source)
         variant_one = aliased(Variant)
         variant_two = aliased(Variant)
-        query = self.session.query(VariantCooccurrence,
+        query = self.session.query(variant_cooccurrence_klass,
                                    variant_one.position,
                                    variant_one.reference,
                                    variant_one.alternate,
@@ -508,9 +509,9 @@ class Queries:
                                    variant_two.hgvs_p.label("hgvs_p_two"),
                                    (variant_one.hgvs_p + " - " + variant_two.hgvs_p).label("hgvs_tooltip"))
 
-        query = query.filter(VariantCooccurrence.count >= min_cooccurrence) \
-            .join(variant_one, and_(VariantCooccurrence.variant_id_one == variant_one.variant_id)) \
-            .join(variant_two, and_(VariantCooccurrence.variant_id_two == variant_two.variant_id))
+        query = query.filter(variant_cooccurrence_klass.count >= min_cooccurrence) \
+            .join(variant_one, and_(variant_cooccurrence_klass.variant_id_one == variant_one.variant_id)) \
+            .join(variant_two, and_(variant_cooccurrence_klass.variant_id_two == variant_two.variant_id))
 
         if domain is not None:
             query = query.filter(and_(
