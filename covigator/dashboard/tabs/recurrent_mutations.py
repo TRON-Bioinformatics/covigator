@@ -23,7 +23,6 @@ ID_DROPDOWN_DATE_RANGE_END = 'dropdown-date-range-end'
 ID_DROPDOWN_DATE_RANGE_START = 'dropdown-date-range-start'
 ID_TOP_VARIANTS_METRIC = 'dropdown-top-variants-metric'
 ID_SLIDER_TOP_VARIANTS = 'slider-top-variants'
-ID_VARIANTS_MDS = 'variants-mds'
 ID_COOCCURRENCE_HEATMAP = 'cooccurrence-heatmap'
 ID_NEEDLE_PLOT = 'needle-plot'
 ID_TOP_OCCURRING_VARIANTS = 'top-occurring-variants'
@@ -53,8 +52,6 @@ def get_variants_tab_graphs():
             html.Div(id=ID_NEEDLE_PLOT),
             html.Br(),
             html.Div(id=ID_COOCCURRENCE_HEATMAP),
-            html.Br(),
-            html.Div(id=ID_VARIANTS_MDS),
             html.Br(),
         ],
         className="nine columns",
@@ -314,6 +311,7 @@ def set_callbacks_variants_tab(app, session: Session):
                     selected_variants=selected_rows,
                     metric=metric,
                     min_cooccurrences=min_cooccurrences),
+                html.Br(),
                 figures.get_variants_clustering(
                     sparse_matrix=sparse_matrix, min_cooccurrence=min_cooccurrences, min_samples=min_samples)
             ]
