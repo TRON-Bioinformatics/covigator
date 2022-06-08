@@ -306,7 +306,7 @@ def set_callbacks_variants_tab(app, session: Session):
         else:
             selected_rows = [rows[s] for s in selected_rows_indices] if selected_rows_indices else None
             sparse_matrix = queries.get_sparse_cooccurrence_matrix(
-                gene_name=gene_name, domain=domain, min_cooccurrence=min_cooccurrences)
+                gene_name=gene_name, domain=domain, min_cooccurrence=min_cooccurrences, source=source)
             plot = html.Div(children=[
                 figures.get_cooccurrence_heatmap(
                     sparse_matrix=sparse_matrix,
