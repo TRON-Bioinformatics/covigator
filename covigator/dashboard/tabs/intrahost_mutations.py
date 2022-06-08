@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from dash import dcc
 import dash_bootstrap_components as dbc
 from dash import html
@@ -5,6 +7,7 @@ from dash import dash_table
 from covigator.dashboard.tabs import get_mini_container, print_number
 from dash.dependencies import Output, Input, State
 from sqlalchemy.orm import Session
+import pandas as pd
 
 from covigator.dashboard.figures.intrahost_mutations import IntrahostMutationsFigures
 from covigator.database.queries import Queries
@@ -241,3 +244,18 @@ def set_callbacks_subclonal_variants_tab(app, session: Session):
                     variant_id=variant_id, min_vaf=min_vaf, gene_name=gene_name, domain=domain),
             )
         return plot
+
+    @app.callback(
+        Output("download-dataframe-csv3", "data"),
+        inputs=[
+            Input("btn_csv3", "n_clicks"),
+            Input("memory3", "data")
+        ],
+        prevent_initial_call=True,
+    )
+    def download_top_intrahost_mutations(n_clicks, df):
+        return dcc.send_data_frame(
+            pd.DataFrame.from_dict(df).to_csv,
+            "covigator_top_intrahost_mutations_{}.csv".format(datetime.now().strftime("%Y%m%d%H%M%S")),
+            index=False
+        )

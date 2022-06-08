@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from dash import dcc
+from dash import html
 from dash import dash_table
 from logzero import logger
 from sqlalchemy.orm import Session
@@ -237,6 +238,12 @@ class IntrahostMutationsFigures(Figures):
 
         return [
             fig,
+            html.Br(),
+            html.Div(children=[
+                html.Button("Download CSV", id="btn_csv3"),
+                dcc.Download(id="download-dataframe-csv3"),
+                dcc.Store(id="memory3", data=ordered_data.to_dict('records'))]),
+            html.Br(),
             dcc.Markdown("""
             **Mutations only observed as intrahost**
                             
