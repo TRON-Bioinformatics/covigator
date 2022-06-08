@@ -329,9 +329,24 @@ def set_callbacks_variants_tab(app, session: Session):
             ],
         prevent_initial_call=True,
     )
-    def func(n_clicks, df):
+    def download_clustering_results(n_clicks, df):
         return dcc.send_data_frame(
             pd.DataFrame.from_dict(df).to_csv,
             "covigator_clustering_results_{}.csv".format(datetime.now().strftime("%Y%m%d%H%M%S")),
+            index=False
+        )
+
+    @app.callback(
+        Output("download-dataframe-csv2", "data"),
+        inputs=[
+            Input("btn_csv2", "n_clicks"),
+            Input("memory2", "data")
+        ],
+        prevent_initial_call=True,
+    )
+    def download_top_recurrent_mutations(n_clicks, df):
+        return dcc.send_data_frame(
+            pd.DataFrame.from_dict(df).to_csv,
+            "covigator_top_recurrent_mutations_{}.csv".format(datetime.now().strftime("%Y%m%d%H%M%S")),
             index=False
         )
