@@ -299,11 +299,8 @@ def set_callbacks_variants_tab(app, session: Session):
     )
     def update_cooccurrence_heatmap(
             _, gene_name, domain, dummy, rows, selected_rows_indices, metric, min_cooccurrences, min_samples, source):
-        if source != DataSource.ENA.name:
-            plot = html.Div(
-                children=[dcc.Markdown(
-                    """**The co-occurrence analysis is currently only available for the ENA dataset**""")])
-        elif gene_name is None and domain is None:
+
+        if gene_name is None and domain is None:
             plot = html.Div(
                 children=[dcc.Markdown(
                     """**Please, select a gene or domain to explore the co-occurrence analysis**""")])
