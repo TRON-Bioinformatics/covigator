@@ -48,8 +48,10 @@ def get_variants_tab_graphs():
         children=[
             html.Br(),
             html.Div(id=ID_TOP_OCCURRING_VARIANTS, children=dash_table.DataTable(id=ID_TOP_OCCURRING_VARIANTS_TABLE)),
+            html.Hr(),
             html.Br(),
             html.Div(id=ID_NEEDLE_PLOT),
+            html.Hr(),
             html.Br(),
             html.Div(id=ID_COOCCURRENCE_HEATMAP),
             html.Br(),
@@ -311,6 +313,7 @@ def set_callbacks_variants_tab(app, session: Session):
                     selected_variants=selected_rows,
                     metric=metric,
                     min_cooccurrences=min_cooccurrences),
+                html.Hr(),
                 html.Br(),
                 figures.get_variants_clustering(
                     sparse_matrix=sparse_matrix, min_cooccurrence=min_cooccurrences, min_samples=min_samples)
