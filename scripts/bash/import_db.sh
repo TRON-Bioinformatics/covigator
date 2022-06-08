@@ -83,3 +83,4 @@ sample_gisaid_fields="run_accession, finished, collection_date, host_tax_id, hos
 psql $pg_uri -c "\\copy sample_gisaid$version($sample_gisaid_fields) from program 'gzip -dc $input_folder/sample_gisaid.csv.gz' csv header;"
 load_table "gisaid_variant"
 load_table "gisaid_variant_observation"
+load_table "gisaid_variant_cooccurrence"
