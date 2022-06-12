@@ -5,7 +5,7 @@
 # Knowledge base
 
 ![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/tron-bioinformatics/covigator)
-[![Run tests](https://github.com/TRON-Bioinformatics/covigator/actions/workflows/unit_tests.yml/badge.svg?branch=master)](https://github.com/TRON-Bioinformatics/covigator/actions/workflows/unit_tests.yml)
+[![Run tests](https://github.com/TRON-Bioinformatics/covigator/actions/workflows/unit_tests.yml/badge.svg?branch=main)](https://github.com/TRON-Bioinformatics/covigator/actions/workflows/unit_tests.yml)
 [![Powered by NumFOCUS](https://img.shields.io/badge/powered%20by-Dash-orange.svg?style=flat&colorA=E1523D&colorB=007D8A)](https://dash.plotly.com/)
 [![License](https://img.shields.io/badge/license-MIT-green)](https://opensource.org/licenses/MIT)
 
