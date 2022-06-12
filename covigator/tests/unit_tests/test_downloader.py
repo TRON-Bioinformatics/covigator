@@ -36,7 +36,7 @@ class DownloaderTest(AbstractTest):
         self.downloader.download(ena_run)
         run_storage_folder = os.path.join(self.downloader.storage_folder, "nodate", run_accession)
         self.assertTrue(os.path.exists(run_storage_folder))
-        self.assertTrue(os.path.exists(os.path.join(run_storage_folder, "TRON_Logo_Science.svg")))
+        self.assertTrue(os.path.exists(os.path.join(run_storage_folder, "62862274344968148ecb1d35_TRON%20Logo.svg")))
 
     def test_download_http_with_date(self):
         run_accession = "TEST12346"
@@ -49,7 +49,7 @@ class DownloaderTest(AbstractTest):
         self.downloader.download(ena_run)
         run_storage_folder = os.path.join(self.downloader.storage_folder, "20210630", run_accession)
         self.assertTrue(os.path.exists(run_storage_folder))
-        self.assertTrue(os.path.exists(os.path.join(run_storage_folder, "TRON_Logo_Science.svg")))
+        self.assertTrue(os.path.exists(os.path.join(run_storage_folder, "62862274344968148ecb1d35_TRON%20Logo.svg")))
 
     def test_download_http_without_md5(self):
         run_accession = "TEST12347"
