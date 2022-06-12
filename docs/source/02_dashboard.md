@@ -129,7 +129,7 @@ The aim of this tab is to explore the evolution of SARS-CoV-2 lineages on differ
   * X-axis: sample collection date
   * Y-axis: percentage of samples
 
-![Lineages tab](_static/figures/screencast_01_samples_by_country_tab.gif)
+![Lineages tab](_static/figures/screenshot_07_lineages.png)
 
 
 ## Mutation statistics tab <a name="id5"></a>
@@ -162,7 +162,7 @@ in CoVigator. Also, some of these observations are coherent with biological know
   * X-axis: mutation effect as provided by SnpEff in Sequence Ontology terms
   * Y-axis: number of mutations in logarithmic scale
 
-![Mutation stats tab](_static/figures/screenshot_02_01_mutation_stats_tab.png)
+![Mutation stats tab](_static/figures/screenshot_02_mutation_stats_tab.png)
 
 ## Recurrent mutations tab <a name="id6"></a>
 
