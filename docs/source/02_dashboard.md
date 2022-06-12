@@ -19,16 +19,16 @@ The dashboard is organized in tabs, here we explore each of the tabs.
 **Table of Contents**
 
 1. [How to use an interactive Dash plot](#id1)
-2. [Samples by country tab](#id2)
-3. [Mutation statistics tab](#id3)
-4. [Recurrent mutations tab](#id4)
-5. [Intrahost mutations tab](#id5)
-6. [ENA dataset tab](#id6)
-7. [GISAID dataset tab](#id7)
-8. [Download the raw data](#id8)
+2. [Overview tab](#id2)
+3. [Samples tab](#id3)
+4. [Lineages tab](#id4)
+5. [Mutation statistics tab](#id5)
+6. [Recurrent mutations tab](#id6)
+7. [Intrahost mutations tab](#id7)
+10. [Download the raw data](#id8)
 
 
-## How to use an interactive Dash plot
+## How to use an interactive Dash plot <a name="id1"></a>
 
 Plotly provides several interactive features, some are more intuitive than others, here we show how to zoom and
 filter data. This is applicable on all plots in CoVigator.
@@ -46,17 +46,54 @@ A double click filters out all other elements except the clicked one. Another do
 
 ![Plotly filtering](_static/figures/screencast_filter.gif)
 
-## Samples by country tab
+
+## Overview tab <a name="id2"></a>
+
+The first tab in both dashboards show a set of statistics that help to assess the quality of the dataset.
+These are different between ENA and GISAID.
+
+### ENA plots
+
+* **Library strategies**. The distribution of samples across different library strategies (ie: WGS, WGA and 
+  targeted-capture).
+  * X-axis: library strategy
+  * Y-axis: number of samples
+* **Number of reads**. The number of reads before and after trimming was applied for each sample.
+  * X-axis: number of read after trimming
+  * Y-axis: number of reads before trimming
+* **Coverage**. The relation between horizontal and vertical coverage for each sample. 
+  * X-axis: mean depth of coverage per sample (ie: vertical coverage)
+  * Y-axis: % of genome covered with at least one read per sample (ie: horizontal coverage)
+* **Mean mapping quality versus base calling quality**. The relation between the mean mapping quality and the mean base 
+  call quality for each sample.
+  * X-axis: mean base call quality per sample (this is a Phred score)
+  * Y-axis: mean mapping quality per sample (this is a Phred score)
+
+![ENA dataset](_static/figures/screenshot_05_ena_dataset.png)
+
+### GISAID plots
+
+* **Horizontal coverage**. The distribution of the horizontal coverage. 
+  * X-axis: horizontal coverage %
+  * Y-axis: number of samples in logarithmic scale
+* **Ratio of N and ambiguous bases**. The FASTA format supports ambiguous bases in the form of Ns or other ambiguous 
+  categories that refer to more than one nucleotide base. The ambiguous sequence is unusable for our purposes.
+  * X-axis: ratio of N and ambiguous bases over sequence length
+  * Y-axis: number of samples in logarithmic scale
+
+![GISAID dataset](_static/figures/screenshot_06_gisaid_dataset.png)
+
+
+## Samples tab <a name="id3"></a>
 
 The aim of this tab is to explore the accumulation of samples on different countries through time. 
 We also use the [dN/dS ratio](https://en.wikipedia.org/wiki/Ka/Ks_ratio) as an estimation of the evolutionary pressure 
 and enable monitoring any change through time and location.
-Both ENA and GISAID datasets can be explored separately.
 
 ### Filters
 
-* **Data source**. Choose either ENA or GISAID
 * **Countries**. Select one or more countries to explore, if none are provided all are shown
+* **Lineages**. Select one or more SARS-CoV-2 lineages to explore, if none are provided all are shown
 * **Minimum number of samples per country**. When no countries are provided then this threshold is applied to exclude 
   countries with fewer samples
 * **Genes**. Select one or more genes on which to explore the dN/dS. When provided also the Pfam protein domains for the 
@@ -74,7 +111,28 @@ Both ENA and GISAID datasets can be explored separately.
 ![Samples tab](_static/figures/screencast_01_samples_by_country_tab.gif)
 
 
-## Mutation statistics tab
+## Lineages tab <a name="id4"></a>
+
+The aim of this tab is to explore the evolution of SARS-CoV-2 lineages on different countries through time.
+
+### Filters
+
+* **Countries**. Select one or more countries to explore, if none are provided all are shown
+* **Lineages**. Select one or more SARS-CoV-2 lineages to explore, if none are provided all are shown
+
+### Plots
+
+* **Accumulated lineages by country**. Area plot showing the accumulation of samples for each country. 
+  * X-axis: sample collection date
+  * Y-axis: number of samples
+* **Stacked lineages by country**. Stacked plot showing the prevalent lineage at each time point. 
+  * X-axis: sample collection date
+  * Y-axis: percentage of samples
+
+![Lineages tab](_static/figures/screencast_01_samples_by_country_tab.gif)
+
+
+## Mutation statistics tab <a name="id5"></a>
 
 The aim of this tab is to show genome wide statistics on both datasets and on different genomic regions.
 These statistics have been widely described in the literature and hence can act as quality controls of the results shown
@@ -82,9 +140,8 @@ in CoVigator. Also, some of these observations are coherent with biological know
 
 ### Filters
 
-* **Data source**. Choose either ENA or GISAID
 * **Genes**. Select one or more genes
-* **Variant type**. Choose Single Nucleotide Variant (SNV), insertion or deletion
+* **Variant type**. Choose Single Nucleotide Variant (SNV), Multi Nucleotide Variant (MNV), insertion or deletion
 
 ### Plots
 
@@ -107,7 +164,7 @@ in CoVigator. Also, some of these observations are coherent with biological know
 
 ![Mutation stats tab](_static/figures/screenshot_02_01_mutation_stats_tab.png)
 
-## Recurrent mutations tab
+## Recurrent mutations tab <a name="id6"></a>
 
 The aim of this tab is to facilitate the exploration of most common mutations through time. 
 We show how the frequency of each mutation evolves month by month. For instance, we have observed the raise 
@@ -118,7 +175,6 @@ that most frequently co-occur.
 
 ### Filters
 
-* **Data source**. Choose either ENA or GISAID
 * **Gene**. Select one gene
 * **Protein domain**. Select one protein domain
 * **Top occurring mutations table**
@@ -158,7 +214,9 @@ that most frequently co-occur.
 
 ![Co-occurrence heatmap](_static/figures/screenshot_03_heatmap.png)
 
-## Intrahost mutations tab
+## Intrahost mutations tab <a name="id7"></a>
+
+**NOTE**: only available for ENA dataset
 
 The aim of this tab is to enable the exploration of intrahost mutations.
 In CoVigator we classify as intrahost all mutation observations with a VAF below 0.8.
@@ -197,51 +255,10 @@ the temporal distribution across countries and finally the top 10 co-occurring c
 ![Intrahost mutations](_static/figures/screenshot_04_intrahost_mutations.png)
 
 
-## ENA dataset tab
+## Download the raw data <a name="id8"></a>
 
-The ENA dataset tab shows statistics that are uniquely applicable to the ENA dataset.
-
-### Plots
-
-* **Library strategies**. The distribution of samples across different library strategies (ie: WGS, WGA and 
-  targeted-capture).
-  * X-axis: library strategy
-  * Y-axis: number of samples
-* **Number of reads**. The number of reads before and after trimming was applied for each sample.
-  * X-axis: number of read after trimming
-  * Y-axis: number of reads before trimming
-* **Coverage**. The relation between horizontal and vertical coverage for each sample. 
-  * X-axis: mean depth of coverage per sample (ie: vertical coverage)
-  * Y-axis: % of genome covered with at least one read per sample (ie: horizontal coverage)
-* **Mean mapping quality versus base calling quality**. The relation between the mean mapping quality and the mean base 
-  call quality for each sample.
-  * X-axis: mean base call quality per sample (this is a Phred score)
-  * Y-axis: mean mapping quality per sample (this is a Phred score)
-
-![ENA dataset](_static/figures/screenshot_05_ena_dataset.png)
-
-
-## GISAID dataset tab
-
-The GISAID dataset tab shows statistics that are uniquely applicable to the GISAID dataset.
-
-### Plots
-
-* **Horizontal coverage**. The distribution of the horizontal coverage. 
-  * X-axis: horizontal coverage %
-  * Y-axis: number of samples in logarithmic scale
-* **Ratio of N and ambiguous bases**. The FASTA format supports ambiguous bases in the form of Ns or other ambiguous 
-  categories that refer to more than one nucleotide base. The ambiguous sequence is unusable for our purposes.
-  * X-axis: ratio of N and ambiguous bases over sequence length
-  * Y-axis: number of samples in logarithmic scale
-
-![GISAID dataset](_static/figures/screenshot_06_gisaid_dataset.png)
-
-
-## Download the raw data
+**NOTE**: only available for ENA dataset
 
 The download tab provides the raw data generated by the CoVigator pipeline, this is the variant calls for every sample.
 This is in a custom table with relevant annotations, unfortunately this is not a standard VCF file and the format of 
 the table may change in the future. The sample metadata is also provided.
-
-**NOTE**: the available information corresponds only to ENA in order to comply with GISAID license.
