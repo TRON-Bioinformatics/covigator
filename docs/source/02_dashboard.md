@@ -18,17 +18,17 @@ The dashboard is organized in tabs, here we explore each of the tabs.
 
 **Table of Contents**
 
-1. [How to use an interactive Dash plot](#id1)
-2. [Overview tab](#id2)
-3. [Samples tab](#id3)
-4. [Lineages tab](#id4)
-5. [Mutation statistics tab](#id5)
-6. [Recurrent mutations tab](#id6)
-7. [Intrahost mutations tab](#id7)
-10. [Download the raw data](#id8)
+1. [How to use an interactive Dash plot](#how-to-use-an-interactive-dash-plot)
+2. [Overview tab](#overview-tab)
+3. [Samples tab](#samples-tab)
+4. [Lineages tab](#lineages-tab)
+5. [Mutation statistics tab](#mutation-statistics-tab)
+6. [Recurrent mutations tab](#recurrent-mutations-tab)
+7. [Intrahost mutations tab](#intrahost-mutations-tab)
+10. [Download the raw data](#download-the-raw-data)
 
 
-## How to use an interactive Dash plot <a name="id1"></a>
+## How to use an interactive Dash plot
 
 Plotly provides several interactive features, some are more intuitive than others, here we show how to zoom and
 filter data. This is applicable on all plots in CoVigator.
@@ -47,7 +47,7 @@ A double click filters out all other elements except the clicked one. Another do
 ![Plotly filtering](_static/figures/screencast_filter.gif)
 
 
-## Overview tab <a name="id2"></a>
+## Overview tab
 
 The first tab in both dashboards show a set of statistics that help to assess the quality of the dataset.
 These are different between ENA and GISAID.
@@ -84,7 +84,7 @@ These are different between ENA and GISAID.
 ![GISAID dataset](_static/figures/screenshot_06_gisaid_dataset.png)
 
 
-## Samples tab <a name="id3"></a>
+## Samples tab
 
 The aim of this tab is to explore the accumulation of samples on different countries through time. 
 We also use the [dN/dS ratio](https://en.wikipedia.org/wiki/Ka/Ks_ratio) as an estimation of the evolutionary pressure 
@@ -111,7 +111,7 @@ and enable monitoring any change through time and location.
 ![Samples tab](_static/figures/screencast_01_samples_by_country_tab.gif)
 
 
-## Lineages tab <a name="id4"></a>
+## Lineages tab
 
 The aim of this tab is to explore the evolution of SARS-CoV-2 lineages on different countries through time.
 
@@ -132,7 +132,7 @@ The aim of this tab is to explore the evolution of SARS-CoV-2 lineages on differ
 ![Lineages tab](_static/figures/screenshot_07_lineages.png)
 
 
-## Mutation statistics tab <a name="id5"></a>
+## Mutation statistics tab
 
 The aim of this tab is to show genome wide statistics on both datasets and on different genomic regions.
 These statistics have been widely described in the literature and hence can act as quality controls of the results shown
@@ -164,7 +164,7 @@ in CoVigator. Also, some of these observations are coherent with biological know
 
 ![Mutation stats tab](_static/figures/screenshot_02_mutation_stats_tab.png)
 
-## Recurrent mutations tab <a name="id6"></a>
+## Recurrent mutations tab
 
 The aim of this tab is to facilitate the exploration of most common mutations through time. 
 We show how the frequency of each mutation evolves month by month. For instance, we have observed the raise 
@@ -214,7 +214,7 @@ that most frequently co-occur.
 
 ![Co-occurrence heatmap](_static/figures/screenshot_03_heatmap.png)
 
-## Intrahost mutations tab <a name="id7"></a>
+## Intrahost mutations tab
 
 **NOTE**: only available for ENA dataset
 
@@ -255,7 +255,7 @@ the temporal distribution across countries and finally the top 10 co-occurring c
 ![Intrahost mutations](_static/figures/screenshot_04_intrahost_mutations.png)
 
 
-## Download the raw data <a name="id8"></a>
+## Download the raw data
 
 **NOTE**: only available for ENA dataset
 
