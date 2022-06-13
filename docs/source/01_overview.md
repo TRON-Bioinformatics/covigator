@@ -52,7 +52,9 @@ reporting to both databases. ENA enables a higher resolution into the SARS-CoV-2
 reads. This allows us to annotate mutations with a Variant Allele Frequency (VAF) and explore intrahost 
 mutations. On the other hand, while we load all of the GISAID database in CoVigator, we only process the Illumina 
 samples from ENA. This means excluding all of the Oxford Nanopore samples and hence having a partial view of all the 
-available data.
+available data. Each of the datasets is available in a separate address 
+[https://covigator.tron-mainz.de/gisaid](https://covigator.tron-mainz.de/gisaid) and 
+[https://covigator.tron-mainz.de/ena](https://covigator.tron-mainz.de/ena), respectively.
 
 The dashboard is implemented in the visualization framework [Dash](https://dash.plotly.com/). 
 The computation is distributed through our cluster with a library of similar name [Dask](https://dask.org/).
@@ -129,6 +131,7 @@ kept the use of variant in some scientific terms commonly used; these are:
   mutation may exist.
 * Variant call: a mutation determined by the variant calling process
 * Single Nucleotide Variant (SNV): a point mutation where a single DNA base is substituted by another
+* Multi Nucleotide Variant (MNV): a point mutation where more than one DNA base is substituted by another
 
 There are two terms referring to a given mutation frequency:
 * The Variant Allele Frequency (VAF) refers to the ratio of reads supporting a given mutation. 

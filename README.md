@@ -31,19 +31,19 @@ CoVigator is a monitoring system for SARS-CoV-2 which integrates a full variant 
 a database that stores all relevant information about mutations in SARS-CoV-2 and finally a dashboard to enable 
 visual analytics.
 
-![CoVigator sample accumulation](docs/source/_static/figures/screenshot_01_samples.png)
+![CoVigator sample accumulation](docs/source/_static/figures/screencast_01_samples_by_country_tab.gif)
 
 <p align = "center">
-<b>Figure 1: Sample accumulation by country</b>
+<b>Figure 1: Sample accumulation by country and dN/dS evolution</b>
 </p>
 
 * European Nucleotide Archive (ENA) providing raw reads in FASTQ format
 * Global Initiative on Sharing Avian Influenza Data (GISAID) providing assemblies in FASTA format
 
-![CoVigator gene S view](docs/source/_static/figures/screenshot_01_gene_view.png)
+![CoVigator gene S view](docs/source/_static/figures/screencast_03_recurrent_mutations_tab.gif)
 
 <p align = "center">
-<b>Figure 2: Most frequent mutations in the spike protein</b>
+<b>Figure 2: Recurrent mutations</b>
 </p>
 
 CoVigator loads publicly available SARS-CoV-2 DNA sequences from two databases:
