@@ -42,7 +42,7 @@ class DownloaderTest(AbstractTest):
         run_accession = "TEST12346"
         ena_run = SampleEna(
             run_accession=run_accession,
-            fastq_ftp="https://tron-mainz.de/wp-content/uploads/2020/07/TRON_Logo_Science.svg",
+            fastq_ftp="https://assets.website-files.com/62862274344968d3d3cb1cfc/62862274344968148ecb1d35_TRON%20Logo.svg",
             fastq_md5="de83875d1badf03508269ff77e63e676",
             collection_date=datetime.date(year=2021, month=6, day=30)
         )
