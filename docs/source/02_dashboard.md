@@ -59,7 +59,7 @@ These are different between ENA and GISAID.
   * X-axis: library strategy
   * Y-axis: number of samples
 * **Number of reads**. The number of reads before and after trimming was applied for each sample.
-  * X-axis: number of read after trimming
+  * X-axis: number of reads after trimming
   * Y-axis: number of reads before trimming
 * **Coverage**. The relation between horizontal and vertical coverage for each sample. 
   * X-axis: mean depth of coverage per sample (ie: vertical coverage)
@@ -152,7 +152,7 @@ in CoVigator. Also, some of these observations are coherent with biological know
 * **Top mutations**. Most frequent DNA substitutions. 
   * X-axis: number of samples
   * Y-axis: substitution 
-  * While for SNVs there are only 12 possible substitutions, the possible insertions or deletions is unbounded. This plot shows a maximum of 
+  * While for SNVs there are only 12 possible substitutions, the possible insertions or deletions are unbounded. This plot shows a maximum of 
     12 substitutions.
 * **Indel length distribution**.The length distribution of insertions and deletions. Negative lengths 
   correspond to deletions and positive lengths to insertions. Darker bars indicate in-frame indels. 
@@ -196,7 +196,7 @@ that most frequently co-occur.
 
 ### Plots
 
-* **Top occurring mutations table**. A table with the top occurring mutations including information on the aminoacid change,
+* **Top occurring mutations table**. A table with the top occurring mutations including information on the amino-acid change,
   the mutation effect, the total frequency and number of observations of the mutation, plus the monthly counts or 
   frequency. Mutations selected in this table will be highlighted in the other plots in this tab.
 * **Genome/gene view**. This plot shows by default the genome view with the SARS-CoV-2 genome including seven tracks: 
@@ -234,7 +234,7 @@ the temporal distribution across countries and finally the top 10 co-occurring c
 
 * **Gene**. Select one gene
 * **Protein domain**. Select one protein domain
-* **Minimum VAF subclonal mutations**. The threshoold on the variant allele frequency
+* **Minimum VAF subclonal mutations**. The threshold on the variant allele frequency
 * **Number of top occurring intrahost mutations**. The number of intrahost mutations in the table
 * **Order metric**. Intrahost mutations can be ordered by a joint score of count of observations and conservation, by 
   conservation uniquely, by count of observations uniquely or by VAF.
@@ -243,7 +243,7 @@ the temporal distribution across countries and finally the top 10 co-occurring c
 
 * **Mutations only observed as intrahost**. Any mutation that has been observed in clonal state (ie: VAF > 80 %) will not 
   be present in this table, no matter how many intrahost observations. This table includes information on the 
-  aminoacid change, the mutation effect, first and last observation dates, plus some of the scores discussed above.
+  amino-acid change, the mutation effect, first and last observation dates, plus some of the scores discussed above.
 * **Library strategies distribution** 
   * X-axis: library strategy
   * Y-axis: number of samples
