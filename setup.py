@@ -19,7 +19,6 @@ setup(
         "console_scripts": [
             "covigator-ena-accessor=covigator.command_line:ena_accessor",
             "covigator-ena-downloader=covigator.command_line:ena_downloader",
-            "covigator-gisaid-accessor=covigator.command_line:gisaid_accessor",
             "covigator-processor=covigator.command_line:processor",
             "covigator-dashboard=covigator.dashboard.dashboard:main",
             "covigator-pipeline=covigator.command_line:pipeline",

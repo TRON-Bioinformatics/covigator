@@ -43,20 +43,6 @@ def get_tab_acknowledgements():
                 ),
                 html.Br(),
 
-                html.P(html.B("GISAID Data")),
-                html.P([
-                    """We gratefully acknowledge all data contributors, i.e. the Authors and their Originating laboratories 
-                    responsible for obtaining the specimens, and their Submitting laboratories for generating the 
-                    genetic sequence and metadata and sharing via the GISAID Initiative""",
-                    html.Sup("1"),
-                    " on which this research is based."]),
-                html.P([
-                    html.Sup("1"),
-                    """ Elbe, S., and Buckland-Merrett, G. (2017) Data, disease and diplomacy: 
-                    GISAID’s innovative contribution to global health. Global Challenges, 1:33-46. 
-                    DOI: 10.1002/gch2.1018, PMCID: 31565258"""]),
-                html.Br(),
-
                 html.P(html.B("ENA Data")),
                 html.P([
                     """We gratefully acknowledge the European Nucleotide Archive""",

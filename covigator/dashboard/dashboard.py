@@ -12,7 +12,6 @@ import covigator.configuration
 from covigator.configuration import Configuration
 from covigator.dashboard.tabs.acknowledgements import get_tab_acknowledgements
 from covigator.dashboard.tabs.dataset_ena import get_tab_dataset_ena
-from covigator.dashboard.tabs.dataset_gisaid import get_tab_dataset_gisaid
 from covigator.dashboard.tabs.download import set_callbacks_download_tab, get_tab_download
 from covigator.dashboard.tabs.footer import get_footer
 from covigator.dashboard.tabs.lineages import set_callbacks_lineages_tab, get_tab_lineages
@@ -37,7 +36,6 @@ RECURRENT_MUTATIONS_TAB_ID = "variants"
 SAMPLES_TAB_ID = "samples"
 LINEAGES_TAB_ID = "lineages"
 MUTATIONS_TAB_ID = "mutation-stats"
-GISAID_DATASET_TAB_ID = "gisaid-dataset"
 ENA_DATASET_TAB_ID = "ena-dataset"
 OVERVIEW_TAB_ID = "overview"
 
@@ -64,12 +62,10 @@ class Dashboard:
                                 dbc.Row([
                                         dbc.Col(
                                             children=html.A(html.Img(src="/assets/CoVigator_logo_txt_reg_no_bg.png",
-                                                                     height="25px"), href="/"),
+                                                                     height="80px"), href="/"),
                                             className="ml-2",
                                             id="logo"
                                         ),
-                                        #dbc.Col(html.Br(), className="ml-2"),
-                                        #dbc.Col(html.Br(), className="ml-2"),
                                     ],
                                     align="left",
                                     className="g-0",
@@ -100,9 +96,6 @@ class Dashboard:
                                             label="Menu", children=[
                                                 dbc.DropdownMenuItem(
                                                     "Home", href="/", class_name="m-1",
-                                                    style={'font-size' : '150%', "color": "#003c78"}),
-                                                dbc.DropdownMenuItem(
-                                                    "GISAID dataset", href="/gisaid",
                                                     style={'font-size' : '150%', "color": "#003c78"}),
                                                 dbc.DropdownMenuItem(
                                                     "ENA dataset", href="/ena",
@@ -207,14 +200,11 @@ def set_callbacks(app, session: Session, content_folder):
 
     MAIN_PAGE = "main"
     ENA_PAGE = DataSource.ENA
-    GISAID_PAGE = DataSource.GISAID
     ACKNOWLEDGEMENTS_PAGE = "acknowledgements"
 
     def _get_page(url):
         if url in ["", "/"]:
             return MAIN_PAGE
-        elif url == "/gisaid":
-            return GISAID_PAGE
         elif url == "/ena":
             return ENA_PAGE
         elif url == "/acknowledgements":
@@ -231,15 +221,6 @@ def set_callbacks(app, session: Session, content_folder):
         if page == MAIN_PAGE:
             # show overview with links
             return None, None
-        elif page == GISAID_PAGE:
-            # show gisaid tabs
-            return [
-                dbc.Tab(label="Overview", tab_id=GISAID_DATASET_TAB_ID, label_style=TAB_STYLE),
-                dbc.Tab(label="Samples", tab_id=SAMPLES_TAB_ID, label_style=TAB_STYLE),
-                dbc.Tab(label="Lineages", tab_id=LINEAGES_TAB_ID, label_style=TAB_STYLE),
-                dbc.Tab(label="Mutation statistics", tab_id=MUTATIONS_TAB_ID, label_style=TAB_STYLE),
-                dbc.Tab(label="Recurrent mutations", tab_id=RECURRENT_MUTATIONS_TAB_ID, label_style=TAB_STYLE),
-                ], GISAID_DATASET_TAB_ID
         elif page == ENA_PAGE:
             # show ena tabs
             return [
@@ -256,30 +237,12 @@ def set_callbacks(app, session: Session, content_folder):
                 dbc.Tab(label="Acknowledgements", tab_id=HELP_TAB_ID, label_style={"color": "#003c78", 'display': 'none'})], HELP_TAB_ID
 
     @app.callback(
-        Output('logo', "children"),
-        [Input("url", "pathname")])
-    def switch_logo(url):
-        page = _get_page(url)
-        if page == MAIN_PAGE or page == ACKNOWLEDGEMENTS_PAGE:
-            return html.A(html.Img(src="/assets/CoVigator_logo_txt_reg_no_bg.png", height="80px"), href="/")
-        elif page == GISAID_PAGE:
-            return html.A(html.Img(src="/assets/CoVigator_logo_GISAID.png", height="80px"), href="/")
-        elif page == ENA_PAGE:
-            return html.A(html.Img(src="/assets/CoVigator_logo_ENA.png", height="80px"), href="/")
-
-    @app.callback(
         Output('top-right-logo', "children"),
         [Input("url", "pathname")])
     def switch_lat_update(url):
         page = _get_page(url)
         if page == MAIN_PAGE:
             return None
-        elif page == GISAID_PAGE:
-            return dbc.Button(
-                "last updated {date}".format(date=queries.get_last_update(DataSource.GISAID)),
-                outline=True, color="dark", className="me-1",
-                # 'background-color': '#b71300',
-                style={"margin-right": "15px", 'font-size': '85%'})
         elif page == ENA_PAGE:
             return dbc.Button(
                 "last updated {date}".format(date=queries.get_last_update(DataSource.ENA)),
@@ -296,8 +259,6 @@ def set_callbacks(app, session: Session, content_folder):
                 return get_tab_overview()
             elif at == ENA_DATASET_TAB_ID:
                 return get_tab_dataset_ena(queries=queries)
-            elif at == GISAID_DATASET_TAB_ID:
-                return get_tab_dataset_gisaid(queries=queries)
             elif at == SAMPLES_TAB_ID:
                 return get_tab_samples(queries=queries, data_source=page)
             elif at == MUTATIONS_TAB_ID:

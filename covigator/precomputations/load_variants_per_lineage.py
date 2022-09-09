@@ -34,21 +34,14 @@ class VariantsPerLineageLoader:
         except ValueError as e:
             logger.exception(e)
             logger.error("No top occurrences for ENA data")
-        variants_per_lineage_gisaid = None
-        try:
-            variants_per_lineage_gisaid = self.get_variants_per_lineage(source=DataSource.GISAID.name)
-        except ValueError:
-            logger.error("No top occurrences for GISAID data")
+
         database_rows = []
         # stores the precomputed data
         if variants_per_lineage_ena is not None:
             for index, row in variants_per_lineage_ena.iterrows():
                 # add entries per gene
                 database_rows.append(self._row_to_variants_per_lineage(row, source=DataSource.ENA))
-        if variants_per_lineage_gisaid is not None:
-            for index, row in variants_per_lineage_gisaid.iterrows():
-                # add entries per gene
-                database_rows.append(self._row_to_variants_per_lineage(row, source=DataSource.GISAID))
+
         return database_rows
 
     def _row_to_variants_per_lineage(self, row, source):

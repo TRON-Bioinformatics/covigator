@@ -13,10 +13,6 @@ def get_footer():
                 dbc.Col([
                     html.Br(),
                     html.P("CoVigator {} © 2021 TRON. All Rights Reserved".format(covigator.VERSION)),
-                    html.P([
-                        "GISAID data provided on this website are subject to GISAID’s ",
-                        html.A("Terms and Conditions", href="https://www.gisaid.org/registration/terms-of-use/",
-                               target="_blank")]),
                     html.A(html.Img(src=tron_logo, id="tron-logo"), href="https://tron-mainz.de",  target="_blank"),
                     html.Br(),
                     dcc.Markdown("""

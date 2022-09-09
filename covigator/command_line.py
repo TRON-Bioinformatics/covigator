@@ -7,14 +7,11 @@ from dask_jobqueue import SLURMCluster
 import covigator
 import covigator.configuration
 from covigator.accessor.ena_accessor import EnaAccessor
-from covigator.accessor.gisaid_accessor import GisaidAccessor
 from covigator.configuration import Configuration
 from covigator.database.database import Database
 from covigator.pipeline.ena_pipeline import Pipeline
-from covigator.pipeline.gisaid_pipeline import GisaidPipeline
 from covigator.processor.ena_downloader import EnaDownloader
 from covigator.processor.ena_processor import EnaProcessor
-from covigator.processor.gisaid_processor import GisaidProcessor
 from logzero import logger
 
 
@@ -42,38 +39,9 @@ def ena_accessor():
     EnaAccessor(tax_id=tax_id, host_tax_id=host_tax_id, database=Database(config=config, initialize=True)).access()
 
 
-def gisaid_accessor():
-    parser = ArgumentParser(
-        description="Covigator {} GISAID accessor".format(covigator.VERSION))
-    parser.add_argument(
-        "--input-fasta",
-        dest="input_fasta",
-        help="the FASTA input file from GISAID",
-        required=True
-    )
-    parser.add_argument(
-        "--input-metadata",
-        dest="input_metadata",
-        help="GISAID metadata file",
-        required=True
-    )
-
-    args = parser.parse_args()
-
-    config = Configuration()
-    covigator.configuration.initialise_logs(config.logfile_accesor)
-    GisaidAccessor(input_fasta=args.input_fasta, input_metadata=args.input_metadata, database=Database(initialize=True, config=config)).access()
-
-
 def processor():
     parser = ArgumentParser(
         description="Covigator {} processor".format(covigator.VERSION))
-    parser.add_argument(
-        "--source",
-        dest="data_source",
-        help="Specify data source. This can be either ENA or GISAID",
-        required=True
-    )
     parser.add_argument(
         "--num-jobs",
         dest="num_jobs",
@@ -126,16 +94,9 @@ def ena_downloader():
 
 def _start_dask_processor(args, config, download, cluster=None, num_local_cpus=1):
     with Client(cluster) if cluster is not None else Client(n_workers=num_local_cpus, threads_per_worker=1) as client:
-        if args.data_source == "ENA":
-            EnaProcessor(database=Database(initialize=True, config=config),
-                         dask_client=client, config=config, download=download) \
-                .process()
-        elif args.data_source == "GISAID":
-            GisaidProcessor(database=Database(initialize=True, config=config),
-                            dask_client=client, config=config) \
-                .process()
-        else:
-            logger.error("Unknown data source. Please choose either ENA or GISAID")
+        EnaProcessor(database=Database(initialize=True, config=config),
+                     dask_client=client, config=config, download=download) \
+            .process()
 
 
 def pipeline():
@@ -151,16 +112,6 @@ def pipeline():
         run_accession="test", fastq1=args.fastq1, fastq2=args.fastq2)
     logger.info("Output VCF file: {}".format(vcf_file))
     logger.info("Output QC file: {}".format(qc_file))
-
-
-def gisaid_pipeline():
-    parser = ArgumentParser(description="Run Pipeline for testing")
-    parser.add_argument("--run_accession", dest="run_accession", help="Specify run accession to process", required=True)
-
-    args = parser.parse_args()
-    # FIXME: this interface is broken, it requires the SampleGisaid object not the run_accession
-    vcf_file = GisaidPipeline(config=Configuration()).run(run_accession=args.run_accession)
-    logger.info("Output VCF file: {}".format(vcf_file))
 
 
 def precompute_queries():

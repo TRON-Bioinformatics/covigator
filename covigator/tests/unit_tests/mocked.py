@@ -81,38 +81,23 @@ def get_mocked_variant_observation(
     )
 
 
-def get_mocked_sample(faker: Faker, source: DataSource, job_status=JobStatus.FINISHED) -> Union[SampleEna, SampleGisaid]:
+def get_mocked_sample(faker: Faker, source: DataSource =DataSource.ENA, job_status=JobStatus.FINISHED) -> Union[SampleEna, SampleGisaid]:
     identifier = faker.unique.uuid4()
-    if source == DataSource.ENA:
-        sample = SampleEna(
-            run_accession=identifier,
-            collection_date=faker.date_time(),
-            country=faker.country(),
-            fastq_ftp=faker.uri(),
-            fastq_md5=faker.md5(),
-            num_fastqs=1,
-            status=job_status,
-            pangolin_lineage=faker.random_choices(MOCKED_LINEAGES, length=1)[0]
-        )
-    elif source == DataSource.GISAID:
-        sample = SampleGisaid(
-            run_accession=identifier,
-            collection_date=faker.date_time(),
-            country=faker.country(),
-            status=job_status,
-            pangolin_lineage=faker.random_choices(MOCKED_LINEAGES, length=1)[0]
-        )
-    else:
-        raise ValueError("Bad data source")
+    sample = SampleEna(
+        run_accession=identifier,
+        collection_date=faker.date_time(),
+        country=faker.country(),
+        fastq_ftp=faker.uri(),
+        fastq_md5=faker.md5(),
+        num_fastqs=1,
+        status=job_status,
+        pangolin_lineage=faker.random_choices(MOCKED_LINEAGES, length=1)[0]
+    )
     return sample
 
 
 def get_mocked_ena_sample(faker: Faker, job_status=JobStatus.FINISHED) -> SampleEna:
     return get_mocked_sample(faker=faker, source=DataSource.ENA, job_status=job_status)
-
-
-def get_mocked_gisaid_sample(faker: Faker, job_status=JobStatus.FINISHED) -> SampleGisaid:
-    return get_mocked_sample(faker=faker, source=DataSource.GISAID, job_status=job_status)
 
 
 def get_mocked_log(faker: Faker, source: DataSource = None, module: CovigatorModule = None) -> Log:
@@ -165,17 +150,10 @@ def mock_samples_and_variants(faker, session: Session, num_samples=10):
         session.commit()
 
 
-def mock_samples(faker, session: Session, num_samples=10, job_status=JobStatus.FINISHED, source=None):
+def mock_samples(faker, session: Session, num_samples=10, job_status=JobStatus.FINISHED, source=DataSource.ENA):
     samples = []
     for _ in range(num_samples):
-        if source is not None:
-            selected_source = source
-        else:
-            selected_source = faker.random_choices([DataSource.ENA.name, DataSource.GISAID.name], length=1)[0]
-        if selected_source == DataSource.ENA.name:
-            sample= get_mocked_ena_sample(faker=faker, job_status=job_status)
-        else:   # GISAID
-            sample = get_mocked_gisaid_sample(faker=faker, job_status=job_status)
+        sample = get_mocked_ena_sample(faker=faker, job_status=job_status)
         samples.append(sample)
 
     session.add_all(samples)
