@@ -34,9 +34,10 @@ The result of the pipeline is one or more annotated VCFs with the list of SNVs a
 
 ## Two pipelines in one
 
-In CoVigator we analyse samples from two different sources, ENA and GISAID. While from the first we get the raw reads in
-FASTQ format, from the second we obtain already assembled genomes in FASTA format. Each of these formats has to be 
-analysed differently. Also, the output data that we can obtain from each of these is different.
+In CoVigator we analyse samples from two different formats, FASTQ and FASTA. While from the first we get the 
+the pileup of raw reads, from the second we obtain already assembled genomes in a single sequence. 
+Each of these formats has to be analysed differently. 
+Also, the output data that we can obtain from each of these is different.
 
 ![CoVigator pipeline](_static/figures/pipeline.drawio.png)
 
