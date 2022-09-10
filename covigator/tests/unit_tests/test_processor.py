@@ -31,7 +31,6 @@ class ProcessorTests(AbstractTest):
         log = self.session.query(Log).first()
         self.assertIsNotNone(log.start)
         self.assertIsNotNone(log.end)
-        self.assertEqual(log.source, source)
         self.assertEqual(log.module, CovigatorModule.PROCESSOR)
         self.assertEqual(log.processed, 0)
         data = log.data
@@ -115,8 +114,8 @@ class ProcessorTests(AbstractTest):
 
     def test_load_pangolin(self):
         pangolin_path = pkg_resources.resource_filename(covigator.tests.__name__, "resources/test.lofreq.pangolin.csv")
-        sample = SampleEna(run_accession="TEST")
-        EnaProcessor.load_pangolin(sample, path=pangolin_path)
+        sample = SampleEna(run_accession="TEST", fastq_ftp="blabla", fastq_md5="blabla", num_fastqs=1)
+        sample = EnaProcessor.load_pangolin(sample, path=pangolin_path)
         self.assertEqual(sample.pangolin_pangolin_version, "3.1.19")
         self.assertEqual(sample.pangolin_version, "PLEARN-v1.2.123")
         self.assertEqual(sample.pangolin_pangoLEARN_version, "2022-01-20")

@@ -36,12 +36,6 @@ class TestPrecomputer(AbstractTest):
                          PrecomputedSynonymousNonSynonymousCounts.region_name == g,
                          PrecomputedSynonymousNonSynonymousCounts.source == DataSource.ENA.name)).count(),
                 0)
-            self.assertGreater(
-                self.session.query(PrecomputedSynonymousNonSynonymousCounts).filter(
-                    and_(PrecomputedSynonymousNonSynonymousCounts.region_type == RegionType.GENE.name,
-                         PrecomputedSynonymousNonSynonymousCounts.region_name == g,
-                         PrecomputedSynonymousNonSynonymousCounts.source == DataSource.GISAID.name)).count(),
-                0)
             self.assertEqual(
                 self.session.query(PrecomputedSynonymousNonSynonymousCounts).filter(
                     and_(PrecomputedSynonymousNonSynonymousCounts.region_type != RegionType.GENE.name,
@@ -54,10 +48,6 @@ class TestPrecomputer(AbstractTest):
             self.session.query(PrecomputedSynonymousNonSynonymousCounts).filter(
                 and_(PrecomputedSynonymousNonSynonymousCounts.region_type == RegionType.CODING_REGION.name,
                      PrecomputedSynonymousNonSynonymousCounts.source == DataSource.ENA.name)).count(), 0)
-        self.assertGreater(
-            self.session.query(PrecomputedSynonymousNonSynonymousCounts).filter(
-                and_(PrecomputedSynonymousNonSynonymousCounts.region_type == RegionType.CODING_REGION.name,
-                     PrecomputedSynonymousNonSynonymousCounts.source == DataSource.GISAID.name)).count(), 0)
 
         s_genes = self.session.query(func.sum(PrecomputedSynonymousNonSynonymousCounts.s)).filter(
             PrecomputedSynonymousNonSynonymousCounts.region_type == RegionType.GENE.name).scalar()
@@ -82,12 +72,6 @@ class TestPrecomputer(AbstractTest):
                     and_(PrecomputedSynonymousNonSynonymousCounts.region_type == RegionType.DOMAIN.name,
                          PrecomputedSynonymousNonSynonymousCounts.region_name == d,
                          PrecomputedSynonymousNonSynonymousCounts.source == DataSource.ENA.name)).count(),
-                0)
-            self.assertGreater(
-                self.session.query(PrecomputedSynonymousNonSynonymousCounts).filter(
-                    and_(PrecomputedSynonymousNonSynonymousCounts.region_type == RegionType.DOMAIN.name,
-                         PrecomputedSynonymousNonSynonymousCounts.region_name == d,
-                         PrecomputedSynonymousNonSynonymousCounts.source == DataSource.GISAID.name)).count(),
                 0)
             self.assertEqual(
                 self.session.query(PrecomputedSynonymousNonSynonymousCounts).filter(
@@ -179,7 +163,7 @@ class TestPrecomputer(AbstractTest):
             self.assertIsNotNone(p.variant_id)
             self.assertIsNotNone(p.country)
 
-    @parameterized.expand([DataSource.ENA.name, DataSource.GISAID.name])
+    @parameterized.expand([DataSource.ENA.name])
     def test_load_cooccurrence_matrix(self, source):
 
         variant_cooccurrence_klass = self.queries.get_variant_cooccurrence_klass(source)

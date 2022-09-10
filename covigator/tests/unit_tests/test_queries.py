@@ -97,7 +97,7 @@ class QueriesTests(AbstractTest):
         mds_fit, mds_coords = self.queries.get_mds(gene_name="S")
         self.assertIsNotNone(mds_fit)
 
-    @parameterized.expand([(DataSource.ENA, ), (DataSource.GISAID, )])
+    @parameterized.expand([(DataSource.ENA, )])
     def test_get_variant_abundance_histogram(self, source):
 
         # gets an empty histogram
@@ -204,11 +204,7 @@ class QueriesTests(AbstractTest):
         mock_samples(faker=self.faker, session=self.session, job_status=JobStatus.FINISHED, num_samples=50)
 
         count_jobs_in_queue_ena = self.queries.count_jobs_in_queue(DataSource.ENA)
-        self.assertGreater(count_jobs_in_queue_ena, 0)
-        count_jobs_in_queue_gisaid = self.queries.count_jobs_in_queue(DataSource.GISAID)
-        self.assertGreater(count_jobs_in_queue_gisaid, 0)
-
-        self.assertEqual(count_jobs_in_queue_ena + count_jobs_in_queue_gisaid, 50)
+        self.assertEqual(count_jobs_in_queue_ena, 50)
 
     def test_get_dnds_table(self):
         mock_samples_and_variants(session=self.session, faker=self.faker, num_samples=100)
@@ -218,15 +214,6 @@ class QueriesTests(AbstractTest):
         data = self.queries.get_dnds_table(source=DataSource.ENA.name)
         self._assert_dnds_table(data)
         self.assertEqual(data[data.source != DataSource.ENA].shape[0], 0)      # no entries to other source
-
-        data = self.queries.get_dnds_table(source=DataSource.GISAID.name)
-        self._assert_dnds_table(data)
-        self.assertEqual(data[data.source != DataSource.GISAID].shape[0], 0)  # no entries to other source
-
-        countries = list(data.country.unique())[0:2]
-        data = self.queries.get_dnds_table(source=DataSource.GISAID.name, countries=countries)
-        self._assert_dnds_table(data)
-        self.assertEqual(data[~data.country.isin(countries)].shape[0], 0)  # no entries to other country
 
         genes = ["S"]
         data = self.queries.get_dnds_table(source=DataSource.ENA.name, genes=genes)

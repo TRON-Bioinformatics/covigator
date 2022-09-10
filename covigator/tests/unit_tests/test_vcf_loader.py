@@ -67,26 +67,6 @@ class VcfLoaderTests(AbstractTest):
         self.session.commit()
         self.assertEqual(self.session.query(Variant).count(), 1)
         self.assertEqual(self.session.query(VariantObservation).count(), 1)
-
-    def test_vcf_loader_gisaid(self):
-        vcf_file = pkg_resources.resource_filename(covigator.tests.__name__, "resources/snpeff.vcf")
-        VcfLoader().load(vcf_file, run_accession=self.sample_gisaid.run_accession, source=DataSource.GISAID, session=self.session)
-        self.session.commit()
-        self.assertEqual(self.session.query(GisaidVariant).count(), 3)
-        self.assertEqual(self.session.query(GisaidVariantObservation).count(), 3)
-        variant = self.session.query(GisaidVariant).first()
-        self.assertEqual(variant.chromosome, "MN908947.3")
-        self.assertEqual(variant.position, 23403)
-        self.assertEqual(variant.reference, "A")
-        self.assertEqual(variant.alternate, "G")
-        self.assertEqual(variant.gene_name, "S")
-        variant_observation = self.session.query(GisaidVariantObservation).first()
-        self.assertEqual(variant_observation.sample, self.sample_gisaid.run_accession)
-        self.assertEqual(variant_observation.chromosome, "MN908947.3")
-        self.assertEqual(variant_observation.position, 23403)
-        self.assertEqual(variant_observation.reference, "A")
-        self.assertEqual(variant_observation.alternate, "G")
-
     def test_vcf_loader_vafator(self):
         vcf_file = pkg_resources.resource_filename(covigator.tests.__name__, "resources/test.lofreq.vcf.gz")
         VcfLoader().load(vcf_file, run_accession=self.sample_ena.run_accession, source=DataSource.ENA, session=self.session)
@@ -114,16 +94,3 @@ class VcfLoaderTests(AbstractTest):
             self.assertLess(vo.vaf, 0.2)
             self.assertGreater(vo.dp, 0)
             self.assertGreater(vo.ac, 0)
-
-    def test_vcf_loader_gisaid_2(self):
-        vcf_file = pkg_resources.resource_filename(covigator.tests.__name__, "resources/test.assembly.vcf.gz")
-        VcfLoader().load(vcf_file, run_accession=self.sample_gisaid.run_accession, source=DataSource.GISAID, session=self.session)
-        self.session.commit()
-        self.assertEqual(self.session.query(GisaidVariant).count(), 13)
-        self.assertEqual(self.session.query(GisaidVariantObservation).count(), 13)
-
-        # NOTE: this test VCF was computed with thresholds of 0.2 and 0.8
-        for vo in self.session.query(GisaidVariantObservation).all():
-            self.assertIsNone(vo.vaf)
-            self.assertIsNone(vo.dp)
-            self.assertIsNone(vo.ac)
