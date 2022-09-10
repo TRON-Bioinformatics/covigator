@@ -39,7 +39,7 @@ CoVigator interacts with other systems not part of CoVigator per se:
 * **European Nucleotide Archive (ENA) Application Programming Interface (API)**. The accessor queries the ENA API to fetch 
   new samples periodically. This process can be fully automated.
 
-![CoVigator system design](_static/figures/system_design.png)
+![CoVigator system design](_static/figures/system_design.drawio.png)
 
 All automated data download performs MD5 checksums to ensure data integrity. Also, all network requests implement
 an exponential backoff retry mechanism to minimise failures in a non reliable network.
