@@ -37,27 +37,19 @@ visual analytics.
 <b>Figure 1: Sample accumulation by country and dN/dS evolution</b>
 </p>
 
-* European Nucleotide Archive (ENA) providing raw reads in FASTQ format
-* Global Initiative on Sharing Avian Influenza Data (GISAID) providing assemblies in FASTA format
-
 ![CoVigator gene S view](docs/source/_static/figures/screencast_03_recurrent_mutations_tab.gif)
 
 <p align = "center">
 <b>Figure 2: Recurrent mutations</b>
 </p>
 
-CoVigator loads publicly available SARS-CoV-2 DNA sequences from two databases:
+CoVigator loads publicly available SARS-CoV-2 DNA sequences from the 
+[European Nucleotide Archive (ENA)](https://www.ebi.ac.uk/ena) providing raw reads in FASTQ format.
 
-* [European Nucleotide Archive (ENA)](https://www.ebi.ac.uk/ena) providing raw reads in FASTQ format.
-* [Global Initiative on Sharing Avian Influenza Data (GISAID)](https://www.gisaid.org/) providing assemblies in FASTA 
-  format.
-
-There is certain overlap in the samples present in ENA and GISAID as some national initiatives are systematically 
-reporting to both databases. ENA enables a higher resolution into the SARS-CoV-2 mutation details through the individual 
+ENA enables a high resolution into the SARS-CoV-2 mutation details through the individual 
 reads. This allows us to annotate mutations with a Variant Allele Frequency (VAF) and explore intrahost 
-mutations. On the other hand, while we load all of the GISAID database in CoVigator, we only process the Illumina 
-samples from ENA. This means excluding all of the Oxford Nanopore samples and hence having a partial view of all the 
-available data.
+mutations. Importantly, we only process the Illumina samples from ENA. 
+This means excluding all of the Oxford Nanopore samples and hence having a partial view of all the available data.
 
 The dashboard is implemented in the visualization framework [Dash](https://dash.plotly.com/). 
 The computation is distributed through our cluster with a library of similar name [Dask](https://dask.org/).
