@@ -132,7 +132,7 @@ def get_mocked_variant_cooccurrence(faker: Faker, variant_one: Variant, variant_
 
 def mock_samples_and_variants(faker, session: Session, num_samples=10):
     existing_variants = {DataSource.ENA.name: set(), DataSource.GISAID.name: set()}
-    samples = mock_samples(faker=faker, session=session, num_samples=num_samples)
+    samples = mock_samples(faker=faker, session=session, num_samples=num_samples, source=DataSource.ENA)
     for sample in samples:
         source = DataSource.ENA if isinstance(sample, SampleEna) else DataSource.GISAID
         variants = [get_mocked_variant(faker=faker, source=source.name, session=session) for _ in range(10)]

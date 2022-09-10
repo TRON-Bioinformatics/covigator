@@ -37,15 +37,10 @@ def get_tab_overview():
                                 """),
                             html.Br(),
                             html.P("""
-                       CoVigator loads publicly available SARS-CoV-2 DNA sequences from two systems: 
-                       the European Nucleotide Archive (ENA) and the Global Initiative on Sharing Avian Influenza 
-                       Data (GISAID). 
-                       Some samples are present both in ENA and GISAID as some national initiatives are systematically
-                       reporting to both databases. 
-                       ENA provides the raw reads in FASTQ format and thus enables a higher resolution analysis into the 
-                       SARS-CoV-2 mutations. Intrahost mutations are of particular interest. 
-                       On the other hand, GISAID dataset is more extensive and represents best the geograhical and
-                       temporal spread of SARS-CoV-2.
+                       CoVigator loads publicly available SARS-CoV-2 DNA sequences from 
+                       the European Nucleotide Archive (ENA).  
+                       ENA provides the raw reads in FASTQ format and thus enables a high resolution analysis into the 
+                       SARS-CoV-2 mutations. Intrahost mutations are of particular interest.
                        """),
                             html.Br(),
                             dbc.CardBody(

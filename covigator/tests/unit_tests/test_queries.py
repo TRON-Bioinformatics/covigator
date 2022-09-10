@@ -56,7 +56,7 @@ class QueriesTests(AbstractTest):
         observed_date = self.queries.get_date_of_most_recent_sample()
         self.assertIsNone(observed_date)
 
-    @parameterized.expand([DataSource.ENA.name, DataSource.GISAID.name])
+    @parameterized.expand([DataSource.ENA.name])
     def test_get_cooccurrence_matrix_by_gene_no_data(self, source):
         PrecomputationsLoader(session=self.session).load_table_counts()
         data = self.queries.get_sparse_cooccurrence_matrix(gene_name="S", domain=None, source=source)

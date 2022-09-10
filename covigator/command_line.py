@@ -1,5 +1,7 @@
 from argparse import ArgumentParser
 
+from covigator.database.model import DataSource
+
 from covigator.precomputations.load_cooccurrences import CooccurrenceMatrixLoader
 from covigator.precomputations.loader import PrecomputationsLoader
 from dask.distributed import Client
@@ -65,7 +67,7 @@ def processor():
     parser.add_argument(
         "--download",
         dest="download",
-        help="if set it tries to download ENA FASTQs if they are not already in place. Not applicale for GISAID",
+        help="if set it tries to download ENA FASTQs if they are not already in place.",
         action='store_true',
         default=False
     )
@@ -128,12 +130,6 @@ def precompute_queries():
 def cooccurrence():
     parser = ArgumentParser(description="Precompute cooccurrence of mutations")
     parser.add_argument(
-        "--source",
-        dest="data_source",
-        help="Specify data source. This can be either ENA or GISAID",
-        required=True
-    )
-    parser.add_argument(
         "--maximum-mutation-length",
         dest="maximum_length",
         help="Only mutations with this maximum size will be included in the cooccurence matrix",
@@ -142,7 +138,7 @@ def cooccurrence():
     args = parser.parse_args()
 
     database = Database(initialize=True, config=Configuration())
-    loader = CooccurrenceMatrixLoader(session=database.get_database_session(), source=args.data_source)
+    loader = CooccurrenceMatrixLoader(session=database.get_database_session(), source=DataSource.ENA.name)
     logger.info("Starting precomputation...")
     loader.load(maximum_length=int(args.maximum_length))
     logger.info("Done precomputing")
