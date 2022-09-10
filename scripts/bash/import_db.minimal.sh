@@ -70,15 +70,3 @@ load_table "subclonal_variant"
 load_table "subclonal_variant_observation"
 #load_table "low_frequency_variant_observation"
 
-# GISAID
-sample_gisaid_fields="run_accession, finished, collection_date, host_tax_id, host, \
- country_raw, region, country, country_alpha_2, country_alpha_3, continent, continent_alpha_2, \
- site, site2, sequence_length, count_n_bases, count_ambiguous_bases, count_snvs, \
- count_insertions, count_deletions, status, created_at, queued_at, analysed_at, loaded_at, failed_at, \
- error_message, sample_folder, vcf_path, fasta_path, pangolin_path, pangolin_lineage, \
- pangolin_conflict, pangolin_ambiguity_score, pangolin_scorpio_call, pangolin_scorpio_support, \
- pangolin_scorpio_conflict, pangolin_version, pangolin_pangolin_version, \
- pangolin_pango_version, pangolin_status, pangolin_note, covigator_accessor_version, covigator_processor_version"
-psql $pg_uri -c "\\copy sample_gisaid$version($sample_gisaid_fields) from program 'gzip -dc $input_folder/sample_gisaid.minimal.csv.gz' csv header;"
-load_table "gisaid_variant"
-load_table "gisaid_variant_observation"

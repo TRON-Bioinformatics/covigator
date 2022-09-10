@@ -37,15 +37,10 @@ def get_tab_overview():
                                 """),
                             html.Br(),
                             html.P("""
-                       CoVigator loads publicly available SARS-CoV-2 DNA sequences from two systems: 
-                       the European Nucleotide Archive (ENA) and the Global Initiative on Sharing Avian Influenza 
-                       Data (GISAID). 
-                       Some samples are present both in ENA and GISAID as some national initiatives are systematically
-                       reporting to both databases. 
-                       ENA provides the raw reads in FASTQ format and thus enables a higher resolution analysis into the 
-                       SARS-CoV-2 mutations. Intrahost mutations are of particular interest. 
-                       On the other hand, GISAID dataset is more extensive and represents best the geograhical and
-                       temporal spread of SARS-CoV-2.
+                       CoVigator loads publicly available SARS-CoV-2 DNA sequences from 
+                       the European Nucleotide Archive (ENA).  
+                       ENA provides the raw reads in FASTQ format and thus enables a high resolution analysis into the 
+                       SARS-CoV-2 mutations. Intrahost mutations are of particular interest.
                        """),
                             html.Br(),
                             dbc.CardBody(
@@ -53,13 +48,13 @@ def get_tab_overview():
                                     dbc.Col(
                                         dbc.Card(
                                             [
-                                                dbc.CardImg(src="/assets/gisaid.png", top=True,
-                                                            style={"width": "18rem", "margin-left": "20px",
+                                                dbc.CardImg(src="/assets/ENA_logo_2021.png", top=True,
+                                                            style={"width": "23rem", "margin-left": "20px",
                                                                    "margin-top": "10px"}, ),
                                                 dbc.CardBody(
                                                     [
                                                         dbc.Button(
-                                                            "Explore data derived from GISAID", color="warning", href="/gisaid",
+                                                            "Explore data derived from ENA", color="warning", href="/ena",
                                                             style={"margin-left": "20px", "margin-right": "20px",
                                                                    "font-size": 20}, ),
                                                     ]
@@ -68,26 +63,8 @@ def get_tab_overview():
                                             outline=False,
                                             style={"width": "40rem", "height": "15rem"},
                                         )
-                                    ),
-                                dbc.Col(
-                                    dbc.Card(
-                                        [
-                                            dbc.CardImg(src="/assets/ENA_logo_2021.png", top=True,
-                                                        style={"width": "23rem", "margin-left": "20px",
-                                                               "margin-top": "10px"}, ),
-                                            dbc.CardBody(
-                                                [
-                                                    dbc.Button(
-                                                        "Explore data derived from ENA", color="warning", href="/ena",
-                                                        style={"margin-left": "20px", "margin-right": "20px",
-                                                               "font-size": 20}, ),
-                                                ]
-                                            ),
-                                        ],
-                                        outline=False,
-                                        style={"width": "40rem", "height": "15rem"},
                                     )
-                                )])),
+                                ])),
                             html.Br(),
                             html.Br(),
                             html.Br(),

@@ -10,7 +10,7 @@
 [![License](https://img.shields.io/badge/license-MIT-green)](https://opensource.org/licenses/MIT)
 
 The Covigator knowledge base holds all the results that are shown in the dashboard.
-It is responsible for orchestrating the update of data from ENA and GISAID into the final results.
+It is responsible for orchestrating the update of data from ENA into the final results.
 It acts as the backend for all of CoVigator.
 
 Here we describe what the knowledge base is in charge of and how to operate it.
@@ -28,7 +28,7 @@ Here we describe what the knowledge base is in charge of and how to operate it.
 
 The CoVigator knowledge base has several components:
 
-* **Accessor**. The process in charge of fetching raw data from ENA and GISAID and store it in the database.
+* **Accessor**. The process in charge of fetching raw data from ENA and store it in the database.
 * **Processor**. The process in charge of processing the raw data through the pipeline and storing the results.
 * **Database**. The database where raw data and results are stored.
 
@@ -38,9 +38,8 @@ CoVigator interacts with other systems not part of CoVigator per se:
   CoVigator can run without this, but it is required in order to scale out processing to multiple servers.
 * **European Nucleotide Archive (ENA) Application Programming Interface (API)**. The accessor queries the ENA API to fetch 
   new samples periodically. This process can be fully automated.
-* **GISAID database**. The accessor relies on a manual download from GISAID before updating any data.
 
-![CoVigator system design](_static/figures/system_design.png)
+![CoVigator system design](_static/figures/system_design.drawio.png)
 
 All automated data download performs MD5 checksums to ensure data integrity. Also, all network requests implement
 an exponential backoff retry mechanism to minimise failures in a non reliable network.
@@ -111,9 +110,6 @@ CoVigator is configured through environment variables.
 
 ### Accessor
 
-
-#### ENA
-
 `covigator-ena-accessor --tax-id 2697049 --host-tax-id 9606`
 
 - The organism taxonomic identifier (eg: for SARS-CoV-2 the taxonomic identifier is 2697049)
@@ -121,16 +117,10 @@ CoVigator is configured through environment variables.
 
 The taxonomic identifiers for the different organisms is available through EMBL-EBI as described here https://ena-docs.readthedocs.io/en/latest/retrieval/programmatic-access/taxon-api.html or through NCBI here https://www.ncbi.nlm.nih.gov/taxonomy.
 
-Only for ENA an additional step to download samples is required. This has been removed from the processor as 
+An additional step to download samples is required. This has been removed from the processor as 
 distributed downloading does not scale up as well as processing does.
 
 `covigator-download`
-
-#### GISAID
-
-`covigator-gisaid-accessor --input-fasta gisaid_dna.fasta --input-metadata gisaid.tsv`
-
-The input files for GISAID need to be downloaded manually from GISAID site after accepting their license.
 
 ### Processor
 
@@ -141,7 +131,7 @@ through its life cycle.
 
 The happy path of a job is the following:
 - `PENDING`: newly created job by the accessor
-- `DOWNLOADED`: in the case of ENA samples there is an intermediate state for the download
+- `DOWNLOADED`: intermediate state for the download
 - `QUEUED`: the job has already been read by the processor and the subsequent actions are scheduled
 - `FINISHED`: final state
   
@@ -157,11 +147,10 @@ Also, it can run on a single computer without any cluster by specifiying the num
 
 
 ```
-covigator-processor --source ENA|GISAID
+covigator-processor
 ```
 
 **Parameters**
-- `--source` The data source to process. Possible values: ENA, GISAID. Required: true
 - `--num-jobs` The number of dask jobs to spin, this corresponds to the number of whole nodes requested to the cluster. Default: 1
 
 To run locally out of a cluster use `--local` and `--num-local-cpus`.
@@ -174,24 +163,13 @@ covigator-dashboard
 
 ## Sample exclusion criteria
 
-Exclusion criteria common to ENA and GISAID:
+Exclusion criteria:
 1. Non human host. All samples with a non human host are excluded
 2. Collection date prior to December 2019
 3. Horizontal genome coverage below 20%
-
-Exclusion criteria for ENA samples:
-1. Non Illumina samples. Notice that this excludes all of Nanopore sequencing data. 
+4. Non Illumina samples. Notice that this excludes all of Nanopore sequencing data. 
 This may change in the future.
-2. Only WGA, WGS and targeted sequencing samples. Other library strategies such as RNA-seq are excluded.
-3. Missing URL to raw FASTQ data
-4. Mean mapping quality below 10
-5. Mean base call quality below 10
-
-Exclusion criteria for GISAID samples:
-1. Ratio of ambiguous bases (ie: N and other ambiguous IUPAC codes) greater than 0.2
-
-
-
-
-
-
+5. Only WGA, WGS and targeted sequencing samples. Other library strategies such as RNA-seq are excluded.
+6. Missing URL to raw FASTQ data
+7. Mean mapping quality below 10
+8. Mean base call quality below 10
