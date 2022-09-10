@@ -41,20 +41,14 @@ visual analytics.
 <b>Figure 2: Most frequent mutations in the spike protein</b>
 </p>
 
-CoVigator loads publicly available SARS-CoV-2 DNA sequences from two databases:
+CoVigator loads publicly available SARS-CoV-2 DNA sequences from the
+[European Nucleotide Archive (ENA)](https://www.ebi.ac.uk/ena) providing raw reads in FASTQ format.
 
-* [European Nucleotide Archive (ENA)](https://www.ebi.ac.uk/ena) providing raw reads in FASTQ format.
-* [Global Initiative on Sharing Avian Influenza Data (GISAID)](https://www.gisaid.org/) providing assemblies in FASTA 
-  format.
-
-There is certain overlap in the samples present in ENA and GISAID as some national initiatives are systematically 
-reporting to both databases. ENA enables a higher resolution into the SARS-CoV-2 mutation details through the individual 
+ENA enables a high resolution into the SARS-CoV-2 mutation details through the individual 
 reads. This allows us to annotate mutations with a Variant Allele Frequency (VAF) and explore intrahost 
-mutations. On the other hand, while we load all of the GISAID database in CoVigator, we only process the Illumina 
-samples from ENA. This means excluding all of the Oxford Nanopore samples and hence having a partial view of all the 
-available data. Each of the datasets is available in a separate address 
-[https://covigator.tron-mainz.de/gisaid](https://covigator.tron-mainz.de/gisaid) and 
-[https://covigator.tron-mainz.de/ena](https://covigator.tron-mainz.de/ena), respectively.
+mutations. At the moment we only process the Illumina samples from ENA. 
+This means excluding all of the Oxford Nanopore samples and hence having a partial view of all the 
+available data.
 
 The dashboard is implemented in the visualization framework [Dash](https://dash.plotly.com/). 
 The computation is distributed through our cluster with a library of similar name [Dask](https://dask.org/).
@@ -108,12 +102,9 @@ contribution to integrate Pangolin into the CoVigator pipeline.
 
 We gratefully acknowledge all data contributors, i.e. the Authors and their Originating laboratories responsible for 
 obtaining the specimens, and their Submitting laboratories for generating the genetic sequence and metadata and sharing 
-via the GISAID Initiative (1) and the European Nucleotide Archive (2), on which this research is based.
-GISAID data used in this web application remain subject to GISAID’s Terms and Conditions http://www/gisaid/org/DAA/.
+via the European Nucleotide Archive (1), on which this research is based.
 
-1) Elbe, S., and Buckland-Merrett, G. (2017) Data, disease and diplomacy: GISAID’s innovative contribution to global 
-   health. Global Challenges, 1:33-46. DOI: 10.1002/gch2.1018 PMCID: 31565258
-2) Leinonen, R., Akhtar, R., Birney, E., Bower, L., Cerdeno-Tárraga, A., Cheng, Y., Cleland, I., Faruque, N., 
+1) Leinonen, R., Akhtar, R., Birney, E., Bower, L., Cerdeno-Tárraga, A., Cheng, Y., Cleland, I., Faruque, N., 
    Goodgame, N., Gibson, R., Hoad, G., Jang, M., Pakseresht, N., Plaister, S., Radhakrishnan, R., Reddy, K., 
    Sobhany, S., Hoopen, P. Ten, Vaughan, R., Zalunin V., Cochrane, G. (2011). The European nucleotide archive. 
    Nucleic Acids Research, 39(SUPPL. 1), D28. [10.1093/nar/gkq967](https://doi.org/10.1093/nar/gkq967)
@@ -134,11 +125,10 @@ kept the use of variant in some scientific terms commonly used; these are:
 * Multi Nucleotide Variant (MNV): a point mutation where more than one DNA base is substituted by another
 
 There are two terms referring to a given mutation frequency:
-* The Variant Allele Frequency (VAF) refers to the ratio of reads supporting a given mutation. 
-  The VAF can only be calculated on the ENA dataset. 
+* The Variant Allele Frequency (VAF) refers to the ratio of reads supporting a given mutation.  
   The VAF is used to distinguish clonal and intrahost mutations. 
 * The mutation frequency on the other hand refers to the frequency in the population of samples. 
-  This is calculated on both datasets ENA and GISAID, but importantly intrahost mutations are not taken into account.
+  Importantly intrahost mutations are not taken into account.
 
 
 ------------------------

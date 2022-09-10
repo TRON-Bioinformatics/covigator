@@ -13,18 +13,16 @@ def get_tab_download(content_folder):
                 dcc.Markdown("""
                     ** Download the raw CoVigator data derived from ENA** 
                     
-                    * `variant_observation` contains the variant calls from ENA
-                    * `subclonal_variant_observation` contains the variant calls from ENA with a VAF < 80 % and >= 5 %
-                    * `low_frequency_variant_observation` contains the variant calls from ENA with a VAF < 5 %
+                    * `variant_observation` contains the individual variant calls
+                    * `subclonal_variant_observation` contains the variant calls with a VAF < 80 % and >= 5 %
+                    * `low_frequency_variant_observation` contains the variant calls with a VAF < 5 %
                     * `variant` contains the unique variants without any sample specific information
-                    * `variant_cooccurrence` contains the cooccurrence matrix between ENA clonal variants
-                    * `sample_ena` contains the ENA samples metadata and some sample level derived data (eg: pangolin, coverage analysis, etc.)
+                    * `variant_cooccurrence` contains the cooccurrence matrix between clonal variants
+                    * `sample_ena` contains the samples metadata and some sample level derived data (eg: pangolin, coverage analysis, etc.)
                     * `conservation` contains the ConsHMM conservation tracks
                     * `gene` contains the gene annotations as provided by Ensembl
                     * `domain` contains the Pfam protein domains
-                    
-                    **NOTE**: no GISAID data, metadata or derived data that enables reverse engineer GISAID original 
-                    sequences is available for download in agreement with GISAID's terms and conditions 
+                     
                      """, style={"font-size": 16}),
                 html.Br(),
                 get_downloadable_files(content_folder=content_folder)

@@ -101,8 +101,8 @@ class FakeProcessorFailing(AbstractProcessor):
 class FakeGisaidProcessor(AbstractProcessor):
 
     def __init__(self, database: Database, dask_client: Client, config: Configuration):
-        logger.info("Initialising GISAID processor")
-        super().__init__(database, dask_client, DataSource.GISAID, config, wait_time=1)
+        logger.info("Initialising ENA processor")
+        super().__init__(database, dask_client, DataSource.ENA, config, wait_time=1)
 
     def _process_run(self, run_accession: str):
         """
@@ -116,7 +116,7 @@ class FakeGisaidProcessor(AbstractProcessor):
     def job(config: Configuration, run_accession):
         return FakeGisaidProcessor.run_job(
             config, run_accession, start_status=JobStatus.QUEUED, end_status=JobStatus.FINISHED,
-            error_status=JobStatus.FAILED_PROCESSING, data_source=DataSource.GISAID,
+            error_status=JobStatus.FAILED_PROCESSING, data_source=DataSource.ENA,
             function=FakeGisaidProcessor.run_all
     )
 

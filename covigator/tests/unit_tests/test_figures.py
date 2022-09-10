@@ -19,7 +19,7 @@ class FiguresTests(AbstractTest):
         self.mutation_stats_figures = MutationStatsFigures(queries=Queries(session=self.session))
         self.variants_figures = RecurrentMutationsFigures(queries=Queries(session=self.session))
 
-    @parameterized.expand([DataSource.ENA.name, DataSource.GISAID.name, (None,)])
+    @parameterized.expand([DataSource.ENA.name, (None,)])
     def test_samples_by_country(self, source):
         # populates the ENA samples tables
         mock_samples(faker=self.faker, session=self.session, num_samples=100)
@@ -37,7 +37,7 @@ class FiguresTests(AbstractTest):
                 data_source=source
             )
 
-    @parameterized.expand([DataSource.ENA.name, DataSource.GISAID.name, (None,)])
+    @parameterized.expand([DataSource.ENA.name, (None,)])
     def test_samples_by_country_no_data(self, source):
         if source is not None:
             figure = self.sample_figures.get_accumulated_samples_by_country_plot(data_source=source)
@@ -49,7 +49,7 @@ class FiguresTests(AbstractTest):
                 data_source=source
             )
 
-    @parameterized.expand([DataSource.ENA.name, DataSource.GISAID.name, (None,)])
+    @parameterized.expand([DataSource.ENA.name, (None,)])
     def test_variants_per_sample(self, source):
         # populates the ENA samples tables
         mock_samples_and_variants(session=self.session, faker=self.faker, num_samples=100)
@@ -67,7 +67,7 @@ class FiguresTests(AbstractTest):
                 data_source=source
             )
 
-    @parameterized.expand([DataSource.ENA.name, DataSource.GISAID.name, (None,)])
+    @parameterized.expand([DataSource.ENA.name, (None,)])
     def test_variants_per_sample_no_data(self, source):
         if source is not None:
             figure = self.mutation_stats_figures.get_variants_per_sample_plot(data_source=source)
@@ -79,7 +79,7 @@ class FiguresTests(AbstractTest):
                 data_source=source
             )
 
-    @parameterized.expand([DataSource.ENA.name, DataSource.GISAID.name, (None,)])
+    @parameterized.expand([DataSource.ENA.name, (None,)])
     def test_substitutions(self, source):
         # populates the ENA samples tables
         mock_samples_and_variants(session=self.session, faker=self.faker, num_samples=100)
@@ -99,7 +99,7 @@ class FiguresTests(AbstractTest):
                 data_source=source, variant_types=[VariantType.SNV.name]
             )
 
-    @parameterized.expand([DataSource.ENA.name, DataSource.GISAID.name, (None,)])
+    @parameterized.expand([DataSource.ENA.name, (None,)])
     def test_substitutions_no_data(self, source):
         if source is not None:
             figure = self.mutation_stats_figures.get_substitutions_plot(
@@ -112,7 +112,7 @@ class FiguresTests(AbstractTest):
                 data_source=source, variant_types=[VariantType.SNV.name]
             )
 
-    @parameterized.expand([DataSource.ENA.name, DataSource.GISAID.name, (None,)])
+    @parameterized.expand([DataSource.ENA.name, (None,)])
     def test_needle_plot(self, source):
         mock_samples_and_variants(session=self.session, faker=self.faker, num_samples=100)
         if source is not None:
@@ -126,7 +126,7 @@ class FiguresTests(AbstractTest):
                 source=source, gene_name="S", bin_size=50, domain_name=None, selected_variants=None
             )
 
-    @parameterized.expand([DataSource.ENA.name, DataSource.GISAID.name, (None,)])
+    @parameterized.expand([DataSource.ENA.name, (None,)])
     def test_needle_plot_no_data(self, source):
         if source is not None:
             figure = self.variants_figures.get_variants_plot(
@@ -139,7 +139,7 @@ class FiguresTests(AbstractTest):
                 source=source, gene_name="S", bin_size=50, domain_name=None, selected_variants=None
             )
 
-    @parameterized.expand([DataSource.ENA.name, DataSource.GISAID.name, (None,)])
+    @parameterized.expand([DataSource.ENA.name, (None,)])
     def test_dn_ds_plot(self, source):
         if source is not None:
             figure = self.sample_figures.get_dnds_by_gene_plot(data_source=source)

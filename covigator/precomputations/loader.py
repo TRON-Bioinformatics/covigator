@@ -47,16 +47,14 @@ class PrecomputationsLoader:
 
         # reads the data from the database
         database_rows_ena = self._read_count_variants_per_sample(data_source=DataSource.ENA)
-        database_rows_gisaid = self._read_count_variants_per_sample(data_source=DataSource.GISAID)
 
         # delete all rows before starting
         self.session.query(PrecomputedVariantsPerSample).delete()
         self.session.commit()
 
-        self.session.add_all(database_rows_ena + database_rows_gisaid)
+        self.session.add_all(database_rows_ena)
         self.session.commit()
-        logger.info("Added {} entries to {}".format(len(database_rows_ena) + len(database_rows_gisaid),
-                                                    PrecomputedVariantsPerSample.__tablename__))
+        logger.info("Added {} entries to {}".format(len(database_rows_ena), PrecomputedVariantsPerSample.__tablename__))
 
     def _read_count_variants_per_sample(self, data_source: DataSource):
 
@@ -98,15 +96,14 @@ class PrecomputationsLoader:
     def load_count_substitutions(self):
 
         database_rows_ena = self._read_count_substitutions(data_source=DataSource.ENA)
-        database_rows_gisaid = self._read_count_substitutions(data_source=DataSource.GISAID)
 
         # delete all rows before starting
         self.session.query(PrecomputedSubstitutionsCounts).delete()
         self.session.commit()
 
-        self.session.add_all(database_rows_ena + database_rows_gisaid)
+        self.session.add_all(database_rows_ena)
         self.session.commit()
-        logger.info("Added {} entries to {}".format(len(database_rows_ena) + len(database_rows_gisaid),
+        logger.info("Added {} entries to {}".format(len(database_rows_ena),
                                                     PrecomputedSubstitutionsCounts.__tablename__))
 
     def _read_count_substitutions(self, data_source: DataSource):
@@ -153,15 +150,14 @@ class PrecomputationsLoader:
     def load_indel_length(self):
 
         database_rows_ena = self._read_indel_length(data_source=DataSource.ENA)
-        database_rows_gisaid = self._read_indel_length(data_source=DataSource.GISAID)
 
         # delete all rows before starting
         self.session.query(PrecomputedIndelLength).delete()
         self.session.commit()
 
-        self.session.add_all(database_rows_ena + database_rows_gisaid)
+        self.session.add_all(database_rows_ena)
         self.session.commit()
-        logger.info("Added {} entries to {}".format(len(database_rows_ena) + len(database_rows_gisaid),
+        logger.info("Added {} entries to {}".format(len(database_rows_ena),
                                                     PrecomputedIndelLength.__tablename__))
 
     def _read_indel_length(self, data_source: DataSource):
@@ -206,15 +202,14 @@ class PrecomputationsLoader:
     def load_annotation(self):
 
         database_rows_ena = self._read_annotations(data_source=DataSource.ENA)
-        database_rows_gisaid = self._read_annotations(data_source=DataSource.GISAID)
 
         # delete all rows before starting
         self.session.query(PrecomputedAnnotation).delete()
         self.session.commit()
 
-        self.session.add_all(database_rows_ena + database_rows_gisaid)
+        self.session.add_all(database_rows_ena)
         self.session.commit()
-        logger.info("Added {} entries to {}".format(len(database_rows_ena) + len(database_rows_gisaid), PrecomputedAnnotation.__tablename__))
+        logger.info("Added {} entries to {}".format(len(database_rows_ena), PrecomputedAnnotation.__tablename__))
 
     def _read_annotations(self, data_source: DataSource):
 
@@ -258,18 +253,13 @@ class PrecomputationsLoader:
     def load_table_counts(self):
 
         count_variants_ena = self.queries.count_variants(cache=False, source=DataSource.ENA.name)
-        count_variants_gisaid = self.queries.count_variants(cache=False, source=DataSource.GISAID.name)
         count_samples_ena = self.queries.count_samples(source=DataSource.ENA.name, cache=False)
-        count_samples_gisaid = self.queries.count_samples(source=DataSource.GISAID.name, cache=False)
         count_variant_observations_ena = self.queries.count_variant_observations(
             source=DataSource.ENA.name, cache=False)
-        count_variant_observations_gisaid = self.queries.count_variant_observations(
-            source=DataSource.GISAID.name, cache=False)
         count_subclonal_variant_observations = self.queries.count_subclonal_variant_observations(cache=False)
         count_subclonal_variant_unique = self.queries.count_unique_subclonal_variant(cache=False)
         count_subclonal_variant_unique_only_subclonal = self.queries.count_unique_only_subclonal_variant(cache=False)
         count_countries_ena = self.queries.count_countries(source=DataSource.ENA.name, cache=False)
-        count_countries_gisaid = self.queries.count_countries(source=DataSource.GISAID.name, cache=False)
 
         # delete all rows before starting
         self.session.query(PrecomputedTableCounts).delete()
@@ -280,14 +270,8 @@ class PrecomputationsLoader:
                 table=Variant.__name__, count=count_variants_ena,
                 factor=PrecomputedTableCounts.FACTOR_SOURCE, value=DataSource.ENA.name),
             PrecomputedTableCounts(
-                table=GisaidVariant.__name__, count=count_variants_gisaid,
-                factor=PrecomputedTableCounts.FACTOR_SOURCE, value=DataSource.GISAID.name),
-            PrecomputedTableCounts(
                 table=VariantObservation.__name__, count=count_variant_observations_ena,
                 factor=PrecomputedTableCounts.FACTOR_SOURCE, value=DataSource.ENA.name),
-            PrecomputedTableCounts(
-                table=GisaidVariantObservation.__name__, count=count_variant_observations_gisaid,
-                factor=PrecomputedTableCounts.FACTOR_SOURCE, value=DataSource.GISAID.name),
             PrecomputedTableCounts(
                 table=SubclonalVariantObservation.__name__, count=count_subclonal_variant_observations),
             PrecomputedTableCounts(
@@ -299,14 +283,8 @@ class PrecomputationsLoader:
                 table=SampleEna.__name__, count=count_samples_ena,
                 factor=PrecomputedTableCounts.FACTOR_SOURCE, value=DataSource.ENA.name),
             PrecomputedTableCounts(
-                table=SampleGisaid.__name__, count=count_samples_gisaid,
-                factor=PrecomputedTableCounts.FACTOR_SOURCE, value=DataSource.GISAID.name),
-            PrecomputedTableCounts(
                 table=PrecomputedTableCounts.VIRTUAL_TABLE_COUNTRY, count=count_countries_ena,
                 factor=PrecomputedTableCounts.FACTOR_SOURCE, value=DataSource.ENA.name),
-            PrecomputedTableCounts(
-                table=PrecomputedTableCounts.VIRTUAL_TABLE_COUNTRY, count=count_countries_gisaid,
-                factor=PrecomputedTableCounts.FACTOR_SOURCE, value=DataSource.GISAID.name),
         ]
 
         if len(database_rows) > 0:
@@ -336,13 +314,6 @@ class PrecomputationsLoader:
             if histogram is not None:
                 histogram["bin_size"] = bin_size
                 histogram["source"] = DataSource.ENA
-                histograms.append(histogram)
-        for bin_size in BIN_SIZE_VALUES:
-            histogram = self.queries.get_variant_abundance_histogram(
-                bin_size=bin_size, source=DataSource.GISAID.name, cache=False)
-            if histogram is not None:
-                histogram["bin_size"] = bin_size
-                histogram["source"] = DataSource.GISAID
                 histograms.append(histogram)
         database_rows = []
         if len(histograms) > 0:

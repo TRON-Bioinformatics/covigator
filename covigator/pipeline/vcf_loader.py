@@ -54,30 +54,24 @@ class VcfLoader:
         variant: Variant
         for variant in variants:
             if variant.FILTER is None or variant.FILTER in ["LOW_FREQUENCY", "SUBCLONAL"]:
-                if source == DataSource.GISAID:
-                    gisaid_variant = self._parse_variant(variant, GisaidVariant)
-                    observed_variants.append(
-                        self._parse_variant_observation(variant, specific_sample, source, gisaid_variant,
-                                                        GisaidVariantObservation))
-                    session.add(gisaid_variant)
-                elif variant.FILTER is None:    # ENA clonal
+                if variant.FILTER is None:    # ENA clonal
                     # only stores clonal high quality variants in this table
                     ena_variant = self._parse_variant(variant, CovigatorVariant)
                     observed_variants.append(
                         self._parse_variant_observation(
-                            variant, specific_sample, source, ena_variant, VariantObservation))
+                            variant, specific_sample, ena_variant, VariantObservation))
                     session.add(ena_variant)
                 elif variant.FILTER == "SUBCLONAL":
                     subclonal_variant = self._parse_variant(variant, SubclonalVariant)
                     subclonal_observed_variants.append(
                         self._parse_variant_observation(
-                            variant, specific_sample, source, subclonal_variant, SubclonalVariantObservation))
+                            variant, specific_sample, subclonal_variant, SubclonalVariantObservation))
                     session.add(subclonal_variant)
                 elif variant.FILTER == "LOW_FREQUENCY":
                     low_frequency_variant = self._parse_variant(variant, LowFrequencyVariant)
                     low_frequency_observed_variants.append(
                         self._parse_variant_observation(
-                            variant, specific_sample, source, low_frequency_variant, LowFrequencyVariantObservation))
+                            variant, specific_sample, low_frequency_variant, LowFrequencyVariantObservation))
                     session.add(low_frequency_variant)
                 try:
                     session.commit()
@@ -89,7 +83,7 @@ class VcfLoader:
         session.add_all(low_frequency_observed_variants)
         # NOTE: commit will happen afterwards when the job status is updated
 
-    def _parse_variant(self, variant: Variant, klass) -> Union[CovigatorVariant, GisaidVariant]:
+    def _parse_variant(self, variant: Variant, klass) -> CovigatorVariant:
         parsed_variant = klass(
             chromosome=variant.CHROM,
             position=variant.POS,
@@ -106,7 +100,7 @@ class VcfLoader:
         return parsed_variant
 
     def _parse_additional_annotations(
-            self, covigator_variant: Union[CovigatorVariant, GisaidVariant, SubclonalVariant, LowFrequencyVariant],
+            self, covigator_variant: Union[CovigatorVariant, SubclonalVariant, LowFrequencyVariant],
             vcf_variant: Variant):
         covigator_variant.cons_hmm_sars_cov_2 = vcf_variant.INFO.get("CONS_HMM_SARS_COV_2")
         covigator_variant.cons_hmm_sarbecovirus = vcf_variant.INFO.get("CONS_HMM_SARBECOVIRUS")
@@ -115,7 +109,7 @@ class VcfLoader:
         covigator_variant.pfam_description = vcf_variant.INFO.get("PFAM_DESCRIPTION")
 
     def _parse_snpeff_annotations(
-            self, covigator_variant: Union[CovigatorVariant, GisaidVariant, SubclonalVariant, LowFrequencyVariant],
+            self, covigator_variant: Union[CovigatorVariant, SubclonalVariant, LowFrequencyVariant],
             vcf_variant: Variant):
         ann = vcf_variant.INFO.get("ANN")
         if ann is not None:
@@ -144,8 +138,7 @@ class VcfLoader:
                         covigator_variant.position_amino_acid = int(match.group(2))
 
     def _parse_variant_observation(
-            self, variant: Variant, sample: Union[SampleEna, SampleGisaid], source: DataSource,
-            covigator_variant: Union[CovigatorVariant, GisaidVariant], klass):
+            self, variant: Variant, sample: SampleEna, covigator_variant: CovigatorVariant, klass):
 
         dp4 = variant.INFO.get("DP4")
         return klass(
@@ -174,7 +167,7 @@ class VcfLoader:
             gene_name=covigator_variant.gene_name,
             hgvs_p=covigator_variant.hgvs_p,
             hgvs_c=covigator_variant.hgvs_c,
-            date=sample.first_created if source == DataSource.ENA else sample.collection_date,
+            date=sample.first_created,
             variant_type=covigator_variant.variant_type,
             length=self._get_variant_length(variant),
             reference_amino_acid=covigator_variant.reference_amino_acid,
