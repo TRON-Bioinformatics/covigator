@@ -43,8 +43,8 @@ def get_footer():
                         "."
                         ]),
                     html.P([
-                        html.A("DATA PROTECTION", href="https://tron-mainz.de/data-protection/",  target="_blank"), " | ",
-                        html.A("IMPRINT", href="https://tron-mainz.de/imprint/",  target="_blank")])
+                        html.A("DATA PROTECTION", href="https://tron-mainz.de/data-protection",  target="_blank"), " | ",
+                        html.A("IMPRINT", href="https://tron-mainz.de/imprint",  target="_blank")])
                 ], style={"color": "#003c78", 'margin-left': '15px'})]
                 # this bit makes sure the footer sticks at the bottom
                 #style={"position": "relative", "bottom": "0", "width": "100%", "overflow": "hidden", "height": "120px"}
