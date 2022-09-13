@@ -13,7 +13,7 @@ import covigator
 import covigator.configuration
 from covigator.configuration import Configuration
 from covigator.database.database import Database, session_scope
-from covigator.database.model import Log, DataSource, CovigatorModule, JobStatus, SampleGisaid, \
+from covigator.database.model import Log, DataSource, CovigatorModule, JobStatus, \
     SampleEna
 from covigator.database.queries import Queries
 from covigator.exceptions import CovigatorExcludedSampleException, CovigatorErrorProcessingPangolinResults
@@ -106,8 +106,8 @@ class AbstractProcessor:
     @staticmethod
     def run_job(config: Configuration, run_accession: str, start_status: JobStatus, end_status: JobStatus,
                 error_status: JobStatus, data_source: DataSource,
-                function: Callable[[typing.Union[SampleEna, SampleGisaid] , Queries, Configuration],
-                                   typing.Union[SampleEna, SampleGisaid]]) -> str or None:
+                function: Callable[[typing.Union[SampleEna], Queries, Configuration],
+                                   typing.Union[SampleEna]]) -> str or None:
         """
         Runs a function on a job, if anything goes wrong or does not fit in the DB it returns None in order to
         stop the execution of subsequent jobs.
@@ -178,7 +178,7 @@ class AbstractProcessor:
             sample.error_message = AbstractProcessor._get_traceback_from_exception(exception)
 
     @staticmethod
-    def load_pangolin(sample: typing.Union[SampleGisaid, SampleEna], path: str) -> typing.Union[SampleGisaid, SampleEna]:
+    def load_pangolin(sample: typing.Union[SampleEna], path: str) -> typing.Union[SampleEna]:
         try:
             data = pd.read_csv(path,
                                na_values=None,
@@ -191,9 +191,10 @@ class AbstractProcessor:
                                    'scorpio_conflict': float,
                                    'version': str,
                                    'pangolin_version': str,
-                                   'pangoLEARN_version': str,
-                                   'pango_version': str,
-                                   'status': str,
+                                   'scorpio_version': str,
+                                   'constellation_version': str,
+                                   'qc_status': str,
+                                   'qc_notes': str,
                                    'note': str
                                })
 
@@ -203,8 +204,8 @@ class AbstractProcessor:
             data.scorpio_call.fillna(value="", inplace=True)
             data.version.fillna(value="", inplace=True)
             data.pangolin_version.fillna(value="", inplace=True)
-            data.pangoLEARN_version.fillna(value="", inplace=True)
-            data.pango_version.fillna(value="", inplace=True)
+            data.scorpio_version.fillna(value="", inplace=True)
+            data.constellation_version.fillna(value="", inplace=True)
             data.note.fillna(value="", inplace=True)
             data.conflict.fillna(value=0.0, inplace=True)
             data.ambiguity_score.fillna(value=0.0, inplace=True)
@@ -219,9 +220,10 @@ class AbstractProcessor:
             sample.pangolin_scorpio_conflict = data.scorpio_conflict.loc[0]
             sample.pangolin_version = data.version.loc[0]
             sample.pangolin_pangolin_version = data.pangolin_version.loc[0]
-            sample.pangolin_pangoLEARN_version = data.pangoLEARN_version.loc[0]
-            sample.pangolin_pango_version = data.pango_version.loc[0]
-            sample.pangolin_status = data.status.loc[0]
+            sample.pangolin_scorpio_version = data.scorpio_version.loc[0]
+            sample.pangolin_constellation_version = data.constellation_version.loc[0]
+            sample.pangolin_qc_status = data.qc_status.loc[0]
+            sample.pangolin_qc_notes = data.qc_notes.loc[0]
             sample.pangolin_note = data.note.loc[0]
         except Exception as e:
             raise CovigatorErrorProcessingPangolinResults(e)

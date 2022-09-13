@@ -7,8 +7,8 @@ from sqlalchemy.orm import Session
 
 from covigator import MISSENSE_VARIANT
 from covigator.database.model import Variant as CovigatorVariant, VariantObservation, \
-    SubclonalVariantObservation, SampleEna, SampleGisaid, DataSource, VariantType, GisaidVariantObservation, \
-    LowFrequencyVariantObservation, GisaidVariant, SubclonalVariant, LowFrequencyVariant
+    SubclonalVariantObservation, SampleEna, DataSource, VariantType, \
+    LowFrequencyVariantObservation, SubclonalVariant, LowFrequencyVariant
 from covigator.database.queries import Queries
 from covigator.exceptions import CovigatorNotSupportedVariant
 
