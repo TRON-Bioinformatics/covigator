@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from covigator import MISSENSE_VARIANT, SYNONYMOUS_VARIANT, INFRAME_INSERTION, INFRAME_DELETION
 from covigator.database.model import SampleEna, DataSource, JobStatus, Log, CovigatorModule, Variant, \
-    VariantCooccurrence, VariantType, SampleGisaid, GisaidVariant
+    VariantCooccurrence, VariantType
 from Bio.Alphabet.IUPAC import IUPACData
 
 from covigator.database.queries import Queries
@@ -59,7 +59,7 @@ def get_mocked_variant(faker: Faker, chromosome=None, gene_name=None, source=Dat
 
 
 def get_mocked_variant_observation(
-        sample: Union[SampleEna, SampleGisaid], variant: Union[Variant or GisaidVariant], faker=Faker()):
+        sample: Union[SampleEna], variant: Union[Variant], faker=Faker()):
 
     klass = Queries.get_variant_observation_klass(
         DataSource.ENA.name if isinstance(sample, SampleEna) else DataSource.GISAID.name)
@@ -81,7 +81,7 @@ def get_mocked_variant_observation(
     )
 
 
-def get_mocked_sample(faker: Faker, source: DataSource =DataSource.ENA, job_status=JobStatus.FINISHED) -> Union[SampleEna, SampleGisaid]:
+def get_mocked_sample(faker: Faker, source: DataSource =DataSource.ENA, job_status=JobStatus.FINISHED) -> Union[SampleEna]:
     identifier = faker.unique.uuid4()
     sample = SampleEna(
         run_accession=identifier,
@@ -134,7 +134,7 @@ def mock_samples_and_variants(faker, session: Session, num_samples=10):
     existing_variants = {DataSource.ENA.name: set(), DataSource.GISAID.name: set()}
     samples = mock_samples(faker=faker, session=session, num_samples=num_samples, source=DataSource.ENA)
     for sample in samples:
-        source = DataSource.ENA if isinstance(sample, SampleEna) else DataSource.GISAID
+        source = DataSource.ENA
         variants = [get_mocked_variant(faker=faker, source=source.name, session=session) for _ in range(10)]
         # this aims at removing potentially repeated variants
         variants_dict = {v.variant_id: v for v in variants}

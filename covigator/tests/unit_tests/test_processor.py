@@ -1,14 +1,13 @@
 import numpy as np
-from parameterized import parameterized
 
 import covigator
 import pkg_resources
 from dask.distributed import Client
-from covigator.database.model import Log, DataSource, CovigatorModule, JobStatus, SampleEna, SampleGisaid
+from covigator.database.model import Log, DataSource, CovigatorModule, JobStatus, SampleEna
 from covigator.processor.ena_processor import EnaProcessor
 from covigator.tests.unit_tests.abstract_test import AbstractTest
 from covigator.tests.unit_tests.faked_objects import FakeEnaProcessor, \
-    FakeGisaidProcessor, FakeProcessorFailing
+    FakeProcessorFailing
 from covigator.tests.unit_tests.mocked import mock_samples
 
 

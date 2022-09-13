@@ -8,7 +8,7 @@ import covigator
 from covigator.accessor.ena_accessor import EnaAccessor
 from covigator.configuration import Configuration
 from covigator.database.database import Database
-from covigator.database.model import DataSource, JobStatus, SampleGisaid, SampleEna
+from covigator.database.model import DataSource, JobStatus, SampleEna
 from covigator.database.queries import Queries
 from covigator.processor.abstract_processor import AbstractProcessor
 from covigator.tests import SARS_COV_2_TAXID, HOMO_SAPIENS_TAXID
@@ -96,33 +96,3 @@ class FakeProcessorFailing(AbstractProcessor):
     @staticmethod
     def run_all(sample: SampleEna, queries: Queries, config: Configuration) -> SampleEna:
         raise ValueError("Fail em'all")
-
-
-class FakeGisaidProcessor(AbstractProcessor):
-
-    def __init__(self, database: Database, dask_client: Client, config: Configuration):
-        logger.info("Initialising ENA processor")
-        super().__init__(database, dask_client, DataSource.ENA, config, wait_time=1)
-
-    def _process_run(self, run_accession: str):
-        """
-        Launches all jobs and returns the futures for the final job only
-        """
-        # NOTE: here we set the priority of each step to ensure a depth first processing
-        future = self.dask_client.submit(FakeGisaidProcessor.job, self.config, run_accession, priority=1)
-        return future
-
-    @staticmethod
-    def job(config: Configuration, run_accession):
-        return FakeGisaidProcessor.run_job(
-            config, run_accession, start_status=JobStatus.QUEUED, end_status=JobStatus.FINISHED,
-            error_status=JobStatus.FAILED_PROCESSING, data_source=DataSource.ENA,
-            function=FakeGisaidProcessor.run_all
-    )
-
-    @staticmethod
-    def run_all(sample: SampleGisaid, queries: Queries, config: Configuration) -> SampleGisaid:
-        logger.info("Job processed!")
-        sample.analysed_at = datetime.datetime.now()
-        sample.pangolin_lineage = "B.TEST"
-        return sample
