@@ -5,7 +5,7 @@ from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
 from covigator import SYNONYMOUS_VARIANT
-from covigator.database.model import JobStatus, VariantCooccurrence, GisaidVariantCooccurrence
+from covigator.database.model import JobStatus, VariantCooccurrence
 from covigator.database.queries import Queries
 from logzero import logger
 
@@ -72,7 +72,7 @@ class CooccurrenceMatrixLoader:
         return self.cache.get(self._unique_id(variant_id_one, variant_id_two), None)
 
     def _store_in_cache(self, variant_id_one: str, variant_id_two: str,
-                        entry: Union[VariantCooccurrence, GisaidVariantCooccurrence]):
+                        entry: Union[VariantCooccurrence]):
         self.cache[self._unique_id(variant_id_one, variant_id_two)] = entry
 
     def _commit_cache(self):

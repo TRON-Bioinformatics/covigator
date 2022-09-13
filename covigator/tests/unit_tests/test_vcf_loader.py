@@ -1,7 +1,7 @@
 import pkg_resources
 import covigator.tests
 from covigator.database.model import Variant, VariantObservation, DataSource, SubclonalVariantObservation, \
-    SampleGisaid, SampleEna, GisaidVariant, GisaidVariantObservation, LowFrequencyVariantObservation, SubclonalVariant, \
+    SampleEna, LowFrequencyVariantObservation, SubclonalVariant, \
     LowFrequencyVariant
 from covigator.pipeline.vcf_loader import VcfLoader
 from covigator.tests.unit_tests.abstract_test import AbstractTest
@@ -11,8 +11,7 @@ class VcfLoaderTests(AbstractTest):
 
     def setUp(self) -> None:
         self.sample_ena = SampleEna(run_accession="TEST1", fastq_ftp="something", fastq_md5="else", num_fastqs=2)
-        self.sample_gisaid = SampleGisaid(run_accession="TEST2")
-        self.session.add_all([self.sample_ena, self.sample_gisaid])
+        self.session.add_all([self.sample_ena])
         self.session.commit()
 
     def test_vcf_loader(self):

@@ -9,11 +9,11 @@ from sqlalchemy.orm import Session, aliased
 from sqlalchemy.sql.sqltypes import NullType
 from covigator import SYNONYMOUS_VARIANT
 from covigator.database.model import DataSource, SampleEna, JobStatus, \
-    VariantObservation, Gene, Variant, VariantCooccurrence, Conservation, SampleGisaid, \
+    VariantObservation, Gene, Variant, VariantCooccurrence, Conservation, \
     SubclonalVariantObservation, PrecomputedVariantsPerSample, PrecomputedSubstitutionsCounts, PrecomputedIndelLength, \
     VariantType, PrecomputedAnnotation, PrecomputedOccurrence, PrecomputedTableCounts, \
     PrecomputedVariantAbundanceHistogram, PrecomputedSynonymousNonSynonymousCounts, RegionType, Domain, \
-    GisaidVariantObservation, GisaidVariant, LastUpdate, GisaidVariantCooccurrence
+    LastUpdate
 from covigator.exceptions import CovigatorQueryException, CovigatorDashboardMissingPrecomputedData
 
 
@@ -26,8 +26,6 @@ class Queries:
     def get_variant_observation_klass(source: str):
         if source == DataSource.ENA.name:
             klass = VariantObservation
-        elif source == DataSource.GISAID.name:
-            klass = GisaidVariantObservation
         else:
             raise CovigatorQueryException("Bad data source: {}".format(source))
         return klass
@@ -36,8 +34,6 @@ class Queries:
     def get_variant_klass(source: str):
         if source == DataSource.ENA.name:
             klass = Variant
-        elif source == DataSource.GISAID.name:
-            klass = GisaidVariant
         else:
             raise CovigatorQueryException("Bad data source: {}".format(source))
         return klass
@@ -46,8 +42,6 @@ class Queries:
     def get_sample_klass(source: str):
         if source == DataSource.ENA.name:
             klass = SampleEna
-        elif source == DataSource.GISAID.name:
-            klass = SampleGisaid
         else:
             raise CovigatorQueryException("Bad data source: {}".format(source))
         return klass
@@ -56,23 +50,21 @@ class Queries:
     def get_variant_cooccurrence_klass(source: str):
         if source == DataSource.ENA.name:
             klass = VariantCooccurrence
-        elif source == DataSource.GISAID.name:
-            klass = GisaidVariantCooccurrence
         else:
             raise CovigatorQueryException("Bad data source: {}".format(source))
         return klass
 
     def find_job_by_accession_and_status(
-            self, run_accession: str, status: JobStatus, data_source: DataSource) -> Union[SampleEna, SampleGisaid]:
+            self, run_accession: str, status: JobStatus, data_source: DataSource) -> Union[SampleEna]:
         klass = self.get_sample_klass(source=data_source.name)
         return self.session.query(klass)\
             .filter(and_(klass.run_accession == run_accession, klass.status == status)).first()
 
-    def find_job_by_accession(self, run_accession: str, data_source: DataSource) -> Union[SampleEna, SampleGisaid]:
+    def find_job_by_accession(self, run_accession: str, data_source: DataSource) -> Union[SampleEna]:
         klass = self.get_sample_klass(source=data_source.name)
         return self.session.query(klass).filter(klass.run_accession == run_accession).first()
 
-    def find_first_by_status(self, data_source: DataSource, status, n=100) -> List[Union[SampleEna, SampleGisaid]]:
+    def find_first_by_status(self, data_source: DataSource, status, n=100) -> List[Union[SampleEna]]:
         klass = self.get_sample_klass(source=data_source.name)
         return self.session.query(klass) \
             .filter(klass.status.in_(status)) \
@@ -81,10 +73,10 @@ class Queries:
             .all()
 
     def find_first_pending_jobs(
-            self, data_source: DataSource, n=100, status: List = [JobStatus.DOWNLOADED]) -> List[Union[SampleEna, SampleGisaid]]:
+            self, data_source: DataSource, n=100, status: List = [JobStatus.DOWNLOADED]) -> List[Union[SampleEna]]:
         return self.find_first_by_status(data_source=data_source, status=status, n=n)
 
-    def find_first_jobs_to_download(self, data_source: DataSource, n=100) -> List[Union[SampleEna, SampleGisaid]]:
+    def find_first_jobs_to_download(self, data_source: DataSource, n=100) -> List[Union[SampleEna]]:
         return self.find_first_by_status(data_source=data_source, status=[JobStatus.PENDING], n=n)
 
     def count_jobs_in_queue(self, data_source):
@@ -94,7 +86,7 @@ class Queries:
         klass = self.get_sample_klass(source=data_source.name)
         return self.session.query(klass).filter(klass.status == status).count()
 
-    def find_sample_by_accession(self, run_accession: str, source: DataSource) -> Union[SampleEna, SampleGisaid]:
+    def find_sample_by_accession(self, run_accession: str, source: DataSource) -> Union[SampleEna]:
         klass = self.get_sample_klass(source=source.name)
         return self.session.query(klass).filter(klass.run_accession == run_accession).first()
 
@@ -342,11 +334,6 @@ class Queries:
             if source == DataSource.ENA.name:
                 query = query.filter(and_(
                     PrecomputedTableCounts.table == SampleEna.__name__,
-                    PrecomputedTableCounts.factor == PrecomputedTableCounts.FACTOR_SOURCE
-                ))
-            elif source == DataSource.GISAID.name:
-                query = query.filter(and_(
-                    PrecomputedTableCounts.table == SampleGisaid.__name__,
                     PrecomputedTableCounts.factor == PrecomputedTableCounts.FACTOR_SOURCE
                 ))
             result = query.first()

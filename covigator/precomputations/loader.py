@@ -4,7 +4,7 @@ from covigator.dashboard.tabs.recurrent_mutations import BIN_SIZE_VALUES
 from covigator.database.model import PrecomputedVariantsPerSample, PrecomputedSubstitutionsCounts, \
     PrecomputedIndelLength, PrecomputedAnnotation, VariantObservation, DataSource, \
     PrecomputedTableCounts, Variant, SubclonalVariantObservation, PrecomputedVariantAbundanceHistogram, \
-    SampleEna, SampleGisaid, GisaidVariantObservation, GisaidVariant
+    SampleEna
 from logzero import logger
 
 from covigator.database.queries import Queries

@@ -126,7 +126,7 @@ class EnaAccessor:
         try:
             json = response.json()
         except JSONDecodeError as e:
-            logger.error("Response content: {}".format(response.content))
+            logger.exception(e)
             raise e
         return json
 
