@@ -50,17 +50,19 @@ class Covid19PortalAccessor(AbstractAccessor):
             logger.info("Reading...")
             page = 1    # it has to start with 1
             list_runs = self._get_page(page=page, size=BATCH_SIZE)
-            count = len(list_runs.get('entries'))
+            num_entries = len(list_runs.get('entries'))
+            count = num_entries
             # gets total expected number of results from first page
             total = list_runs.get('hitCount')
-            logger.info("Processing {} Covid19 Portal samples...".format(len(list_runs)))
+            logger.info("Processing {} Covid19 Portal samples...".format(num_entries))
             self._process_runs(list_runs, existing_sample_ids, session)
 
             while count < total:
                 page += 1
                 list_runs = self._get_page(page=page, size=BATCH_SIZE)
-                count += len(list_runs.get('entries'))
-                logger.info("Processing {} Covid19 Portal samples...".format(len(list_runs.get('entries'))))
+                num_entries = len(list_runs.get('entries'))
+                count += num_entries
+                logger.info("Processing {} Covid19 Portal samples...".format(num_entries))
                 self._process_runs(list_runs, existing_sample_ids, session)
 
             logger.info("All samples processed!")
@@ -123,6 +125,7 @@ class Covid19PortalAccessor(AbstractAccessor):
             center_name=next(iter(sample.get('fields').get('center_name')), None),
             isolate=next(iter(sample.get('fields').get('isolate')), None),
             molecule_type=next(iter(sample.get('fields').get('molecule_type')), None),
+            country=next(iter(sample.get('fields').get('country')), None),
             # build FASTA URL here
             fasta_url="{base}/{acc}".format(base=self.FASTA_URL_BASE, acc=sample.get('acc'))
         )
