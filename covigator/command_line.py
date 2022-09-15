@@ -46,10 +46,9 @@ def covid19_portal_accessor():
     parser = ArgumentParser(
         description="Covigator {} CoVid19 portal accessor".format(covigator.VERSION))
 
-    args = parser.parse_args()
     config = Configuration()
     covigator.configuration.initialise_logs(config.logfile_accesor)
-    Covid19PortalAccessor(database=Database(config=config, initialize=True)).access()
+    Covid19PortalAccessor(database=Database(config=config, initialize=True), storage_folder=config.storage_folder).access()
 
 
 def processor():
