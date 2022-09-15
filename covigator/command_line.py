@@ -1,5 +1,6 @@
 from argparse import ArgumentParser
 
+from covigator.accessor.covid19_portal_accessor import Covid19PortalAccessor
 from covigator.database.model import DataSource
 
 from covigator.precomputations.load_cooccurrences import CooccurrenceMatrixLoader
@@ -39,6 +40,16 @@ def ena_accessor():
     config = Configuration()
     covigator.configuration.initialise_logs(config.logfile_accesor)
     EnaAccessor(tax_id=tax_id, host_tax_id=host_tax_id, database=Database(config=config, initialize=True)).access()
+
+
+def covid19_portal_accessor():
+    parser = ArgumentParser(
+        description="Covigator {} CoVid19 portal accessor".format(covigator.VERSION))
+
+    args = parser.parse_args()
+    config = Configuration()
+    covigator.configuration.initialise_logs(config.logfile_accesor)
+    Covid19PortalAccessor(database=Database(config=config, initialize=True)).access()
 
 
 def processor():

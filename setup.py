@@ -18,6 +18,7 @@ setup(
     entry_points={
         "console_scripts": [
             "covigator-ena-accessor=covigator.command_line:ena_accessor",
+            "covigator-covid19portal-accessor=covigator.command_line:covid19_portal_accessor",
             "covigator-ena-downloader=covigator.command_line:ena_downloader",
             "covigator-processor=covigator.command_line:processor",
             "covigator-dashboard=covigator.dashboard.dashboard:main",

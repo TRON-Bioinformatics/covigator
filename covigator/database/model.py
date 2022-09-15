@@ -30,6 +30,7 @@ LOW_FREQUENCY_VARIANT_TABLE_NAME = get_table_versioned_name('low_frequency_varia
 GISAID_VARIANT_TABLE_NAME = get_table_versioned_name('gisaid_variant', config=config)
 SAMPLE_GISAID_TABLE_NAME = get_table_versioned_name('sample_gisaid', config=config)
 SAMPLE_ENA_TABLE_NAME = get_table_versioned_name('sample_ena', config=config)
+SAMPLE_COVID19_PORTAL_TABLE_NAME = get_table_versioned_name('sample_covid19_portal', config=config)
 CONSERVATION_TABLE_NAME = get_table_versioned_name('conservation', config=config)
 PRECOMPUTED_VARIANTS_PER_SAMPLE_TABLE_NAME = get_table_versioned_name('precomputed_variants_per_sample', config=config)
 PRECOMPUTED_SUBSTITUTIONS_COUNTS_TABLE_NAME = get_table_versioned_name('precomputed_substitutions_counts', config=config)
@@ -106,6 +107,7 @@ class DataSource(enum.Enum):
 
     ENA = 1
     GISAID = 2
+    COVID19_PORTAL = 2
 
 
 class VariantType(enum.Enum):
@@ -124,7 +126,6 @@ class SampleEna(Base):
     __tablename__ = SAMPLE_ENA_TABLE_NAME
 
     # data on run
-    # TODO: add foreign keys to jobs
     run_accession = Column(String, primary_key=True)            # 'ERR4080473',
     # DEPRECATED
     finished = Column(Boolean)
@@ -132,7 +133,6 @@ class SampleEna(Base):
     scientific_name = Column(String)
     study_accession = Column(String)
     experiment_accession = Column(String)
-    # TODO: store these as dates
     first_created = Column(Date)
     collection_date = Column(Date)
     instrument_platform = Column(String)
@@ -274,6 +274,81 @@ class SampleEna(Base):
             fastq1 = fastqs[0]
             fastq2 = None
         return fastq1, fastq2
+
+
+class SampleCovid19Portal(Base):
+    """
+    The table that holds all metadata for a ENA sample
+    """
+    __tablename__ = SAMPLE_COVID19_PORTAL_TABLE_NAME
+
+    run_accession = Column(String, primary_key=True)
+    first_created = Column(Date)
+    collection_date = Column(Date)
+    last_modification_date = Column(Date)
+    center_name = Column(String)
+    isolate = Column(String)
+    molecule_type = Column(String)
+
+    # geographical data
+    country_raw = Column(String)  # 'Denmark',
+    country = Column(String)
+    country_alpha_2 = Column(String)
+    country_alpha_3 = Column(String)
+    continent = Column(String)
+    continent_alpha_2 = Column(String)
+
+    # FASTA
+    fasta_url = Column(String, nullable=False)
+
+    # local files storage
+    sample_folder = Column(String)
+    fasta_path = Column(String)
+    vcf_path = Column(String)
+    pangolin_path = Column(String)
+
+    # sequence  information
+    sequence_length = Column(Integer)
+    count_n_bases = Column(Integer)
+    count_ambiguous_bases = Column(Integer)
+
+    # counts of variants
+    count_snvs = Column(Integer)
+    count_insertions = Column(Integer)
+    count_deletions = Column(Integer)
+
+    # pango output
+    pangolin_lineage = Column(String)
+    pangolin_conflict = Column(Float)
+    pangolin_ambiguity_score = Column(Float)
+    pangolin_scorpio_call = Column(String)
+    pangolin_scorpio_support = Column(Float)
+    pangolin_scorpio_conflict = Column(Float)
+    pangolin_version = Column(String)
+    pangolin_pangolin_version = Column(String)
+    pangolin_scorpio_version = Column(String)
+    pangolin_constellation_version = Column(String)
+    pangolin_qc_status = Column(String)
+    pangolin_qc_notes = Column(String)
+    pangolin_note = Column(String)
+
+    # job status
+    status = Column(Enum(JobStatus, name=JobStatus.__constraint_name__), default=JobStatus.PENDING)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.now())
+    queued_at = Column(DateTime(timezone=True))
+    analysed_at = Column(DateTime(timezone=True))
+    loaded_at = Column(DateTime(timezone=True))
+    failed_at = Column(DateTime(timezone=True))
+    error_message = Column(String)
+
+    covigator_accessor_version = Column(String)
+    covigator_processor_version = Column(String)
+
+    def get_sample_folder(self, base_folder):
+        return os.path.join(
+            base_folder,
+            self.collection_date.strftime("%Y%m%d") if self.collection_date is not None else "nodate",
+            self.run_accession)
 
 
 class Variant(Base):
