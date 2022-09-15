@@ -5,7 +5,6 @@ import shutil
 from datetime import datetime
 from io import StringIO
 from json import JSONDecodeError
-from urllib.request import urlopen
 from Bio import SeqIO
 from covigator.accessor import MINIMUM_DATE
 from covigator.configuration import Configuration
@@ -19,7 +18,6 @@ from covigator.exceptions import CovigatorExcludedSampleTooEarlyDateException, C
 from covigator.database.model import DataSource, Log, CovigatorModule, SampleCovid19Portal
 from covigator.database.database import Database
 from logzero import logger
-from covigator.misc import backoff_retrier
 
 NUMBER_RETRIES = 5
 BATCH_SIZE = 1000
@@ -59,8 +57,6 @@ class Covid19PortalAccessor(AbstractAccessor):
         self.excluded_too_many_entries = 0
         self.excluded_horizontal_coverage = 0
         self.excluded_bad_bases = 0
-
-        self.download_with_retries = backoff_retrier.wrapper(self._download_fasta, NUMBER_RETRIES)
 
     def access(self):
         logger.info("Starting Covid19 portal accessor")
@@ -127,7 +123,7 @@ class Covid19PortalAccessor(AbstractAccessor):
                     # parses sample into DB model
                     sample = self._parse_covid19_portal_sample(sample_dict)
                     # downloads FASTA file
-                    sample = self.download_with_retries(sample=sample)
+                    sample = self._download_fasta(sample=sample)
                     self.included += 1
                     included_samples.append(sample)
                 except CovigatorExcludedSampleTooEarlyDateException:
@@ -245,13 +241,13 @@ class Covid19PortalAccessor(AbstractAccessor):
         if not os.path.exists(local_full_path):
             pathlib.Path(local_folder).mkdir(parents=True, exist_ok=True)
             try:
-                fasta_str = urlopen(sample.fasta_url).read().decode('utf-8')
+                fasta_str = self.get_with_retries(sample.fasta_url).content.decode('utf-8')
                 fasta_io = StringIO(fasta_str)
                 records = list(SeqIO.parse(fasta_io, "fasta"))
             except Exception as e:
                 raise CovigatorExcludedFailedDownload(e)
         else:
-            records = list(SeqIO.parse(gzip.open(local_full_path, "rt"), "fasta"))
+            records = list(SeqIO.parse(open(local_full_path, "r"), "fasta"))
 
         # checks the validity of the FASTA sequence
         if len(records) == 0:

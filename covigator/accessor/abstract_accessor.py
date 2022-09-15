@@ -20,7 +20,8 @@ class AbstractAccessor:
         self.country_parser = CountryParser()
 
         # this ensures there is a retry mechanism in place with a limited number of retries
-        self.get_with_retries = backoff_retrier.wrapper(requests.get, NUMBER_RETRIES)
+        self.session = requests.session()
+        self.get_with_retries = backoff_retrier.wrapper(self.session.get, NUMBER_RETRIES)
 
     def _parse_country(self, sample: Union[SampleEna, SampleCovid19]):
         parsed_country = self.country_parser.parse_country(
