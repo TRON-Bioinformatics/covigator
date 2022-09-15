@@ -107,7 +107,7 @@ class DataSource(enum.Enum):
 
     ENA = 1
     GISAID = 2
-    COVID19_PORTAL = 2
+    COVID19_PORTAL = 3
 
 
 class VariantType(enum.Enum):
