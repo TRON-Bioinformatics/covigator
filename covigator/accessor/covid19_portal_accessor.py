@@ -1,18 +1,32 @@
+import gzip
+import os
+import pathlib
+import shutil
 from datetime import datetime
 from json import JSONDecodeError
+from urllib import request
+from Bio import SeqIO
+from covigator.accessor import MINIMUM_DATE
 
 from covigator.configuration import Configuration
 from requests import Response
 from sqlalchemy.orm import Session
 import covigator
-from covigator.accessor.abstract_accessor import AbstractAccessor
-from covigator.exceptions import CovigatorExcludedSampleTooEarlyDateException
+from covigator.accessor.abstract_accessor import AbstractAccessor, SampleCovid19
+from covigator.exceptions import CovigatorExcludedSampleTooEarlyDateException, CovigatorExcludedFailedDownload, \
+    CovigatorExcludedTooManyEntries, CovigatorExcludedEmptySequence, CovigatorExcludedHorizontalCoverage, \
+    CovigatorExcludedBadBases, CovigatorExcludedSampleException, CovigatorExcludedMissingDateException
 from covigator.database.model import DataSource, Log, CovigatorModule, SampleCovid19Portal
 from covigator.database.database import Database
 from logzero import logger
 
+from covigator.misc import backoff_retrier
+
 NUMBER_RETRIES = 5
 BATCH_SIZE = 1000
+THRESHOLD_NON_VALID_BASES_RATIO = 0.2
+THRESHOLD_GENOME_COVERAGE = 0.2
+GENOME_LENGTH = 29903
 
 
 class Covid19PortalAccessor(AbstractAccessor):
@@ -23,12 +37,13 @@ class Covid19PortalAccessor(AbstractAccessor):
     HOST = "Homo sapiens"
     TAX_ID = "2697049"
 
-    def __init__(self, database: Database):
+    def __init__(self, database: Database, storage_folder):
         super().__init__()
         logger.info("Initialising Covid19 portal accessor")
         self.start_time = datetime.now()
         self.has_error = False
         self.error_message = None
+        self.storage_folder = storage_folder
 
         self.database = database
         assert self.database is not None, "Empty database"
@@ -39,6 +54,9 @@ class Covid19PortalAccessor(AbstractAccessor):
         self.included = 0
         self.excluded = 0
         self.excluded_by_date = 0
+        self.excluded_failed_download = 0
+
+        self.download_with_retries = backoff_retrier.wrapper(self._download_fasta, NUMBER_RETRIES)
 
     def access(self):
         logger.info("Starting Covid19 portal accessor")
@@ -53,17 +71,19 @@ class Covid19PortalAccessor(AbstractAccessor):
             num_entries = len(list_runs.get('entries'))
             count = num_entries
             # gets total expected number of results from first page
-            total = list_runs.get('hitCount')
             logger.info("Processing {} Covid19 Portal samples...".format(num_entries))
             self._process_runs(list_runs, existing_sample_ids, session)
 
-            while count < total:
+            while True:
                 page += 1
                 list_runs = self._get_page(page=page, size=BATCH_SIZE)
-                num_entries = len(list_runs.get('entries'))
+                entries = list_runs.get('entries')
+                if entries is None or entries == []:
+                    break
+                num_entries = len(entries)
                 count += num_entries
-                logger.info("Processing {} Covid19 Portal samples...".format(num_entries))
                 self._process_runs(list_runs, existing_sample_ids, session)
+                logger.info("Processed {} of Covid19 Portal samples...".format(count))
 
             logger.info("All samples processed!")
         except Exception as e:
@@ -91,30 +111,36 @@ class Covid19PortalAccessor(AbstractAccessor):
     def _process_runs(self, list_samples, existing_sample_ids, session: Session):
 
         included_samples = []
-        for sample in list_samples.get('entries'):
-            if isinstance(sample, dict):
-                if sample.get("acc") in existing_sample_ids:
+        for sample_dict in list_samples.get('entries'):
+            if isinstance(sample_dict, dict):
+                if sample_dict.get("acc") in existing_sample_ids:
                     self.excluded_existing += 1
                     continue    # skips runs already registered in the database
-                if not self._complies_with_inclusion_criteria(sample):
+                if not self._complies_with_inclusion_criteria(sample_dict):
                     continue    # skips runs not complying with inclusion criteria
                 # NOTE: this parse operation is costly
                 try:
-                    sample = self._parse_covid19_portal_sample(sample)
+                    # parses sample into DB model
+                    sample = self._parse_covid19_portal_sample(sample_dict)
+                    # downloads FASTA file
+                    sample = self.download_with_retries(sample=sample)
                     self.included += 1
                     included_samples.append(sample)
                 except CovigatorExcludedSampleTooEarlyDateException:
-                    logger.error("Excluded sample due to too early date")
                     self.excluded_by_date += 1
                     self.excluded += 1
+                except CovigatorExcludedFailedDownload:
+                    self.excluded_failed_download += 1
+                    self.excluded += 1
+                except CovigatorExcludedSampleException:
+                    self.excluded += 1
             else:
-                logger.error("Run from ENA without the expected format")
+                logger.error("Sample without the expected format")
+                logger.error("Sample without the expected format")
 
         if len(included_samples) > 0:
             session.add_all(included_samples)
             session.commit()
-            logger.info("Added {} new Covid19 Portal samples".format(len(included_samples)))
-        logger.info("Processed {} Covid19 Portal samples".format(len(list_samples)))
 
     def _parse_covid19_portal_sample(self, sample: dict) -> SampleCovid19Portal:
         sample = SampleCovid19Portal(
@@ -160,13 +186,14 @@ class Covid19PortalAccessor(AbstractAccessor):
         logger.info("Total excluded runs by selection criteria = {}".format(self.excluded))
         logger.info("Excluded by host = {}".format(self.excluded_samples_by_host_tax_id))
         logger.info("Excluded by host = {}".format(self.excluded_samples_by_tax_id))
+        logger.info("Excluded failed download = {}".format(self.excluded_failed_download))
 
     def _write_execution_log(self, session: Session):
         end_time = datetime.now()
         session.add(Log(
             start=self.start_time,
             end=end_time,
-            source=DataSource.ENA,
+            source=DataSource.COVID19_PORTAL,
             module=CovigatorModule.ACCESSOR,
             has_error=self.has_error,
             error_message=self.error_message,
@@ -177,6 +204,7 @@ class Covid19PortalAccessor(AbstractAccessor):
                     "existing": self.excluded_existing,
                     "excluded_by_criteria": self.excluded,
                     "excluded_by_date": self.excluded_by_date,
+                    "excluded_failed_download": self.excluded_failed_download,
                     "host": self.excluded_samples_by_host_tax_id,
                     "taxon": self.excluded_samples_by_tax_id
                 }
@@ -184,8 +212,65 @@ class Covid19PortalAccessor(AbstractAccessor):
         ))
         session.commit()
 
+    def _download_fasta(self, sample: SampleCovid19Portal) -> SampleCovid19Portal:
+
+        local_filename = sample.fasta_url.split('/')[-1] + ".fasta"  # URL comes without extension
+        local_folder = sample.get_sample_folder(self.storage_folder)
+        local_full_path = os.path.join(local_folder, local_filename)
+        compressed_local_full_path = local_full_path + ".gz"
+
+        # avoids downloading the same files over and over
+        if not os.path.exists(local_full_path):
+            pathlib.Path(local_folder).mkdir(parents=True, exist_ok=True)
+            try:
+                request.urlretrieve(sample.fasta_url, local_full_path)
+                self._compress_file(local_full_path, compressed_local_full_path)
+            except Exception as e:
+                raise CovigatorExcludedFailedDownload(e)
+
+        sample.fasta_path = compressed_local_full_path
+
+        # checks the validity of the FASTA sequence
+        records = list(SeqIO.parse(gzip.open(compressed_local_full_path, "rt"), "fasta"))
+        if len(records) == 0:
+            raise CovigatorExcludedEmptySequence()
+        if len(records) > 1:
+            raise CovigatorExcludedTooManyEntries()
+        record = records[0]
+        sequence_length = len(record.seq)
+        if float(sequence_length) / GENOME_LENGTH < THRESHOLD_GENOME_COVERAGE:
+            raise CovigatorExcludedHorizontalCoverage()
+        count_n_bases = record.seq.count("N")
+        count_ambiguous_bases = sum([record.seq.count(b) for b in "RYWSMKHBVD"])
+        if float(count_n_bases + count_ambiguous_bases) / sequence_length > THRESHOLD_NON_VALID_BASES_RATIO:
+            raise CovigatorExcludedBadBases()
+
+        return sample
+
+    def _compress_file(self, uncompressed_file, compressed_file):
+        with open(uncompressed_file, 'rb') as f_in:
+            with gzip.open(compressed_file, 'wb') as f_out:
+                shutil.copyfileobj(f_in, f_out)
+        os.remove(uncompressed_file)
+
+    def _parse_dates(self, sample: SampleCovid19):
+        format = "%Y%m%d"
+        try:
+            sample.collection_date = datetime.strptime(sample.collection_date, format).date()
+        except ValueError:
+            sample.collection_date = None
+        try:
+            sample.first_created = datetime.strptime(sample.first_created, format).date()
+        except ValueError:
+            sample.first_created = None
+
+        if sample.collection_date is None:
+            raise CovigatorExcludedMissingDateException()
+        if sample.collection_date is not None and sample.collection_date < MINIMUM_DATE:
+            raise CovigatorExcludedSampleTooEarlyDateException()
+
 
 if __name__ == '__main__':
     config = Configuration()
     covigator.configuration.initialise_logs(config.logfile_accesor)
-    Covid19PortalAccessor(database=Database(config=config, initialize=True)).access()
+    Covid19PortalAccessor(database=Database(config=config, initialize=True), storage_folder=config.storage_folder).access()

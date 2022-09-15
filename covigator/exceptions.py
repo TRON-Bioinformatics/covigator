@@ -62,3 +62,25 @@ class CovigatorExcludedSampleNarrowCoverage(CovigatorExcludedSampleException):
 
 class CovigatorExcludedSampleBadQualityReads(CovigatorExcludedSampleException):
     pass
+
+
+class CovigatorExcludedFailedDownload(CovigatorExcludedSampleException):
+    pass
+
+
+class CovigatorExcludedHorizontalCoverage(CovigatorExcludedSampleException):
+    pass
+
+
+class CovigatorExcludedBadBases(CovigatorExcludedSampleException):
+    pass
+
+
+class CovigatorExcludedTooManyEntries(CovigatorExcludedSampleException):
+    pass
+
+class CovigatorExcludedEmptySequence(CovigatorExcludedSampleException):
+    pass
+
+class CovigatorExcludedMissingDateException(CovigatorExcludedSampleException):
+    pass

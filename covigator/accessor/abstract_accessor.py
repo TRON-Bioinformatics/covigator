@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from typing import Union
 import requests
 from covigator.misc.country_parser import CountryParser
