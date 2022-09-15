@@ -3,11 +3,11 @@ import os
 import pathlib
 import shutil
 from datetime import datetime
+from io import StringIO
 from json import JSONDecodeError
-from urllib import request
+from urllib.request import urlopen
 from Bio import SeqIO
 from covigator.accessor import MINIMUM_DATE
-
 from covigator.configuration import Configuration
 from requests import Response
 from sqlalchemy.orm import Session
@@ -19,7 +19,6 @@ from covigator.exceptions import CovigatorExcludedSampleTooEarlyDateException, C
 from covigator.database.model import DataSource, Log, CovigatorModule, SampleCovid19Portal
 from covigator.database.database import Database
 from logzero import logger
-
 from covigator.misc import backoff_retrier
 
 NUMBER_RETRIES = 5
@@ -54,7 +53,12 @@ class Covid19PortalAccessor(AbstractAccessor):
         self.included = 0
         self.excluded = 0
         self.excluded_by_date = 0
+        self.excluded_missing_date = 0
         self.excluded_failed_download = 0
+        self.excluded_empty_sequence = 0
+        self.excluded_too_many_entries = 0
+        self.excluded_horizontal_coverage = 0
+        self.excluded_bad_bases = 0
 
         self.download_with_retries = backoff_retrier.wrapper(self._download_fasta, NUMBER_RETRIES)
 
@@ -129,13 +133,27 @@ class Covid19PortalAccessor(AbstractAccessor):
                 except CovigatorExcludedSampleTooEarlyDateException:
                     self.excluded_by_date += 1
                     self.excluded += 1
+                except CovigatorExcludedMissingDateException:
+                    self.excluded_missing_date += 1
+                    self.excluded += 1
                 except CovigatorExcludedFailedDownload:
                     self.excluded_failed_download += 1
+                    self.excluded += 1
+                except CovigatorExcludedEmptySequence:
+                    self.excluded_empty_sequence += 1
+                    self.excluded += 1
+                except CovigatorExcludedTooManyEntries:
+                    self.excluded_too_many_entries += 1
+                    self.excluded += 1
+                except CovigatorExcludedHorizontalCoverage:
+                    self.excluded_horizontal_coverage += 1
+                    self.excluded += 1
+                except CovigatorExcludedBadBases:
+                    self.excluded_bad_bases += 1
                     self.excluded += 1
                 except CovigatorExcludedSampleException:
                     self.excluded += 1
             else:
-                logger.error("Sample without the expected format")
                 logger.error("Sample without the expected format")
 
         if len(included_samples) > 0:
@@ -203,8 +221,13 @@ class Covid19PortalAccessor(AbstractAccessor):
                 "excluded": {
                     "existing": self.excluded_existing,
                     "excluded_by_criteria": self.excluded,
-                    "excluded_by_date": self.excluded_by_date,
+                    "excluded_early_date": self.excluded_by_date,
+                    "excluded_missing_date": self.excluded_missing_date,
                     "excluded_failed_download": self.excluded_failed_download,
+                    "excluded_bad_bases": self.excluded_bad_bases,
+                    "excluded_horizontal_coverage": self.excluded_horizontal_coverage,
+                    "excluded_too_many_entries": self.excluded_too_many_entries,
+                    "excluded_empty_sequence": self.excluded_empty_sequence,
                     "host": self.excluded_samples_by_host_tax_id,
                     "taxon": self.excluded_samples_by_tax_id
                 }
@@ -217,21 +240,20 @@ class Covid19PortalAccessor(AbstractAccessor):
         local_filename = sample.fasta_url.split('/')[-1] + ".fasta"  # URL comes without extension
         local_folder = sample.get_sample_folder(self.storage_folder)
         local_full_path = os.path.join(local_folder, local_filename)
-        compressed_local_full_path = local_full_path + ".gz"
 
         # avoids downloading the same files over and over
         if not os.path.exists(local_full_path):
             pathlib.Path(local_folder).mkdir(parents=True, exist_ok=True)
             try:
-                request.urlretrieve(sample.fasta_url, local_full_path)
-                self._compress_file(local_full_path, compressed_local_full_path)
+                fasta_str = urlopen(sample.fasta_url).read().decode('utf-8')
+                fasta_io = StringIO(fasta_str)
+                records = list(SeqIO.parse(fasta_io, "fasta"))
             except Exception as e:
                 raise CovigatorExcludedFailedDownload(e)
-
-        sample.fasta_path = compressed_local_full_path
+        else:
+            records = list(SeqIO.parse(gzip.open(local_full_path, "rt"), "fasta"))
 
         # checks the validity of the FASTA sequence
-        records = list(SeqIO.parse(gzip.open(compressed_local_full_path, "rt"), "fasta"))
         if len(records) == 0:
             raise CovigatorExcludedEmptySequence()
         if len(records) > 1:
@@ -245,6 +267,14 @@ class Covid19PortalAccessor(AbstractAccessor):
         if float(count_n_bases + count_ambiguous_bases) / sequence_length > THRESHOLD_NON_VALID_BASES_RATIO:
             raise CovigatorExcludedBadBases()
 
+        # compress and writes the file after all checks
+        if not os.path.exists(local_full_path):
+            with open(local_full_path, "w") as f:
+                SeqIO.write(sequences=records, handle=f, format="fasta")
+
+        # stores the reference to the file in the DB
+        sample.fasta_path = local_full_path
+
         return sample
 
     def _compress_file(self, uncompressed_file, compressed_file):
@@ -257,11 +287,11 @@ class Covid19PortalAccessor(AbstractAccessor):
         format = "%Y%m%d"
         try:
             sample.collection_date = datetime.strptime(sample.collection_date, format).date()
-        except ValueError:
+        except Exception:
             sample.collection_date = None
         try:
             sample.first_created = datetime.strptime(sample.first_created, format).date()
-        except ValueError:
+        except Exception:
             sample.first_created = None
 
         if sample.collection_date is None:
