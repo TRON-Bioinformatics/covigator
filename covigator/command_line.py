@@ -113,11 +113,12 @@ def ena_downloader():
 
 def _start_dask_processor(args, config, download, cluster=None, num_local_cpus=1):
     with Client(cluster) if cluster is not None else Client(n_workers=num_local_cpus, threads_per_worker=1) as client:
-        if args.data_source == DataSource.ENA.name:
+        # NOTE: the comparison with DataSource.ENA.name fails for some reason...
+        if args.data_source == "ENA":
             EnaProcessor(database=Database(initialize=True, config=config),
                          dask_client=client, config=config, download=download) \
                 .process()
-        elif args.data_source == DataSource.COVID19_PORTAL.name:
+        elif args.data_source == "COVID19_PORTAL":
             Covid19PortalProcessor(
                 database=Database(initialize=True, config=config), dask_client=client, config=config) \
                 .process()
