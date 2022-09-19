@@ -13,7 +13,7 @@ from covigator.database.model import DataSource, SampleEna, JobStatus, \
     SubclonalVariantObservation, PrecomputedVariantsPerSample, PrecomputedSubstitutionsCounts, PrecomputedIndelLength, \
     VariantType, PrecomputedAnnotation, PrecomputedOccurrence, PrecomputedTableCounts, \
     PrecomputedVariantAbundanceHistogram, PrecomputedSynonymousNonSynonymousCounts, RegionType, Domain, \
-    LastUpdate
+    LastUpdate, SampleCovid19Portal
 from covigator.exceptions import CovigatorQueryException, CovigatorDashboardMissingPrecomputedData
 
 
@@ -34,6 +34,8 @@ class Queries:
     def get_variant_klass(source: str):
         if source == DataSource.ENA.name:
             klass = Variant
+        elif source == DataSource.COVID19_PORTAL.name:
+            klass = VariantCovid19Portal
         else:
             raise CovigatorQueryException("Bad data source: {}".format(source))
         return klass
@@ -42,6 +44,8 @@ class Queries:
     def get_sample_klass(source: str):
         if source == DataSource.ENA.name:
             klass = SampleEna
+        elif source == DataSource.COVID19_PORTAL.name:
+            klass = SampleCovid19Portal
         else:
             raise CovigatorQueryException("Bad data source: {}".format(source))
         return klass
