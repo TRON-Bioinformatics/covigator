@@ -13,7 +13,7 @@ from covigator.database.model import DataSource, SampleEna, JobStatus, \
     SubclonalVariantObservation, PrecomputedVariantsPerSample, PrecomputedSubstitutionsCounts, PrecomputedIndelLength, \
     VariantType, PrecomputedAnnotation, PrecomputedOccurrence, PrecomputedTableCounts, \
     PrecomputedVariantAbundanceHistogram, PrecomputedSynonymousNonSynonymousCounts, RegionType, Domain, \
-    LastUpdate, SampleCovid19Portal
+    LastUpdate, SampleCovid19Portal, VariantObservationCovid19Portal, VariantCovid19Portal
 from covigator.exceptions import CovigatorQueryException, CovigatorDashboardMissingPrecomputedData
 
 
@@ -26,6 +26,8 @@ class Queries:
     def get_variant_observation_klass(source: str):
         if source == DataSource.ENA.name:
             klass = VariantObservation
+        elif source == DataSource.COVID19_PORTAL.name:
+            klass = VariantObservationCovid19Portal
         else:
             raise CovigatorQueryException("Bad data source: {}".format(source))
         return klass
@@ -127,7 +129,7 @@ class Queries:
             .groupby(["number_mutations", "variant_type"]).sum().reset_index()
 
     def _assert_data_source(self, data_source):
-        if data_source != DataSource.ENA.name and data_source != DataSource.GISAID.name:
+        if data_source != DataSource.ENA.name and data_source != DataSource.COVID19_PORTAL.name:
             raise CovigatorQueryException("Bad data source:  {}".format(data_source))
 
     def get_indel_lengths(self, data_source, genes):

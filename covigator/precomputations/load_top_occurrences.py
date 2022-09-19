@@ -38,12 +38,22 @@ class TopOccurrencesLoader:
         except ValueError as e:
             logger.exception(e)
             logger.error("No top occurrences for ENA data")
+        top_occurring_variants_portal = None
+        try:
+            top_occurring_variants_portal = self.get_top_occurring_variants(
+                top=NUMBER_TOP_OCCURRENCES, source=DataSource.COVID19_PORTAL.name)
+        except ValueError:
+            logger.error("No top occurrences for GISAID data")
         database_rows = []
         # stores the precomputed data
         if top_occurring_variants_ena is not None:
             for index, row in top_occurring_variants_ena.iterrows():
                 # add entries per gene
                 database_rows.append(self._row_to_top_occurrence(row, source=DataSource.ENA))
+        if top_occurring_variants_portal is not None:
+            for index, row in top_occurring_variants_portal.iterrows():
+                # add entries per gene
+                database_rows.append(self._row_to_top_occurrence(row, source=DataSource.COVID19_PORTAL))
         return database_rows
 
     def _row_to_top_occurrence(self, row, source):

@@ -35,12 +35,23 @@ class NsSCountsLoader:
             source=DataSource.ENA, annotation=SYNONYMOUS_VARIANT, region=region)
         data_ns_ena = self._count_variant_observations_by_source_annotation_and_region(
             source=DataSource.ENA, annotation=MISSENSE_VARIANT, region=region)
+        data_s_portal = self._count_variant_observations_by_source_annotation_and_region(
+            source=DataSource.COVID19_PORTAL, annotation=SYNONYMOUS_VARIANT, region=region)
+        data_ns_portal = self._count_variant_observations_by_source_annotation_and_region(
+            source=DataSource.COVID19_PORTAL, annotation=MISSENSE_VARIANT, region=region)
+
         data_ena = pd.merge(
             left=data_s_ena, right=data_ns_ena, on=["month", "region_name", "country"], how='outer').fillna(0)
+        data_portal = pd.merge(
+            left=data_s_portal, right=data_ns_portal, on=["month", "region_name", "country"], how='outer').fillna(0)
+
         database_rows = []
         if data_ena is not None:
             database_rows.extend(self._dataframe_to_model(
                 data=data_ena, source=DataSource.ENA, region=region))
+        if data_portal is not None:
+            database_rows.extend(self._dataframe_to_model(
+                data=data_portal, source=DataSource.GISAID, region=region))
 
         return database_rows
 

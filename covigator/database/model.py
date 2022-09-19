@@ -626,12 +626,12 @@ class VariantObservation(Base):
     ForeignKeyConstraint([variant_id], [Variant.variant_id])
 
     __table_args__ = (
-        Index("{}_index_annotation_position".format(VARIANT_OBSERVATION_TABLE_NAME),
+        Index("{}_i1".format(VARIANT_OBSERVATION_TABLE_NAME),
               "annotation_highest_impact", "position"),
-        Index("{}_index_sample".format(VARIANT_OBSERVATION_TABLE_NAME), "sample"),
-        Index("{}_index_position".format(VARIANT_OBSERVATION_TABLE_NAME), "position"),
-        Index("{}_index_annotation".format(VARIANT_OBSERVATION_TABLE_NAME), "annotation_highest_impact"),
-        Index("{}_index_variant_id".format(VARIANT_OBSERVATION_TABLE_NAME), "variant_id")
+        Index("{}_i2".format(VARIANT_OBSERVATION_TABLE_NAME), "sample"),
+        Index("{}_i3".format(VARIANT_OBSERVATION_TABLE_NAME), "position"),
+        Index("{}_i4".format(VARIANT_OBSERVATION_TABLE_NAME), "annotation_highest_impact"),
+        Index("{}_i5".format(VARIANT_OBSERVATION_TABLE_NAME), "variant_id")
     )
 
 
