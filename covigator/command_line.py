@@ -13,6 +13,7 @@ from covigator.accessor.ena_accessor import EnaAccessor
 from covigator.configuration import Configuration
 from covigator.database.database import Database
 from covigator.pipeline.ena_pipeline import Pipeline
+from covigator.processor.covid19portal_processor import Covid19PortalProcessor
 from covigator.processor.ena_downloader import EnaDownloader
 from covigator.processor.ena_processor import EnaProcessor
 from logzero import logger
@@ -54,6 +55,12 @@ def covid19_portal_accessor():
 def processor():
     parser = ArgumentParser(
         description="Covigator {} processor".format(covigator.VERSION))
+    parser.add_argument(
+        "--source",
+        dest="data_source",
+        help="Specify data source. This can be either ENA or COVID19_PORTAL",
+        required=True
+    )
     parser.add_argument(
         "--num-jobs",
         dest="num_jobs",
@@ -106,9 +113,16 @@ def ena_downloader():
 
 def _start_dask_processor(args, config, download, cluster=None, num_local_cpus=1):
     with Client(cluster) if cluster is not None else Client(n_workers=num_local_cpus, threads_per_worker=1) as client:
-        EnaProcessor(database=Database(initialize=True, config=config),
-                     dask_client=client, config=config, download=download) \
-            .process()
+        if args.data_source == DataSource.ENA.name:
+            EnaProcessor(database=Database(initialize=True, config=config),
+                         dask_client=client, config=config, download=download) \
+                .process()
+        elif args.data_source == DataSource.COVID19_PORTAL.name:
+            Covid19PortalProcessor(
+                database=Database(initialize=True, config=config), dask_client=client, config=config) \
+                .process()
+        else:
+            logger.error("Unknown data source. Please choose either ENA or COVID19_PORTAL")
 
 
 def pipeline():
