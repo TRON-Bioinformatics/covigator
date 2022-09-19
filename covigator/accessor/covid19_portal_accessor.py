@@ -15,7 +15,7 @@ from covigator.accessor.abstract_accessor import AbstractAccessor, SampleCovid19
 from covigator.exceptions import CovigatorExcludedSampleTooEarlyDateException, CovigatorExcludedFailedDownload, \
     CovigatorExcludedTooManyEntries, CovigatorExcludedEmptySequence, CovigatorExcludedHorizontalCoverage, \
     CovigatorExcludedBadBases, CovigatorExcludedSampleException, CovigatorExcludedMissingDateException
-from covigator.database.model import DataSource, Log, CovigatorModule, SampleCovid19Portal
+from covigator.database.model import DataSource, Log, CovigatorModule, SampleCovid19Portal, JobStatus
 from covigator.database.database import Database
 from logzero import logger
 
@@ -270,6 +270,7 @@ class Covid19PortalAccessor(AbstractAccessor):
 
         # stores the reference to the file in the DB
         sample.fasta_path = local_full_path
+        sample.status = JobStatus.DOWNLOADED
 
         return sample
 
