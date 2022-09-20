@@ -58,8 +58,8 @@ class VcfLoader:
                 if source == DataSource.COVID19_PORTAL:
                     covid19portal_variant = self._parse_variant(variant, VariantCovid19Portal)
                     observed_variants.append(
-                        self._parse_variant_observation(variant, specific_sample, source, covid19portal_variant,
-                                                        klass=VariantObservationCovid19Portal))
+                        self._parse_variant_observation(
+                            variant, specific_sample, covid19portal_variant, VariantObservationCovid19Portal))
                     session.add(covid19portal_variant)
                 elif variant.FILTER is None:    # ENA clonal
                     # only stores clonal high quality variants in this table
