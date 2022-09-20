@@ -93,8 +93,10 @@ def processor():
     config = Configuration()
     covigator.configuration.initialise_logs(config.logfile_processor)
     if args.local:
+        logger.info("Local processing")
         _start_dask_processor(args, config, args.download, num_local_cpus=int(args.num_local_cpus))
     else:
+        logger.info("Processing in Slurm cluster")
         with SLURMCluster(
                 walltime='72:00:00',  # hard codes maximum time to 72 hours
                 scheduler_options={"dashboard_address": ':{}'.format(config.dask_port)}) as cluster:
@@ -115,12 +117,14 @@ def _start_dask_processor(args, config, download, cluster=None, num_local_cpus=1
     with Client(cluster) if cluster is not None else Client(n_workers=num_local_cpus, threads_per_worker=1) as client:
         # NOTE: the comparison with DataSource.ENA.name fails for some reason...
         if args.data_source == "ENA":
-            EnaProcessor(database=Database(initialize=True, config=config),
-                         dask_client=client, config=config, download=download) \
+            EnaProcessor(
+                database=Database(initialize=True, config=config),
+                dask_client=client, config=config, download=download) \
                 .process()
         elif args.data_source == "COVID19_PORTAL":
             Covid19PortalProcessor(
-                database=Database(initialize=True, config=config), dask_client=client, config=config) \
+                database=Database(initialize=True, config=config),
+                dask_client=client, config=config) \
                 .process()
         else:
             logger.error("Unknown data source. Please choose either ENA or COVID19_PORTAL")

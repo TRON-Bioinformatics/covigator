@@ -5,7 +5,6 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, String, Float, Enum, DateTime, Integer, Boolean, Date, ForeignKey, \
     ForeignKeyConstraint, BigInteger, JSON, Index
 import enum
-
 from covigator.configuration import Configuration
 
 
@@ -698,12 +697,12 @@ class VariantObservationCovid19Portal(Base):
     ForeignKeyConstraint([variant_id], [VariantCovid19Portal.variant_id])
 
     __table_args__ = (
-        Index("{}_index_annotation_position".format(COVID19_PORTAL_VARIANT_OBSERVATION_TABLE_NAME),
+        Index("{}_i1".format(COVID19_PORTAL_VARIANT_OBSERVATION_TABLE_NAME),
               "annotation_highest_impact", "position"),
-        Index("{}_index_sample".format(COVID19_PORTAL_VARIANT_OBSERVATION_TABLE_NAME), "sample"),
-        Index("{}_index_position".format(COVID19_PORTAL_VARIANT_OBSERVATION_TABLE_NAME), "position"),
-        Index("{}_index_annotation".format(COVID19_PORTAL_VARIANT_OBSERVATION_TABLE_NAME), "annotation_highest_impact"),
-        Index("{}_index_variant_id".format(COVID19_PORTAL_VARIANT_OBSERVATION_TABLE_NAME), "variant_id")
+        Index("{}_i2".format(COVID19_PORTAL_VARIANT_OBSERVATION_TABLE_NAME), "sample"),
+        Index("{}_i3".format(COVID19_PORTAL_VARIANT_OBSERVATION_TABLE_NAME), "position"),
+        Index("{}_i4".format(COVID19_PORTAL_VARIANT_OBSERVATION_TABLE_NAME), "annotation_highest_impact"),
+        Index("{}_i5".format(COVID19_PORTAL_VARIANT_OBSERVATION_TABLE_NAME), "variant_id")
     )
 
 
