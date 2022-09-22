@@ -76,6 +76,10 @@ class EnaProcessor(AbstractProcessor):
         # load pangolin results
         sample = EnaProcessor.load_pangolin(sample=sample, path=sample.lofreq_pangolin_path)
 
+        # NOTE: this is a counterintuititve commit. The VCF loading happening after this may do a legitimate rollback
+        # but we don't want to rollback changes in the sample, hence this commit
+        queries.session.commit()
+
         return sample
 
     @staticmethod
