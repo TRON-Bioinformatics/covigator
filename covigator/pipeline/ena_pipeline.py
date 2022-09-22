@@ -1,7 +1,6 @@
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from logzero import logger
 from covigator.configuration import Configuration
 from covigator.pipeline.runner import run_command
 
@@ -34,10 +33,7 @@ class Pipeline:
 
     def run(self, run_accession: str, fastq1: str, fastq2: str = None) -> PipelineResult:
 
-        logger.info("Processing {} and {}".format(fastq1, fastq2))
         sample_data_folder = Path(fastq1).parent
-
-        logger.info("Sample data folder: {}".format(sample_data_folder))
 
         lofreq_vcf = os.path.join(sample_data_folder, "{name}.lofreq.vcf.gz".format(name=run_accession))
         ivar_vcf = os.path.join(sample_data_folder, "{name}.ivar.vcf.gz".format(name=run_accession))

@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import os
 from dataclasses import dataclass
-from logzero import logger
 from covigator.configuration import Configuration
 from covigator.database.model import SampleCovid19Portal
 from covigator.pipeline.runner import run_command
@@ -20,7 +19,6 @@ class Covid19PortalPipeline:
         self.config = config
 
     def run(self, sample: SampleCovid19Portal) -> Covid19PortalPipelineResult:
-        logger.info("Processing {}".format(sample.run_accession))
         # NOTE: sample folder date/run_accession
         sample_data_folder = sample.get_sample_folder(self.config.storage_folder)
         output_vcf = os.path.join(sample_data_folder, "{name}.assembly.vcf.gz".format(name=sample.run_accession))

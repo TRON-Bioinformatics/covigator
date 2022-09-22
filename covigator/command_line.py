@@ -81,27 +81,20 @@ def processor():
         help="number of CPUs to be used by the processor when running locally",
         default=1
     )
-    parser.add_argument(
-        "--download",
-        dest="download",
-        help="if set it tries to download ENA FASTQs if they are not already in place.",
-        action='store_true',
-        default=False
-    )
 
     args = parser.parse_args()
     config = Configuration()
     covigator.configuration.initialise_logs(config.logfile_processor)
     if args.local:
         logger.info("Local processing")
-        _start_dask_processor(args, config, args.download, num_local_cpus=int(args.num_local_cpus))
+        _start_dask_processor(args, config, num_local_cpus=int(args.num_local_cpus))
     else:
         logger.info("Processing in Slurm cluster")
         with SLURMCluster(
                 walltime='72:00:00',  # hard codes maximum time to 72 hours
                 scheduler_options={"dashboard_address": ':{}'.format(config.dask_port)}) as cluster:
             cluster.scale(jobs=int(args.num_jobs))
-            _start_dask_processor(args, config, args.download, cluster=cluster)
+            _start_dask_processor(args, config, cluster=cluster)
 
 
 def ena_downloader():
@@ -113,13 +106,13 @@ def ena_downloader():
     EnaDownloader(database=Database(config=config, initialize=True), config=config).process()
 
 
-def _start_dask_processor(args, config, download, cluster=None, num_local_cpus=1):
+def _start_dask_processor(args, config, cluster=None, num_local_cpus=1):
     with Client(cluster) if cluster is not None else Client(n_workers=num_local_cpus, threads_per_worker=1) as client:
         # NOTE: the comparison with DataSource.ENA.name fails for some reason...
         if args.data_source == "ENA":
             EnaProcessor(
                 database=Database(initialize=True, config=config),
-                dask_client=client, config=config, download=download) \
+                dask_client=client, config=config) \
                 .process()
         elif args.data_source == "COVID19_PORTAL":
             Covid19PortalProcessor(

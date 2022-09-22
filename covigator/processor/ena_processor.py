@@ -1,31 +1,26 @@
 import json
 from datetime import datetime
-
 import pandas as pd
-
 import covigator
 from covigator.configuration import Configuration
 from covigator.database.queries import Queries
 from covigator.exceptions import CovigatorErrorProcessingCoverageResults, CovigatorExcludedSampleBadQualityReads, \
     CovigatorExcludedSampleNarrowCoverage, \
     CovigatorErrorProcessingDeduplicationResults
-from covigator.misc import backoff_retrier
 from covigator.database.model import JobStatus, DataSource, SampleEna
 from covigator.database.database import Database
 from logzero import logger
 from dask.distributed import Client
 from covigator.processor.abstract_processor import AbstractProcessor
-from covigator.pipeline.downloader import Downloader
 from covigator.pipeline.ena_pipeline import Pipeline
 from covigator.pipeline.vcf_loader import VcfLoader
 
 
 class EnaProcessor(AbstractProcessor):
 
-    def __init__(self, database: Database, dask_client: Client, config: Configuration, download : bool = False,
-                 wait_time=60):
+    def __init__(self, database: Database, dask_client: Client, config: Configuration, wait_time=60):
         logger.info("Initialising ENA processor")
-        super().__init__(database, dask_client, DataSource.ENA, config, download=download, wait_time=wait_time)
+        super().__init__(database, dask_client, DataSource.ENA, config, wait_time=wait_time)
 
     def _process_run(self, run_accession: str):
         """
@@ -44,20 +39,8 @@ class EnaProcessor(AbstractProcessor):
 
     @staticmethod
     def run_all(sample: SampleEna, queries: Queries, config: Configuration) -> SampleEna:
-        sample = EnaProcessor.download(sample=sample, queries=queries, config=config)
         sample = EnaProcessor.run_pipeline(sample=sample, queries=queries, config=config)
         sample = EnaProcessor.load(sample=sample, queries=queries, config=config)
-        return sample
-
-    @staticmethod
-    def download(sample: SampleEna, queries: Queries, config: Configuration) -> SampleEna:
-        # ensures that the download is done with retries, even after MD5 check sum failure
-        downloader = Downloader(config=config)
-        download_with_retries = backoff_retrier.wrapper(downloader.download, config.retries_download)
-        paths = download_with_retries(sample_ena=sample)
-        sample.sample_folder = sample.get_sample_folder(config.storage_folder)
-        sample.fastq_path = paths
-        sample.downloaded_at = datetime.now()
         return sample
 
     @staticmethod

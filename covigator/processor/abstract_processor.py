@@ -9,8 +9,6 @@ import typing as typing
 from dask.distributed import Client
 from distributed import fire_and_forget
 from logzero import logger
-import covigator
-import covigator.configuration
 from covigator.configuration import Configuration
 from covigator.database.database import Database, session_scope
 from covigator.database.model import Log, DataSource, CovigatorModule, JobStatus, \
@@ -23,7 +21,7 @@ from covigator.precomputations.loader import PrecomputationsLoader
 class AbstractProcessor:
 
     def __init__(self, database: Database, dask_client: Client, data_source: DataSource, config: Configuration,
-                 download : bool = False, wait_time=60):
+                 wait_time=60):
         self.data_source = data_source
         self.config = config
         self.start_time = datetime.now()
@@ -36,7 +34,6 @@ class AbstractProcessor:
         self.session = self.database.get_database_session()
         self.queries = Queries(self.session)
         self.wait_time = wait_time
-        self.download = download
 
     def process(self):
         logger.info("Starting processor")
@@ -45,10 +42,7 @@ class AbstractProcessor:
         try:
             while True:
                 # queries 100 jobs every time to make sending to queue faster
-                jobs = self.queries.find_first_pending_jobs(
-                    self.data_source, n=1000,
-                    # only reads jobs in PENDING status if --download is indicated
-                    status=[JobStatus.PENDING, JobStatus.DOWNLOADED] if self.download else [JobStatus.DOWNLOADED])
+                jobs = self.queries.find_first_pending_jobs(self.data_source, n=1000, status=[JobStatus.DOWNLOADED])
                 if jobs is None or len(jobs) == 0:
                     logger.info("No more jobs to process after sending {} runs to process".format(count))
                     break
@@ -112,7 +106,6 @@ class AbstractProcessor:
         Runs a function on a job, if anything goes wrong or does not fit in the DB it returns None in order to
         stop the execution of subsequent jobs.
         """
-        covigator.configuration.initialise_logs(config.logfile_processor, sample_id=run_accession)
         if run_accession is not None:
             try:
                 with session_scope(config=config) as session:
@@ -124,7 +117,6 @@ class AbstractProcessor:
                         if end_status is not None:
                             sample.status = end_status
                     else:
-                        logger.warning("Expected ENA job {} in status {}".format(run_accession, start_status))
                         run_accession = None
             except CovigatorExcludedSampleException as e:
                 # captures exclusion cases
@@ -139,8 +131,6 @@ class AbstractProcessor:
                         config=config, run_accession=run_accession, exception=e, status=error_status,
                         data_source=data_source)
                     run_accession = None
-                else:
-                    logger.warning("Error processing a job that does not stop the workflow!")
         return run_accession
 
     @abc.abstractmethod
@@ -170,8 +160,6 @@ class AbstractProcessor:
     @staticmethod
     def _log_error_in_job(config: Configuration, run_accession: str, exception: Exception, status: JobStatus, data_source: DataSource):
         with session_scope(config=config) as session:
-            logger.exception(exception)
-            logger.info("Error on job {} on state {}: {}".format(run_accession, status, str(exception)))
             sample = Queries(session).find_job_by_accession(run_accession=run_accession, data_source=data_source)
             sample.status = status
             sample.failed_at = datetime.now()
