@@ -19,6 +19,7 @@ class EnaAccessor(AbstractAccessor):
     ENA_FIELDS = [
         # data on run
         "scientific_name",
+        "sample_accession",
         "study_accession",
         "experiment_accession",
         "first_created",

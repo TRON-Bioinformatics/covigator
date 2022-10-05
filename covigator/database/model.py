@@ -125,8 +125,11 @@ class SampleEna(Base):
 
     # data on run
     run_accession = Column(String, primary_key=True)            # 'ERR4080473',
+
     # DEPRECATED
     finished = Column(Boolean)
+    ####
+
     sample_accession = Column(String)                           # 'SAMEA6798401',
     scientific_name = Column(String)
     study_accession = Column(String)
