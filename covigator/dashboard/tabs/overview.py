@@ -38,9 +38,12 @@ def get_tab_overview():
                             html.Br(),
                             html.P("""
                        CoVigator loads publicly available SARS-CoV-2 DNA sequences from 
-                       the European Nucleotide Archive (ENA).  
+                       the European Nucleotide Archive (ENA) and the Covid19 Data Portal.
+                       Some samples are present both datasets.
                        ENA provides the raw reads in FASTQ format and thus enables a high resolution analysis into the 
                        SARS-CoV-2 mutations. Intrahost mutations are of particular interest.
+                       On the other hand, the Covid19 Data Portal sequences dataset is more extensive and represents 
+                       best the geograhical and temporal spread of SARS-CoV-2.
                        """),
                             html.Br(),
                             dbc.CardBody(
@@ -63,7 +66,27 @@ def get_tab_overview():
                                             outline=False,
                                             style={"width": "40rem", "height": "15rem"},
                                         )
-                                    )
+                                    ),
+                                    dbc.Col(
+                                        dbc.Card(
+                                            [
+                                                dbc.CardImg(src="/assets/CV19DP_logo_oneliner2.svg", top=True,
+                                                            style={"width": "18rem", "margin-left": "20px",
+                                                                   "margin-top": "10px"}, ),
+                                                dbc.CardBody(
+                                                    [
+                                                        dbc.Button(
+                                                            "Explore data derived from the Covid19 Data Portal sequences", color="warning",
+                                                            href="/covid19-portal",
+                                                            style={"margin-left": "20px", "margin-right": "20px",
+                                                                   "font-size": 20}, ),
+                                                    ]
+                                                ),
+                                            ],
+                                            outline=False,
+                                            style={"width": "40rem", "height": "15rem"},
+                                        )
+                                    ),
                                 ])),
                             html.Br(),
                             html.Br(),

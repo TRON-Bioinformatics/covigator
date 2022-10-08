@@ -203,6 +203,7 @@ def set_callbacks_variants_tab(app, session: Session):
     domains_by_gene = {g.name: queries.get_domains_by_gene(g.name) for g in queries.get_genes()}
     all_domains = queries.get_domains()
     months_from_db_ena = queries.get_sample_months(MONTH_PATTERN, data_source=DataSource.ENA.name)
+    months_from_db_covid19_portal = queries.get_sample_months(MONTH_PATTERN, data_source=DataSource.COVID19_PORTAL.name)
 
     @app.callback(
         Output(ID_DROPDOWN_DOMAIN, 'options'),
@@ -214,12 +215,17 @@ def set_callbacks_variants_tab(app, session: Session):
 
     @app.callback(
         Output(ID_DROPDOWN_DATE_RANGE_END_DIV, 'children'),
-        Input(ID_DROPDOWN_DATE_RANGE_START, 'value')
+        Input(ID_DROPDOWN_DATE_RANGE_START, 'value'),
+        Input(ID_DROPDOWN_DATA_SOURCE, 'value')
     )
-    def update_dropdown_end_date(start_date):
+    def update_dropdown_end_date(start_date, data_source):
         today = datetime.now()
         today_formatted = today.strftime(MONTH_PATTERN)
-        months = [m for m in months_from_db_ena if m >= start_date]
+        months = []
+        if data_source == DataSource.ENA.name:
+            months = [m for m in months_from_db_ena if m >= start_date]
+        elif data_source == DataSource.COVID19_PORTAL.name:
+            months = [m for m in months_from_db_covid19_portal if m >= start_date]
         return dcc.Dropdown(
             id=ID_DROPDOWN_DATE_RANGE_END,
             options=[{'label': c, 'value': c} for c in months],
