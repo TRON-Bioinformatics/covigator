@@ -261,7 +261,7 @@ def set_callbacks(app, session: Session, content_folder):
         if page == MAIN_PAGE or page == ACKNOWLEDGEMENTS_PAGE:
             return html.A(html.Img(src="/assets/CoVigator_logo_txt_reg_no_bg.png", height="80px"), href="/")
         elif page == COVID19_PORTAL_PAGE:
-            return html.A(html.Img(src="/assets/CoVigator_logo_Covid19_portal.png", height="80px"), href="/")
+            return html.A(html.Img(src="/assets/CoVigator_logo_txt_reg_no_bg_covid19_portal.png", height="80px"), href="/")
         elif page == ENA_PAGE:
             return html.A(html.Img(src="/assets/CoVigator_logo_ENA.png", height="80px"), href="/")
 
