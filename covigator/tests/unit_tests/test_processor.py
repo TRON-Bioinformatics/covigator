@@ -126,24 +126,6 @@ class ProcessorTests(AbstractTest):
         self.session.add(sample)
         self.session.commit()
 
-    def test_load_dedup_metrics(self):
-        deduplication_metrics_path = pkg_resources.resource_filename(
-            covigator.tests.__name__, "resources/test.deduplication_metrics.txt")
-        sample = SampleEna(run_accession="TEST", deduplication_metrics_path=deduplication_metrics_path, fastq_ftp="", fastq_md5="",
-                           num_fastqs=1)
-        EnaProcessor.load_deduplication_metrics(sample)
-        self.assertEqual(sample.percent_duplication, 0.919339)
-        self.assertEqual(sample.unpaired_reads_examined, 0)
-        self.assertEqual(sample.read_pairs_examined, 352625)
-        self.assertEqual(sample.secondary_or_supplementary_reads, 1972)
-        self.assertEqual(sample.unmapped_reads, 0)
-        self.assertEqual(sample.unpaired_read_duplicates, 0)
-        self.assertEqual(sample.read_pair_duplicates, 324182)
-        self.assertEqual(sample.read_pair_optical_duplicates, 0)
-
-        self.session.add(sample)
-        self.session.commit()
-
     def test_load_horizontal_coverage(self):
         horizontal_coverage_path = pkg_resources.resource_filename(covigator.tests.__name__, "resources/test.coverage.tsv")
         sample = SampleEna(run_accession="TEST", horizontal_coverage_path=horizontal_coverage_path, fastq_ftp="",

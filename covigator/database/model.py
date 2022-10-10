@@ -208,7 +208,7 @@ class SampleEna(Base):
     gatk_pangolin_path = Column(String)
     bcftools_pangolin_path = Column(String)
     fastp_path = Column(String)
-    deduplication_metrics_path = Column(String)
+    deduplication_metrics_path = Column(String)     # DEPRECATED
     horizontal_coverage_path = Column(String)
     vertical_coverage_path = Column(String)
 
@@ -238,7 +238,7 @@ class SampleEna(Base):
     pangolin_qc_notes = Column(String)
     pangolin_note = Column(String)
 
-    # Picard deduplicatio output
+    # Picard deduplicatio output   ## DEPRECATED
     percent_duplication = Column(Float)
     unpaired_reads_examined = Column(Integer)
     read_pairs_examined = Column(Integer)
