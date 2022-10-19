@@ -764,9 +764,9 @@ class SubclonalVariantObservation(Base):
     ForeignKeyConstraint([variant_id], [SubclonalVariant.variant_id])
 
     __table_args__ = (
-        Index("{}_index_position".format(SUBCLONAL_VARIANT_OBSERVATION_TABLE_NAME), "position"),
-        Index("{}_index_annotation_vaf".format(SUBCLONAL_VARIANT_OBSERVATION_TABLE_NAME), "annotation_highest_impact", "vaf"),
-        Index("{}_index_vaf".format(SUBCLONAL_VARIANT_OBSERVATION_TABLE_NAME), "vaf"),
+        Index("{}_i1".format(SUBCLONAL_VARIANT_OBSERVATION_TABLE_NAME), "position"),
+        Index("{}_i2".format(SUBCLONAL_VARIANT_OBSERVATION_TABLE_NAME), "annotation_highest_impact", "vaf"),
+        Index("{}_i3".format(SUBCLONAL_VARIANT_OBSERVATION_TABLE_NAME), "vaf"),
     )
 
 
@@ -825,9 +825,9 @@ class LowFrequencyVariantObservation(Base):
     ForeignKeyConstraint([variant_id], [LowFrequencyVariant.variant_id])
 
     __table_args__ = (
-        Index("{}_index_position".format(LOW_FREQUENCY_VARIANT_OBSERVATION_TABLE_NAME), "position"),
-        Index("{}_index_annotation_vaf".format(LOW_FREQUENCY_VARIANT_OBSERVATION_TABLE_NAME), "annotation_highest_impact", "vaf"),
-        Index("{}_index_vaf".format(LOW_FREQUENCY_VARIANT_OBSERVATION_TABLE_NAME), "vaf"),
+        Index("{}_i1".format(LOW_FREQUENCY_VARIANT_OBSERVATION_TABLE_NAME), "position"),
+        Index("{}_i2".format(LOW_FREQUENCY_VARIANT_OBSERVATION_TABLE_NAME), "annotation_highest_impact", "vaf"),
+        Index("{}_i3".format(LOW_FREQUENCY_VARIANT_OBSERVATION_TABLE_NAME), "vaf"),
     )
 
 
