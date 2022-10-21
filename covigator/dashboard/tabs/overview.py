@@ -37,13 +37,13 @@ def get_tab_overview():
                                 """),
                             html.Br(),
                             html.P("""
-                       CoVigator loads publicly available SARS-CoV-2 DNA sequences from 
-                       the European Nucleotide Archive (ENA) and the Covid19 Data Portal.
-                       Some samples are present both datasets.
-                       ENA provides the raw reads in FASTQ format and thus enables a high resolution analysis into the 
-                       SARS-CoV-2 mutations. Intrahost mutations are of particular interest.
-                       On the other hand, the Covid19 Data Portal sequences dataset is more extensive and represents 
-                       best the geograhical and temporal spread of SARS-CoV-2.
+                       CoVigator loads publicly available SARS-CoV-2 raw reads (ie: FASTQs) from 
+                       the European Nucleotide Archive (ENA) and sequences from the Covid19 Data Portal.
+                       Some samples are present in both datasets.
+                       ENA enables a high resolution analysis into the SARS-CoV-2 mutations through the raw reads. 
+                       Intrahost mutations are of particular interest.
+                       On the other hand, the Covid19 Data Portal sequences have a lower resolution, 
+                       but it is a more extensive dataset.
                        """),
                             html.Br(),
                             dbc.CardBody(
