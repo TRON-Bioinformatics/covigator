@@ -342,6 +342,13 @@ class Queries:
                     PrecomputedTableCounts.table == SampleEna.__name__,
                     PrecomputedTableCounts.factor == PrecomputedTableCounts.FACTOR_SOURCE
                 ))
+            elif source == DataSource.COVID19_PORTAL.name:
+                query = query.filter(and_(
+                    PrecomputedTableCounts.table == SampleCovid19Portal.__name__,
+                    PrecomputedTableCounts.factor == PrecomputedTableCounts.FACTOR_SOURCE
+                ))
+            else:
+                raise ValueError("Unknown data source")
             result = query.first()
             if result is None:
                 raise CovigatorDashboardMissingPrecomputedData
