@@ -268,8 +268,11 @@ class Covid19PortalAccessor(AbstractAccessor):
             with open(local_full_path, "w") as f:
                 SeqIO.write(sequences=records, handle=f, format="fasta")
 
-        # stores the reference to the file in the DB
+        # stores the reference to the file in the DB and metadata about the sequence
         sample.fasta_path = local_full_path
+        sample.sequence_length = sequence_length
+        sample.count_n_bases = count_n_bases
+        sample.count_ambiguous_bases = count_ambiguous_bases
         sample.status = JobStatus.DOWNLOADED
 
         return sample
