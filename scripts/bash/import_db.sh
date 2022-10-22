@@ -73,6 +73,6 @@ load_table "low_frequency_variant"
 load_table "low_frequency_variant_observation"
 
 # Covid19 portal
-load_table "sample_covid19portal"
-load_table "variant_covid19_portal"
-load_table "variant_observation_covid19_portal"
+load_table "sample_covid19_portal"
+load_table "variant_covid19portal"
+load_table "variant_observation_covid19portal"
