@@ -3,7 +3,7 @@ import time
 import traceback
 import pandas as pd
 from contextlib import suppress
-from datetime import datetime
+from datetime import datetime, date
 from typing import Callable
 import typing as typing
 from dask.distributed import Client
@@ -12,7 +12,7 @@ from logzero import logger
 from covigator.configuration import Configuration
 from covigator.database.database import Database, session_scope
 from covigator.database.model import Log, DataSource, CovigatorModule, JobStatus, \
-    SampleEna
+    SampleEna, LastUpdate
 from covigator.database.queries import Queries
 from covigator.exceptions import CovigatorExcludedSampleException, CovigatorErrorProcessingPangolinResults
 from covigator.precomputations.loader import PrecomputationsLoader
@@ -74,6 +74,9 @@ class AbstractProcessor:
             # precomputes data right after processor
             PrecomputationsLoader(session=self.session).load()
 
+            # updates the last update entry
+            self._register_last_update()
+
         except Exception as e:
             logger.exception(e)
             self.session.rollback()
@@ -89,6 +92,11 @@ class AbstractProcessor:
                 self.dask_client.close(60)
                 self.session.close()
             logger.info("Cluster and database sessions closed")
+
+    def _register_last_update(self):
+        last_update = LastUpdate(source=self.data_source, update_time=date.today())
+        self.session.add(last_update)
+        self.session.commit()
 
     def _wait_for_batch(self):
         logger.info("Waiting for a batch of jobs...")

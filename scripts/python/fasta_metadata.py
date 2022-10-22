@@ -12,6 +12,8 @@ This is a temporary patch that has been amended in the accessor already
 config = Configuration()
 session = Database(config=config, initialize=True).get_database_session()
 
+count = 0
+
 sample: SampleCovid19Portal
 for sample in session.query(SampleCovid19Portal).all():
 
@@ -22,6 +24,11 @@ for sample in session.query(SampleCovid19Portal).all():
         sample.count_ambiguous_bases = sum([record.seq.count(b) for b in "RYWSMKHBVD"])
         break
 
-    session.commit()
+    count += 1
 
+    if count % 1000 == 0:
+        session.commit()
+        count = 0
+
+session.commit()    # last batch commit
 session.close()
