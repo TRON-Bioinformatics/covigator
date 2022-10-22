@@ -43,9 +43,8 @@ def get_tab_acknowledgements():
                 ),
                 html.Br(),
 
-                html.P(html.B("ENA Data")),
                 html.P([
-                    """We gratefully acknowledge the European Nucleotide Archive""",
+                    """We gratefully acknowledge the European Nucleotide Archive, the Covid19 Data portal""",
                     html.Sup("2"),
                     " and all data contributors for sharing the raw reads on which this research is based."]),
                 html.P([

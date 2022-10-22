@@ -8,7 +8,8 @@ from sqlalchemy.orm import Session
 from covigator import MISSENSE_VARIANT
 from covigator.database.model import Variant as CovigatorVariant, VariantObservation, \
     SubclonalVariantObservation, SampleEna, DataSource, VariantType, \
-    LowFrequencyVariantObservation, SubclonalVariant, LowFrequencyVariant
+    LowFrequencyVariantObservation, SubclonalVariant, LowFrequencyVariant, VariantCovid19Portal, \
+    VariantObservationCovid19Portal, SampleCovid19Portal
 from covigator.database.queries import Queries
 from covigator.exceptions import CovigatorNotSupportedVariant
 
@@ -54,7 +55,13 @@ class VcfLoader:
         variant: Variant
         for variant in variants:
             if variant.FILTER is None or variant.FILTER in ["LOW_FREQUENCY", "SUBCLONAL"]:
-                if variant.FILTER is None:    # ENA clonal
+                if source == DataSource.COVID19_PORTAL:
+                    covid19portal_variant = self._parse_variant(variant, VariantCovid19Portal)
+                    observed_variants.append(
+                        self._parse_variant_observation(
+                            variant, specific_sample, covid19portal_variant, VariantObservationCovid19Portal))
+                    session.add(covid19portal_variant)
+                elif variant.FILTER is None:    # ENA clonal
                     # only stores clonal high quality variants in this table
                     ena_variant = self._parse_variant(variant, CovigatorVariant)
                     observed_variants.append(
@@ -138,7 +145,8 @@ class VcfLoader:
                         covigator_variant.position_amino_acid = int(match.group(2))
 
     def _parse_variant_observation(
-            self, variant: Variant, sample: SampleEna, covigator_variant: CovigatorVariant, klass):
+            self, variant: Variant, sample: Union[SampleEna, SampleCovid19Portal], covigator_variant: CovigatorVariant,
+            klass):
 
         dp4 = variant.INFO.get("DP4")
         return klass(

@@ -37,10 +37,13 @@ def get_tab_overview():
                                 """),
                             html.Br(),
                             html.P("""
-                       CoVigator loads publicly available SARS-CoV-2 DNA sequences from 
-                       the European Nucleotide Archive (ENA).  
-                       ENA provides the raw reads in FASTQ format and thus enables a high resolution analysis into the 
-                       SARS-CoV-2 mutations. Intrahost mutations are of particular interest.
+                       CoVigator loads publicly available SARS-CoV-2 raw reads (ie: FASTQs) from 
+                       the European Nucleotide Archive (ENA) and sequences from the Covid19 Data Portal.
+                       Some samples are present in both datasets.
+                       ENA enables a high resolution analysis into the SARS-CoV-2 mutations through the raw reads. 
+                       Intrahost mutations are of particular interest.
+                       On the other hand, the Covid19 Data Portal sequences have a lower resolution, 
+                       but it is a more extensive dataset.
                        """),
                             html.Br(),
                             dbc.CardBody(
@@ -63,7 +66,27 @@ def get_tab_overview():
                                             outline=False,
                                             style={"width": "40rem", "height": "15rem"},
                                         )
-                                    )
+                                    ),
+                                    dbc.Col(
+                                        dbc.Card(
+                                            [
+                                                dbc.CardImg(src="/assets/CV19DP_logo_oneliner2.svg", top=True,
+                                                            style={"width": "18rem", "margin-left": "20px",
+                                                                   "margin-top": "10px"}, ),
+                                                dbc.CardBody(
+                                                    [
+                                                        dbc.Button(
+                                                            "Explore data derived from the Covid19 Data Portal sequences", color="warning",
+                                                            href="/covid19-portal",
+                                                            style={"margin-left": "20px", "margin-right": "20px",
+                                                                   "font-size": 20}, ),
+                                                    ]
+                                                ),
+                                            ],
+                                            outline=False,
+                                            style={"width": "40rem", "height": "15rem"},
+                                        )
+                                    ),
                                 ])),
                             html.Br(),
                             html.Br(),

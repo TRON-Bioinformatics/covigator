@@ -101,6 +101,38 @@ def set_callbacks_samples_tab(app, session: Session):
     queries = Queries(session=session)
     figures = SampleFigures(queries)
 
+    countries_ena = queries.get_countries(DataSource.ENA.name)
+    countries_covid19_portal = queries.get_countries(DataSource.COVID19_PORTAL.name)
+    lineages_ena = queries.get_lineages(DataSource.ENA.name)
+    lineages_covid19_portal = queries.get_lineages(DataSource.COVID19_PORTAL.name)
+
+    @app.callback(
+        Output(ID_DROPDOWN_COUNTRY, 'options'),
+        Input(ID_DROPDOWN_DATA_SOURCE, 'value'))
+    def set_countries(source):
+        """
+        Updates the country drop down list when the data source is changed
+        """
+        countries = []
+        if source == DataSource.ENA.name:
+            countries = [{'label': c, 'value': c} for c in countries_ena]
+        elif source == DataSource.COVID19_PORTAL.name:
+            countries = [{'label': c, 'value': c} for c in countries_covid19_portal]
+        return countries
+
+    @app.callback(
+        Output(ID_DROPDOWN_LINEAGE, 'options'),
+        Input(ID_DROPDOWN_DATA_SOURCE, 'value'))
+    def set_lineages(source):
+        """
+        Updates the country drop down list when the data source is changed
+        """
+        lineages = []
+        if source == DataSource.ENA.name:
+            lineages = [{'label': c, 'value': c} for c in lineages_ena]
+        elif source == DataSource.COVID19_PORTAL.name:
+            lineages = [{'label': c, 'value': c} for c in lineages_covid19_portal]
+        return lineages
 
     @app.callback(
         Output(ID_SLIDER_MIN_SAMPLES, 'disabled'),

@@ -110,21 +110,19 @@ class ProcessorTests(AbstractTest):
         self.session.add(sample)
         self.session.commit()
 
-    def test_load_dedup_metrics(self):
-        deduplication_metrics_path = pkg_resources.resource_filename(
-            covigator.tests.__name__, "resources/test.deduplication_metrics.txt")
-        sample = SampleEna(run_accession="TEST", deduplication_metrics_path=deduplication_metrics_path, fastq_ftp="", fastq_md5="",
-                           num_fastqs=1)
-        EnaProcessor.load_deduplication_metrics(sample)
-        self.assertEqual(sample.percent_duplication, 0.919339)
-        self.assertEqual(sample.unpaired_reads_examined, 0)
-        self.assertEqual(sample.read_pairs_examined, 352625)
-        self.assertEqual(sample.secondary_or_supplementary_reads, 1972)
-        self.assertEqual(sample.unmapped_reads, 0)
-        self.assertEqual(sample.unpaired_read_duplicates, 0)
-        self.assertEqual(sample.read_pair_duplicates, 324182)
-        self.assertEqual(sample.read_pair_optical_duplicates, 0)
-
+    def test_load_another_pangolin(self):
+        pangolin_path = pkg_resources.resource_filename(covigator.tests.__name__, "resources/test.another_pangolin.csv")
+        sample = SampleEna(run_accession="TEST", fastq_ftp="blabla", fastq_md5="blabla", num_fastqs=1)
+        sample = EnaProcessor.load_pangolin(sample, path=pangolin_path)
+        self.assertEqual(sample.pangolin_pangolin_version, "4.1.2")
+        self.assertEqual(sample.pangolin_version, "PUSHER-v1.14")
+        self.assertEqual(sample.pangolin_scorpio_version, "0.3.17")
+        self.assertEqual(sample.pangolin_constellation_version, "v0.1.10")
+        self.assertEqual(sample.pangolin_qc_status, "pass")
+        self.assertEqual(sample.pangolin_note, "Usher placements: AY.44(2/2)")
+        self.assertEqual(sample.pangolin_lineage, "AY.44")
+        self.assertEqual(sample.pangolin_conflict, 0.0)
+        self.assertEqual(sample.pangolin_ambiguity_score, 0.0)
         self.session.add(sample)
         self.session.commit()
 
