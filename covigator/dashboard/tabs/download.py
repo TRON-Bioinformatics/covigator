@@ -11,14 +11,25 @@ def get_tab_download(content_folder):
     return dbc.CardBody(
             children=[
                 dcc.Markdown("""
-                    ** Download the raw CoVigator data derived from ENA** 
+                    ** Download the raw CoVigator data** 
                     
+                    Data releases that may be behind the information shown in the dashboard.
+                    See the README file for more details.
+                    
+                    ENA dataset
                     * `variant_observation` contains the individual variant calls
                     * `subclonal_variant_observation` contains the variant calls with a VAF < 80 % and >= 5 %
                     * `low_frequency_variant_observation` contains the variant calls with a VAF < 5 %
                     * `variant` contains the unique variants without any sample specific information
                     * `variant_cooccurrence` contains the cooccurrence matrix between clonal variants
                     * `sample_ena` contains the samples metadata and some sample level derived data (eg: pangolin, coverage analysis, etc.)
+                    
+                    Covid19 data portal sequences dataset
+                    * `variant_observation_covid19portal` contains the individual variant calls
+                    * `variant_covid19portal` contains the unique variants without any sample specific information
+                    * `sample_covid19_portal` contains the samples metadata and some sample level derived data (eg: pangolin, coverage analysis, etc.)
+                    
+                    Annotations
                     * `conservation` contains the ConsHMM conservation tracks
                     * `gene` contains the gene annotations as provided by Ensembl
                     * `domain` contains the Pfam protein domains
