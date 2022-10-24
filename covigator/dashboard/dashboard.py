@@ -207,6 +207,7 @@ def set_callbacks(app, session: Session, content_folder):
     ENA_PAGE = DataSource.ENA
     COVID19_PORTAL_PAGE = DataSource.COVID19_PORTAL
     ACKNOWLEDGEMENTS_PAGE = "acknowledgements"
+    DOWNLOAD_PAGE = "download"
 
     def _get_page(url):
         if url in ["", "/"]:
@@ -217,6 +218,8 @@ def set_callbacks(app, session: Session, content_folder):
             return ENA_PAGE
         elif url == "/acknowledgements":
             return ACKNOWLEDGEMENTS_PAGE
+        elif url == "/download":
+            return DOWNLOAD_PAGE
         else:
             raise ValueError("This URL does not exist")
 
@@ -249,16 +252,18 @@ def set_callbacks(app, session: Session, content_folder):
                 dbc.Tab(label="Intrahost mutations", tab_id=INTRAHOST_MUTATIONS_TAB_ID, label_style=TAB_STYLE),
                 dbc.Tab(label="Download data", tab_id=DOWNLOAD_TAB_ID, label_style=TAB_STYLE)], ENA_DATASET_TAB_ID
         elif page == ACKNOWLEDGEMENTS_PAGE:
-            # show ena tabs
             return [
                 dbc.Tab(label="Acknowledgements", tab_id=HELP_TAB_ID, label_style={"color": "#003c78", 'display': 'none'})], HELP_TAB_ID
+        elif page == DOWNLOAD_PAGE:
+            return [
+                dbc.Tab(label="Download", tab_id=DOWNLOAD_TAB_ID, label_style={"color": "#003c78", 'display': 'none'})], DOWNLOAD_TAB_ID
 
     @app.callback(
         Output('logo', "children"),
         [Input("url", "pathname")])
     def switch_logo(url):
         page = _get_page(url)
-        if page == MAIN_PAGE or page == ACKNOWLEDGEMENTS_PAGE:
+        if page in [MAIN_PAGE, ACKNOWLEDGEMENTS_PAGE, DOWNLOAD_PAGE]:
             return html.A(html.Img(src="/assets/CoVigator_logo_txt_reg_no_bg.png", height="80px"), href="/")
         elif page == COVID19_PORTAL_PAGE:
             return html.A(html.Img(src="/assets/CoVigator_logo_txt_reg_no_bg_covid19_portal.png", height="80px"), href="/")
