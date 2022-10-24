@@ -265,4 +265,5 @@ Only the latest data release is available for download, we do not maintain a his
 
 Unfortunately the data is not in the standard VCF format and the format of the table may change in the future.
 Also, we do not provide the BAM files for download.
-We are happy to attend specific data requests via our GitHub site.
+We internally store all VCF and BAM files, we are happy to attend specific and justified data requests via issues in 
+our GitHub site.
