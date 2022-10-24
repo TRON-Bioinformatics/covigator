@@ -41,7 +41,7 @@ def get_covid19_portal_overview_tab_left_bar(queries: Queries, count_samples):
         children=[
             html.Br(),
             dcc.Markdown("""
-                The Covid19 Data Portal (https://www.covid19dataportal.org/) provides among other things DNA assemblies, 
+                The COVID-19 Data Portal (https://www.covid19dataportal.org/) provides among other things DNA assemblies, 
                 geographical information and other metadata about SARS-CoV-2 samples. 
                 The processing pipeline runs alignment to the reference genome (bioypthon), 
                 variant calling (custom code), normalization (vt and BCFtools), annotation (SnpEff) 

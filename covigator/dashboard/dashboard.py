@@ -111,7 +111,7 @@ class Dashboard:
                                                     "ENA dashboard", href=ENA_HREF,
                                                     style={'font-size' : '150%', "color": "#003c78"}),
                                                 dbc.DropdownMenuItem(
-                                                    "Covid19 Data Portal sequences dashboard", href=COVID_PORTAL_HREF,
+                                                    "COVID-19 Data Portal sequences dashboard", href=COVID_PORTAL_HREF,
                                                     style={'font-size': '150%', "color": "#003c78"}),
                                                 dbc.DropdownMenuItem(
                                                     "Documentation", href="https://covigator.readthedocs.io/en/latest",
