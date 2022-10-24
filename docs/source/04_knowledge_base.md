@@ -9,6 +9,7 @@
 [![Powered by NumFOCUS](https://img.shields.io/badge/powered%20by-Dash-orange.svg?style=flat&colorA=E1523D&colorB=007D8A)](https://dash.plotly.com/)
 [![License](https://img.shields.io/badge/license-MIT-green)](https://opensource.org/licenses/MIT)
 
+
 The Covigator knowledge base holds all the results that are shown in the dashboard.
 It is responsible for orchestrating the update of data from ENA and the COVID-19 Data Portal into the final results.
 It acts as the backend for all of CoVigator.

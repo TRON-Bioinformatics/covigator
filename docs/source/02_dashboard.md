@@ -9,6 +9,7 @@
 [![Powered by NumFOCUS](https://img.shields.io/badge/powered%20by-Dash-orange.svg?style=flat&colorA=E1523D&colorB=007D8A)](https://dash.plotly.com/)
 [![License](https://img.shields.io/badge/license-MIT-green)](https://opensource.org/licenses/MIT)
 
+
 The Covigator dashboard provides the ability to navigate through a series of interactive plots that visualise 
 SARS-CoV-2 mutations derived from the ENA  and COVID-19 Data Portal datasets. Our aim is to enable users to understand trends in the dataset of mutations in its 
 geographical and temporal context.

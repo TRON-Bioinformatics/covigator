@@ -9,6 +9,7 @@
 [![Powered by Dash](https://img.shields.io/badge/powered%20by-Dask-orange.svg?style=flat&colorA=E1523D&colorB=007D8A)](https://dask.org/)
 [![Powered by Dash](https://img.shields.io/badge/powered%20by-Nextflow-orange.svg?style=flat&colorA=E1523D&colorB=007D8A)](https://nextflow.io/)
 
+
 **CoVigator dashboard**: [https://covigator.tron-mainz.de](https://covigator.tron-mainz.de)
 
 Human infections with SARS-CoV-2 are spreading globally since the beginning of 2020, necessitating preventive or 
