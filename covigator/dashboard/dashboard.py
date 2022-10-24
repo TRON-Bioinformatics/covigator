@@ -260,8 +260,8 @@ def set_callbacks(app, session: Session, content_folder):
                 dbc.Tab(label="Lineages", tab_id=LINEAGES_TAB_ID, label_style=TAB_STYLE),
                 dbc.Tab(label="Mutation statistics", tab_id=MUTATIONS_TAB_ID, label_style=TAB_STYLE),
                 dbc.Tab(label="Recurrent mutations", tab_id=RECURRENT_MUTATIONS_TAB_ID, label_style=TAB_STYLE),
-                dbc.Tab(label="Intrahost mutations", tab_id=INTRAHOST_MUTATIONS_TAB_ID, label_style=TAB_STYLE),
-                dbc.Tab(label="Download data", tab_id=DOWNLOAD_TAB_ID, label_style=TAB_STYLE)], ENA_DATASET_TAB_ID
+                dbc.Tab(label="Intrahost mutations", tab_id=INTRAHOST_MUTATIONS_TAB_ID, label_style=TAB_STYLE)], \
+                   ENA_DATASET_TAB_ID
         elif page == ACKNOWLEDGEMENTS_PAGE:
             return [
                 dbc.Tab(label="Acknowledgements", tab_id=HELP_TAB_ID, label_style={"color": "#003c78", 'display': 'none'})], HELP_TAB_ID
