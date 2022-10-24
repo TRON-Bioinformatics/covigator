@@ -41,14 +41,19 @@ visual analytics.
 <b>Figure 2: Most frequent mutations in the spike protein</b>
 </p>
 
-CoVigator loads publicly available SARS-CoV-2 DNA sequences from the
-[European Nucleotide Archive (ENA)](https://www.ebi.ac.uk/ena) providing raw reads in FASTQ format.
+CoVigator loads publicly available SARS-CoV-2 DNA sequences from two databases:
 
-ENA enables a high resolution into the SARS-CoV-2 mutation details through the individual 
+* [European Nucleotide Archive (ENA)](https://www.ebi.ac.uk/ena) providing raw reads in FASTQ format.
+* [COVID-19 Data Portal](https://www.covid19dataportal.org/) providing assemblies in FASTA format.
+
+There is certain overlap in the samples present in ENA and COVID-19 Data Portal as some national initiatives are systematically 
+reporting both FASTQ reads and FASTA assemblies. FASTQ reads enable a higher resolution into the SARS-CoV-2 mutation details through the individual 
 reads. This allows us to annotate mutations with a Variant Allele Frequency (VAF) and explore intrahost 
-mutations. At the moment we only process the Illumina samples from ENA. 
-This means excluding all of the Oxford Nanopore samples and hence having a partial view of all the 
-available data.
+mutations. On the other hand, while we load all of the sequences from COVID-19 Data Portal database in CoVigator, we only process the Illumina 
+samples from ENA. This means excluding all of the Oxford Nanopore samples and hence having a partial view of all the 
+available data. Each of the datasets is available in a separate address 
+[https://covigator.tron-mainz.de/covid19-portal](https://covigator.tron-mainz.de/covid19-portal) and 
+[https://covigator.tron-mainz.de/ena](https://covigator.tron-mainz.de/ena), respectively.
 
 The dashboard is implemented in the visualization framework [Dash](https://dash.plotly.com/). 
 The computation is distributed through our cluster with a library of similar name [Dask](https://dask.org/).
@@ -102,12 +107,14 @@ contribution to integrate Pangolin into the CoVigator pipeline.
 
 We gratefully acknowledge all data contributors, i.e. the Authors and their Originating laboratories responsible for 
 obtaining the specimens, and their Submitting laboratories for generating the genetic sequence and metadata and sharing 
-via the European Nucleotide Archive (1), on which this research is based.
+via the European Nucleotide Archive [1] and the COVID-19 Data Portal [2], on which this research is based.
 
 1) Leinonen, R., Akhtar, R., Birney, E., Bower, L., Cerdeno-Tárraga, A., Cheng, Y., Cleland, I., Faruque, N., 
    Goodgame, N., Gibson, R., Hoad, G., Jang, M., Pakseresht, N., Plaister, S., Radhakrishnan, R., Reddy, K., 
    Sobhany, S., Hoopen, P. Ten, Vaughan, R., Zalunin V., Cochrane, G. (2011). The European nucleotide archive. 
    Nucleic Acids Research, 39(SUPPL. 1), D28. [10.1093/nar/gkq967](https://doi.org/10.1093/nar/gkq967)
+2) “COVID-19 Data Portal - Accelerating Scientific Research through Data.” Accessed October 24, 2022. https://www.covid19dataportal.org/.
+
 
 
 ## A note on terminology
@@ -125,10 +132,11 @@ kept the use of variant in some scientific terms commonly used; these are:
 * Multi Nucleotide Variant (MNV): a point mutation where more than one DNA base is substituted by another
 
 There are two terms referring to a given mutation frequency:
-* The Variant Allele Frequency (VAF) refers to the ratio of reads supporting a given mutation.  
+* The Variant Allele Frequency (VAF) refers to the ratio of reads supporting a given mutation. 
+  The VAF can only be calculated on the ENA dataset. 
   The VAF is used to distinguish clonal and intrahost mutations. 
 * The mutation frequency on the other hand refers to the frequency in the population of samples. 
-  Importantly intrahost mutations are not taken into account.
+  This is calculated on both datasets ENA and COVID-19 Data Portal, but importantly intrahost mutations are not taken into account.
 
 
 ------------------------
