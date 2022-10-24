@@ -27,6 +27,14 @@ from logzero import logger
 from covigator.database.model import DataSource
 from covigator.database.queries import Queries
 
+COVIGATOR_ENA_LOGO = "/assets/CoVigator_logo_ENA.png"
+COVIGATOR_COVID19_LOGO = "/assets/CoVigator_logo_txt_reg_no_bg_covid19_portal.png"
+COVIGATOR_LOGO = "/assets/CoVigator_logo_txt_reg_no_bg.png"
+HOME_HREF = "/"
+COVID_PORTAL_HREF = "/covid19-portal"
+ENA_HREF = "/ena"
+DOWNLOAD_HREF = "/download"
+ACKNOWLEDGEMENTS_HREF = "/acknowledgements"
 TAB_STYLE = {"color": "#003c78", 'margin-right': '15px'}
 
 ID_TAB_CONTENT = "tab-content"
@@ -63,8 +71,8 @@ class Dashboard:
                             [
                                 dbc.Row([
                                         dbc.Col(
-                                            children=html.A(html.Img(src="/assets/CoVigator_logo_txt_reg_no_bg.png",
-                                                                     height="80px"), href="/"),
+                                            children=html.A(html.Img(src=COVIGATOR_LOGO,
+                                                                     height="80px"), href=HOME_HREF),
                                             className="ml-2",
                                             id="logo"
                                         ),
@@ -97,21 +105,24 @@ class Dashboard:
                                         dbc.DropdownMenu(
                                             label="Menu", children=[
                                                 dbc.DropdownMenuItem(
-                                                    "Home", href="/", class_name="m-1",
+                                                    "Home", href=HOME_HREF, class_name="m-1",
                                                     style={'font-size' : '150%', "color": "#003c78"}),
                                                 dbc.DropdownMenuItem(
-                                                    "ENA dataset", href="/ena",
+                                                    "ENA dashboard", href=ENA_HREF,
                                                     style={'font-size' : '150%', "color": "#003c78"}),
                                                 dbc.DropdownMenuItem(
-                                                    "Covid19 Data Portal sequences dataset", href="/covid19-portal",
+                                                    "Covid19 Data Portal sequences dashboard", href=COVID_PORTAL_HREF,
                                                     style={'font-size': '150%', "color": "#003c78"}),
                                                 dbc.DropdownMenuItem(
                                                     "Documentation", href="https://covigator.readthedocs.io/en/latest",
                                                     target="_blank",
                                                     style={'font-size': '150%', "color": "#003c78"}),
                                                 dbc.DropdownMenuItem(
-                                                    "Acknowledgements", href="/acknowledgements",
-                                                    style={'font-size' : '150%', "color": "#003c78"}),
+                                                    "Data download", href=DOWNLOAD_HREF,
+                                                    style={'font-size': '150%', "color": "#003c78"}),
+                                                dbc.DropdownMenuItem(
+                                                    "Acknowledgements", href=ACKNOWLEDGEMENTS_HREF,
+                                                    style={'font-size': '150%', "color": "#003c78"}),
                                             ],
                                             align_end=True,
                                             size="lg",
@@ -210,15 +221,15 @@ def set_callbacks(app, session: Session, content_folder):
     DOWNLOAD_PAGE = "download"
 
     def _get_page(url):
-        if url in ["", "/"]:
+        if url in ["", HOME_HREF]:
             return MAIN_PAGE
-        elif url == "/covid19-portal":
+        elif url == COVID_PORTAL_HREF:
             return COVID19_PORTAL_PAGE
-        elif url == "/ena":
+        elif url == ENA_HREF:
             return ENA_PAGE
-        elif url == "/acknowledgements":
+        elif url == ACKNOWLEDGEMENTS_HREF:
             return ACKNOWLEDGEMENTS_PAGE
-        elif url == "/download":
+        elif url == DOWNLOAD_HREF:
             return DOWNLOAD_PAGE
         else:
             raise ValueError("This URL does not exist")
@@ -264,11 +275,11 @@ def set_callbacks(app, session: Session, content_folder):
     def switch_logo(url):
         page = _get_page(url)
         if page in [MAIN_PAGE, ACKNOWLEDGEMENTS_PAGE, DOWNLOAD_PAGE]:
-            return html.A(html.Img(src="/assets/CoVigator_logo_txt_reg_no_bg.png", height="80px"), href="/")
+            return html.A(html.Img(src=COVIGATOR_LOGO, height="80px"), href="/")
         elif page == COVID19_PORTAL_PAGE:
-            return html.A(html.Img(src="/assets/CoVigator_logo_txt_reg_no_bg_covid19_portal.png", height="80px"), href="/")
+            return html.A(html.Img(src=COVIGATOR_COVID19_LOGO, height="80px"), href="/")
         elif page == ENA_PAGE:
-            return html.A(html.Img(src="/assets/CoVigator_logo_ENA.png", height="80px"), href="/")
+            return html.A(html.Img(src=COVIGATOR_ENA_LOGO, height="80px"), href="/")
 
     @app.callback(
         Output('top-right-logo', "children"),
