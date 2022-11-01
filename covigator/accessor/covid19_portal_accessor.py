@@ -158,8 +158,13 @@ class Covid19PortalAccessor(AbstractAccessor):
             session.commit()
 
     def _parse_covid19_portal_sample(self, sample: dict) -> SampleCovid19Portal:
+        run_accession = sample.get('id')
+        if run_accession is None:
+            run_accession = sample.get('acc')
+        if run_accession is None:
+            raise CovigatorExcludedSampleException("Missing sample id")
         sample = SampleCovid19Portal(
-            run_accession=sample.get('id'),  # this used to be "acc"
+            run_accession=run_accession,  # this used to be "acc"
             first_created=next(iter(sample.get('fields').get('creation_date')), None),
             collection_date=next(iter(sample.get('fields').get('collection_date')), None),
             last_modification_date=next(iter(sample.get('fields').get('last_modification_date')), None),
