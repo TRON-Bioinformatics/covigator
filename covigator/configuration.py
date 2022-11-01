@@ -60,7 +60,7 @@ class Configuration:
     ENV_COVIGATOR_MAX_DELETIONS = "COVIGATOR_MAX_DELETIONS"
     ENV_COVIGATOR_MIN_SEQUENCE_SIZE = "COVIGATOR_MIN_SEQUENCE_SIZE"
 
-    def __init__(self, verbose=True):
+    def __init__(self, verbose=False):
         # local storage
         self.storage_folder = os.getenv(self.ENV_COVIGATOR_STORAGE_FOLDER, "/data/covigator")
         self.content_folder = os.getenv(self.ENV_COVIGATOR_DOWNLOAD_CONTENT_FOLDER)
@@ -144,7 +144,8 @@ class Configuration:
     def log_configuration(self):
         logger.info("Configuration")
         for k, v in self.__dict__.items():
-            logger.info("{}={}".format(k, v))
+            if "PASSWORD" not in k:
+                logger.info("{}={}".format(k, v))
 
 
 def initialise_logs(logfile, sample_id: str = None):

@@ -302,9 +302,3 @@ class Covid19PortalAccessor(AbstractAccessor):
             raise CovigatorExcludedMissingDateException()
         if sample.collection_date is not None and sample.collection_date < MINIMUM_DATE:
             raise CovigatorExcludedSampleTooEarlyDateException()
-
-
-if __name__ == '__main__':
-    config = Configuration()
-    covigator.configuration.initialise_logs(config.logfile_accesor)
-    Covid19PortalAccessor(database=Database(config=config, initialize=True), storage_folder=config.storage_folder).access()
