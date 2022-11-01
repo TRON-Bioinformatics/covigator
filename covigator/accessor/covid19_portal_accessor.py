@@ -159,7 +159,7 @@ class Covid19PortalAccessor(AbstractAccessor):
 
     def _parse_covid19_portal_sample(self, sample: dict) -> SampleCovid19Portal:
         sample = SampleCovid19Portal(
-            run_accession=sample.get('acc'),
+            run_accession=sample.get('id'),  # this used to be "acc"
             first_created=next(iter(sample.get('fields').get('creation_date')), None),
             collection_date=next(iter(sample.get('fields').get('collection_date')), None),
             last_modification_date=next(iter(sample.get('fields').get('last_modification_date')), None),
