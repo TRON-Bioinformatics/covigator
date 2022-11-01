@@ -157,7 +157,7 @@ class Covid19PortalAccessor(AbstractAccessor):
         if len(included_samples) > 0:
             session.add_all(included_samples)
             session.commit()
-            logger.info("Added {} new samples!".format(included_samples))
+        self._log_results()
 
     def _parse_covid19_portal_sample(self, sample: dict) -> SampleCovid19Portal:
         run_accession = self._get_run_accession(sample)
