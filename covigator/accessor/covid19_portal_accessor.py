@@ -5,23 +5,20 @@ import shutil
 from datetime import datetime
 from io import StringIO
 from json import JSONDecodeError
-
-import numpy as np
 from Bio import SeqIO
 from covigator.accessor import MINIMUM_DATE
-from covigator.configuration import Configuration
 from requests import Response
 from sqlalchemy.orm import Session
 import covigator
 from covigator.accessor.abstract_accessor import AbstractAccessor, SampleCovid19
 from covigator.exceptions import CovigatorExcludedSampleTooEarlyDateException, CovigatorExcludedFailedDownload, \
-    CovigatorExcludedTooManyEntries, CovigatorExcludedEmptySequence, CovigatorExcludedHorizontalCoverage, \
+    CovigatorExcludedTooManyEntries, CovigatorExcludedEmptySequence, \
     CovigatorExcludedBadBases, CovigatorExcludedSampleException, CovigatorExcludedMissingDateException
 from covigator.database.model import DataSource, Log, CovigatorModule, SampleCovid19Portal, JobStatus
 from covigator.database.database import Database
 from logzero import logger
 
-NUMBER_RETRIES = 5
+NUMBER_RETRIES = -1
 BATCH_SIZE = 1000
 THRESHOLD_NON_VALID_BASES_RATIO = 0.2
 THRESHOLD_GENOME_COVERAGE = 0.2
