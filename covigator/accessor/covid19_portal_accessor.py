@@ -224,8 +224,8 @@ class Covid19PortalAccessor(AbstractAccessor):
         logger.info("Excluded by host = {}".format(self.excluded_samples_by_tax_id))
         logger.info("Excluded failed download = {}".format(self.excluded_failed_download))
         logger.info("Excluded empty sequence = {}".format(self.excluded_empty_sequence))
-        logger.info("Excluded empty sequence = {}".format(self.excluded_horizontal_coverage))
-        logger.info("Excluded too mayn entries = {}".format(self.excluded_too_many_entries))
+        logger.info("Excluded horizontal coverage = {}".format(self.excluded_horizontal_coverage))
+        logger.info("Excluded too many entries = {}".format(self.excluded_too_many_entries))
         logger.info("Excluded bad bases = {}".format(self.excluded_bad_bases))
         logger.info("Excluded missing date = {}".format(self.excluded_missing_date))
 
