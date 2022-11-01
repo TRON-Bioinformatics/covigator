@@ -6,6 +6,8 @@ from datetime import datetime
 from io import StringIO
 from json import JSONDecodeError
 from Bio import SeqIO
+from covigator.configuration import Configuration
+
 from covigator.accessor import MINIMUM_DATE
 from requests import Response
 from sqlalchemy.orm import Session
@@ -178,7 +180,7 @@ class Covid19PortalAccessor(AbstractAccessor):
             country=next(iter(sample.get('fields').get('country')), None),
             pangolin_lineage=next(iter(sample.get('fields').get('lineage')), None),
             # build FASTA URL here
-            fasta_url="{base}/{acc}".format(base=self.FASTA_URL_BASE, acc=sample.get('acc'))
+            fasta_url="{base}/{acc}".format(base=self.FASTA_URL_BASE, acc=run_accession)
         )
         self._parse_country(sample)
         self._parse_dates(sample)
@@ -221,6 +223,11 @@ class Covid19PortalAccessor(AbstractAccessor):
         logger.info("Excluded by host = {}".format(self.excluded_samples_by_host_tax_id))
         logger.info("Excluded by host = {}".format(self.excluded_samples_by_tax_id))
         logger.info("Excluded failed download = {}".format(self.excluded_failed_download))
+        logger.info("Excluded empty sequence = {}".format(self.excluded_empty_sequence))
+        logger.info("Excluded empty sequence = {}".format(self.excluded_horizontal_coverage))
+        logger.info("Excluded too mayn entries = {}".format(self.excluded_too_many_entries))
+        logger.info("Excluded bad bases = {}".format(self.excluded_bad_bases))
+        logger.info("Excluded missing date = {}".format(self.excluded_missing_date))
 
     def _write_execution_log(self, session: Session):
         end_time = datetime.now()
@@ -318,3 +325,9 @@ class Covid19PortalAccessor(AbstractAccessor):
             raise CovigatorExcludedMissingDateException()
         if sample.collection_date is not None and sample.collection_date < MINIMUM_DATE:
             raise CovigatorExcludedSampleTooEarlyDateException()
+
+
+if __name__ == '__main__':
+    config = Configuration()
+    covigator.configuration.initialise_logs(config.logfile_accesor)
+    Covid19PortalAccessor(database=Database(config=config, initialize=True), storage_folder=config.storage_folder).access()
