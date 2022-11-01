@@ -32,6 +32,7 @@ class Covid19PortalAccessor(AbstractAccessor):
     FASTA_URL_BASE = "https://www.ebi.ac.uk/ena/browser/api/fasta"
     # while ENA API is in principle organism agnostic, this is SARS-CoV-2 specific, thus taxon is hard-coded
     HOST = "Homo sapiens"
+    HOST2 = "Human"
     TAX_ID = "2697049"
 
     def __init__(self, database: Database, storage_folder):
@@ -179,7 +180,7 @@ class Covid19PortalAccessor(AbstractAccessor):
         included = True
 
         host = next(iter(sample.get('fields').get('host')), None)
-        if host is None or host.strip() == "" or host != self.HOST:
+        if host is None or not self._match_host(host):
             included = False    # skips runs where the host is empty or does not match
             self.excluded_samples_by_host_tax_id[str(host)] = \
                 self.excluded_samples_by_host_tax_id.get(str(host), 0) + 1
@@ -193,6 +194,9 @@ class Covid19PortalAccessor(AbstractAccessor):
         if not included:
             self.excluded += 1
         return included
+
+    def _match_host(self, host: str):
+        return host.startswith(self.HOST) or host.startswith(self.HOST2)
 
     def _log_results(self):
         logger.info("Included new runs = {}".format(self.included))
