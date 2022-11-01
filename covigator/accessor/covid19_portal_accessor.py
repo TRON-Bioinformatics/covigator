@@ -5,6 +5,8 @@ import shutil
 from datetime import datetime
 from io import StringIO
 from json import JSONDecodeError
+
+import numpy as np
 from Bio import SeqIO
 from covigator.accessor import MINIMUM_DATE
 from covigator.configuration import Configuration
@@ -62,9 +64,11 @@ class Covid19PortalAccessor(AbstractAccessor):
     def access(self):
         logger.info("Starting Covid19 portal accessor")
         session = self.database.get_database_session()
+
         # NOTE: holding in memory the whole list of existing ids is much faster than querying every time
-        # it assumes there will be no repetitions
-        existing_sample_ids = [value for value, in session.query(SampleCovid19Portal.run_accession).all()]
+        # it assumes there will be no repetitions. The list is sorted in DB to later perform binary search
+        existing_sample_ids = np.asarray([value for value, in session.query(SampleCovid19Portal.run_accession)\
+                                         .order_by(SampleCovid19Portal.run_accession).all()])
         try:
             logger.info("Reading...")
             page = 1    # it has to start with 1
@@ -101,7 +105,9 @@ class Covid19PortalAccessor(AbstractAccessor):
     def _get_page(self, page, size) -> dict:
         # as communicated by ENA support we use limit=0 and offset=0 to get all records in one query
         response: Response = self.get_with_retries(
-            "{url_base}?page={page}&size={size}".format(url_base=self.API_URL_BASE, page=page, size=size))
+            "{url_base}?page={page}&size={size}&&fields=lineage,coverage,collection_date,country,host,TAXON,"
+            "creation_date,last_modification_date,center_name,isolate,molecule_type".format(
+                url_base=self.API_URL_BASE, page=page, size=size))
         try:
             json = response.json()
         except JSONDecodeError as e:
@@ -114,7 +120,9 @@ class Covid19PortalAccessor(AbstractAccessor):
         included_samples = []
         for sample_dict in list_samples.get('entries'):
             if isinstance(sample_dict, dict):
-                if sample_dict.get("acc") in existing_sample_ids:
+                run_accession = self._get_run_accession(sample_dict)
+                index = np.searchsorted(existing_sample_ids, run_accession)     # binary search to speed up
+                if run_accession == existing_sample_ids[index]:
                     self.excluded_existing += 1
                     continue    # skips runs already registered in the database
                 if not self._complies_with_inclusion_criteria(sample_dict):
@@ -142,9 +150,6 @@ class Covid19PortalAccessor(AbstractAccessor):
                 except CovigatorExcludedTooManyEntries:
                     self.excluded_too_many_entries += 1
                     self.excluded += 1
-                except CovigatorExcludedHorizontalCoverage:
-                    self.excluded_horizontal_coverage += 1
-                    self.excluded += 1
                 except CovigatorExcludedBadBases:
                     self.excluded_bad_bases += 1
                     self.excluded += 1
@@ -156,11 +161,10 @@ class Covid19PortalAccessor(AbstractAccessor):
         if len(included_samples) > 0:
             session.add_all(included_samples)
             session.commit()
+            logger.info("Added {} new samples!".format(included_samples))
 
     def _parse_covid19_portal_sample(self, sample: dict) -> SampleCovid19Portal:
-        run_accession = sample.get('id')
-        if run_accession is None:
-            run_accession = sample.get('acc')
+        run_accession = self._get_run_accession(sample)
         if run_accession is None:
             raise CovigatorExcludedSampleException("Missing sample id")
         sample = SampleCovid19Portal(
@@ -172,6 +176,7 @@ class Covid19PortalAccessor(AbstractAccessor):
             isolate=next(iter(sample.get('fields').get('isolate')), None),
             molecule_type=next(iter(sample.get('fields').get('molecule_type')), None),
             country=next(iter(sample.get('fields').get('country')), None),
+            pangolin_lineage=next(iter(sample.get('fields').get('lineage')), None),
             # build FASTA URL here
             fasta_url="{base}/{acc}".format(base=self.FASTA_URL_BASE, acc=sample.get('acc'))
         )
@@ -179,6 +184,12 @@ class Covid19PortalAccessor(AbstractAccessor):
         self._parse_dates(sample)
         sample.covigator_accessor_version = covigator.VERSION
         return sample
+
+    def _get_run_accession(self, sample):
+        run_accession = sample.get('id')
+        if run_accession is None:
+            run_accession = sample.get('acc')
+        return run_accession
 
     def _complies_with_inclusion_criteria(self, sample: dict):
         # NOTE: this uses the original dictionary instead of the parsed SampleEna class for performance reasons
@@ -195,6 +206,16 @@ class Covid19PortalAccessor(AbstractAccessor):
             included = False  # skips runs where the host is empty or does not match
             self.excluded_samples_by_tax_id[str(taxon)] = \
                 self.excluded_samples_by_tax_id.get(str(taxon), 0) + 1
+
+        try:
+            coverage = float(next(iter(sample.get('fields').get('coverage')), None))
+            if coverage < THRESHOLD_GENOME_COVERAGE:
+                included = False  # skips runs where the host is empty or does not match
+                self.excluded_horizontal_coverage += 1
+        except:
+            # if no coverage is reported excludes sample
+            included = False  # skips runs where the host is empty or does not match
+            self.excluded_horizontal_coverage += 1
 
         if not included:
             self.excluded += 1
@@ -265,8 +286,6 @@ class Covid19PortalAccessor(AbstractAccessor):
             raise CovigatorExcludedTooManyEntries()
         record = records[0]
         sequence_length = len(record.seq)
-        if float(sequence_length) / GENOME_LENGTH < THRESHOLD_GENOME_COVERAGE:
-            raise CovigatorExcludedHorizontalCoverage()
         count_n_bases = record.seq.count("N")
         count_ambiguous_bases = sum([record.seq.count(b) for b in "RYWSMKHBVD"])
         if float(count_n_bases + count_ambiguous_bases) / sequence_length > THRESHOLD_NON_VALID_BASES_RATIO:
