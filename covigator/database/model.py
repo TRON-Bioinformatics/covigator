@@ -1,3 +1,4 @@
+import logging
 import os
 from datetime import datetime
 from typing import List
@@ -345,11 +346,16 @@ class SampleCovid19Portal(Base):
     covigator_accessor_version = Column(String)
     covigator_processor_version = Column(String)
 
-    def get_sample_folder(self, base_folder):
-        return os.path.join(
-            base_folder,
-            self.collection_date.strftime("%Y%m%d") if self.collection_date is not None else "nodate",
-            self.run_accession)
+    def get_sample_folder(self, base_folder: str):
+        try:
+            return os.path.join(
+                base_folder,
+                self.collection_date.strftime("%Y%m%d") if self.collection_date is not None else "nodate",
+                self.run_accession)
+        except:
+            logging.error("Base folder: " + base_folder)
+            logging.error("Collection date: " + self.collection_date.strftime("%Y%m%d") if self.collection_date is not None else "nodate")
+            logging.error("Run accession: " + self.run_accession)
 
 
 class Variant(Base):
