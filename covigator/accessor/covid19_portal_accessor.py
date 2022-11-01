@@ -13,7 +13,8 @@ import covigator
 from covigator.accessor.abstract_accessor import AbstractAccessor, SampleCovid19
 from covigator.exceptions import CovigatorExcludedSampleTooEarlyDateException, CovigatorExcludedFailedDownload, \
     CovigatorExcludedTooManyEntries, CovigatorExcludedEmptySequence, \
-    CovigatorExcludedBadBases, CovigatorExcludedSampleException, CovigatorExcludedMissingDateException
+    CovigatorExcludedBadBases, CovigatorExcludedSampleException, CovigatorExcludedMissingDateException, \
+    CovigatorExcludedHorizontalCoverage
 from covigator.database.model import DataSource, Log, CovigatorModule, SampleCovid19Portal, JobStatus
 from covigator.database.database import Database
 from logzero import logger
@@ -146,6 +147,9 @@ class Covid19PortalAccessor(AbstractAccessor):
                 except CovigatorExcludedTooManyEntries:
                     self.excluded_too_many_entries += 1
                     self.excluded += 1
+                except CovigatorExcludedHorizontalCoverage:
+                    self.excluded_horizontal_coverage += 1
+                    self.excluded += 1
                 except CovigatorExcludedBadBases:
                     self.excluded_bad_bases += 1
                     self.excluded += 1
@@ -202,16 +206,6 @@ class Covid19PortalAccessor(AbstractAccessor):
             included = False  # skips runs where the host is empty or does not match
             self.excluded_samples_by_tax_id[str(taxon)] = \
                 self.excluded_samples_by_tax_id.get(str(taxon), 0) + 1
-
-        try:
-            coverage = float(next(iter(sample.get('fields').get('coverage')), None))
-            if coverage < THRESHOLD_GENOME_COVERAGE:
-                included = False  # skips runs where the host is empty or does not match
-                self.excluded_horizontal_coverage += 1
-        except:
-            # if no coverage is reported excludes sample
-            included = False  # skips runs where the host is empty or does not match
-            self.excluded_horizontal_coverage += 1
 
         if not included:
             self.excluded += 1
@@ -282,6 +276,8 @@ class Covid19PortalAccessor(AbstractAccessor):
             raise CovigatorExcludedTooManyEntries()
         record = records[0]
         sequence_length = len(record.seq)
+        if float(sequence_length) / GENOME_LENGTH < THRESHOLD_GENOME_COVERAGE:
+            raise CovigatorExcludedHorizontalCoverage()
         count_n_bases = record.seq.count("N")
         count_ambiguous_bases = sum([record.seq.count(b) for b in "RYWSMKHBVD"])
         if float(count_n_bases + count_ambiguous_bases) / sequence_length > THRESHOLD_NON_VALID_BASES_RATIO:
