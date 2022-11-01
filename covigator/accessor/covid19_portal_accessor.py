@@ -66,9 +66,8 @@ class Covid19PortalAccessor(AbstractAccessor):
         session = self.database.get_database_session()
 
         # NOTE: holding in memory the whole list of existing ids is much faster than querying every time
-        # it assumes there will be no repetitions. The list is sorted in DB to later perform binary search
-        existing_sample_ids = np.asarray([value for value, in session.query(SampleCovid19Portal.run_accession)\
-                                         .order_by(SampleCovid19Portal.run_accession).all()])
+        # using a set is way faster than a list
+        existing_sample_ids = set([value for value, in session.query(SampleCovid19Portal.run_accession).all()])
         try:
             logger.info("Reading...")
             page = 1    # it has to start with 1
@@ -76,8 +75,9 @@ class Covid19PortalAccessor(AbstractAccessor):
             num_entries = len(list_runs.get('entries'))
             count = num_entries
             # gets total expected number of results from first page
-            logger.info("Processing {} Covid19 Portal samples...".format(num_entries))
+            logger.info("Start processing...")
             self._process_runs(list_runs, existing_sample_ids, session)
+            logger.info("Processed {} of Covid19 Portal samples...".format(count))
 
             while True:
                 page += 1
@@ -121,8 +121,7 @@ class Covid19PortalAccessor(AbstractAccessor):
         for sample_dict in list_samples.get('entries'):
             if isinstance(sample_dict, dict):
                 run_accession = self._get_run_accession(sample_dict)
-                index = np.searchsorted(existing_sample_ids, run_accession)     # binary search to speed up
-                if run_accession == existing_sample_ids[index]:
+                if run_accession in existing_sample_ids:
                     self.excluded_existing += 1
                     continue    # skips runs already registered in the database
                 if not self._complies_with_inclusion_criteria(sample_dict):
