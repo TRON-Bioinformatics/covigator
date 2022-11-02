@@ -6,6 +6,8 @@ from datetime import datetime
 from io import StringIO
 from json import JSONDecodeError
 from Bio import SeqIO
+from sqlalchemy.exc import IntegrityError
+
 from covigator.configuration import Configuration
 
 from covigator.accessor import MINIMUM_DATE
@@ -161,8 +163,20 @@ class Covid19PortalAccessor(AbstractAccessor):
                 logger.error("Sample without the expected format")
 
         if len(included_samples) > 0:
-            session.add_all(included_samples)
-            session.commit()
+            try:
+                session.add_all(included_samples)
+                session.commit()
+            except IntegrityError:
+                # NOTE: we observed that the API may return repeated samples, thus when this error is raised,
+                # we insert one by one and ignore the failing sample
+                # this is slower but it happens rarely
+                session.rollback()
+                for s in included_samples:
+                    try:
+                        session.add(s)
+                        session.commit()
+                    except IntegrityError:
+                        pass
         self._log_results()
 
     def _parse_covid19_portal_sample(self, sample: dict) -> SampleCovid19Portal:
