@@ -32,6 +32,7 @@ class Covid19PortalPipeline:
                       "--fasta {fasta} " \
                       "--output {output_folder} " \
                       "--name {name} " \
+                      "--skip_pangolin " \
                       "--cpus {cpus} " \
                       "--memory {memory} " \
                       "-profile conda " \
