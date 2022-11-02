@@ -7,7 +7,7 @@ from datetime import datetime, date
 from typing import Callable
 import typing as typing
 from dask.distributed import Client
-from distributed import fire_and_forget
+from distributed import fire_and_forget, wait
 from logzero import logger
 from covigator.configuration import Configuration
 from covigator.database.database import Database, session_scope
@@ -38,8 +38,8 @@ class AbstractProcessor:
     def process(self):
         logger.info("Starting processor")
         count = 0
-        count_batch = 0
         try:
+            futures = []
             while True:
                 # queries 100 jobs every time to make sending to queue faster
                 jobs = self.queries.find_first_pending_jobs(self.data_source, n=1000, status=[JobStatus.DOWNLOADED])
@@ -54,21 +54,22 @@ class AbstractProcessor:
 
                     # sends the run for processing
                     future = self._process_run(run_accession=job.run_accession)
-                    fire_and_forget(future)
+                    futures.extend(future)
                     count += 1
-                    count_batch += 1
                     if count % 1000 == 0:
                         logger.info("Sent {} jobs for processing...".format(count))
 
                     # waits for a batch to finish
-                    if count_batch >= self.config.batch_size:
+                    if len(futures) >= self.config.batch_size:
                         # waits for a batch to finish before sending more
-                        self._wait_for_batch()
-                        count_batch = 0
+                        logger.info("Waiting for a batch to be processed...")
+                        wait(fs=futures)
+                        futures = []
 
             # waits for the last batch to finish
-            if count_batch > 0:
-                self._wait_for_batch()
+            if len(futures) > 0:
+                logger.info("Waiting for the last batch to be processed...")
+                wait(fs=futures)
             logger.info("Processor finished!")
 
             # precomputes data right after processor
