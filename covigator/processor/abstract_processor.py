@@ -60,7 +60,7 @@ class AbstractProcessor:
 
                     # sends the run for processing
                     future = self._process_run(run_accession=job.run_accession)
-                    futures.extend(future)
+                    futures.append(future)
                     count += 1
                     if count % 1000 == 0:
                         logger.info("Sent {} jobs for processing...".format(count))
