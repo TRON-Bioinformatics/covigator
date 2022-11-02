@@ -9,6 +9,8 @@ import typing as typing
 from dask.distributed import Client
 from distributed import fire_and_forget, wait
 from logzero import logger
+from sqlalchemy.exc import SQLAlchemyError
+
 from covigator.configuration import Configuration
 from covigator.database.database import Database, session_scope
 from covigator.database.model import Log, DataSource, CovigatorModule, JobStatus, \
@@ -47,10 +49,14 @@ class AbstractProcessor:
                     logger.info("No more jobs to process after sending {} runs to process".format(count))
                     break
                 for job in jobs:
-                    # it has to update the status before doing anything so this processor does not read it again
-                    job.status = JobStatus.QUEUED
-                    job.queued_at = datetime.now()
-                    self.session.commit()
+                    # it has to update the status before doing anything so a processor does not read it again
+                    try:
+                        job.status = JobStatus.QUEUED
+                        job.queued_at = datetime.now()
+                        self.session.commit()
+                    except SQLAlchemyError:
+                        # this job has been taken by another processor
+                        continue
 
                     # sends the run for processing
                     future = self._process_run(run_accession=job.run_accession)
@@ -65,6 +71,7 @@ class AbstractProcessor:
                         logger.info("Waiting for a batch to be processed...")
                         wait(fs=futures)
                         futures = []
+                        logger.info("Batch finished!")
 
             # waits for the last batch to finish
             if len(futures) > 0:
@@ -98,13 +105,6 @@ class AbstractProcessor:
         last_update = LastUpdate(source=self.data_source, update_time=date.today())
         self.session.add(last_update)
         self.session.commit()
-
-    def _wait_for_batch(self):
-        logger.info("Waiting for a batch of jobs...")
-        while (count_pending_jobs := self.queries.count_jobs_in_queue(data_source=self.data_source)) > 0:
-            logger.info("Waiting for {} pending jobs".format(count_pending_jobs))
-            time.sleep(self.wait_time)
-        logger.info("Batch finished")
 
     @staticmethod
     def run_job(config: Configuration, run_accession: str, start_status: JobStatus, end_status: JobStatus,
