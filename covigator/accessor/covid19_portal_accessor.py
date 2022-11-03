@@ -5,6 +5,9 @@ import shutil
 from datetime import datetime
 from io import StringIO
 from json import JSONDecodeError
+import random
+import time
+
 from Bio import SeqIO
 from sqlalchemy.exc import IntegrityError
 
@@ -105,16 +108,30 @@ class Covid19PortalAccessor(AbstractAccessor):
             logger.info("Finished Covid19 Portal accessor")
 
     def _get_page(self, page, size) -> dict:
-        # as communicated by ENA support we use limit=0 and offset=0 to get all records in one query
-        response: Response = self.get_with_retries(
-            "{url_base}?page={page}&size={size}&&fields=lineage,coverage,collection_date,country,host,TAXON,"
-            "creation_date,last_modification_date,center_name,isolate,molecule_type".format(
-                url_base=self.API_URL_BASE, page=page, size=size))
-        try:
-            json = response.json()
-        except JSONDecodeError as e:
-            logger.exception(e)
-            raise e
+        # the API is sometimes unstable returning bad json, we retry
+        success = False
+        json = None
+        retries_count = 0
+        backoff_iteration = 1
+        truncate_iteration = 8
+        while not success:
+            response: Response = self.get_with_retries(
+                "{url_base}?page={page}&size={size}&&fields=lineage,coverage,collection_date,country,host,TAXON,"
+                "creation_date,last_modification_date,center_name,isolate,molecule_type".format(
+                    url_base=self.API_URL_BASE, page=page, size=size))
+            try:
+                json = response.json()
+                success = True
+            except JSONDecodeError:
+                # retry
+                retries_count += 1
+                # waits for an increasing random time
+                random_sleep = random.randrange(0, (2 ** backoff_iteration) - 1)
+                logger.info("Retrying connection after %s seconds" % str(random_sleep))
+                time.sleep(random_sleep)
+                # when it reaches the maximum value that it may wait it stops increasing time
+                if backoff_iteration < truncate_iteration:
+                    backoff_iteration += 1
         return json
 
     def _process_runs(self, list_samples, existing_sample_ids, session: Session):
