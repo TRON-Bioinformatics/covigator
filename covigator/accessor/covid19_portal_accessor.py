@@ -7,6 +7,7 @@ from io import StringIO
 from json import JSONDecodeError
 import random
 import time
+from typing import Tuple
 
 from Bio import SeqIO
 from sqlalchemy.exc import IntegrityError
@@ -76,7 +77,7 @@ class Covid19PortalAccessor(AbstractAccessor):
         try:
             logger.info("Reading...")
             page = 1    # it has to start with 1
-            list_runs = self._get_page(page=page, size=BATCH_SIZE)
+            status_code, list_runs = self._get_page(page=page, size=BATCH_SIZE)
             num_entries = len(list_runs.get('entries'))
             count = num_entries
             # gets total expected number of results from first page
@@ -86,9 +87,12 @@ class Covid19PortalAccessor(AbstractAccessor):
 
             while True:
                 page += 1
-                list_runs = self._get_page(page=page, size=BATCH_SIZE)
+                status_code, list_runs = self._get_page(page=page, size=BATCH_SIZE)
                 entries = list_runs.get('entries')
                 if entries is None or entries == []:
+                    logger.info("Last page reached!")
+                    logger.info("Status code: {}".format(status_code))
+                    logger.info("Content: {}".format(str(list_runs)))
                     break
                 num_entries = len(entries)
                 count += num_entries
@@ -107,10 +111,11 @@ class Covid19PortalAccessor(AbstractAccessor):
             self._log_results()
             logger.info("Finished Covid19 Portal accessor")
 
-    def _get_page(self, page, size) -> dict:
+    def _get_page(self, page, size) -> Tuple[int, dict]:
         # the API is sometimes unstable returning bad json, we retry
         success = False
         json = None
+        status_code = None
         retries_count = 0
         backoff_iteration = 1
         truncate_iteration = 8
@@ -121,6 +126,7 @@ class Covid19PortalAccessor(AbstractAccessor):
                     url_base=self.API_URL_BASE, page=page, size=size))
             try:
                 json = response.json()
+                status_code = response.status_code
                 success = True
             except JSONDecodeError:
                 # retry
@@ -132,7 +138,7 @@ class Covid19PortalAccessor(AbstractAccessor):
                 # when it reaches the maximum value that it may wait it stops increasing time
                 if backoff_iteration < truncate_iteration:
                     backoff_iteration += 1
-        return json
+        return status_code, json
 
     def _process_runs(self, list_samples, existing_sample_ids, session: Session):
 
