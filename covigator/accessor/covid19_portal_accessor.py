@@ -76,7 +76,6 @@ class Covid19PortalAccessor(AbstractAccessor):
         existing_sample_ids = set([value for value, in session.query(SampleCovid19Portal.run_accession).all()])
         try:
             logger.info("Reading...")
-            page = 1    # it has to start with 1
             status_code, list_runs = self._get_page(page=page, size=BATCH_SIZE)
             num_entries = len(list_runs.get('entries'))
             count = num_entries
@@ -85,19 +84,23 @@ class Covid19PortalAccessor(AbstractAccessor):
             self._process_runs(list_runs, existing_sample_ids, session)
             logger.info("Processed {} of Covid19 Portal samples...".format(count))
 
-            while True:
-                page += 1
-                status_code, list_runs = self._get_page(page=page, size=BATCH_SIZE)
-                entries = list_runs.get('entries')
-                if entries is None or entries == []:
-                    logger.info("Last page reached!")
-                    logger.info("Status code: {}".format(status_code))
-                    logger.info("Content: {}".format(str(list_runs)))
-                    break
-                num_entries = len(entries)
-                count += num_entries
-                self._process_runs(list_runs, existing_sample_ids, session)
-                logger.info("Processed {} of Covid19 Portal samples...".format(count))
+            months = pd.date_range('2019-12-01', datetime.date.today().strftime("%Y-%m-%d"), freq='MS').strftime("%Y%m").tolist()
+
+            for m in months:
+                page = 1
+                while True:
+                    page += 1
+                    status_code, list_runs = self._get_page(page=page, size=BATCH_SIZE, month=m)
+                    entries = list_runs.get('entries')
+                    if entries is None or entries == []:
+                        logger.info("Last page reached!")
+                        logger.info("Status code: {}".format(status_code))
+                        logger.info("Content: {}".format(str(list_runs)))
+                        break
+                    num_entries = len(entries)
+                    count += num_entries
+                    self._process_runs(list_runs, existing_sample_ids, session)
+                    logger.info("Processed {} of Covid19 Portal samples...".format(count))
 
             logger.info("All samples processed!")
         except Exception as e:
@@ -111,7 +114,7 @@ class Covid19PortalAccessor(AbstractAccessor):
             self._log_results()
             logger.info("Finished Covid19 Portal accessor")
 
-    def _get_page(self, page, size) -> Tuple[int, dict]:
+    def _get_page(self, page, size, month) -> Tuple[int, dict]:
         # the API is sometimes unstable returning bad json, we retry
         success = False
         json = None
@@ -121,9 +124,9 @@ class Covid19PortalAccessor(AbstractAccessor):
         truncate_iteration = 8
         while not success:
             response: Response = self.get_with_retries(
-                "{url_base}?page={page}&size={size}&&fields=lineage,coverage,collection_date,country,host,TAXON,"
+                "{url_base}?page={page}&size={size}&query=collection_date:({month})&fields=lineage,coverage,collection_date,country,host,TAXON,"
                 "creation_date,last_modification_date,center_name,isolate,molecule_type".format(
-                    url_base=self.API_URL_BASE, page=page, size=size))
+                    url_base=self.API_URL_BASE, page=page, size=size, month=month))
             try:
                 json = response.json()
                 status_code = response.status_code
