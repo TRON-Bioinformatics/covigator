@@ -2,12 +2,13 @@ import gzip
 import os
 import pathlib
 import shutil
-from datetime import datetime
+from datetime import datetime, date
 from io import StringIO
 from json import JSONDecodeError
 import random
 import time
 from typing import Tuple
+import pandas as pd
 
 from Bio import SeqIO
 from sqlalchemy.exc import IntegrityError
@@ -76,18 +77,20 @@ class Covid19PortalAccessor(AbstractAccessor):
         existing_sample_ids = set([value for value, in session.query(SampleCovid19Portal.run_accession).all()])
         try:
             logger.info("Reading...")
-            status_code, list_runs = self._get_page(page=page, size=BATCH_SIZE)
-            num_entries = len(list_runs.get('entries'))
-            count = num_entries
-            # gets total expected number of results from first page
-            logger.info("Start processing...")
-            self._process_runs(list_runs, existing_sample_ids, session)
-            logger.info("Processed {} of Covid19 Portal samples...".format(count))
 
-            months = pd.date_range('2019-12-01', datetime.date.today().strftime("%Y-%m-%d"), freq='MS').strftime("%Y%m").tolist()
+            page = 1
+            months = pd.date_range('2019-12-01', date.today().strftime("%Y-%m-%d"), freq='MS').strftime("%Y%m").tolist()
 
             for m in months:
-                page = 1
+
+                status_code, list_runs = self._get_page(page=page, size=BATCH_SIZE, month=m)
+                num_entries = len(list_runs.get('entries'))
+                count = num_entries
+                # gets total expected number of results from first page
+                logger.info("Start processing...")
+                self._process_runs(list_runs, existing_sample_ids, session)
+                logger.info("Processed {} of Covid19 Portal samples...".format(count))
+
                 while True:
                     page += 1
                     status_code, list_runs = self._get_page(page=page, size=BATCH_SIZE, month=m)
