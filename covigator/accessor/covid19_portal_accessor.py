@@ -77,22 +77,16 @@ class Covid19PortalAccessor(AbstractAccessor):
         existing_sample_ids = set([value for value, in session.query(SampleCovid19Portal.run_accession).all()])
         try:
             logger.info("Reading...")
+            count = 0
 
-            page = 1
+            # queries data by month since December 2019, the API does not support paginating over more than 1M entries
+            # there is no month with more than 1M entries... at least for now...
             months = pd.date_range('2019-12-01', date.today().strftime("%Y-%m-%d"), freq='MS').strftime("%Y%m").tolist()
-
             for m in months:
-
-                status_code, list_runs = self._get_page(page=page, size=BATCH_SIZE, month=m)
-                num_entries = len(list_runs.get('entries'))
-                count = num_entries
-                # gets total expected number of results from first page
-                logger.info("Start processing...")
-                self._process_runs(list_runs, existing_sample_ids, session)
-                logger.info("Processed {} of Covid19 Portal samples...".format(count))
-
+                page = 0
+                logger.info("Querying for month {}".format(m))
                 while True:
-                    page += 1
+                    page += 1   # page starts at 1
                     status_code, list_runs = self._get_page(page=page, size=BATCH_SIZE, month=m)
                     entries = list_runs.get('entries')
                     if entries is None or entries == []:
