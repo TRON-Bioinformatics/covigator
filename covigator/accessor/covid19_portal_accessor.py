@@ -199,7 +199,8 @@ class Covid19PortalAccessor(AbstractAccessor):
                         session.add(s)
                         session.commit()
                     except IntegrityError:
-                        pass
+                        logger.warning("Repeated sample: {}".format(s.run_accession))
+                        session.rollback()
         self._log_results()
 
     def _parse_covid19_portal_sample(self, sample: dict) -> SampleCovid19Portal:
