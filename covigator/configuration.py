@@ -40,6 +40,7 @@ class Configuration:
     ENV_COVIGATOR_NEXTFLOW = "COVIGATOR_NEXTFLOW"
     ENV_COVIGATOR_WORKFLOW = "COVIGATOR_WORKFLOW"
     ENV_COVIGATOR_FORCE_PIPELINE = "COVIGATOR_FORCE_PIPELINE"
+    ENV_COVIGATOR_REPHASE = "COVIGATOR_REPHASE"
     ENV_COVIGATOR_SKIP_VCF_LOADING = "COVIGATOR_SKIP_VCF_LOADING"
     ENV_COVIGATOR_WORKFLOW_CPUS = "COVIGATOR_WORKFLOW_CPUS"
     ENV_COVIGATOR_WORKFLOW_MEMORY = "COVIGATOR_WORKFLOW_MEMORY"
@@ -75,6 +76,7 @@ class Configuration:
         self.db_max_overflow = int(os.getenv(self.ENV_COVIGATOR_DB_MAX_OVERFLOW, 10))
         self.db_table_version = os.environ.get(self.ENV_COVIGATOR_TABLE_VERSION, "_test")
         self.force_pipeline = os.environ.get(self.ENV_COVIGATOR_FORCE_PIPELINE, False)
+        self.rephase = os.environ.get(self.ENV_COVIGATOR_REPHASE, False)
         # this is useful for reloading metadata into the DB
         self.skip_vcf_loading = os.environ.get(self.ENV_COVIGATOR_SKIP_VCF_LOADING, False)
 
