@@ -79,7 +79,8 @@ def get_samples_tab_left_bar(queries: Queries, data_source: DataSource):
                     {'label': VariantType.SNV.name, 'value': VariantType.SNV.name},
                     {'label': VariantType.MNV.name, 'value': VariantType.MNV.name},
                     {'label': VariantType.INSERTION.name, 'value': VariantType.INSERTION.name},
-                    {'label': VariantType.DELETION.name, 'value': VariantType.DELETION.name}
+                    {'label': VariantType.DELETION.name, 'value': VariantType.DELETION.name},
+                    {'label': VariantType.COMPLEX.name, 'value': VariantType.COMPLEX.name},
                 ],
                 value=None,
                 multi=True
