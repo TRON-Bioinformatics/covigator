@@ -116,6 +116,7 @@ class VariantType(enum.Enum):
     INSERTION = 2
     DELETION = 3
     MNV = 4
+    COMPLEX = 5
 
 
 class SampleEna(Base):

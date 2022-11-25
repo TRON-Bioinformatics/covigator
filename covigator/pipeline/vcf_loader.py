@@ -197,6 +197,8 @@ class VcfLoader:
             return VariantType.INSERTION
         elif len(reference) > 1 and len(alternate) == 1:
             return VariantType.DELETION
+        elif len(reference) > 1 and len(alternate) > 1:
+            return VariantType.COMPLEX
         else:
             raise CovigatorNotSupportedVariant
 
