@@ -55,12 +55,18 @@ class VcfLoader:
         variant: Variant
         for variant in variants:
             if variant.FILTER is None or variant.FILTER in ["LOW_FREQUENCY", "SUBCLONAL"]:
+                make_pre_commit = False
                 if source == DataSource.COVID19_PORTAL:
                     covid19portal_variant = self._parse_variant(variant, VariantCovid19Portal)
                     observed_variants.append(
                         self._parse_variant_observation(
                             variant, specific_sample, covid19portal_variant, VariantObservationCovid19Portal))
-                    session.add(covid19portal_variant)
+                    if covid19portal_variant.variant_type in [VariantType.MNV, VariantType.COMPLEX]:
+                        # ACHTUNG: this is a dirty fix to increase performance during rephasing, but this needs to be
+                        # removed!!!
+                        session.add(covid19portal_variant)
+                        make_pre_commit = True
+
                 elif variant.FILTER is None:    # ENA clonal
                     # only stores clonal high quality variants in this table
                     ena_variant = self._parse_variant(variant, CovigatorVariant)
@@ -80,11 +86,12 @@ class VcfLoader:
                         self._parse_variant_observation(
                             variant, specific_sample, low_frequency_variant, LowFrequencyVariantObservation))
                     session.add(low_frequency_variant)
-                try:
-                    session.commit()
-                except (IntegrityError, InvalidRequestError):
-                    # do nothing the variant was just added by another process between merge and commit
-                    session.rollback()
+                if make_pre_commit:
+                    try:
+                        session.commit()
+                    except (IntegrityError, InvalidRequestError):
+                        # do nothing the variant was just added by another process between merge and commit
+                        session.rollback()
         session.add_all(observed_variants)
         session.add_all(subclonal_observed_variants)
         session.add_all(low_frequency_observed_variants)
