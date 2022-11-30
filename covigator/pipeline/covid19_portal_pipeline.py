@@ -22,11 +22,39 @@ class Covid19PortalPipeline:
         # NOTE: sample folder date/run_accession
         sample_data_folder = sample.get_sample_folder(self.config.storage_folder)
         output_vcf = os.path.join(sample_data_folder, "{name}.assembly.vcf.gz".format(name=sample.run_accession))
+        final_vcf = output_vcf
         output_pangolin = os.path.join(sample_data_folder,
                                        "{name}.assembly.pangolin.csv".format(name=sample.run_accession))
         input_fasta = sample.fasta_path
 
-        if not os.path.exists(output_vcf) or self.config.force_pipeline:
+        if os.path.exists(output_vcf) and not self.config.force_pipeline and self.config.rephase:
+
+            command = "{nextflow} run {workflow} " \
+                      "--vcf {vcf} " \
+                      "--output {output_folder} " \
+                      "--name {name} " \
+                      "--cpus {cpus} " \
+                      "--memory {memory} " \
+                      "--skip_sarscov2_annotations " \
+                      "--skip_pangolin " \
+                      "--skip_normalization " \
+                      "-profile conda " \
+                      "-offline " \
+                      "-work-dir {work_folder} " \
+                      "-with-trace {trace_file}".format(
+                nextflow=self.config.nextflow,
+                vcf=output_vcf,
+                output_folder=sample_data_folder,
+                name=sample.run_accession,
+                work_folder=self.config.temp_folder,
+                workflow=self.config.workflow,
+                trace_file=os.path.join(sample_data_folder, "nextflow_traces.txt"),
+                cpus=self.config.workflow_cpus,
+                memory=self.config.workflow_memory)
+            run_command(command, sample_data_folder)
+            final_vcf = os.path.join(sample_data_folder, "{name}.input.vcf.gz".format(name=sample.run_accession))
+
+        elif not os.path.exists(output_vcf) or self.config.force_pipeline:
 
             command = "{nextflow} run {workflow} " \
                       "--fasta {fasta} " \
@@ -52,7 +80,7 @@ class Covid19PortalPipeline:
             run_command(command, sample_data_folder)
 
         return Covid19PortalPipelineResult(
-            vcf_path=output_vcf,
+            vcf_path=final_vcf,
             fasta_path=input_fasta,
             pangolin_path=output_pangolin
         )
