@@ -41,6 +41,7 @@ class Configuration:
     ENV_COVIGATOR_WORKFLOW = "COVIGATOR_WORKFLOW"
     ENV_COVIGATOR_FORCE_PIPELINE = "COVIGATOR_FORCE_PIPELINE"
     ENV_COVIGATOR_REPHASE = "COVIGATOR_REPHASE"
+    ENV_COVIGATOR_NEXTFLOW_PROFILE = "COVIGATOR_NEXTFLOW_PROFILE"
     ENV_COVIGATOR_SKIP_VCF_LOADING = "COVIGATOR_SKIP_VCF_LOADING"
     ENV_COVIGATOR_WORKFLOW_CPUS = "COVIGATOR_WORKFLOW_CPUS"
     ENV_COVIGATOR_WORKFLOW_MEMORY = "COVIGATOR_WORKFLOW_MEMORY"
@@ -100,6 +101,7 @@ class Configuration:
 
         # pipeline
         self.nextflow = os.getenv(self.ENV_COVIGATOR_NEXTFLOW, "nextflow")
+        self.nextflow_profile = os.getenv(self.ENV_COVIGATOR_NEXTFLOW_PROFILE, "conda")
         self.workflow = os.getenv(self.ENV_COVIGATOR_WORKFLOW,
                                   "tron-bioinformatics/covigator-ngs-pipeline -r {version}".format(
                                       version=covigator.ANALYSIS_PIPELINE_VERSION))

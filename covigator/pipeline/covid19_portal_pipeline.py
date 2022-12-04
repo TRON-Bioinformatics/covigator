@@ -38,11 +38,12 @@ class Covid19PortalPipeline:
                       "--skip_sarscov2_annotations " \
                       "--skip_pangolin " \
                       "--skip_normalization " \
-                      "-profile conda " \
+                      "-profile {profile} " \
                       "-offline " \
                       "-work-dir {work_folder} " \
                       "-with-trace {trace_file}".format(
                 nextflow=self.config.nextflow,
+                profile=self.config.nextflow_profile,
                 vcf=output_vcf,
                 output_folder=sample_data_folder,
                 name=sample.run_accession,
@@ -63,11 +64,12 @@ class Covid19PortalPipeline:
                       "--skip_pangolin " \
                       "--cpus {cpus} " \
                       "--memory {memory} " \
-                      "-profile conda " \
+                      "-profile {profile} " \
                       "-offline " \
                       "-work-dir {work_folder} " \
                       "-with-trace {trace_file}".format(
                 nextflow=self.config.nextflow,
+                profile=self.config.nextflow_profile,
                 fasta=input_fasta,
                 output_folder=sample_data_folder,
                 name=sample.run_accession,

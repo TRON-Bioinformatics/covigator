@@ -62,11 +62,12 @@ class Pipeline:
                       "--skip_sarscov2_annotations " \
                       "--skip_pangolin " \
                       "--skip_normalization " \
-                      "-profile conda " \
+                      "-profile {profile} " \
                       "-offline " \
                       "-work-dir {work_folder} " \
                       "-with-trace {trace_file}".format(
                 nextflow=self.config.nextflow,
+                profile=self.config.nextflow_profile,
                 vcf=lofreq_vcf,
                 output_folder=sample_data_folder,
                 name=run_accession,
@@ -94,11 +95,12 @@ class Pipeline:
                       "--memory {memory} " \
                       "--skip_bcftools " \
                       "--skip_gatk " \
-                      "-profile conda " \
+                      "-profile {profile} " \
                       "-offline " \
                       "-work-dir {work_folder} " \
                       "-with-trace {trace_file}".format(
                 nextflow=self.config.nextflow,
+                profile=self.config.nextflow_profile,
                 fastq1=fastq1,
                 fastq2="--fastq2 " + fastq2 if fastq2 else "",
                 af_low_frequency_thr=self.config.low_coverage_threshold,
