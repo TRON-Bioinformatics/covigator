@@ -1,3 +1,4 @@
+import logging
 import os
 from datetime import datetime
 from typing import List
@@ -5,7 +6,6 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, String, Float, Enum, DateTime, Integer, Boolean, Date, ForeignKey, \
     ForeignKeyConstraint, BigInteger, JSON, Index
 import enum
-
 from covigator.configuration import Configuration
 
 
@@ -19,17 +19,17 @@ DOMAIN_TABLE_NAME = get_table_versioned_name('domain', config=config)
 LOG_TABLE_NAME = get_table_versioned_name('log', config=config)
 LAST_UPDATE_TABLE_NAME = get_table_versioned_name('last_update', config=config)
 VARIANT_COOCCURRENCE_TABLE_NAME = get_table_versioned_name('variant_cooccurrence', config=config)
-GISAID_VARIANT_COOCCURRENCE_TABLE_NAME = get_table_versioned_name('gisaid_variant_cooccurrence', config=config)
+COVID19_PORTAL_VARIANT_COOCCURRENCE_TABLE_NAME = get_table_versioned_name('covid19portal_variant_cooccurrence', config=config)
 VARIANT_OBSERVATION_TABLE_NAME = get_table_versioned_name('variant_observation', config=config)
 SUBCLONAL_VARIANT_OBSERVATION_TABLE_NAME = get_table_versioned_name('subclonal_variant_observation', config=config)
 LOW_FREQUENCY_VARIANT_OBSERVATION_TABLE_NAME = get_table_versioned_name('low_frequency_variant_observation', config=config)
-GISAID_VARIANT_OBSERVATION_TABLE_NAME = get_table_versioned_name('gisaid_variant_observation', config=config)
+COVID19_PORTAL_VARIANT_OBSERVATION_TABLE_NAME = get_table_versioned_name('variant_observation_covid19portal', config=config)
 VARIANT_TABLE_NAME = get_table_versioned_name('variant', config=config)
 SUBCLONAL_VARIANT_TABLE_NAME = get_table_versioned_name('subclonal_variant', config=config)
 LOW_FREQUENCY_VARIANT_TABLE_NAME = get_table_versioned_name('low_frequency_variant', config=config)
-GISAID_VARIANT_TABLE_NAME = get_table_versioned_name('gisaid_variant', config=config)
-SAMPLE_GISAID_TABLE_NAME = get_table_versioned_name('sample_gisaid', config=config)
+COVID19_PORTAL_VARIANT_TABLE_NAME = get_table_versioned_name('variant_covid19portal', config=config)
 SAMPLE_ENA_TABLE_NAME = get_table_versioned_name('sample_ena', config=config)
+SAMPLE_COVID19_PORTAL_TABLE_NAME = get_table_versioned_name('sample_covid19_portal', config=config)
 CONSERVATION_TABLE_NAME = get_table_versioned_name('conservation', config=config)
 PRECOMPUTED_VARIANTS_PER_SAMPLE_TABLE_NAME = get_table_versioned_name('precomputed_variants_per_sample', config=config)
 PRECOMPUTED_SUBSTITUTIONS_COUNTS_TABLE_NAME = get_table_versioned_name('precomputed_substitutions_counts', config=config)
@@ -106,6 +106,7 @@ class DataSource(enum.Enum):
 
     ENA = 1
     GISAID = 2
+    COVID19_PORTAL = 3
 
 
 class VariantType(enum.Enum):
@@ -115,6 +116,7 @@ class VariantType(enum.Enum):
     INSERTION = 2
     DELETION = 3
     MNV = 4
+    COMPLEX = 5
 
 
 class SampleEna(Base):
@@ -124,15 +126,16 @@ class SampleEna(Base):
     __tablename__ = SAMPLE_ENA_TABLE_NAME
 
     # data on run
-    # TODO: add foreign keys to jobs
     run_accession = Column(String, primary_key=True)            # 'ERR4080473',
+
     # DEPRECATED
     finished = Column(Boolean)
+    ####
+
     sample_accession = Column(String)                           # 'SAMEA6798401',
     scientific_name = Column(String)
     study_accession = Column(String)
     experiment_accession = Column(String)
-    # TODO: store these as dates
     first_created = Column(Date)
     collection_date = Column(Date)
     instrument_platform = Column(String)
@@ -207,7 +210,7 @@ class SampleEna(Base):
     gatk_pangolin_path = Column(String)
     bcftools_pangolin_path = Column(String)
     fastp_path = Column(String)
-    deduplication_metrics_path = Column(String)
+    deduplication_metrics_path = Column(String)     # DEPRECATED
     horizontal_coverage_path = Column(String)
     vertical_coverage_path = Column(String)
 
@@ -237,7 +240,7 @@ class SampleEna(Base):
     pangolin_qc_notes = Column(String)
     pangolin_note = Column(String)
 
-    # Picard deduplicatio output
+    # Picard deduplicatio output   ## DEPRECATED
     percent_duplication = Column(Float)
     unpaired_reads_examined = Column(Integer)
     read_pairs_examined = Column(Integer)
@@ -276,11 +279,150 @@ class SampleEna(Base):
         return fastq1, fastq2
 
 
+class SampleCovid19Portal(Base):
+    """
+    The table that holds all metadata for a ENA sample
+    """
+    __tablename__ = SAMPLE_COVID19_PORTAL_TABLE_NAME
+
+    run_accession = Column(String, primary_key=True)
+    first_created = Column(Date)
+    collection_date = Column(Date)
+    last_modification_date = Column(Date)
+    center_name = Column(String)
+    isolate = Column(String)
+    molecule_type = Column(String)
+
+    # geographical data
+    country_raw = Column(String)  # 'Denmark',
+    country = Column(String)
+    country_alpha_2 = Column(String)
+    country_alpha_3 = Column(String)
+    continent = Column(String)
+    continent_alpha_2 = Column(String)
+
+    # FASTA
+    fasta_url = Column(String, nullable=False)
+
+    # local files storage
+    sample_folder = Column(String)
+    fasta_path = Column(String)
+    vcf_path = Column(String)
+    pangolin_path = Column(String)
+
+    # sequence  information
+    sequence_length = Column(Integer)
+    count_n_bases = Column(Integer)
+    count_ambiguous_bases = Column(Integer)
+
+    # counts of variants
+    count_snvs = Column(Integer)
+    count_insertions = Column(Integer)
+    count_deletions = Column(Integer)
+
+    # pango output
+    pangolin_lineage = Column(String)
+    pangolin_conflict = Column(Float)
+    pangolin_ambiguity_score = Column(Float)
+    pangolin_scorpio_call = Column(String)
+    pangolin_scorpio_support = Column(Float)
+    pangolin_scorpio_conflict = Column(Float)
+    pangolin_version = Column(String)
+    pangolin_pangolin_version = Column(String)
+    pangolin_scorpio_version = Column(String)
+    pangolin_constellation_version = Column(String)
+    pangolin_qc_status = Column(String)
+    pangolin_qc_notes = Column(String)
+    pangolin_note = Column(String)
+
+    # job status
+    status = Column(Enum(JobStatus, name=JobStatus.__constraint_name__), default=JobStatus.PENDING)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.now())
+    queued_at = Column(DateTime(timezone=True))
+    analysed_at = Column(DateTime(timezone=True))
+    loaded_at = Column(DateTime(timezone=True))
+    failed_at = Column(DateTime(timezone=True))
+    error_message = Column(String)
+
+    covigator_accessor_version = Column(String)
+    covigator_processor_version = Column(String)
+
+    def get_sample_folder(self, base_folder: str):
+        return os.path.join(
+            base_folder,
+            self.collection_date.strftime("%Y%m%d") if self.collection_date is not None else "nodate",
+            self.run_accession)
+
+
 class Variant(Base):
     """
     A variant with its specific annotations. THis does not contain any sample specific annotations.
     """
     __tablename__ = VARIANT_TABLE_NAME
+
+    variant_id = Column(String, primary_key=True)
+    chromosome = Column(String)
+    position = Column(Integer, index=True)
+    reference = Column(String)
+    alternate = Column(String)
+    overlaps_multiple_genes = Column(Boolean, default=False)
+    """
+    SnpEff annotations
+    ##INFO=<ID=ANN,Number=.,Type=String,Description="Functional annotations: '
+    Allele |                    C 
+    Annotation |                missense_variant
+    Annotation_Impact |         MODERATE 
+    Gene_Name |                 orf1ab 
+    Gene_ID |                   gene-GU280_gp01 
+    Feature_Type |              transcript 
+    Feature_ID |                TRANSCRIPT_gene-GU280_gp01 
+    Transcript_BioType |        protein_coding 
+    Rank |                      1/1 
+    HGVS.c |                    c.33A>C 
+    HGVS.p |                    p.Lys11Asn 
+    cDNA.pos / cDNA.length |    33/21290 
+    CDS.pos / CDS.length |      33/21290 
+    AA.pos / AA.length |        11/7095 
+    Distance | 
+    ERRORS / WARNINGS / INFO'   
+    """
+    annotation = Column(String, index=True)
+    annotation_highest_impact = Column(String, index=True)
+    annotation_impact = Column(String, index=True)
+    gene_name = Column(String, index=True)
+    gene_id = Column(String)
+    biotype = Column(String)
+    hgvs_c = Column(String)
+    hgvs_p = Column(String)
+    cdna_pos_length = Column(String)
+    cds_pos_length = Column(String)
+    aa_pos_length = Column(String)
+
+    # derived annotations
+    variant_type = Column(Enum(VariantType, name=VariantType.__constraint_name__))
+    length = Column(Integer)
+    reference_amino_acid = Column(String)
+    alternate_amino_acid = Column(String)
+    position_amino_acid = Column(Integer)
+
+    # ConsHMM conservation annotations
+    cons_hmm_sars_cov_2 = Column(Float)
+    cons_hmm_sarbecovirus = Column(Float)
+    cons_hmm_vertebrate_cov = Column(Float)
+
+    # Pfam protein domains
+    pfam_name = Column(String)
+    pfam_description = Column(String)
+
+    def get_variant_id(self):
+        return "{}:{}>{}".format(self.position, self.reference, self.alternate)
+
+
+class VariantCovid19Portal(Base):
+    """
+    A variant with its specific annotations. THis does not contain any sample specific annotations.
+    """
+    __tablename__ = COVID19_PORTAL_VARIANT_TABLE_NAME
 
     variant_id = Column(String, primary_key=True)
     chromosome = Column(String)
@@ -488,12 +630,84 @@ class VariantObservation(Base):
     ForeignKeyConstraint([variant_id], [Variant.variant_id])
 
     __table_args__ = (
-        Index("{}_index_annotation_position".format(VARIANT_OBSERVATION_TABLE_NAME),
+        Index("{}_i1".format(VARIANT_OBSERVATION_TABLE_NAME),
               "annotation_highest_impact", "position"),
-        Index("{}_index_sample".format(VARIANT_OBSERVATION_TABLE_NAME), "sample"),
-        Index("{}_index_position".format(VARIANT_OBSERVATION_TABLE_NAME), "position"),
-        Index("{}_index_annotation".format(VARIANT_OBSERVATION_TABLE_NAME), "annotation_highest_impact"),
-        Index("{}_index_variant_id".format(VARIANT_OBSERVATION_TABLE_NAME), "variant_id")
+        Index("{}_i2".format(VARIANT_OBSERVATION_TABLE_NAME), "sample"),
+        Index("{}_i3".format(VARIANT_OBSERVATION_TABLE_NAME), "position"),
+        Index("{}_i4".format(VARIANT_OBSERVATION_TABLE_NAME), "annotation_highest_impact"),
+        Index("{}_i5".format(VARIANT_OBSERVATION_TABLE_NAME), "variant_id")
+    )
+
+
+class VariantObservationCovid19Portal(Base):
+    """
+    A variant observation in a particular sample. This contains all annotations of a specific observation of a variant.
+    """
+    __tablename__ = COVID19_PORTAL_VARIANT_OBSERVATION_TABLE_NAME
+
+    sample = Column(String, primary_key=True)
+    variant_id = Column(String, primary_key=True)
+    chromosome = Column(String)
+    position = Column(Integer)
+    reference = Column(String)
+    alternate = Column(String)
+    quality = Column(Float)
+    filter = Column(String)
+    """
+    ##INFO=<ID=DP,Number=1,Type=Integer,Description="Raw Depth">
+    ##INFO=<ID=AF,Number=1,Type=Float,Description="Allele Frequency">
+    ##INFO=<ID=SB,Number=1,Type=Integer,Description="Phred-scaled strand bias at this position">
+    ##INFO=<ID=DP4,Number=4,Type=Integer,Description="Counts for ref-forward bases, ref-reverse, alt-forward and alt-reverse bases">
+    ##INFO=<ID=INDEL,Number=0,Type=Flag,Description="Indicates that the variant is an INDEL.">
+    ##INFO=<ID=CONSVAR,Number=0,Type=Flag,Description="Indicates that the variant is a consensus variant (as opposed to a low frequency variant).">
+    ##INFO=<ID=HRUN,Number=1,Type=Integer,Description="Homopolymer length to the right of report indel position">
+    """
+    dp = Column(Integer)
+    ac = Column(Integer)
+    dp4_ref_forward = Column(Integer)
+    dp4_ref_reverse = Column(Integer)
+    dp4_alt_forward = Column(Integer)
+    dp4_alt_reverse = Column(Integer)
+    vaf = Column(Float)
+    strand_bias = Column(Integer)
+    # fields replicated from Variant for performance reasons
+    annotation = Column(String)
+    annotation_impact = Column(String)
+    biotype = Column(String)
+    annotation_highest_impact = Column(String)
+    gene_name = Column(String)
+    hgvs_c = Column(String)
+    hgvs_p = Column(String)
+
+    # fields replicated from sample for performance reasons
+    date = Column(Date)
+
+    # derived annotations
+    variant_type = Column(Enum(VariantType, name=VariantType.__constraint_name__))
+    length = Column(Integer)
+    reference_amino_acid = Column(String)
+    alternate_amino_acid = Column(String)
+    position_amino_acid = Column(Integer)
+
+    # ConsHMM conservation annotations
+    cons_hmm_sars_cov_2 = Column(Float)
+    cons_hmm_sarbecovirus = Column(Float)
+    cons_hmm_vertebrate_cov = Column(Float)
+
+    # Pfam protein domains
+    pfam_name = Column(String)
+    pfam_description = Column(String)
+
+    ForeignKeyConstraint([sample], [SampleCovid19Portal.run_accession])
+    ForeignKeyConstraint([variant_id], [VariantCovid19Portal.variant_id])
+
+    __table_args__ = (
+        Index("{}_i1".format(COVID19_PORTAL_VARIANT_OBSERVATION_TABLE_NAME),
+              "annotation_highest_impact", "position"),
+        Index("{}_i2".format(COVID19_PORTAL_VARIANT_OBSERVATION_TABLE_NAME), "sample"),
+        Index("{}_i3".format(COVID19_PORTAL_VARIANT_OBSERVATION_TABLE_NAME), "position"),
+        Index("{}_i4".format(COVID19_PORTAL_VARIANT_OBSERVATION_TABLE_NAME), "annotation_highest_impact"),
+        Index("{}_i5".format(COVID19_PORTAL_VARIANT_OBSERVATION_TABLE_NAME), "variant_id")
     )
 
 
@@ -552,9 +766,9 @@ class SubclonalVariantObservation(Base):
     ForeignKeyConstraint([variant_id], [SubclonalVariant.variant_id])
 
     __table_args__ = (
-        Index("{}_index_position".format(SUBCLONAL_VARIANT_OBSERVATION_TABLE_NAME), "position"),
-        Index("{}_index_annotation_vaf".format(SUBCLONAL_VARIANT_OBSERVATION_TABLE_NAME), "annotation_highest_impact", "vaf"),
-        Index("{}_index_vaf".format(SUBCLONAL_VARIANT_OBSERVATION_TABLE_NAME), "vaf"),
+        Index("{}_i1".format(SUBCLONAL_VARIANT_OBSERVATION_TABLE_NAME), "position"),
+        Index("{}_i2".format(SUBCLONAL_VARIANT_OBSERVATION_TABLE_NAME), "annotation_highest_impact", "vaf"),
+        Index("{}_i3".format(SUBCLONAL_VARIANT_OBSERVATION_TABLE_NAME), "vaf"),
     )
 
 
@@ -613,9 +827,9 @@ class LowFrequencyVariantObservation(Base):
     ForeignKeyConstraint([variant_id], [LowFrequencyVariant.variant_id])
 
     __table_args__ = (
-        Index("{}_index_position".format(LOW_FREQUENCY_VARIANT_OBSERVATION_TABLE_NAME), "position"),
-        Index("{}_index_annotation_vaf".format(LOW_FREQUENCY_VARIANT_OBSERVATION_TABLE_NAME), "annotation_highest_impact", "vaf"),
-        Index("{}_index_vaf".format(LOW_FREQUENCY_VARIANT_OBSERVATION_TABLE_NAME), "vaf"),
+        Index("{}_i1".format(LOW_FREQUENCY_VARIANT_OBSERVATION_TABLE_NAME), "position"),
+        Index("{}_i2".format(LOW_FREQUENCY_VARIANT_OBSERVATION_TABLE_NAME), "annotation_highest_impact", "vaf"),
+        Index("{}_i3".format(LOW_FREQUENCY_VARIANT_OBSERVATION_TABLE_NAME), "vaf"),
     )
 
 
