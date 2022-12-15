@@ -38,7 +38,7 @@ def ena_accessor():
     args = parser.parse_args()
     tax_id = args.tax_id
     host_tax_id = args.host_tax_id
-    config = Configuration()
+    config = Configuration(verbose=True)
     covigator.configuration.initialise_logs(config.logfile_accesor)
     EnaAccessor(tax_id=tax_id, host_tax_id=host_tax_id, database=Database(config=config, initialize=True)).access()
 
@@ -47,7 +47,7 @@ def covid19_portal_accessor():
     parser = ArgumentParser(
         description="Covigator {} CoVid19 portal accessor".format(covigator.VERSION))
 
-    config = Configuration()
+    config = Configuration(verbose=True)
     covigator.configuration.initialise_logs(config.logfile_accesor)
     Covid19PortalAccessor(database=Database(config=config, initialize=True), storage_folder=config.storage_folder).access()
 
@@ -83,7 +83,7 @@ def processor():
     )
 
     args = parser.parse_args()
-    config = Configuration()
+    config = Configuration(verbose=True)
     covigator.configuration.initialise_logs(config.logfile_processor)
     if args.local:
         logger.info("Local processing")
@@ -101,7 +101,7 @@ def ena_downloader():
     parser = ArgumentParser(
         description="Covigator {} ENA downloader".format(covigator.VERSION))
 
-    config = Configuration()
+    config = Configuration(verbose=True)
     covigator.configuration.initialise_logs(config.logfile_accesor)
     EnaDownloader(database=Database(config=config, initialize=True), config=config).process()
 
@@ -132,7 +132,7 @@ def pipeline():
                         help="Second FASTQ to process for paired end sequencing, otherwise leave empty")
 
     args = parser.parse_args()
-    vcf_file, qc_file = Pipeline(config=Configuration()).run(
+    vcf_file, qc_file = Pipeline(config=Configuration(verbose=True)).run(
         run_accession="test", fastq1=args.fastq1, fastq2=args.fastq2)
     logger.info("Output VCF file: {}".format(vcf_file))
     logger.info("Output QC file: {}".format(qc_file))
@@ -142,7 +142,7 @@ def precompute_queries():
     parser = ArgumentParser(description="Precompute some aggregation queries")
     parser.parse_args()
 
-    database = Database(initialize=True, config=Configuration())
+    database = Database(initialize=True, config=Configuration(verbose=True))
     loader = PrecomputationsLoader(session=database.get_database_session())
     logger.info("Starting precomputation...")
     loader.load()
@@ -159,7 +159,7 @@ def cooccurrence():
     )
     args = parser.parse_args()
 
-    database = Database(initialize=True, config=Configuration())
+    database = Database(initialize=True, config=Configuration(verbose=True))
     loader = CooccurrenceMatrixLoader(session=database.get_database_session(), source=DataSource.ENA.name)
     logger.info("Starting precomputation...")
     loader.load(maximum_length=int(args.maximum_length))

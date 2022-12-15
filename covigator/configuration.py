@@ -40,6 +40,8 @@ class Configuration:
     ENV_COVIGATOR_NEXTFLOW = "COVIGATOR_NEXTFLOW"
     ENV_COVIGATOR_WORKFLOW = "COVIGATOR_WORKFLOW"
     ENV_COVIGATOR_FORCE_PIPELINE = "COVIGATOR_FORCE_PIPELINE"
+    ENV_COVIGATOR_REPHASE = "COVIGATOR_REPHASE"
+    ENV_COVIGATOR_NEXTFLOW_PROFILE = "COVIGATOR_NEXTFLOW_PROFILE"
     ENV_COVIGATOR_SKIP_VCF_LOADING = "COVIGATOR_SKIP_VCF_LOADING"
     ENV_COVIGATOR_WORKFLOW_CPUS = "COVIGATOR_WORKFLOW_CPUS"
     ENV_COVIGATOR_WORKFLOW_MEMORY = "COVIGATOR_WORKFLOW_MEMORY"
@@ -60,7 +62,7 @@ class Configuration:
     ENV_COVIGATOR_MAX_DELETIONS = "COVIGATOR_MAX_DELETIONS"
     ENV_COVIGATOR_MIN_SEQUENCE_SIZE = "COVIGATOR_MIN_SEQUENCE_SIZE"
 
-    def __init__(self, verbose=True):
+    def __init__(self, verbose=False):
         # local storage
         self.storage_folder = os.getenv(self.ENV_COVIGATOR_STORAGE_FOLDER, "/data/covigator")
         self.content_folder = os.getenv(self.ENV_COVIGATOR_DOWNLOAD_CONTENT_FOLDER)
@@ -75,6 +77,7 @@ class Configuration:
         self.db_max_overflow = int(os.getenv(self.ENV_COVIGATOR_DB_MAX_OVERFLOW, 10))
         self.db_table_version = os.environ.get(self.ENV_COVIGATOR_TABLE_VERSION, "_test")
         self.force_pipeline = os.environ.get(self.ENV_COVIGATOR_FORCE_PIPELINE, False)
+        self.rephase = os.environ.get(self.ENV_COVIGATOR_REPHASE, False)
         # this is useful for reloading metadata into the DB
         self.skip_vcf_loading = os.environ.get(self.ENV_COVIGATOR_SKIP_VCF_LOADING, False)
 
@@ -98,6 +101,7 @@ class Configuration:
 
         # pipeline
         self.nextflow = os.getenv(self.ENV_COVIGATOR_NEXTFLOW, "nextflow")
+        self.nextflow_profile = os.getenv(self.ENV_COVIGATOR_NEXTFLOW_PROFILE, "conda")
         self.workflow = os.getenv(self.ENV_COVIGATOR_WORKFLOW,
                                   "tron-bioinformatics/covigator-ngs-pipeline -r {version}".format(
                                       version=covigator.ANALYSIS_PIPELINE_VERSION))
@@ -144,7 +148,8 @@ class Configuration:
     def log_configuration(self):
         logger.info("Configuration")
         for k, v in self.__dict__.items():
-            logger.info("{}={}".format(k, v))
+            if "PASSWORD" not in k:
+                logger.info("{}={}".format(k, v))
 
 
 def initialise_logs(logfile, sample_id: str = None):

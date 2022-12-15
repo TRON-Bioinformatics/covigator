@@ -1,3 +1,4 @@
+import logging
 import os
 from datetime import datetime
 from typing import List
@@ -115,6 +116,7 @@ class VariantType(enum.Enum):
     INSERTION = 2
     DELETION = 3
     MNV = 4
+    COMPLEX = 5
 
 
 class SampleEna(Base):
@@ -345,7 +347,7 @@ class SampleCovid19Portal(Base):
     covigator_accessor_version = Column(String)
     covigator_processor_version = Column(String)
 
-    def get_sample_folder(self, base_folder):
+    def get_sample_folder(self, base_folder: str):
         return os.path.join(
             base_folder,
             self.collection_date.strftime("%Y%m%d") if self.collection_date is not None else "nodate",

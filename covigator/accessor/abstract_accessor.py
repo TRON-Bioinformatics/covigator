@@ -7,7 +7,7 @@ from covigator.accessor import MINIMUM_DATE
 from covigator.exceptions import CovigatorExcludedSampleTooEarlyDateException
 from covigator.misc import backoff_retrier
 
-NUMBER_RETRIES = 5
+NUMBER_RETRIES = -1
 
 
 class SampleCovid19:
