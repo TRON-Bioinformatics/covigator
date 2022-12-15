@@ -25,8 +25,8 @@ def get_tab_acknowledgements():
                 ],
                     style={"font-style": "italic", "margin-left": "50px"}),
                 html.P(
-                    html.A("https://doi.org/10.1101/2021.02.04.429765",
-                           href="https://doi.org/10.1101/2021.02.04.429765", target="_blank"),
+                    html.A("https://doi.org/10.1371/journal.pone.0249254",
+                           href="https://doi.org/10.1371/journal.pone.0249254", target="_blank"),
                     style={"text-indent": "50px"}
                 ),
                 html.Br(),

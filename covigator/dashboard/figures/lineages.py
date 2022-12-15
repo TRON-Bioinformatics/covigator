@@ -17,7 +17,7 @@ from covigator.database.model import PrecomputedVariantsPerLineage, Variant
 
 class LineageFigures(Figures):
 
-    def get_lineages_plot(self, data_source: str, countries=None, lineages=None):
+    def get_lineages_plot(self, data_source: str, countries=None, lineages=None, time_period=False):
         logger.debug("Getting data on samples by country...")
         data = self.queries.get_accumulated_lineages_by_country(
             data_source=data_source, countries=countries, lineages=lineages)
@@ -25,7 +25,8 @@ class LineageFigures(Figures):
         if data is not None and data.shape[0] > 0:
             logger.debug("Prepare plot on samples by lineage...")
             lineages = list(data.sort_values("cumsum", ascending=False).lineage.unique())
-
+            data.set_index('date', drop=False)
+            #'cumsum_sma', 'count_sma'
             fig = make_subplots(rows=2, cols=1)
 
             fig1 = px.area(
@@ -36,8 +37,20 @@ class LineageFigures(Figures):
                 color_discrete_sequence=px.colors.qualitative.Vivid)
             fig1.update_traces(line=dict(width=0.5), showlegend=False)
 
+            # Perform smoothing by using a simple moving average
+            # If time_period is False the un-smoothed data is plotted
+            smooth_data = data[['date', 'lineage', 'ratio_per_date', 'cumsum', 'count']]
+            if time_period:
+                # Group data by lineage to calculate correct average for each lineage in df
+                sma_df = smooth_data.groupby('lineage')[['lineage', 'ratio_per_date', 'cumsum', 'count']]
+                sma_df = sma_df.rolling(time_period, min_periods=1).mean()
+                sma_df = sma_df.reset_index(level='lineage')[['ratio_per_date', 'cumsum', 'count']]
+                # Update columns with moving average over selected period
+                smooth_data.loc[:, 'ratio_per_date'] = sma_df['ratio_per_date']
+                smooth_data.loc[:, 'cumsum'] = sma_df['cumsum']
+                smooth_data.loc[:, 'count'] = sma_df['count']
             fig2 = px.area(
-                data, x="date", y="ratio_per_date", color="lineage",
+                smooth_data, x="date", y="ratio_per_date", color="lineage",
                 category_orders={"lineage": lineages[::-1]},
                 labels={"ratio_per_date": "% daily samples", "cumsum": "num. samples", "count": "increment"},
                 hover_data=["cumsum", "count"],
