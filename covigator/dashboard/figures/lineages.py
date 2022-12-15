@@ -17,7 +17,7 @@ from covigator.database.model import PrecomputedVariantsPerLineage, Variant
 
 class LineageFigures(Figures):
 
-    def get_lineages_plot(self, data_source: str, countries=None, lineages=None, time_period=False):
+    def get_lineages_plot(self, data_source: str, countries=None, lineages=None, time_period=14):
         logger.debug("Getting data on samples by country...")
         data = self.queries.get_accumulated_lineages_by_country(
             data_source=data_source, countries=countries, lineages=lineages)
