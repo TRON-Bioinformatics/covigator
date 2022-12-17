@@ -88,7 +88,7 @@ def get_lineages_tab_left_bar(queries: Queries, data_source: DataSource):
             dcc.Markdown("""Select time period for smoothing"""),
             dcc.Dropdown(
                 id=ID_DROPDOWN_PERIOD,
-                options=[{'label': c, 'value': c} for c in range(1, 32)] + [{'label': 'Disable', 'value': False}],
+                options=[{'label': '{} days'.format(c), 'value': c} for c in range(1, 32)] + [{'label': 'Disable', 'value': False}],
                 value=14,
                 multi=False
             ),

@@ -25,8 +25,7 @@ class LineageFigures(Figures):
         if data is not None and data.shape[0] > 0:
             logger.debug("Prepare plot on samples by lineage...")
             lineages = list(data.sort_values("cumsum", ascending=False).lineage.unique())
-            data.set_index('date', drop=False)
-            #'cumsum_sma', 'count_sma'
+
             fig = make_subplots(rows=2, cols=1)
 
             fig1 = px.area(
@@ -39,16 +38,14 @@ class LineageFigures(Figures):
 
             # Perform smoothing by using a simple moving average
             # If time_period is False the un-smoothed data is plotted
-            smooth_data = data[['date', 'lineage', 'ratio_per_date', 'cumsum', 'count']]
+            smooth_data = data.loc[:, ['date', 'lineage', 'ratio_per_date', 'cumsum', 'count']]
             if time_period:
                 # Group data by lineage to calculate correct average for each lineage in df
-                sma_df = smooth_data.groupby('lineage')[['lineage', 'ratio_per_date', 'cumsum', 'count']]
+                sma_df = smooth_data.groupby('lineage')[['lineage', 'ratio_per_date']]
                 sma_df = sma_df.rolling(time_period, min_periods=1).mean()
-                sma_df = sma_df.reset_index(level='lineage')[['ratio_per_date', 'cumsum', 'count']]
+                sma_df = sma_df.reset_index(level='lineage')[['ratio_per_date']]
                 # Update columns with moving average over selected period
-                smooth_data.loc[:, 'ratio_per_date'] = sma_df['ratio_per_date']
-                smooth_data.loc[:, 'cumsum'] = sma_df['cumsum']
-                smooth_data.loc[:, 'count'] = sma_df['count']
+                smooth_data.update(sma_df)
             fig2 = px.area(
                 smooth_data, x="date", y="ratio_per_date", color="lineage",
                 category_orders={"lineage": lineages[::-1]},
