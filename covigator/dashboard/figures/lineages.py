@@ -17,7 +17,7 @@ from covigator.database.model import PrecomputedVariantsPerLineage, Variant
 
 class LineageFigures(Figures):
 
-    def get_lineages_plot(self, data_source: str, countries=None, lineages=None):
+    def get_lineages_plot(self, data_source: str, countries=None, lineages=None, time_period=14):
         logger.debug("Getting data on samples by country...")
         data = self.queries.get_accumulated_lineages_by_country(
             data_source=data_source, countries=countries, lineages=lineages)
@@ -36,8 +36,18 @@ class LineageFigures(Figures):
                 color_discrete_sequence=px.colors.qualitative.Vivid)
             fig1.update_traces(line=dict(width=0.5), showlegend=False)
 
+            # Perform smoothing by using a simple moving average
+            # If time_period is False the un-smoothed data is plotted
+            smooth_data = data.loc[:, ['date', 'lineage', 'ratio_per_date', 'cumsum', 'count']]
+            if time_period:
+                # Group data by lineage to calculate correct average for each lineage in df
+                sma_df = smooth_data.groupby('lineage')[['lineage', 'ratio_per_date']]
+                sma_df = sma_df.rolling(time_period, min_periods=1).mean()
+                sma_df = sma_df.reset_index(level='lineage')[['ratio_per_date']]
+                # Update columns with moving average over selected period
+                smooth_data.update(sma_df)
             fig2 = px.area(
-                data, x="date", y="ratio_per_date", color="lineage",
+                smooth_data, x="date", y="ratio_per_date", color="lineage",
                 category_orders={"lineage": lineages[::-1]},
                 labels={"ratio_per_date": "% daily samples", "cumsum": "num. samples", "count": "increment"},
                 hover_data=["cumsum", "count"],
