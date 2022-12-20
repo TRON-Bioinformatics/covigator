@@ -1,4 +1,4 @@
-name: CodeCov
+name: Code Coverage
 on: [push, pull_request]
 jobs:
   run:
@@ -7,8 +7,8 @@ jobs:
       OS: ubuntu-20.04
       PYTHON: '3.8'
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions/setup-python@v2
+    - uses: actions/checkout@v3
+    - uses: actions/setup-python@v4
       with:
         python-version: '3.8'
     - name: Generate Report
@@ -16,4 +16,4 @@ jobs:
         pip install coverage
         coverage run -m unittest discover covigator.tests.unit_tests
     - name: Upload Coverage to Codecov
-      uses: codecov/codecov-action@v2
+      uses: codecov/codecov-action@v3
