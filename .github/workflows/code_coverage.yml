@@ -47,5 +47,6 @@ jobs:
         pip install numpy==1.21.0
         pip install dist/covigator*.whl
         coverage run -m unittest discover covigator.tests.unit_tests
+
     - name: Upload Coverage to Codecov
       uses: codecov/codecov-action@v3
