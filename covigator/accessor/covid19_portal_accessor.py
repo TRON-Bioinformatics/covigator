@@ -158,37 +158,7 @@ class Covid19PortalAccessor(AbstractAccessor):
                     continue    # skips runs already registered in the database
                 if not self._complies_with_inclusion_criteria(sample_dict):
                     continue    # skips runs not complying with inclusion criteria
-                # NOTE: this parse operation is costly
-                try:
-                    # parses sample into DB model
-                    sample = self._parse_covid19_portal_sample(sample_dict)
-                    # downloads FASTA file
-                    sample = self._download_fasta(sample=sample)
-                    self.included += 1
-                    included_samples.append(sample)
-                except CovigatorExcludedSampleTooEarlyDateException:
-                    self.excluded_by_date += 1
-                    self.excluded += 1
-                except CovigatorExcludedMissingDateException:
-                    self.excluded_missing_date += 1
-                    self.excluded += 1
-                except CovigatorExcludedFailedDownload:
-                    self.excluded_failed_download += 1
-                    self.excluded += 1
-                except CovigatorExcludedEmptySequence:
-                    self.excluded_empty_sequence += 1
-                    self.excluded += 1
-                except CovigatorExcludedTooManyEntries:
-                    self.excluded_too_many_entries += 1
-                    self.excluded += 1
-                except CovigatorExcludedHorizontalCoverage:
-                    self.excluded_horizontal_coverage += 1
-                    self.excluded += 1
-                except CovigatorExcludedBadBases:
-                    self.excluded_bad_bases += 1
-                    self.excluded += 1
-                except CovigatorExcludedSampleException:
-                    self.excluded += 1
+                self._process_run(included_samples, sample_dict)
             else:
                 logger.error("Sample without the expected format")
 
@@ -209,6 +179,39 @@ class Covid19PortalAccessor(AbstractAccessor):
                         logger.warning("Repeated sample: {}".format(s.run_accession))
                         session.rollback()
         self._log_results()
+
+    def _process_run(self, included_samples, sample_dict):
+        # NOTE: this parse operation is costly
+        try:
+            # parses sample into DB model
+            sample = self._parse_covid19_portal_sample(sample_dict)
+            # downloads FASTA file
+            sample = self._download_fasta(sample=sample)
+            self.included += 1
+            included_samples.append(sample)
+        except CovigatorExcludedSampleTooEarlyDateException:
+            self.excluded_by_date += 1
+            self.excluded += 1
+        except CovigatorExcludedMissingDateException:
+            self.excluded_missing_date += 1
+            self.excluded += 1
+        except CovigatorExcludedFailedDownload:
+            self.excluded_failed_download += 1
+            self.excluded += 1
+        except CovigatorExcludedEmptySequence:
+            self.excluded_empty_sequence += 1
+            self.excluded += 1
+        except CovigatorExcludedTooManyEntries:
+            self.excluded_too_many_entries += 1
+            self.excluded += 1
+        except CovigatorExcludedHorizontalCoverage:
+            self.excluded_horizontal_coverage += 1
+            self.excluded += 1
+        except CovigatorExcludedBadBases:
+            self.excluded_bad_bases += 1
+            self.excluded += 1
+        except CovigatorExcludedSampleException:
+            self.excluded += 1
 
     def _parse_covid19_portal_sample(self, sample: dict) -> SampleCovid19Portal:
         run_accession = _get_run_accession(sample)
