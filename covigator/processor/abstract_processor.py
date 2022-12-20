@@ -7,7 +7,7 @@ from datetime import datetime, date
 from typing import Callable
 import typing as typing
 from dask.distributed import Client
-from distributed import fire_and_forget, wait
+from distributed import wait
 from logzero import logger
 from sqlalchemy.exc import SQLAlchemyError
 

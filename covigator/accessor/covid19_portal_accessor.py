@@ -35,6 +35,13 @@ THRESHOLD_GENOME_COVERAGE = 0.2
 GENOME_LENGTH = 29903
 
 
+def _get_run_accession(sample):
+    run_accession = sample.get('id')
+    if run_accession is None:
+        run_accession = sample.get('acc')
+    return run_accession
+
+
 class Covid19PortalAccessor(AbstractAccessor):
 
     API_URL_BASE = "https://www.covid19dataportal.org/api/backend/viral-sequences/sequences"
@@ -145,7 +152,7 @@ class Covid19PortalAccessor(AbstractAccessor):
         included_samples = []
         for sample_dict in list_samples.get('entries'):
             if isinstance(sample_dict, dict):
-                run_accession = self._get_run_accession(sample_dict)
+                run_accession = _get_run_accession(sample_dict)
                 if run_accession in existing_sample_ids:
                     self.excluded_existing += 1
                     continue    # skips runs already registered in the database
@@ -204,7 +211,7 @@ class Covid19PortalAccessor(AbstractAccessor):
         self._log_results()
 
     def _parse_covid19_portal_sample(self, sample: dict) -> SampleCovid19Portal:
-        run_accession = self._get_run_accession(sample)
+        run_accession = _get_run_accession(sample)
         if run_accession is None:
             raise CovigatorExcludedSampleException("Missing sample id")
         sample = SampleCovid19Portal(
@@ -224,12 +231,6 @@ class Covid19PortalAccessor(AbstractAccessor):
         self._parse_dates(sample)
         sample.covigator_accessor_version = covigator.VERSION
         return sample
-
-    def _get_run_accession(self, sample):
-        run_accession = sample.get('id')
-        if run_accession is None:
-            run_accession = sample.get('acc')
-        return run_accession
 
     def _complies_with_inclusion_criteria(self, sample: dict):
         # NOTE: this uses the original dictionary instead of the parsed SampleEna class for performance reasons
