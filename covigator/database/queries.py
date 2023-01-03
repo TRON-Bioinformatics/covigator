@@ -467,13 +467,16 @@ class Queries:
     def get_variant_counts_by_month(self, variant_id, source: str) -> pd.DataFrame:
 
         klass = self.get_variant_observation_klass(source=source)
+        sample_klass = self.get_sample_klass(source=source)
         sql_query_ds_ena = """
         select count(*) as count, variant_id, date_trunc('month', date::timestamp) as month 
             from {variant_observation_table} 
-            where variant_id='{variant_id}'
+            where variant_id='{variant_id}' 
+            and sample in (select run_accession from {sample_table} where status='FINISHED')
             group by variant_id, date_trunc('month', date::timestamp);
             """.format(
             variant_observation_table=klass.__tablename__,
+            sample_table=sample_klass.__tablename__,
             variant_id=variant_id
         )
         data = pd.read_sql_query(sql_query_ds_ena, self.session.bind)
