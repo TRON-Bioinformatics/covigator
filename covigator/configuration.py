@@ -6,8 +6,9 @@ from logzero import logger
 import covigator
 from covigator.exceptions import CovigatorDashBoardInitialisationError
 
-DEFAULT_SUBCLONAL_AF_THR = 0.8
-DEFAULT_LOW_COVERAGE_AF_THR = 0.05
+DEFAULT_LQ_CLONAL_AF_THR = 0.8
+DEFAULT_SUBCLONAL_AF_THR = 0.5
+DEFAULT_LOW_COVERAGE_AF_THR = 0.02
 DEFAULT_HORIZONTAL_COVERAGE_THR = 20
 DEFAULT_MEAN_BQ_THR = 10
 DEFAULT_MEAN_MQ_THR = 10
@@ -49,6 +50,7 @@ class Configuration:
     ENV_COVIGATOR_RETRIES_DOWNLOAD = "COVIGATOR_RETRIES_DOWNLOAD"
     ENV_COVIGATOR_LOW_COVERAGE_THR = "COVIGATOR_LOW_COVERAGE_THR"
     ENV_COVIGATOR_SUBCLONAL_THR = "COVIGATOR_SUBCLONAL_THR"
+    ENV_COVIGATOR_LQ_CLONAL_THR = "COVIGATOR_LQ_CLONAL_THR"
     # references
     ENV_COVIGATOR_REF_FASTA = "COVIGATOR_REF_FASTA"
     # dask
@@ -113,6 +115,8 @@ class Configuration:
             variable=self.ENV_COVIGATOR_LOW_COVERAGE_THR, default=DEFAULT_LOW_COVERAGE_AF_THR)
         self.subclonal_threshold = self.load_float_value(
             variable=self.ENV_COVIGATOR_SUBCLONAL_THR, default=DEFAULT_SUBCLONAL_AF_THR)
+        self.lq_clonal_threshold = self.load_float_value(
+            variable=self.ENV_COVIGATOR_LQ_CLONAL_THR, default=DEFAULT_LQ_CLONAL_AF_THR)
 
         ## sample exclusion
         self.mean_mq_thr = self.load_numeric_value(variable=self.ENV_COVIGATOR_MEAN_MQ_THR, default=DEFAULT_MEAN_MQ_THR)

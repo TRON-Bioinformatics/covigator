@@ -37,7 +37,7 @@ class VcfLoaderTests(AbstractTest):
         self.assertEqual(variant_observation.reference, "A")
         self.assertEqual(variant_observation.alternate, "G")
         self.assertIsNone(variant_observation.dp)
-        self.assertIsNone(variant_observation.vaf)
+        self.assertEqual(variant_observation.vaf, 0.9)
 
     def test_vcf_loader_without_dp4(self):
         vcf_file = pkg_resources.resource_filename(covigator.tests.__name__, "resources/snpeff_without_dp4.vcf")

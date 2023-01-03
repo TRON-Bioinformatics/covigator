@@ -91,6 +91,7 @@ class Pipeline:
                       "--name {name} " \
                       "--low_frequency_variant_threshold {af_low_frequency_thr} " \
                       "--subclonal_variant_threshold {af_subclonal_thr} " \
+                      "--lq-clonal_variant_threshold {af_lq_clonal_thr} " \
                       "--cpus {cpus} " \
                       "--memory {memory} " \
                       "--skip_bcftools " \
@@ -105,6 +106,7 @@ class Pipeline:
                 fastq2="--fastq2 " + fastq2 if fastq2 else "",
                 af_low_frequency_thr=self.config.low_coverage_threshold,
                 af_subclonal_thr=self.config.subclonal_threshold,
+                af_lq_clonal_thr=self.config.lq_clonal_threshold,
                 output_folder=sample_data_folder,
                 name=run_accession,
                 work_folder=self.config.temp_folder,
