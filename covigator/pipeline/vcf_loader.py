@@ -9,7 +9,7 @@ from covigator import MISSENSE_VARIANT
 from covigator.database.model import Variant as CovigatorVariant, VariantObservation, \
     SubclonalVariantObservation, SampleEna, DataSource, VariantType, \
     LowFrequencyVariantObservation, SubclonalVariant, LowFrequencyVariant, VariantCovid19Portal, \
-    VariantObservationCovid19Portal, SampleCovid19Portal
+    VariantObservationCovid19Portal, SampleCovid19Portal, LowQualityClonalVariant, LowQualityClonalVariantObservation
 from covigator.database.queries import Queries
 from covigator.exceptions import CovigatorNotSupportedVariant
 
@@ -54,32 +54,47 @@ class VcfLoader:
 
         variant: Variant
         for variant in variants:
-            if variant.FILTER is None or variant.FILTER in ["LOW_FREQUENCY", "SUBCLONAL"]:
+            # NOTE: it accepts only variant flagged as PASS, LOW_FREQUENCY, SUBCLONAL
+            # but this classification is irrelevant as it then classifies mutations based on VAF
+            # furthermore, the classification from the pipeline may not consistent with the VAF
+            if variant.FILTER is None or variant.FILTER in ["LOW_FREQUENCY", "SUBCLONAL", "LOW_QUALITY_CLONAL"]:
                 if source == DataSource.COVID19_PORTAL:
-                    covid19portal_variant = self._parse_variant(variant, VariantCovid19Portal)
+                    v = self._parse_variant(variant, VariantCovid19Portal)
                     observed_variants.append(
                         self._parse_variant_observation(
-                            variant, specific_sample, covid19portal_variant, VariantObservationCovid19Portal))
-                    session.add(covid19portal_variant)
-                elif variant.FILTER is None:    # ENA clonal
-                    # only stores clonal high quality variants in this table
-                    ena_variant = self._parse_variant(variant, CovigatorVariant)
-                    observed_variants.append(
-                        self._parse_variant_observation(
-                            variant, specific_sample, ena_variant, VariantObservation))
-                    session.add(ena_variant)
-                elif variant.FILTER == "SUBCLONAL":
-                    subclonal_variant = self._parse_variant(variant, SubclonalVariant)
-                    subclonal_observed_variants.append(
-                        self._parse_variant_observation(
-                            variant, specific_sample, subclonal_variant, SubclonalVariantObservation))
-                    session.add(subclonal_variant)
-                elif variant.FILTER == "LOW_FREQUENCY":
-                    low_frequency_variant = self._parse_variant(variant, LowFrequencyVariant)
-                    low_frequency_observed_variants.append(
-                        self._parse_variant_observation(
-                            variant, specific_sample, low_frequency_variant, LowFrequencyVariantObservation))
-                    session.add(low_frequency_variant)
+                            variant, specific_sample, v, VariantObservationCovid19Portal))
+                    session.add(v)
+                else:
+                    vaf = variant.INFO.get("vafator_af", 0.0)
+                    if vaf >= 0.8:
+                        # only stores clonal high quality variants in this table
+                        v = self._parse_variant(variant, CovigatorVariant)
+                        observed_variants.append(
+                            self._parse_variant_observation(
+                                variant, specific_sample, v, VariantObservation))
+                        session.add(v)
+                    elif vaf >= 0.5:  # and < 0.8
+                        # stores clonal low quality variants in this table
+                        v = self._parse_variant(variant, LowQualityClonalVariant)
+                        observed_variants.append(
+                            self._parse_variant_observation(
+                                variant, specific_sample, v, LowQualityClonalVariantObservation))
+                        session.add(v)
+                    elif vaf >= 0.02:  # and < 0.5
+                        # stores intrahost subclonal variants in this table
+                        v = self._parse_variant(variant, SubclonalVariant)
+                        subclonal_observed_variants.append(
+                            self._parse_variant_observation(
+                                variant, specific_sample, v, SubclonalVariantObservation))
+                        session.add(v)
+                    else:
+                        # stores low frequency variants in this table (we do nothing with these variants)
+                        v = self._parse_variant(variant, LowFrequencyVariant)
+                        low_frequency_observed_variants.append(
+                            self._parse_variant_observation(
+                                variant, specific_sample, v, LowFrequencyVariantObservation))
+                        session.add(v)
+
                 try:
                     session.commit()
                 except (IntegrityError, InvalidRequestError):
