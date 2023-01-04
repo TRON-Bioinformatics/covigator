@@ -24,6 +24,7 @@
 ##INFO=<ID=AN,Number=1,Type=Integer,Description="Total number of alleles in called genotypes">
 ##INFO=<ID=DP4,Number=4,Type=Integer,Description="Number of high-quality ref-forward , ref-reverse, alt-forward and alt-reverse bases">
 ##INFO=<ID=MQ,Number=1,Type=Integer,Description="Average mapping quality">
+##INFO=<ID=vafator_af,Number=1,Type=Float,Description="VAF">
 ##bcftools_callVersion=1.9+htslib-1.9
 ##bcftools_callCommand=call -mv --ploidy 1 -Ov -o /scratch/info/projects/covigator/data/ena/SRR13242734/pileup.vcf; Date=Thu Jan 21 15:16:04 2021
 ##SnpEffVersion="4.3t (build 2017-11-24 10:18), by Pablo Cingolani"
