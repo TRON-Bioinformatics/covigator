@@ -7,7 +7,8 @@ from covigator.database.model import VariantCooccurrence, SampleEna, VariantObse
     PrecomputedSynonymousNonSynonymousCounts, PrecomputedOccurrence, PrecomputedAnnotation, PrecomputedIndelLength, \
     PrecomputedSubstitutionsCounts, PrecomputedVariantsPerSample, Log, \
     LowFrequencyVariantObservation, LowFrequencyVariant, SubclonalVariant, PrecomputedVariantsPerLineage, \
-    LowQualityClonalVariantObservation, LowQualityClonalVariant
+    LowQualityClonalVariantObservation, LowQualityClonalVariant, SampleCovid19Portal, VariantObservationCovid19Portal, \
+    VariantCovid19Portal
 from covigator.database.queries import Queries
 from covigator.tests.unit_tests.faked_objects import FakeConfiguration
 
@@ -41,12 +42,15 @@ class AbstractTest(TestCase):
 
     def _clean_test_database(self):
         try:
+            self._clean_table(VariantObservationCovid19Portal)
             self._clean_table(VariantObservation)
             self._clean_table(SubclonalVariantObservation)
             self._clean_table(LowFrequencyVariantObservation)
             self._clean_table(LowQualityClonalVariantObservation)
             self._clean_table(SampleEna)
+            self._clean_table(SampleCovid19Portal)
             self._clean_table(VariantCooccurrence)
+            self._clean_table(VariantCovid19Portal)
             self._clean_table(Variant)
             self._clean_table(SubclonalVariant)
             self._clean_table(LowFrequencyVariant)
