@@ -47,6 +47,9 @@ jobs:
         pip install numpy==1.21.0
         pip install dist/covigator*.whl
         coverage run -m unittest discover covigator.tests.unit_tests
+        # push the coverage report to codacy
+        export CODACY_PROJECT_TOKEN=2badd1218f5b453cb7d75b97e1e11135
+        bash <(curl -Ls https://coverage.codacy.com/get.sh)
 
     - name: Upload Coverage to Codecov
       uses: codecov/codecov-action@v3
