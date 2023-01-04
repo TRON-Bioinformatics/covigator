@@ -65,7 +65,7 @@ class VcfLoader:
                             variant, specific_sample, v, VariantObservationCovid19Portal))
                     session.add(v)
                 else:
-                    vaf = float(variant.INFO.get("vafator_af", 0.0))
+                    vaf = variant.INFO.get("vafator_af", 0.0)
                     if vaf >= 0.8:
                         # only stores clonal high quality variants in this table
                         v = self._parse_variant(variant, CovigatorVariant)

@@ -6,7 +6,8 @@ from covigator.database.model import VariantCooccurrence, SampleEna, VariantObse
     SubclonalVariantObservation, Variant, PrecomputedVariantAbundanceHistogram, PrecomputedTableCounts, \
     PrecomputedSynonymousNonSynonymousCounts, PrecomputedOccurrence, PrecomputedAnnotation, PrecomputedIndelLength, \
     PrecomputedSubstitutionsCounts, PrecomputedVariantsPerSample, Log, \
-    LowFrequencyVariantObservation, LowFrequencyVariant, SubclonalVariant, PrecomputedVariantsPerLineage
+    LowFrequencyVariantObservation, LowFrequencyVariant, SubclonalVariant, PrecomputedVariantsPerLineage, \
+    LowQualityClonalVariantObservation, LowQualityClonalVariant
 from covigator.database.queries import Queries
 from covigator.tests.unit_tests.faked_objects import FakeConfiguration
 
@@ -43,11 +44,13 @@ class AbstractTest(TestCase):
             self._clean_table(VariantObservation)
             self._clean_table(SubclonalVariantObservation)
             self._clean_table(LowFrequencyVariantObservation)
+            self._clean_table(LowQualityClonalVariantObservation)
             self._clean_table(SampleEna)
             self._clean_table(VariantCooccurrence)
             self._clean_table(Variant)
             self._clean_table(SubclonalVariant)
             self._clean_table(LowFrequencyVariant)
+            self._clean_table(LowQualityClonalVariant)
             self._clean_table(PrecomputedVariantsPerSample)
             self._clean_table(PrecomputedSubstitutionsCounts)
             self._clean_table(PrecomputedIndelLength)
