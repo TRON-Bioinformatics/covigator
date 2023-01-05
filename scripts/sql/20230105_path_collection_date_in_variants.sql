@@ -8,4 +8,4 @@ update low_frequency_variant_observation_on set date=s.collection_date from samp
 update lq_clonal_variant_observation_on set date=s.collection_date from sample_ena_on as s where s.run_accession = lq_clonal_variant_observation_on.sample;
 
 -- patch COVID19 Data Portal dataset
-update variant_observation_covid19portal_on set date=s.collection_date from sample_ena_on as s where s.run_accession = variant_observation_covid19portal_on.sample;
+update variant_observation_covid19portal_on set date=s.collection_date from sample_covid19_portal_on as s where s.run_accession = variant_observation_covid19portal_on.sample;
