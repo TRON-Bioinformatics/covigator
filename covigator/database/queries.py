@@ -485,6 +485,8 @@ class Queries:
 
     def get_sample_counts_by_month(self, source: str) -> pd.DataFrame:
         klass = self.get_sample_klass(source=source)
+        # NOTE: this query was originally implemented with SQLAlchemy syntax, but the func.date_trunc function
+        # provides different results. Do not change back!
         query = """
         select date_trunc('month', collection_date::timestamp) as month,
             count(*) as sample_count
