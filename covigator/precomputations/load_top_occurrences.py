@@ -1,9 +1,9 @@
 import pandas as pd
 from logzero import logger
-from sqlalchemy import func, desc
+from sqlalchemy import func, desc, and_
 from sqlalchemy.orm import Session
 from covigator import SYNONYMOUS_VARIANT
-from covigator.database.model import DataSource, PrecomputedOccurrence
+from covigator.database.model import DataSource, PrecomputedOccurrence, JobStatus
 from covigator.database.queries import Queries
 
 
@@ -72,11 +72,14 @@ class TopOccurrencesLoader:
         )
 
     def get_top_occurring_variants(self, top, source: str):
+        sample_klass = self.queries.get_sample_klass(source=source)
+        subquery = self.session.query(sample_klass.run_accession).filter(sample_klass.status == JobStatus.FINISHED)
+
         klass = self.queries.get_variant_observation_klass(source)
         query = self.session.query(
             klass.variant_id, klass.hgvs_p, klass.gene_name, klass.pfam_name,
             klass.annotation_highest_impact, func.count().label('total')) \
-            .filter(klass.annotation_highest_impact != SYNONYMOUS_VARIANT)
+            .filter(and_(klass.annotation_highest_impact != SYNONYMOUS_VARIANT, klass.sample.in_(subquery)))
         query = query.group_by(klass.variant_id, klass.hgvs_p, klass.gene_name,
                       klass.pfam_name, klass.annotation_highest_impact) \
             .order_by(desc('total')).limit(top)
