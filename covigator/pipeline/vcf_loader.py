@@ -190,7 +190,7 @@ class VcfLoader:
             gene_name=covigator_variant.gene_name,
             hgvs_p=covigator_variant.hgvs_p,
             hgvs_c=covigator_variant.hgvs_c,
-            date=sample.first_created,
+            date=sample.collection_date,
             variant_type=covigator_variant.variant_type,
             length=self._get_variant_length(variant),
             reference_amino_acid=covigator_variant.reference_amino_acid,
