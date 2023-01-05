@@ -3,7 +3,7 @@ from typing import List, Union
 import pandas as pd
 from logzero import logger
 import sqlalchemy
-from sqlalchemy import and_, desc, asc, func, String, DateTime
+from sqlalchemy import and_, desc, asc, func, String, DateTime, text
 from sqlalchemy.engine.default import DefaultDialect
 from sqlalchemy.orm import Session, aliased
 from sqlalchemy.sql.sqltypes import NullType
@@ -485,12 +485,16 @@ class Queries:
 
     def get_sample_counts_by_month(self, source: str) -> pd.DataFrame:
         klass = self.get_sample_klass(source=source)
-        query = self.session.query(
-            func.date_trunc('month', klass.collection_date).label("month"),
-            func.count().label("sample_count"))\
-            .filter(klass.status == JobStatus.FINISHED.name) \
-            .group_by(func.date_trunc('month', klass.collection_date))
-        counts = pd.read_sql(query.statement, self.session.bind)
+        query = """
+        select date_trunc('month', collection_date::timestamp) as month,
+            count(*) as sample_count
+            from {table}
+            where status='FINISHED'
+            group by date_trunc('month', collection_date::timestamp);
+            """.format(
+            table=klass.__tablename__
+        )
+        counts = pd.read_sql(text(query), self.session.bind)
         counts['month'] = pd.to_datetime(counts['month'], utc=True)
         return counts
 
@@ -553,8 +557,6 @@ class Queries:
 
         # formats the DNA mutation
         top_occurring_variants.rename(columns={'variant_id': 'dna_mutation'}, inplace=True)
-        top_occurring_variants["frequency_by_month"] = top_occurring_variants.frequency
-
         # pivots the table over months
         top_occurring_variants = pd.pivot_table(
             top_occurring_variants, index=['gene_name', 'dna_mutation', 'hgvs_p', 'annotation', "frequency", "total"],
