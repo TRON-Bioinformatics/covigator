@@ -13,6 +13,20 @@ from covigator.database.model import Variant as CovigatorVariant, VariantObserva
 from covigator.database.queries import Queries
 from covigator.exceptions import CovigatorNotSupportedVariant
 
+MAX_INTRAHOST_SUBCLONAL = 5147
+
+MAX_INTRAHOST_HIGH_FREQUENCY = 3
+
+MIN_INTRAHOST_READ_COUNT = 50000
+
+MIN_INTRAHOST_COVERED_BASES = 29000
+
+MIN_INTRAHOST_LENGTH = 10
+
+MIN_INTRAHOST_AC = 10
+
+MIN_INTRAHOST_DP = 100
+
 
 class VcfLoader:
 
@@ -38,6 +52,8 @@ class VcfLoader:
         specific_sample.count_deletions = len([v for v in variants if v.FILTER is None and len(v.REF) == 1 and len(v.ALT[0]) > 1])
         specific_sample.count_insertions = len([v for v in variants if v.FILTER is None and len(v.REF) > 1 and len(v.ALT[0]) == 1])
 
+        count_high_frequency_non_clonal = 0
+        count_subclonal = 0
         if source == DataSource.ENA:
             specific_sample.count_subclonal_snvs = len([v for v in variants if v.FILTER == "SUBCLONAL"
                                         and len(v.REF) == 1 and len(v.ALT[0]) == 1])
@@ -51,6 +67,14 @@ class VcfLoader:
                                              and len(v.REF) > 1 and len(v.ALT[0]) == 1])
             specific_sample.count_low_frequency_insertions = len([v for v in variants if v.FILTER == "LOW_FREQUENCY"
                                               and len(v.REF) == 1 and len(v.ALT[0]) > 1])
+
+            count_subclonal = len([v for v in variants if v.INFO.get("vafator_af", 0.0) < 0.8])
+            specific_sample.intrahost_filter = not self.is_eligible_intrahost_sample(
+                sample=specific_sample, count_subclonal=count_subclonal)
+
+            count_high_frequency_non_clonal = len([v for v in variants if 0.4 <= v.INFO.get("vafator_af", 0.0) < 0.8])
+            specific_sample.potential_coinfection = count_high_frequency_non_clonal > MAX_INTRAHOST_HIGH_FREQUENCY
+
 
         variant: Variant
         for variant in variants:
@@ -66,6 +90,9 @@ class VcfLoader:
                     session.add(v)
                 else:
                     vaf = variant.INFO.get("vafator_af", 0.0)
+                    dp = variant.INFO.get("vafator_dp", 0)
+                    ac = variant.INFO.get("vafator_ac", 0)
+                    length = abs(self._get_variant_length(variant))
                     if vaf >= 0.8:
                         # only stores clonal high quality variants in this table
                         v = self._parse_variant(variant, CovigatorVariant)
@@ -80,15 +107,17 @@ class VcfLoader:
                             self._parse_variant_observation(
                                 variant, specific_sample, v, LowQualityClonalVariantObservation))
                         session.add(v)
-                    elif vaf >= 0.02:  # and < 0.5
-                        # stores intrahost subclonal variants in this table
+                    elif self.is_eligible_intrahost_mutation(ac=ac, dp=dp, length=length, vaf=vaf) and \
+                            not specific_sample.intrahost_filter and \
+                            not specific_sample.potential_coinfection:  # and vaf < 0.5
+                        # stores high quality intrahost subclonal variants in this table
                         v = self._parse_variant(variant, SubclonalVariant)
                         subclonal_observed_variants.append(
                             self._parse_variant_observation(
                                 variant, specific_sample, v, SubclonalVariantObservation))
                         session.add(v)
                     else:
-                        # stores low frequency variants in this table (we do nothing with these variants)
+                        # stores low frequency and/or low quality subclonal variants in this table (we do nothing with these variants)
                         v = self._parse_variant(variant, LowFrequencyVariant)
                         low_frequency_observed_variants.append(
                             self._parse_variant_observation(
@@ -104,6 +133,15 @@ class VcfLoader:
         session.add_all(subclonal_observed_variants)
         session.add_all(low_frequency_observed_variants)
         # NOTE: commit will happen afterwards when the job status is updated
+
+    def is_eligible_intrahost_sample(self, sample, count_subclonal):
+        return sample.covered_bases is not None and sample.covered_bases >= MIN_INTRAHOST_COVERED_BASES and \
+            sample.read_count is not None and sample.read_count >= MIN_INTRAHOST_READ_COUNT and \
+            count_subclonal <= MAX_INTRAHOST_SUBCLONAL
+
+    def is_eligible_intrahost_mutation(self, ac, dp, length, vaf):
+        return vaf >= 0.02 and dp >= MIN_INTRAHOST_DP and ac >= MIN_INTRAHOST_AC and \
+            length <= MIN_INTRAHOST_LENGTH
 
     def _parse_variant(self, variant: Variant, klass) -> CovigatorVariant:
         parsed_variant = klass(

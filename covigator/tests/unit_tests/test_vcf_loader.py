@@ -11,9 +11,19 @@ from covigator.tests.unit_tests.abstract_test import AbstractTest
 class VcfLoaderTests(AbstractTest):
 
     def setUp(self) -> None:
-        self.sample_ena = SampleEna(run_accession="TEST1", fastq_ftp="something", fastq_md5="else", num_fastqs=2)
+        self.sample_ena = SampleEna(run_accession="TEST1", fastq_ftp="something", fastq_md5="else", num_fastqs=2,
+                                    covered_bases=30000, read_count=100000)
+        # these samples are not eligible to intrahost mutations
+        self.sample_ena_low_covered_bases = SampleEna(
+            run_accession="TEST2", fastq_ftp="something", fastq_md5="else", num_fastqs=2,
+            covered_bases=100, read_count=100000)
+        self.sample_ena_low_read_counts = SampleEna(
+            run_accession="TEST3", fastq_ftp="something", fastq_md5="else", num_fastqs=2,
+            covered_bases=30000, read_count=100)
         self.sample_c19dp = SampleCovid19Portal(run_accession="TEST2", fasta_url="something")
-        self.session.add_all([self.sample_ena, self.sample_c19dp])
+        self.session.add_all([
+            self.sample_ena, self.sample_c19dp,
+            self.sample_ena_low_covered_bases, self.sample_ena_low_read_counts])
         self.session.commit()
 
     def test_vcf_loader_ena(self):
@@ -59,7 +69,7 @@ class VcfLoaderTests(AbstractTest):
         self.assertEqual(variant_observation.position, 23403)
         self.assertEqual(variant_observation.reference, "A")
         self.assertEqual(variant_observation.alternate, "C")
-        self.assertIsNone(variant_observation.dp)
+        self.assertEqual(variant_observation.dp, 110)
         self.assertAlmostEqual(variant_observation.vaf, 0.4)
 
         variant = self.session.query(LowFrequencyVariant).first()
