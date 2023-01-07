@@ -97,12 +97,7 @@ def get_tab_acknowledgements():
                 html.Iframe(srcDoc="""
                             <a class="github-button" href="https://github.com/tron-bioinformatics/covigator" data-color-scheme="no-preference: light; light: light; dark: light;" data-icon="octicon-star" data-size="large" data-show-count="true" aria-label="Star tron-bioinformatics/covigator on GitHub">Star</a>
                             <script async defer src="https://buttons.github.io/buttons.js"></script>
-                           """, style={'border': 0, 'height': '50px'}),
-                html.Br(),
-                html.P("Follow #CoVigator in Twitter:"),
-                html.A(html.Img(src="/assets/2021_twitter_logo_blue.png", height="25px"),
-                       href="https://twitter.com/hashtag/CoVigator", target="_blank")
-
+                           """, style={'border': 0, 'height': '50px'})
             ], width=8, style={"text-align": "left", "font-size": 16}),
             dbc.Col([None], width=2)]
             ),
