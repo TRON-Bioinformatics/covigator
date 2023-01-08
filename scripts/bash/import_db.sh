@@ -20,8 +20,8 @@ get_delete_command() {
 }
 
 load_table() {
-  psql $pg_uri -c "`get_delete_command $1`"
-  psql $pg_uri -c "`get_import_command $1`"
+  psql $pg_uri -c "$(get_delete_command $1)"
+  psql $pg_uri -c "$(get_import_command $1)"
 }
 
 # references
