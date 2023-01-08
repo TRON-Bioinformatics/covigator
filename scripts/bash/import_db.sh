@@ -62,7 +62,7 @@ pangolin_scorpio_support, pangolin_scorpio_conflict, pangolin_version, pangolin_
 pangolin_scorpio_version, pangolin_constellation_version, pangolin_qc_status, pangolin_qc_notes, pangolin_note, percent_duplication, \
 unpaired_reads_examined, read_pairs_examined, secondary_or_supplementary_reads, unmapped_reads, \
 unpaired_read_duplicates, read_pair_duplicates, read_pair_optical_duplicates, covigator_accessor_version, \
-covigator_processor_version"
+covigator_processor_version, intrahost_filter, potential_coinfection"
 psql $pg_uri -c "\\copy sample_ena$version($sample_ena_fields) from program 'gzip -dc $input_folder/sample_ena.csv.gz' csv header;"
 load_table "variant"
 load_table "variant_cooccurrence"
@@ -71,6 +71,8 @@ load_table "subclonal_variant"
 load_table "subclonal_variant_observation"
 load_table "low_frequency_variant"
 load_table "low_frequency_variant_observation"
+load_table "lq_clonal_variant"
+load_table "lq_clonal_variant_observation"
 
 # Covid19 portal
 load_table "sample_covid19_portal"
