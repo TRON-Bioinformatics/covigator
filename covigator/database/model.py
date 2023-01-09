@@ -251,6 +251,10 @@ class SampleEna(Base):
     read_pair_duplicates = Column(Integer)
     read_pair_optical_duplicates = Column(Integer)
 
+    # intrahost sample filters
+    intrahost_filter = Column(Boolean, default=False)
+    potential_coinfection = Column(Boolean, default=False)
+
     covigator_accessor_version = Column(String)
     covigator_processor_version = Column(String)
 
