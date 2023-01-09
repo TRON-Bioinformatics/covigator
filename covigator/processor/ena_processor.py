@@ -1,31 +1,25 @@
 import json
 from datetime import datetime
-
 import pandas as pd
-
 import covigator
 from covigator.configuration import Configuration
 from covigator.database.queries import Queries
 from covigator.exceptions import CovigatorErrorProcessingCoverageResults, CovigatorExcludedSampleBadQualityReads, \
-    CovigatorExcludedSampleNarrowCoverage, \
-    CovigatorErrorProcessingDeduplicationResults
-from covigator.misc import backoff_retrier
+    CovigatorExcludedSampleNarrowCoverage
 from covigator.database.model import JobStatus, DataSource, SampleEna
 from covigator.database.database import Database
 from logzero import logger
 from dask.distributed import Client
 from covigator.processor.abstract_processor import AbstractProcessor
-from covigator.pipeline.downloader import Downloader
 from covigator.pipeline.ena_pipeline import Pipeline
 from covigator.pipeline.vcf_loader import VcfLoader
 
 
 class EnaProcessor(AbstractProcessor):
 
-    def __init__(self, database: Database, dask_client: Client, config: Configuration, download : bool = False,
-                 wait_time=60):
+    def __init__(self, database: Database, dask_client: Client, config: Configuration, wait_time=60):
         logger.info("Initialising ENA processor")
-        super().__init__(database, dask_client, DataSource.ENA, config, download=download, wait_time=wait_time)
+        super().__init__(database, dask_client, DataSource.ENA, config, wait_time=wait_time)
 
     def _process_run(self, run_accession: str):
         """
@@ -44,20 +38,8 @@ class EnaProcessor(AbstractProcessor):
 
     @staticmethod
     def run_all(sample: SampleEna, queries: Queries, config: Configuration) -> SampleEna:
-        sample = EnaProcessor.download(sample=sample, queries=queries, config=config)
         sample = EnaProcessor.run_pipeline(sample=sample, queries=queries, config=config)
         sample = EnaProcessor.load(sample=sample, queries=queries, config=config)
-        return sample
-
-    @staticmethod
-    def download(sample: SampleEna, queries: Queries, config: Configuration) -> SampleEna:
-        # ensures that the download is done with retries, even after MD5 check sum failure
-        downloader = Downloader(config=config)
-        download_with_retries = backoff_retrier.wrapper(downloader.download, config.retries_download)
-        paths = download_with_retries(sample_ena=sample)
-        sample.sample_folder = sample.get_sample_folder(config.storage_folder)
-        sample.fastq_path = paths
-        sample.downloaded_at = datetime.now()
         return sample
 
     @staticmethod
@@ -79,7 +61,6 @@ class EnaProcessor(AbstractProcessor):
         sample.fastp_path = pipeline_result.fastp_qc
         sample.horizontal_coverage_path = pipeline_result.horizontal_coverage
         sample.vertical_coverage_path = pipeline_result.vertical_coverage
-        sample.deduplication_metrics_path = pipeline_result.deduplication_metrics
 
         # stores the covigator version
         sample.covigator_processor_version = covigator.VERSION
@@ -88,52 +69,12 @@ class EnaProcessor(AbstractProcessor):
         sample.qc = json.load(open(pipeline_result.fastp_qc))
         # load horizontal coverage values in the database
         sample = EnaProcessor.load_coverage_results(sample)
-        # load deduplication metrics
-        sample = EnaProcessor.load_deduplication_metrics(sample)
         # load pangolin results
         sample = EnaProcessor.load_pangolin(sample=sample, path=sample.lofreq_pangolin_path)
 
-        return sample
-
-    @staticmethod
-    def load_deduplication_metrics(sample: SampleEna) -> SampleEna:
-        try:
-            data = pd.read_csv(sample.deduplication_metrics_path,
-                               sep="\t",
-                               skiprows=6,
-                               nrows=1,
-                               dtype={
-                                   'PERCENT_DUPLICATION': float,
-                                   'UNPAIRED_READS_EXAMINED': int,
-                                   'READ_PAIRS_EXAMINED': int,
-                                   'SECONDARY_OR_SUPPLEMENTARY_RDS': int,
-                                   'UNMAPPED_READS': int,
-                                   'UNPAIRED_READ_DUPLICATES': int,
-                                   'READ_PAIR_DUPLICATES': int,
-                                   'READ_PAIR_OPTICAL_DUPLICATES': int
-                               })
-
-            # fill NA values on a per column basis...
-            data.PERCENT_DUPLICATION.fillna(value=0.0, inplace=True)
-            data.UNPAIRED_READS_EXAMINED.fillna(value=0, inplace=True)
-            data.READ_PAIRS_EXAMINED.fillna(value=0, inplace=True)
-            data.SECONDARY_OR_SUPPLEMENTARY_RDS.fillna(value=0, inplace=True)
-            data.UNMAPPED_READS.fillna(value=0, inplace=True)
-            data.UNPAIRED_READ_DUPLICATES.fillna(value=0, inplace=True)
-            data.READ_PAIR_DUPLICATES.fillna(value=0, inplace=True)
-            data.READ_PAIR_OPTICAL_DUPLICATES.fillna(value=0, inplace=True)
-
-            sample.percent_duplication = data.PERCENT_DUPLICATION.loc[0]
-            # NOTE: SQLalchemy does not play well with int64
-            sample.unpaired_reads_examined = int(data.UNPAIRED_READS_EXAMINED.loc[0])
-            sample.read_pairs_examined = int(data.READ_PAIRS_EXAMINED.loc[0])
-            sample.secondary_or_supplementary_reads = int(data.SECONDARY_OR_SUPPLEMENTARY_RDS.loc[0])
-            sample.unmapped_reads = int(data.UNMAPPED_READS.loc[0])
-            sample.unpaired_read_duplicates = int(data.UNPAIRED_READ_DUPLICATES.loc[0])
-            sample.read_pair_duplicates = int(data.READ_PAIR_DUPLICATES.loc[0])
-            sample.read_pair_optical_duplicates = int(data.READ_PAIR_OPTICAL_DUPLICATES.loc[0])
-        except Exception as e:
-            raise CovigatorErrorProcessingDeduplicationResults(e)
+        # NOTE: this is a counterintuititve commit. The VCF loading happening after this may do a legitimate rollback
+        # but we don't want to rollback changes in the sample, hence this commit
+        queries.session.commit()
 
         return sample
 

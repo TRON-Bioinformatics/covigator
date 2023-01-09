@@ -4,7 +4,7 @@ from covigator.dashboard.tabs.recurrent_mutations import BIN_SIZE_VALUES
 from covigator.database.model import PrecomputedVariantsPerSample, PrecomputedSubstitutionsCounts, \
     PrecomputedIndelLength, PrecomputedAnnotation, VariantObservation, DataSource, \
     PrecomputedTableCounts, Variant, SubclonalVariantObservation, PrecomputedVariantAbundanceHistogram, \
-    SampleEna
+    SampleEna, VariantCovid19Portal, VariantObservationCovid19Portal, SampleCovid19Portal
 from logzero import logger
 
 from covigator.database.queries import Queries
@@ -47,14 +47,16 @@ class PrecomputationsLoader:
 
         # reads the data from the database
         database_rows_ena = self._read_count_variants_per_sample(data_source=DataSource.ENA)
+        database_rows_portal = self._read_count_variants_per_sample(data_source=DataSource.COVID19_PORTAL)
 
         # delete all rows before starting
         self.session.query(PrecomputedVariantsPerSample).delete()
         self.session.commit()
 
-        self.session.add_all(database_rows_ena)
+        self.session.add_all(database_rows_ena + database_rows_portal)
         self.session.commit()
-        logger.info("Added {} entries to {}".format(len(database_rows_ena), PrecomputedVariantsPerSample.__tablename__))
+        logger.info("Added {} entries to {}".format(len(database_rows_ena) + len(database_rows_portal),
+                                                    PrecomputedVariantsPerSample.__tablename__))
 
     def _read_count_variants_per_sample(self, data_source: DataSource):
 
@@ -96,14 +98,15 @@ class PrecomputationsLoader:
     def load_count_substitutions(self):
 
         database_rows_ena = self._read_count_substitutions(data_source=DataSource.ENA)
+        database_rows_portal = self._read_count_substitutions(data_source=DataSource.COVID19_PORTAL)
 
         # delete all rows before starting
         self.session.query(PrecomputedSubstitutionsCounts).delete()
         self.session.commit()
 
-        self.session.add_all(database_rows_ena)
+        self.session.add_all(database_rows_ena + database_rows_portal)
         self.session.commit()
-        logger.info("Added {} entries to {}".format(len(database_rows_ena),
+        logger.info("Added {} entries to {}".format(len(database_rows_ena) + len(database_rows_portal),
                                                     PrecomputedSubstitutionsCounts.__tablename__))
 
     def _read_count_substitutions(self, data_source: DataSource):
@@ -150,14 +153,15 @@ class PrecomputationsLoader:
     def load_indel_length(self):
 
         database_rows_ena = self._read_indel_length(data_source=DataSource.ENA)
+        database_rows_portal = self._read_indel_length(data_source=DataSource.COVID19_PORTAL)
 
         # delete all rows before starting
         self.session.query(PrecomputedIndelLength).delete()
         self.session.commit()
 
-        self.session.add_all(database_rows_ena)
+        self.session.add_all(database_rows_ena + database_rows_portal)
         self.session.commit()
-        logger.info("Added {} entries to {}".format(len(database_rows_ena),
+        logger.info("Added {} entries to {}".format(len(database_rows_ena) + len(database_rows_portal),
                                                     PrecomputedIndelLength.__tablename__))
 
     def _read_indel_length(self, data_source: DataSource):
@@ -202,14 +206,16 @@ class PrecomputationsLoader:
     def load_annotation(self):
 
         database_rows_ena = self._read_annotations(data_source=DataSource.ENA)
+        database_rows_portal = self._read_annotations(data_source=DataSource.COVID19_PORTAL)
 
         # delete all rows before starting
         self.session.query(PrecomputedAnnotation).delete()
         self.session.commit()
 
-        self.session.add_all(database_rows_ena)
+        self.session.add_all(database_rows_ena + database_rows_portal)
         self.session.commit()
-        logger.info("Added {} entries to {}".format(len(database_rows_ena), PrecomputedAnnotation.__tablename__))
+        logger.info("Added {} entries to {}".format(len(database_rows_ena) + len(database_rows_portal),
+                                                    PrecomputedAnnotation.__tablename__))
 
     def _read_annotations(self, data_source: DataSource):
 
@@ -253,13 +259,18 @@ class PrecomputationsLoader:
     def load_table_counts(self):
 
         count_variants_ena = self.queries.count_variants(cache=False, source=DataSource.ENA.name)
+        count_variants_portal = self.queries.count_variants(cache=False, source=DataSource.COVID19_PORTAL.name)
         count_samples_ena = self.queries.count_samples(source=DataSource.ENA.name, cache=False)
+        count_samples_portal = self.queries.count_samples(source=DataSource.COVID19_PORTAL.name, cache=False)
         count_variant_observations_ena = self.queries.count_variant_observations(
             source=DataSource.ENA.name, cache=False)
+        count_variant_observations_portal = self.queries.count_variant_observations(
+            source=DataSource.COVID19_PORTAL.name, cache=False)
         count_subclonal_variant_observations = self.queries.count_subclonal_variant_observations(cache=False)
         count_subclonal_variant_unique = self.queries.count_unique_subclonal_variant(cache=False)
         count_subclonal_variant_unique_only_subclonal = self.queries.count_unique_only_subclonal_variant(cache=False)
         count_countries_ena = self.queries.count_countries(source=DataSource.ENA.name, cache=False)
+        count_countries_portal = self.queries.count_countries(source=DataSource.COVID19_PORTAL.name, cache=False)
 
         # delete all rows before starting
         self.session.query(PrecomputedTableCounts).delete()
@@ -270,8 +281,14 @@ class PrecomputationsLoader:
                 table=Variant.__name__, count=count_variants_ena,
                 factor=PrecomputedTableCounts.FACTOR_SOURCE, value=DataSource.ENA.name),
             PrecomputedTableCounts(
+                table=VariantCovid19Portal.__name__, count=count_variants_portal,
+                factor=PrecomputedTableCounts.FACTOR_SOURCE, value=DataSource.COVID19_PORTAL.name),
+            PrecomputedTableCounts(
                 table=VariantObservation.__name__, count=count_variant_observations_ena,
                 factor=PrecomputedTableCounts.FACTOR_SOURCE, value=DataSource.ENA.name),
+            PrecomputedTableCounts(
+                table=VariantObservationCovid19Portal.__name__, count=count_variant_observations_portal,
+                factor=PrecomputedTableCounts.FACTOR_SOURCE, value=DataSource.COVID19_PORTAL.name),
             PrecomputedTableCounts(
                 table=SubclonalVariantObservation.__name__, count=count_subclonal_variant_observations),
             PrecomputedTableCounts(
@@ -283,8 +300,14 @@ class PrecomputationsLoader:
                 table=SampleEna.__name__, count=count_samples_ena,
                 factor=PrecomputedTableCounts.FACTOR_SOURCE, value=DataSource.ENA.name),
             PrecomputedTableCounts(
+                table=SampleCovid19Portal.__name__, count=count_samples_portal,
+                factor=PrecomputedTableCounts.FACTOR_SOURCE, value=DataSource.COVID19_PORTAL.name),
+            PrecomputedTableCounts(
                 table=PrecomputedTableCounts.VIRTUAL_TABLE_COUNTRY, count=count_countries_ena,
                 factor=PrecomputedTableCounts.FACTOR_SOURCE, value=DataSource.ENA.name),
+            PrecomputedTableCounts(
+                table=PrecomputedTableCounts.VIRTUAL_TABLE_COUNTRY, count=count_countries_portal,
+                factor=PrecomputedTableCounts.FACTOR_SOURCE, value=DataSource.COVID19_PORTAL.name),
         ]
 
         if len(database_rows) > 0:
@@ -314,6 +337,13 @@ class PrecomputationsLoader:
             if histogram is not None:
                 histogram["bin_size"] = bin_size
                 histogram["source"] = DataSource.ENA
+                histograms.append(histogram)
+        for bin_size in BIN_SIZE_VALUES:
+            histogram = self.queries.get_variant_abundance_histogram(
+                bin_size=bin_size, source=DataSource.COVID19_PORTAL.name, cache=False)
+            if histogram is not None:
+                histogram["bin_size"] = bin_size
+                histogram["source"] = DataSource.COVID19_PORTAL
                 histograms.append(histogram)
         database_rows = []
         if len(histograms) > 0:

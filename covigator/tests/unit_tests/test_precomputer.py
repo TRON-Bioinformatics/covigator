@@ -3,7 +3,7 @@ from sqlalchemy import and_, func
 
 from covigator.database.model import PrecomputedSynonymousNonSynonymousCounts, RegionType, DataSource, \
     PrecomputedOccurrence, PrecomputedVariantsPerSample, PrecomputedSubstitutionsCounts, PrecomputedIndelLength, \
-    PrecomputedAnnotation, PrecomputedVariantAbundanceHistogram, PrecomputedVariantsPerLineage, VariantCooccurrence
+    PrecomputedAnnotation, PrecomputedVariantAbundanceHistogram, PrecomputedVariantsPerLineage
 from covigator.precomputations.load_cooccurrences import CooccurrenceMatrixLoader
 from covigator.precomputations.load_ns_s_counts import NsSCountsLoader
 from covigator.precomputations.load_top_occurrences import TopOccurrencesLoader
@@ -16,14 +16,11 @@ from covigator.tests.unit_tests.mocked import mock_samples_and_variants, MOCKED_
 class TestPrecomputer(AbstractTest):
 
     def setUp(self) -> None:
-        mock_samples_and_variants(session=self.session, faker=self.faker, num_samples=100)
-        self.ns_counts_loader = NsSCountsLoader(session=self.session)
-        self.top_occurrences_loader = TopOccurrencesLoader(session=self.session)
+        mock_samples_and_variants(session=self.session, faker=self.faker, num_samples=100, source=DataSource.ENA)
         self.precomputations_loader = PrecomputationsLoader(session=self.session)
-        self.precomputations_lineage = VariantsPerLineageLoader(session=self.session)
 
     def test_load_dn_ds(self):
-        self.ns_counts_loader.load()
+        NsSCountsLoader(session=self.session).load()
         for g in MOCKED_GENES:
             self.assertGreater(
                 self.session.query(PrecomputedSynonymousNonSynonymousCounts).filter(
@@ -79,10 +76,10 @@ class TestPrecomputer(AbstractTest):
                          PrecomputedSynonymousNonSynonymousCounts.region_name == d)).count(),
                 0)
 
-    def test_load_table_counts(self):
+    def test_load_top_occurrent_mutations(self):
         self.assertEqual(self.session.query(PrecomputedOccurrence).count(), 0)
         self.precomputations_loader.load_table_counts()     # table counts precomputations are needed
-        self.top_occurrences_loader.load()
+        TopOccurrencesLoader(session=self.session).load()
         self.assertGreater(self.session.query(PrecomputedOccurrence).count(), 0)
         for g in MOCKED_GENES:
             occurrences = self.session.query(PrecomputedOccurrence).filter(PrecomputedOccurrence.gene_name == g).all()
@@ -90,6 +87,7 @@ class TestPrecomputer(AbstractTest):
             for o in occurrences:
                 self.assertGreater(o.total, 0)
                 self.assertGreater(o.frequency, 0.0)
+                self.assertLessEqual(o.frequency, 1.0)
                 self.assertIsNotNone(o.variant_id)
                 self.assertIsNotNone(o.gene_name)
                 self.assertIsNotNone(o.domain)
@@ -154,7 +152,7 @@ class TestPrecomputer(AbstractTest):
 
     def test_load_variants_per_lineage(self):
         self.assertEqual(self.session.query(PrecomputedVariantsPerLineage).count(), 0)
-        self.precomputations_lineage.load()
+        VariantsPerLineageLoader(session=self.session).load()
         self.assertGreater(self.session.query(PrecomputedVariantsPerLineage).count(), 0)
         for p in self.session.query(PrecomputedVariantsPerLineage).all():
             self.assertGreater(p.count_observations, 0)

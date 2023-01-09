@@ -1,30 +1,25 @@
-from datetime import date, datetime
+from datetime import datetime
 from json import JSONDecodeError
-
-import requests
 from requests import Response
 from sqlalchemy.orm import Session
-
 import covigator
-from covigator.accessor import MINIMUM_DATE
+from covigator.accessor.abstract_accessor import AbstractAccessor, _parse_abstract
 from covigator.exceptions import CovigatorExcludedSampleTooEarlyDateException
-from covigator.misc import backoff_retrier
 from covigator.database.model import SampleEna, DataSource, Log, CovigatorModule
 from covigator.database.database import Database
 from logzero import logger
-from covigator.misc.country_parser import CountryParser
 
-NUMBER_RETRIES = 5
 BATCH_SIZE = 1000
 
 
-class EnaAccessor:
+class EnaAccessor(AbstractAccessor):
 
     ENA_API_URL_BASE = "https://www.ebi.ac.uk/ena/portal/api"
     # see https://www.ebi.ac.uk/ena/portal/api/returnFields?result=read_run&format=json for all possible fields
     ENA_FIELDS = [
         # data on run
         "scientific_name",
+        "sample_accession",
         "study_accession",
         "experiment_accession",
         "first_created",
@@ -64,6 +59,8 @@ class EnaAccessor:
     ]
 
     def __init__(self, tax_id: str, host_tax_id: str, database: Database, maximum=None):
+
+        super().__init__()
         logger.info("Initialising ENA accessor")
         self.start_time = datetime.now()
         self.has_error = False
@@ -86,10 +83,6 @@ class EnaAccessor:
         self.included = 0
         self.excluded = 0
         self.excluded_by_date = 0
-        self.country_parser = CountryParser()
-
-        # this ensures there is a retry mechanism in place with a limited number of retries
-        self.get_with_retries = backoff_retrier.wrapper(requests.get, NUMBER_RETRIES)
 
     def access(self):
         logger.info("Starting ENA accessor")
@@ -163,22 +156,6 @@ class EnaAccessor:
             logger.info("Added {} new ENA samples".format(len(included_samples)))
         logger.info("Processed {} ENA samples".format(len(list_runs)))
 
-    def _parse_country(self, sample: SampleEna):
-        parsed_country = self.country_parser.parse_country(
-            sample.country.split(":")[0] if sample.country else "")
-        sample.country_raw = sample.country
-        sample.country = parsed_country.country
-        sample.country_alpha_2 = parsed_country.country_alpha_2
-        sample.country_alpha_3 = parsed_country.country_alpha_3
-        sample.continent_alpha_2 = parsed_country.continent_alpha_2
-        sample.continent = parsed_country.continent
-
-    def _parse_dates(self, ena_run):
-        ena_run.collection_date = self._parse_abstract(ena_run.collection_date, date.fromisoformat)
-        ena_run.first_created = self._parse_abstract(ena_run.first_created, date.fromisoformat)
-        if ena_run.collection_date is not None and ena_run.collection_date < MINIMUM_DATE:
-            raise CovigatorExcludedSampleTooEarlyDateException
-
     def _parse_ena_run(self, run):
         sample = SampleEna(**run)
         self._parse_country(sample)
@@ -191,18 +168,11 @@ class EnaAccessor:
         return sample
 
     def _parse_numeric_fields(self, ena_run):
-        ena_run.nominal_length = self._parse_abstract(ena_run.nominal_length, int)
-        ena_run.read_count = self._parse_abstract(ena_run.read_count, int)
-        ena_run.base_count = self._parse_abstract(ena_run.base_count, int)
-        ena_run.lat = self._parse_abstract(ena_run.lat, float)
-        ena_run.lon = self._parse_abstract(ena_run.lon, float)
-
-    def _parse_abstract(self, value, type):
-        try:
-            value = type(value)
-        except (ValueError, TypeError):
-            value = None
-        return value
+        ena_run.nominal_length = _parse_abstract(ena_run.nominal_length, int)
+        ena_run.read_count = _parse_abstract(ena_run.read_count, int)
+        ena_run.base_count = _parse_abstract(ena_run.base_count, int)
+        ena_run.lat = _parse_abstract(ena_run.lat, float)
+        ena_run.lon = _parse_abstract(ena_run.lon, float)
 
     def _complies_with_inclusion_criteria(self, ena_run: dict):
         # NOTE: this uses the original dictionary instead of the parsed SampleEna class for performance reasons

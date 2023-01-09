@@ -1,6 +1,4 @@
 from unittest import TestCase
-
-from covigator.configuration import Configuration
 from covigator.references.gene_annotations import GeneAnnotationsLoader
 
 

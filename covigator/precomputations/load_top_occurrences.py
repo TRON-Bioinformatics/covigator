@@ -1,13 +1,29 @@
 import pandas as pd
 from logzero import logger
-from sqlalchemy import func, desc
+from sqlalchemy import func, desc, and_
 from sqlalchemy.orm import Session
 from covigator import SYNONYMOUS_VARIANT
-from covigator.database.model import DataSource, PrecomputedOccurrence
+from covigator.database.model import DataSource, PrecomputedOccurrence, JobStatus
 from covigator.database.queries import Queries
 
 
 NUMBER_TOP_OCCURRENCES = 1000
+
+
+def _row_to_top_occurrence(row, source):
+    return PrecomputedOccurrence(
+        total=row["total"],
+        frequency=row["frequency"],
+        variant_id=row["variant_id"],
+        hgvs_p=row["hgvs_p"],
+        gene_name=row["gene_name"],
+        domain=row["pfam_name"],
+        annotation=row["annotation_highest_impact"],
+        source=source,
+        month=row["month"],
+        count=row["count"],
+        frequency_by_month=row["frequency_by_month"],
+    )
 
 
 class TopOccurrencesLoader:
@@ -38,35 +54,33 @@ class TopOccurrencesLoader:
         except ValueError as e:
             logger.exception(e)
             logger.error("No top occurrences for ENA data")
+        top_occurring_variants_portal = None
+        try:
+            top_occurring_variants_portal = self.get_top_occurring_variants(
+                top=NUMBER_TOP_OCCURRENCES, source=DataSource.COVID19_PORTAL.name)
+        except ValueError:
+            logger.error("No top occurrences for GISAID data")
         database_rows = []
         # stores the precomputed data
         if top_occurring_variants_ena is not None:
-            for index, row in top_occurring_variants_ena.iterrows():
+            for _, row in top_occurring_variants_ena.iterrows():
                 # add entries per gene
-                database_rows.append(self._row_to_top_occurrence(row, source=DataSource.ENA))
+                database_rows.append(_row_to_top_occurrence(row, source=DataSource.ENA))
+        if top_occurring_variants_portal is not None:
+            for _, row in top_occurring_variants_portal.iterrows():
+                # add entries per gene
+                database_rows.append(_row_to_top_occurrence(row, source=DataSource.COVID19_PORTAL))
         return database_rows
 
-    def _row_to_top_occurrence(self, row, source):
-        return PrecomputedOccurrence(
-            total=row["total"],
-            frequency=row["frequency"],
-            variant_id=row["variant_id"],
-            hgvs_p=row["hgvs_p"],
-            gene_name=row["gene_name"],
-            domain=row["pfam_name"],
-            annotation=row["annotation_highest_impact"],
-            source=source,
-            month=row["month"],
-            count=row["count"],
-            frequency_by_month=row["frequency_by_month"],
-        )
-
     def get_top_occurring_variants(self, top, source: str):
+        sample_klass = self.queries.get_sample_klass(source=source)
+        subquery = self.session.query(sample_klass.run_accession).filter(sample_klass.status == JobStatus.FINISHED)
+
         klass = self.queries.get_variant_observation_klass(source)
         query = self.session.query(
             klass.variant_id, klass.hgvs_p, klass.gene_name, klass.pfam_name,
             klass.annotation_highest_impact, func.count().label('total')) \
-            .filter(klass.annotation_highest_impact != SYNONYMOUS_VARIANT)
+            .filter(and_(klass.annotation_highest_impact != SYNONYMOUS_VARIANT, klass.sample.in_(subquery)))
         query = query.group_by(klass.variant_id, klass.hgvs_p, klass.gene_name,
                       klass.pfam_name, klass.annotation_highest_impact) \
             .order_by(desc('total')).limit(top)

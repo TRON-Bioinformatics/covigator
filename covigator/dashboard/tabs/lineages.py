@@ -14,6 +14,7 @@ ID_APPLY_BUTTOM = 'lineages-apply-buttom'
 ID_DROPDOWN_DATA_SOURCE = "lineages-dropdown-data-source"
 ID_DROPDOWN_COUNTRY = 'lineages-dropdown-country'
 ID_DROPDOWN_LINEAGE = 'lineages-dropdown-lineage'
+ID_DROPDOWN_PERIOD = 'lineages-dropdown-period'
 ID_LINEAGES_GRAPH = 'lineages-graph'
 ID_LINEAGES_TABLE = 'lineages-table'
 
@@ -84,6 +85,14 @@ def get_lineages_tab_left_bar(queries: Queries, data_source: DataSource):
                 multi=True
             ),
             html.Br(),
+            dcc.Markdown("""Select time period for smoothing"""),
+            dcc.Dropdown(
+                id=ID_DROPDOWN_PERIOD,
+                options=[{'label': '{} days'.format(c), 'value': c} for c in range(1, 32)] + [{'label': 'Disable', 'value': False}],
+                value=14,
+                multi=False
+            ),
+            html.Br(),
             html.P("Select a single lineage to explore its corresponding mutations."),
             html.Button('Apply', id=ID_APPLY_BUTTOM),
         ])
@@ -94,6 +103,39 @@ def set_callbacks_lineages_tab(app, session: Session):
     queries = Queries(session=session)
     figures = LineageFigures(queries)
 
+    countries_ena = queries.get_countries(DataSource.ENA.name)
+    countries_covid19_portal = queries.get_countries(DataSource.COVID19_PORTAL.name)
+    lineages_ena = queries.get_lineages(DataSource.ENA.name)
+    lineages_covid19_portal = queries.get_lineages(DataSource.COVID19_PORTAL.name)
+
+    @app.callback(
+        Output(ID_DROPDOWN_COUNTRY, 'options'),
+        Input(ID_DROPDOWN_DATA_SOURCE, 'value'))
+    def set_countries(source):
+        """
+        Updates the country drop down list when the data source is changed
+        """
+        countries = []
+        if source == DataSource.ENA.name:
+            countries = [{'label': c, 'value': c} for c in countries_ena]
+        elif source == DataSource.COVID19_PORTAL.name:
+            countries = [{'label': c, 'value': c} for c in countries_covid19_portal]
+        return countries
+
+    @app.callback(
+        Output(ID_DROPDOWN_LINEAGE, 'options'),
+        Input(ID_DROPDOWN_DATA_SOURCE, 'value'))
+    def set_lineages(source):
+        """
+        Updates the country drop down list when the data source is changed
+        """
+        lineages = []
+        if source == DataSource.ENA.name:
+            lineages = [{'label': c, 'value': c} for c in lineages_ena]
+        elif source == DataSource.COVID19_PORTAL.name:
+            lineages = [{'label': c, 'value': c} for c in lineages_covid19_portal]
+        return lineages
+
     @app.callback(
         Output(ID_LINEAGES_GRAPH, 'children'),
         inputs=[Input(ID_APPLY_BUTTOM, 'n_clicks')],
@@ -101,14 +143,15 @@ def set_callbacks_lineages_tab(app, session: Session):
             State(ID_DROPDOWN_DATA_SOURCE, 'value'),
             State(ID_DROPDOWN_COUNTRY, 'value'),
             State(ID_DROPDOWN_LINEAGE, 'value'),
+            State(ID_DROPDOWN_PERIOD, 'value'),
         ],
-        suppress_callback_exceptions=True
-    )
-    def update_lineages_plot(_, data_source, countries, lineages):
+        suppress_callback_exceptions=True)
+    def update_lineages_plot(_, data_source, countries, lineages, time_period):
         return html.Div(children=figures.get_lineages_plot(
             data_source=data_source,
             countries=countries,
-            lineages=lineages))
+            lineages=lineages,
+            time_period=time_period))
 
     @app.callback(
         Output(ID_LINEAGES_TABLE, 'children'),
@@ -118,8 +161,7 @@ def set_callbacks_lineages_tab(app, session: Session):
             State(ID_DROPDOWN_COUNTRY, 'value'),
             State(ID_DROPDOWN_LINEAGE, 'value'),
         ],
-        suppress_callback_exceptions=True
-    )
+        suppress_callback_exceptions=True)
     def update_lineages_table(_, data_source, countries, lineages):
         return html.Div(children=figures.get_lineages_variants_table(
             data_source=data_source, lineages=lineages, countries=countries))

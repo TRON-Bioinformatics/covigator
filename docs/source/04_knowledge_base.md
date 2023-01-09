@@ -9,8 +9,9 @@
 [![Powered by NumFOCUS](https://img.shields.io/badge/powered%20by-Dash-orange.svg?style=flat&colorA=E1523D&colorB=007D8A)](https://dash.plotly.com/)
 [![License](https://img.shields.io/badge/license-MIT-green)](https://opensource.org/licenses/MIT)
 
+
 The Covigator knowledge base holds all the results that are shown in the dashboard.
-It is responsible for orchestrating the update of data from ENA into the final results.
+It is responsible for orchestrating the update of data from ENA and the COVID-19 Data Portal into the final results.
 It acts as the backend for all of CoVigator.
 
 Here we describe what the knowledge base is in charge of and how to operate it.
@@ -28,7 +29,7 @@ Here we describe what the knowledge base is in charge of and how to operate it.
 
 The CoVigator knowledge base has several components:
 
-* **Accessor**. The process in charge of fetching raw data from ENA and store it in the database.
+* **Accessor**. The process in charge of fetching raw data from ENA and the COVID-19 Data Portal store it in the database.
 * **Processor**. The process in charge of processing the raw data through the pipeline and storing the results.
 * **Database**. The database where raw data and results are stored.
 
@@ -36,8 +37,10 @@ CoVigator interacts with other systems not part of CoVigator per se:
 
 * **High Performance Computing (HPC) cluster**. The computational resources where the processing of data actually happens. 
   CoVigator can run without this, but it is required in order to scale out processing to multiple servers.
-* **European Nucleotide Archive (ENA) Application Programming Interface (API)**. The accessor queries the ENA API to fetch 
-  new samples periodically. This process can be fully automated.
+* **European Nucleotide Archive (ENA) and COVID-19 Data Portal Application Programming Interfaces (APIs)**. The accessor 
+queries each of the APIs to fetch new samples periodically.
+
+Both accessor and processor are automated to run periodically.
 
 ![CoVigator system design](_static/figures/system_design.drawio.png)
 
@@ -110,6 +113,9 @@ CoVigator is configured through environment variables.
 
 ### Accessor
 
+
+#### ENA
+
 `covigator-ena-accessor --tax-id 2697049 --host-tax-id 9606`
 
 - The organism taxonomic identifier (eg: for SARS-CoV-2 the taxonomic identifier is 2697049)
@@ -121,6 +127,12 @@ An additional step to download samples is required. This has been removed from t
 distributed downloading does not scale up as well as processing does.
 
 `covigator-download`
+
+#### COVID-19 Data Portal
+
+`covigator-covid19portal-accessor`
+
+No parameters are required
 
 ### Processor
 
@@ -136,6 +148,7 @@ The happy path of a job is the following:
 - `FINISHED`: final state
   
 There are two self-descriptive failure states
+- `FAILED_DOWNLOAD`
 - `FAILED_PROCESSING`
 - `EXCLUDED`
 
@@ -147,7 +160,7 @@ Also, it can run on a single computer without any cluster by specifiying the num
 
 
 ```
-covigator-processor
+covigator-processor  --source ENA|COVID19_PORTAL
 ```
 
 **Parameters**
@@ -163,13 +176,24 @@ covigator-dashboard
 
 ## Sample exclusion criteria
 
-Exclusion criteria:
+Exclusion criteria common to ENA and COVID-19 Data Portal:
 1. Non human host. All samples with a non human host are excluded
 2. Collection date prior to December 2019
 3. Horizontal genome coverage below 20%
-4. Non Illumina samples. Notice that this excludes all of Nanopore sequencing data. 
+
+Exclusion criteria for ENA samples:
+1. Non Illumina samples. Notice that this excludes all of Nanopore sequencing data. 
 This may change in the future.
-5. Only WGA, WGS and targeted sequencing samples. Other library strategies such as RNA-seq are excluded.
-6. Missing URL to raw FASTQ data
-7. Mean mapping quality below 10
-8. Mean base call quality below 10
+2. Only WGA, WGS and targeted sequencing samples. Other library strategies such as RNA-seq are excluded.
+3. Missing URL to raw FASTQ data
+4. Mean mapping quality below 10
+5. Mean base call quality below 10
+
+Exclusion criteria for COVID-19 Data Portal samples:
+1. Ratio of ambiguous bases (ie: N and other ambiguous IUPAC codes) greater than 0.2
+
+
+
+
+
+

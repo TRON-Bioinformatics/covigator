@@ -1,9 +1,9 @@
 from datetime import date, datetime
-from typing import List, Union
+from typing import List, Union, Tuple
 import pandas as pd
 from logzero import logger
 import sqlalchemy
-from sqlalchemy import and_, desc, asc, func, String, DateTime
+from sqlalchemy import and_, desc, asc, func, String, DateTime, text
 from sqlalchemy.engine.default import DefaultDialect
 from sqlalchemy.orm import Session, aliased
 from sqlalchemy.sql.sqltypes import NullType
@@ -13,7 +13,7 @@ from covigator.database.model import DataSource, SampleEna, JobStatus, \
     SubclonalVariantObservation, PrecomputedVariantsPerSample, PrecomputedSubstitutionsCounts, PrecomputedIndelLength, \
     VariantType, PrecomputedAnnotation, PrecomputedOccurrence, PrecomputedTableCounts, \
     PrecomputedVariantAbundanceHistogram, PrecomputedSynonymousNonSynonymousCounts, RegionType, Domain, \
-    LastUpdate
+    LastUpdate, SampleCovid19Portal, VariantObservationCovid19Portal, VariantCovid19Portal
 from covigator.exceptions import CovigatorQueryException, CovigatorDashboardMissingPrecomputedData
 
 
@@ -26,6 +26,8 @@ class Queries:
     def get_variant_observation_klass(source: str):
         if source == DataSource.ENA.name:
             klass = VariantObservation
+        elif source == DataSource.COVID19_PORTAL.name:
+            klass = VariantObservationCovid19Portal
         else:
             raise CovigatorQueryException("Bad data source: {}".format(source))
         return klass
@@ -34,6 +36,8 @@ class Queries:
     def get_variant_klass(source: str):
         if source == DataSource.ENA.name:
             klass = Variant
+        elif source == DataSource.COVID19_PORTAL.name:
+            klass = VariantCovid19Portal
         else:
             raise CovigatorQueryException("Bad data source: {}".format(source))
         return klass
@@ -42,6 +46,8 @@ class Queries:
     def get_sample_klass(source: str):
         if source == DataSource.ENA.name:
             klass = SampleEna
+        elif source == DataSource.COVID19_PORTAL.name:
+            klass = SampleCovid19Portal
         else:
             raise CovigatorQueryException("Bad data source: {}".format(source))
         return klass
@@ -64,7 +70,7 @@ class Queries:
         klass = self.get_sample_klass(source=data_source.name)
         return self.session.query(klass).filter(klass.run_accession == run_accession).first()
 
-    def find_first_by_status(self, data_source: DataSource, status, n=100) -> List[Union[SampleEna]]:
+    def find_first_by_status(self, data_source: DataSource, status: Tuple, n=100) -> List[Union[SampleEna]]:
         klass = self.get_sample_klass(source=data_source.name)
         return self.session.query(klass) \
             .filter(klass.status.in_(status)) \
@@ -73,11 +79,11 @@ class Queries:
             .all()
 
     def find_first_pending_jobs(
-            self, data_source: DataSource, n=100, status: List = [JobStatus.DOWNLOADED]) -> List[Union[SampleEna]]:
+            self, data_source: DataSource, n=100, status: Tuple = (JobStatus.DOWNLOADED, )) -> List[Union[SampleEna]]:
         return self.find_first_by_status(data_source=data_source, status=status, n=n)
 
     def find_first_jobs_to_download(self, data_source: DataSource, n=100) -> List[Union[SampleEna]]:
-        return self.find_first_by_status(data_source=data_source, status=[JobStatus.PENDING], n=n)
+        return self.find_first_by_status(data_source=data_source, status=(JobStatus.PENDING, ), n=n)
 
     def count_jobs_in_queue(self, data_source):
         return self.count_jobs_by_status(data_source=data_source, status=JobStatus.QUEUED)
@@ -123,7 +129,7 @@ class Queries:
             .groupby(["number_mutations", "variant_type"]).sum().reset_index()
 
     def _assert_data_source(self, data_source):
-        if data_source != DataSource.ENA.name and data_source != DataSource.GISAID.name:
+        if data_source != DataSource.ENA.name and data_source != DataSource.COVID19_PORTAL.name:
             raise CovigatorQueryException("Bad data source:  {}".format(data_source))
 
     def get_indel_lengths(self, data_source, genes):
@@ -336,6 +342,13 @@ class Queries:
                     PrecomputedTableCounts.table == SampleEna.__name__,
                     PrecomputedTableCounts.factor == PrecomputedTableCounts.FACTOR_SOURCE
                 ))
+            elif source == DataSource.COVID19_PORTAL.name:
+                query = query.filter(and_(
+                    PrecomputedTableCounts.table == SampleCovid19Portal.__name__,
+                    PrecomputedTableCounts.factor == PrecomputedTableCounts.FACTOR_SOURCE
+                ))
+            else:
+                raise ValueError("Unknown data source")
             result = query.first()
             if result is None:
                 raise CovigatorDashboardMissingPrecomputedData
@@ -454,13 +467,16 @@ class Queries:
     def get_variant_counts_by_month(self, variant_id, source: str) -> pd.DataFrame:
 
         klass = self.get_variant_observation_klass(source=source)
+        sample_klass = self.get_sample_klass(source=source)
         sql_query_ds_ena = """
         select count(*) as count, variant_id, date_trunc('month', date::timestamp) as month 
             from {variant_observation_table} 
-            where variant_id='{variant_id}'
+            where variant_id='{variant_id}' 
+            and sample in (select run_accession from {sample_table} where status='FINISHED')
             group by variant_id, date_trunc('month', date::timestamp);
             """.format(
             variant_observation_table=klass.__tablename__,
+            sample_table=sample_klass.__tablename__,
             variant_id=variant_id
         )
         data = pd.read_sql_query(sql_query_ds_ena, self.session.bind)
@@ -469,12 +485,18 @@ class Queries:
 
     def get_sample_counts_by_month(self, source: str) -> pd.DataFrame:
         klass = self.get_sample_klass(source=source)
-        query = self.session.query(
-            func.date_trunc('month', klass.collection_date).label("month"),
-            func.count().label("sample_count"))\
-            .filter(klass.status == JobStatus.FINISHED.name) \
-            .group_by(func.date_trunc('month', klass.collection_date))
-        counts = pd.read_sql(query.statement, self.session.bind)
+        # NOTE: this query was originally implemented with SQLAlchemy syntax, but the func.date_trunc function
+        # provides different results. Do not change back!
+        query = """
+        select date_trunc('month', collection_date::timestamp) as month,
+            count(*) as sample_count
+            from {table}
+            where status='FINISHED'
+            group by date_trunc('month', collection_date::timestamp);
+            """.format(
+            table=klass.__tablename__
+        )
+        counts = pd.read_sql(text(query), self.session.bind)
         counts['month'] = pd.to_datetime(counts['month'], utc=True)
         return counts
 
@@ -537,8 +559,6 @@ class Queries:
 
         # formats the DNA mutation
         top_occurring_variants.rename(columns={'variant_id': 'dna_mutation'}, inplace=True)
-        top_occurring_variants["frequency_by_month"] = top_occurring_variants.frequency
-
         # pivots the table over months
         top_occurring_variants = pd.pivot_table(
             top_occurring_variants, index=['gene_name', 'dna_mutation', 'hgvs_p', 'annotation', "frequency", "total"],

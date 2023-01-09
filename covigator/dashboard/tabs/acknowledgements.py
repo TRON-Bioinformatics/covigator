@@ -25,8 +25,8 @@ def get_tab_acknowledgements():
                 ],
                     style={"font-style": "italic", "margin-left": "50px"}),
                 html.P(
-                    html.A("https://doi.org/10.1101/2021.02.04.429765",
-                           href="https://doi.org/10.1101/2021.02.04.429765", target="_blank"),
+                    html.A("https://doi.org/10.1371/journal.pone.0249254",
+                           href="https://doi.org/10.1371/journal.pone.0249254", target="_blank"),
                     style={"text-indent": "50px"}
                 ),
                 html.Br(),
@@ -43,16 +43,15 @@ def get_tab_acknowledgements():
                 ),
                 html.Br(),
 
-                html.P(html.B("ENA Data")),
                 html.P([
-                    """We gratefully acknowledge the European Nucleotide Archive""",
+                    """We gratefully acknowledge the European Nucleotide Archive, the Covid19 Data portal""",
                     html.Sup("2"),
                     " and all data contributors for sharing the raw reads on which this research is based."]),
                 html.P([
                     html.Sup("2"),
-                    """ Leinonen, R., Akhtar, R., Birney, E., Bower, L., Cerdeno-Tárraga, A., Cheng, Y., 
+                    """Leinonen, R., Akhtar, R., Birney, E., Bower, L., Cerdeno-Tárraga, A., Cheng, Y.,
                     Cleland, I., Faruque, N., Goodgame, N., Gibson, R., Hoad, G., Jang, M., Pakseresht, N., 
-                    Plaister, S., Radhakrishnan, R., Reddy, K., Sobhany, S., Hoopen, P. Ten, Vaughan, R., 
+                    Plaister, S., Radhakrishnan, R., Reddy, K., Sobhany, S., Hoopen, P. Ten, Vaughan, R.,
                     Zalunin V., Cochrane, G. (2011). The European nucleotide archive. Nucleic Acids Research, 
                     39(SUPPL. 1), D28. https://doi.org/10.1093/nar/gkq967"""]),
                 html.Br(),
@@ -98,12 +97,7 @@ def get_tab_acknowledgements():
                 html.Iframe(srcDoc="""
                             <a class="github-button" href="https://github.com/tron-bioinformatics/covigator" data-color-scheme="no-preference: light; light: light; dark: light;" data-icon="octicon-star" data-size="large" data-show-count="true" aria-label="Star tron-bioinformatics/covigator on GitHub">Star</a>
                             <script async defer src="https://buttons.github.io/buttons.js"></script>
-                           """, style={'border': 0, 'height': '50px'}),
-                html.Br(),
-                html.P("Follow #CoVigator in Twitter:"),
-                html.A(html.Img(src="/assets/2021_twitter_logo_blue.png", height="25px"),
-                       href="https://twitter.com/hashtag/CoVigator", target="_blank")
-
+                           """, style={'border': 0, 'height': '50px'})
             ], width=8, style={"text-align": "left", "font-size": 16}),
             dbc.Col([None], width=2)]
             ),

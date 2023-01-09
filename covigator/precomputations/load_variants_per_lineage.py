@@ -7,6 +7,16 @@ from covigator.database.model import DataSource, PrecomputedVariantsPerLineage
 from covigator.database.queries import Queries
 
 
+def _row_to_variants_per_lineage(row, source):
+    return PrecomputedVariantsPerLineage(
+        lineage=row["lineage"],
+        variant_id=row["variant_id"],
+        country=row["country"],
+        count_observations=row["count_observations"],
+        source=source
+    )
+
+
 class VariantsPerLineageLoader:
 
     def __init__(self, session: Session):
@@ -34,24 +44,22 @@ class VariantsPerLineageLoader:
         except ValueError as e:
             logger.exception(e)
             logger.error("No top occurrences for ENA data")
-
+        variants_per_lineage_portal = None
+        try:
+            variants_per_lineage_portal = self.get_variants_per_lineage(source=DataSource.COVID19_PORTAL.name)
+        except ValueError:
+            logger.error("No top occurrences for Covid19 Portal data")
         database_rows = []
         # stores the precomputed data
         if variants_per_lineage_ena is not None:
             for index, row in variants_per_lineage_ena.iterrows():
                 # add entries per gene
-                database_rows.append(self._row_to_variants_per_lineage(row, source=DataSource.ENA))
-
+                database_rows.append(_row_to_variants_per_lineage(row, source=DataSource.ENA))
+        if variants_per_lineage_portal is not None:
+            for index, row in variants_per_lineage_portal.iterrows():
+                # add entries per gene
+                database_rows.append(_row_to_variants_per_lineage(row, source=DataSource.COVID19_PORTAL))
         return database_rows
-
-    def _row_to_variants_per_lineage(self, row, source):
-        return PrecomputedVariantsPerLineage(
-            lineage=row["lineage"],
-            variant_id=row["variant_id"],
-            country=row["country"],
-            count_observations=row["count_observations"],
-            source=source
-        )
 
     def get_variants_per_lineage(self, source: str):
         klass_variant_observation = self.queries.get_variant_observation_klass(source)

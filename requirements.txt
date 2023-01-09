@@ -1,10 +1,10 @@
-numpy==1.21.0
+numpy==1.22.0
 pandas==1.3.3
 requests==2.25.0
 sqlalchemy==1.3.20
-dask[complete]==2022.1.1
-dask_jobqueue==0.7.3
-distributed==2022.1.1
+dask[complete]==2022.9.2
+dask_jobqueue==0.8.1
+distributed==2022.9.2
 Werkzeug==2.0.1
 cytoolz==0.11.0
 logzero==1.6.3

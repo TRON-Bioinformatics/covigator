@@ -6,12 +6,29 @@ from logzero import logger
 import covigator
 from covigator.exceptions import CovigatorDashBoardInitialisationError
 
-DEFAULT_SUBCLONAL_AF_THR = 0.8
-DEFAULT_LOW_COVERAGE_AF_THR = 0.05
+DEFAULT_LQ_CLONAL_AF_THR = 0.8
+DEFAULT_SUBCLONAL_AF_THR = 0.5
+DEFAULT_LOW_COVERAGE_AF_THR = 0.02
 DEFAULT_HORIZONTAL_COVERAGE_THR = 20
 DEFAULT_MEAN_BQ_THR = 10
 DEFAULT_MEAN_MQ_THR = 10
 DEFAULT_MINIMUM_SEQUENCE_SIZE = 5980    # 20 % of the genome, 29903 bp
+
+
+def load_numeric_value(variable, default):
+    try:
+        value = int(os.getenv(variable, default))
+    except ValueError as e:
+        raise CovigatorDashBoardInitialisationError("{} needs to be a numeric value : {}".format(variable, str(e)))
+    return value
+
+
+def load_float_value(variable, default):
+    try:
+        value = float(os.getenv(variable, default))
+    except ValueError as e:
+        raise CovigatorDashBoardInitialisationError("{} needs to be a float value : {}".format(variable, str(e)))
+    return value
 
 
 class Configuration:
@@ -40,6 +57,8 @@ class Configuration:
     ENV_COVIGATOR_NEXTFLOW = "COVIGATOR_NEXTFLOW"
     ENV_COVIGATOR_WORKFLOW = "COVIGATOR_WORKFLOW"
     ENV_COVIGATOR_FORCE_PIPELINE = "COVIGATOR_FORCE_PIPELINE"
+    ENV_COVIGATOR_REPHASE = "COVIGATOR_REPHASE"
+    ENV_COVIGATOR_NEXTFLOW_PROFILE = "COVIGATOR_NEXTFLOW_PROFILE"
     ENV_COVIGATOR_SKIP_VCF_LOADING = "COVIGATOR_SKIP_VCF_LOADING"
     ENV_COVIGATOR_WORKFLOW_CPUS = "COVIGATOR_WORKFLOW_CPUS"
     ENV_COVIGATOR_WORKFLOW_MEMORY = "COVIGATOR_WORKFLOW_MEMORY"
@@ -47,6 +66,7 @@ class Configuration:
     ENV_COVIGATOR_RETRIES_DOWNLOAD = "COVIGATOR_RETRIES_DOWNLOAD"
     ENV_COVIGATOR_LOW_COVERAGE_THR = "COVIGATOR_LOW_COVERAGE_THR"
     ENV_COVIGATOR_SUBCLONAL_THR = "COVIGATOR_SUBCLONAL_THR"
+    ENV_COVIGATOR_LQ_CLONAL_THR = "COVIGATOR_LQ_CLONAL_THR"
     # references
     ENV_COVIGATOR_REF_FASTA = "COVIGATOR_REF_FASTA"
     # dask
@@ -60,7 +80,7 @@ class Configuration:
     ENV_COVIGATOR_MAX_DELETIONS = "COVIGATOR_MAX_DELETIONS"
     ENV_COVIGATOR_MIN_SEQUENCE_SIZE = "COVIGATOR_MIN_SEQUENCE_SIZE"
 
-    def __init__(self, verbose=True):
+    def __init__(self, verbose=False):
         # local storage
         self.storage_folder = os.getenv(self.ENV_COVIGATOR_STORAGE_FOLDER, "/data/covigator")
         self.content_folder = os.getenv(self.ENV_COVIGATOR_DOWNLOAD_CONTENT_FOLDER)
@@ -75,6 +95,7 @@ class Configuration:
         self.db_max_overflow = int(os.getenv(self.ENV_COVIGATOR_DB_MAX_OVERFLOW, 10))
         self.db_table_version = os.environ.get(self.ENV_COVIGATOR_TABLE_VERSION, "_test")
         self.force_pipeline = os.environ.get(self.ENV_COVIGATOR_FORCE_PIPELINE, False)
+        self.rephase = os.environ.get(self.ENV_COVIGATOR_REPHASE, False)
         # this is useful for reloading metadata into the DB
         self.skip_vcf_loading = os.environ.get(self.ENV_COVIGATOR_SKIP_VCF_LOADING, False)
 
@@ -98,27 +119,30 @@ class Configuration:
 
         # pipeline
         self.nextflow = os.getenv(self.ENV_COVIGATOR_NEXTFLOW, "nextflow")
+        self.nextflow_profile = os.getenv(self.ENV_COVIGATOR_NEXTFLOW_PROFILE, "conda")
         self.workflow = os.getenv(self.ENV_COVIGATOR_WORKFLOW,
                                   "tron-bioinformatics/covigator-ngs-pipeline -r {version}".format(
                                       version=covigator.ANALYSIS_PIPELINE_VERSION))
         self.workflow_cpus = os.getenv(self.ENV_COVIGATOR_WORKFLOW_CPUS, "1")
         self.workflow_memory = os.getenv(self.ENV_COVIGATOR_WORKFLOW_MEMORY, "3g")
-        self.batch_size = self.load_numeric_value(variable=self.ENV_COVIGATOR_BATCH_SIZE, default=1000)
-        self.retries_download = self.load_numeric_value(variable=self.ENV_COVIGATOR_RETRIES_DOWNLOAD, default=3)
-        self.low_coverage_threshold = self.load_float_value(
+        self.batch_size = load_numeric_value(variable=self.ENV_COVIGATOR_BATCH_SIZE, default=1000)
+        self.retries_download = load_numeric_value(variable=self.ENV_COVIGATOR_RETRIES_DOWNLOAD, default=3)
+        self.low_coverage_threshold = load_float_value(
             variable=self.ENV_COVIGATOR_LOW_COVERAGE_THR, default=DEFAULT_LOW_COVERAGE_AF_THR)
-        self.subclonal_threshold = self.load_float_value(
+        self.subclonal_threshold = load_float_value(
             variable=self.ENV_COVIGATOR_SUBCLONAL_THR, default=DEFAULT_SUBCLONAL_AF_THR)
+        self.lq_clonal_threshold = load_float_value(
+            variable=self.ENV_COVIGATOR_LQ_CLONAL_THR, default=DEFAULT_LQ_CLONAL_AF_THR)
 
         ## sample exclusion
-        self.mean_mq_thr = self.load_numeric_value(variable=self.ENV_COVIGATOR_MEAN_MQ_THR, default=DEFAULT_MEAN_MQ_THR)
-        self.mean_bq_thr = self.load_numeric_value(variable=self.ENV_COVIGATOR_MEAN_BQ_THR, default=DEFAULT_MEAN_BQ_THR)
-        self.horizontal_coverage_thr = self.load_numeric_value(
+        self.mean_mq_thr = load_numeric_value(variable=self.ENV_COVIGATOR_MEAN_MQ_THR, default=DEFAULT_MEAN_MQ_THR)
+        self.mean_bq_thr = load_numeric_value(variable=self.ENV_COVIGATOR_MEAN_BQ_THR, default=DEFAULT_MEAN_BQ_THR)
+        self.horizontal_coverage_thr = load_numeric_value(
             variable=self.ENV_COVIGATOR_HORIZONTAL_COVERAGE_THR, default=DEFAULT_HORIZONTAL_COVERAGE_THR)
-        self.max_snvs = self.load_numeric_value(variable=self.ENV_COVIGATOR_MAX_SNVS, default=76)
-        self.max_insertions = self.load_numeric_value(variable=self.ENV_COVIGATOR_MAX_INSERTIONS, default=10)
-        self.max_deletions = self.load_numeric_value(variable=self.ENV_COVIGATOR_MAX_DELETIONS, default=10)
-        self.min_sequence_size = self.load_numeric_value(variable=self.ENV_COVIGATOR_MIN_SEQUENCE_SIZE,
+        self.max_snvs = load_numeric_value(variable=self.ENV_COVIGATOR_MAX_SNVS, default=76)
+        self.max_insertions = load_numeric_value(variable=self.ENV_COVIGATOR_MAX_INSERTIONS, default=10)
+        self.max_deletions = load_numeric_value(variable=self.ENV_COVIGATOR_MAX_DELETIONS, default=10)
+        self.min_sequence_size = load_numeric_value(variable=self.ENV_COVIGATOR_MIN_SEQUENCE_SIZE,
                                                          default=DEFAULT_MINIMUM_SEQUENCE_SIZE)
 
         # NOTE: the defaults are already set in the workflow config
@@ -127,24 +151,11 @@ class Configuration:
         if verbose:
             self.log_configuration()
 
-    def load_numeric_value(self, variable, default):
-        try:
-            value = int(os.getenv(variable, default))
-        except ValueError as e:
-            raise CovigatorDashBoardInitialisationError("{} needs to be a numeric value : {}".format(variable, str(e)))
-        return value
-
-    def load_float_value(self, variable, default):
-        try:
-            value = float(os.getenv(variable, default))
-        except ValueError as e:
-            raise CovigatorDashBoardInitialisationError("{} needs to be a float value : {}".format(variable, str(e)))
-        return value
-
     def log_configuration(self):
         logger.info("Configuration")
         for k, v in self.__dict__.items():
-            logger.info("{}={}".format(k, v))
+            if "PASSWORD" not in k:
+                logger.info("{}={}".format(k, v))
 
 
 def initialise_logs(logfile, sample_id: str = None):

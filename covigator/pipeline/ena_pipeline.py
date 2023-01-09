@@ -1,7 +1,6 @@
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from logzero import logger
 from covigator.configuration import Configuration
 from covigator.pipeline.runner import run_command
 
@@ -34,12 +33,10 @@ class Pipeline:
 
     def run(self, run_accession: str, fastq1: str, fastq2: str = None) -> PipelineResult:
 
-        logger.info("Processing {} and {}".format(fastq1, fastq2))
         sample_data_folder = Path(fastq1).parent
 
-        logger.info("Sample data folder: {}".format(sample_data_folder))
-
         lofreq_vcf = os.path.join(sample_data_folder, "{name}.lofreq.vcf.gz".format(name=run_accession))
+        final_vcf = lofreq_vcf
         ivar_vcf = os.path.join(sample_data_folder, "{name}.ivar.vcf.gz".format(name=run_accession))
         gatk_vcf = os.path.join(sample_data_folder, "{name}.gatk.vcf.gz".format(name=run_accession))
         bcftools_vcf = os.path.join(sample_data_folder, "{name}.bcftools.vcf.gz".format(name=run_accession))
@@ -55,7 +52,34 @@ class Pipeline:
         deduplication_metrics = os.path.join(
             sample_data_folder, "{name}.deduplication_metrics.txt".format(name=run_accession))
 
-        if not os.path.exists(lofreq_vcf) \
+        if os.path.exists(lofreq_vcf) and not self.config.force_pipeline and self.config.rephase:
+            command = "{nextflow} run {workflow} " \
+                      "--vcf {vcf} " \
+                      "--output {output_folder} " \
+                      "--name {name} " \
+                      "--cpus {cpus} " \
+                      "--memory {memory} " \
+                      "--skip_sarscov2_annotations " \
+                      "--skip_pangolin " \
+                      "--skip_normalization " \
+                      "-profile {profile} " \
+                      "-offline " \
+                      "-work-dir {work_folder} " \
+                      "-with-trace {trace_file}".format(
+                nextflow=self.config.nextflow,
+                profile=self.config.nextflow_profile,
+                vcf=lofreq_vcf,
+                output_folder=sample_data_folder,
+                name=run_accession,
+                work_folder=self.config.temp_folder,
+                workflow=self.config.workflow,
+                trace_file=os.path.join(sample_data_folder, "nextflow_traces.txt"),
+                cpus=self.config.workflow_cpus,
+                memory=self.config.workflow_memory)
+            run_command(command, sample_data_folder)
+            final_vcf = os.path.join(sample_data_folder, "{name}.input.vcf.gz".format(name=run_accession))
+
+        elif not os.path.exists(lofreq_vcf) \
                 or not os.path.exists(output_qc) \
                 or not os.path.exists(output_horizontal_coverage) \
                 or not os.path.exists(output_vertical_coverage) \
@@ -67,19 +91,22 @@ class Pipeline:
                       "--name {name} " \
                       "--low_frequency_variant_threshold {af_low_frequency_thr} " \
                       "--subclonal_variant_threshold {af_subclonal_thr} " \
+                      "--lq-clonal_variant_threshold {af_lq_clonal_thr} " \
                       "--cpus {cpus} " \
                       "--memory {memory} " \
                       "--skip_bcftools " \
                       "--skip_gatk " \
-                      "-profile conda " \
+                      "-profile {profile} " \
                       "-offline " \
                       "-work-dir {work_folder} " \
                       "-with-trace {trace_file}".format(
                 nextflow=self.config.nextflow,
+                profile=self.config.nextflow_profile,
                 fastq1=fastq1,
                 fastq2="--fastq2 " + fastq2 if fastq2 else "",
                 af_low_frequency_thr=self.config.low_coverage_threshold,
                 af_subclonal_thr=self.config.subclonal_threshold,
+                af_lq_clonal_thr=self.config.lq_clonal_threshold,
                 output_folder=sample_data_folder,
                 name=run_accession,
                 work_folder=self.config.temp_folder,
@@ -91,7 +118,7 @@ class Pipeline:
 
         return PipelineResult(
             # VCF
-            lofreq_vcf=lofreq_vcf,
+            lofreq_vcf=final_vcf,
             ivar_vcf=ivar_vcf,
             gatk_vcf=gatk_vcf,
             bcftools_vcf=bcftools_vcf,
