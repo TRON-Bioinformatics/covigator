@@ -7,6 +7,7 @@
 [![PyPI version](https://badge.fury.io/py/covigator.svg)](https://badge.fury.io/py/covigator)
 [![Run unit tests](https://github.com/TRON-Bioinformatics/covigator/actions/workflows/unit_tests.yml/badge.svg?branch=main)](https://github.com/TRON-Bioinformatics/covigator/actions/workflows/unit_tests.yml)
 [![codecov](https://codecov.io/gh/TRON-Bioinformatics/covigator/branch/main/graph/badge.svg?token=J5Q8UV65PD)](https://codecov.io/gh/TRON-Bioinformatics/covigator)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/d6735b902b7b42e0a7cd423cebff69d2)](https://www.codacy.com/gh/TRON-Bioinformatics/covigator/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=TRON-Bioinformatics/covigator&amp;utm_campaign=Badge_Grade)
 [![Powered by Dash](https://img.shields.io/badge/powered%20by-Dash-orange.svg?style=flat&colorA=E1523D&colorB=007D8A)](https://dash.plotly.com/)
 [![License](https://img.shields.io/badge/license-MIT-green)](https://opensource.org/licenses/MIT)
 [![Documentation Status](https://readthedocs.org/projects/covigator/badge/?version=latest)](https://covigator.readthedocs.io/en/latest/?badge=latest)
