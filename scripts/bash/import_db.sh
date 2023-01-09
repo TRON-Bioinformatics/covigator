@@ -25,24 +25,24 @@ load_table() {
 }
 
 # references
-load_table "conservation"
-load_table "gene"
-load_table "domain"
+load_table conservation
+load_table gene
+load_table domain
 
 # logs
-load_table "log"
-load_table "last_update"
+load_table log
+load_table last_update
 
 # precomputations
-load_table "precomputed_annotation"
-load_table "precomputed_indel_length"
-load_table "precomputed_ns_s_counts"
-load_table "precomputed_substitutions_counts"
-load_table "precomputed_table_counts"
-load_table "precomputed_top_occurrence"
-load_table "precomputed_variant_abundance_histogram"
-load_table "precomputed_variants_per_lineage"
-load_table "precomputed_variants_per_sample"
+load_table precomputed_annotation
+load_table precomputed_indel_length
+load_table precomputed_ns_s_counts
+load_table precomputed_substitutions_counts
+load_table precomputed_table_counts
+load_table precomputed_top_occurrence
+load_table precomputed_variant_abundance_histogram
+load_table precomputed_variants_per_lineage
+load_table precomputed_variants_per_sample
 
 # ENA
 sample_ena_fields="run_accession, finished, sample_accession, scientific_name, study_accession, experiment_accession, \
@@ -64,17 +64,17 @@ unpaired_reads_examined, read_pairs_examined, secondary_or_supplementary_reads, 
 unpaired_read_duplicates, read_pair_duplicates, read_pair_optical_duplicates, covigator_accessor_version, \
 covigator_processor_version, intrahost_filter, potential_coinfection"
 psql $pg_uri -c "\\copy sample_ena$version($sample_ena_fields) from program 'gzip -dc $input_folder/sample_ena.csv.gz' csv header;"
-load_table "variant"
-load_table "variant_cooccurrence"
-load_table "variant_observation"
-load_table "subclonal_variant"
-load_table "subclonal_variant_observation"
-load_table "low_frequency_variant"
-load_table "low_frequency_variant_observation"
-load_table "lq_clonal_variant"
-load_table "lq_clonal_variant_observation"
+load_table variant
+load_table variant_cooccurrence
+load_table variant_observation
+load_table subclonal_variant
+load_table subclonal_variant_observation
+load_table low_frequency_variant
+load_table low_frequency_variant_observation
+load_table lq_clonal_variant
+load_table lq_clonal_variant_observation
 
 # Covid19 portal
-load_table "sample_covid19_portal"
-load_table "variant_covid19portal"
-load_table "variant_observation_covid19portal"
+load_table sample_covid19_portal
+load_table variant_covid19portal
+load_table variant_observation_covid19portal
