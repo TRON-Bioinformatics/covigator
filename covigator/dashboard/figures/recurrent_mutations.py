@@ -14,25 +14,25 @@ from covigator import MISSENSE_VARIANT, DISRUPTIVE_INFRAME_DELETION, CONSERVATIV
     CONSERVATIVE_INFRAME_INSERTION, DISRUPTIVE_INFRAME_INSERTION
 from covigator.dashboard.figures.figures import Figures, PLOTLY_CONFIG, TEMPLATE, MARGIN, STYLES_STRIPPED, STYLE_HEADER, \
     STYLE_CELL
-import plotly
+import plotly.express as px
 import plotly.graph_objects as go
 from dash import html
 from dash import dcc
 from covigator.database.model import Gene, Domain, DataSource
 
 VARIANT_TOOLTIP = '<b>%{text}</b><br>' + 'Allele frequency: %{y:.5f}<br>' + 'Genomic Position: %{x}'
-GENE_COLORS = list(reversed(plotly.express.colors.sequential.Tealgrn))
-DOMAIN_COLORS = list(reversed(plotly.express.colors.sequential.Magenta))
+GENE_COLORS = list(reversed(px.colors.sequential.Tealgrn))
+DOMAIN_COLORS = list(reversed(px.colors.sequential.Magenta))
 OTHER_VARIANT_SYMBOL = "x"
 INSERTION_SYMBOL = "triangle-up"
 DELETION_SYMBOL = "triangle-down"
 MISSENSE_VARIANT_SYMBOL = "circle"
-VERY_COMMON_VARIANTS_COLOR = plotly.express.colors.sequential.Reds[-1]
-COMMON_VARIANTS_COLOR = plotly.express.colors.sequential.Reds[-3]
-RARE_VARIANTS_COLOR = plotly.express.colors.sequential.Reds[-7]
+VERY_COMMON_VARIANTS_COLOR = px.colors.sequential.Reds[-1]
+COMMON_VARIANTS_COLOR = px.colors.sequential.Reds[-3]
+RARE_VARIANTS_COLOR = px.colors.sequential.Reds[-7]
 COMMON_VARIANTS_THRESHOLD = 0.1
 LOW_FREQUENCY_VARIANTS_THRESHOLD = 0.01
-LOW_FREQUENCY_VARIANTS_COLOR = plotly.express.colors.sequential.Reds[-5]
+LOW_FREQUENCY_VARIANTS_COLOR = px.colors.sequential.Reds[-5]
 RARE_VARIANTS_THRESHOLD = 0.001
 MONTH_PATTERN = re.compile('[0-9]{4}-[0-9]{2}')
 
@@ -387,14 +387,14 @@ class RecurrentMutationsFigures(Figures):
         variant_counts_traces = [
             go.Scatter(x=data.position_bin, y=data.count_variant_observations,
                        name="All variants", text="All variants", showlegend=False,
-                       line_color=plotly.express.colors.sequential.Blues[-2], line_width=1),
+                       line_color=px.colors.sequential.Blues[-2], line_width=1),
             go.Scatter(x=data.position_bin,
                        y=[mean_unique_variants_per_bin for _ in range(data.shape[0])],
                        yaxis='y2', name="Mean unique variants", text="Mean unique variants",
-                       line_width=1, showlegend=False, line_color=plotly.express.colors.sequential.Blues[-3]),
+                       line_width=1, showlegend=False, line_color=px.colors.sequential.Blues[-3]),
             go.Scatter(x=data.position_bin, y=data.count_unique_variants, yaxis='y2',
                        name="Unique variants", text="Unique variants", showlegend=False, fill='tonexty',
-                       line_color=plotly.express.colors.sequential.Blues[-4], line_width=1)
+                       line_color=px.colors.sequential.Blues[-4], line_width=1)
         ]
 
         fig = go.Figure(data=variant_counts_traces + conservation_traces + gene_traces + domain_traces, layout=layout)
@@ -523,7 +523,7 @@ class RecurrentMutationsFigures(Figures):
 
             domain_colors = cycle(DOMAIN_COLORS)
             gene_trace = self._get_gene_trace(
-                gene, start=start, end=end, color=plotly.express.colors.sequential.Tealgrn[-1], yaxis='y5', xaxis=main_xaxis)
+                gene, start=start, end=end, color=px.colors.sequential.Tealgrn[-1], yaxis='y5', xaxis=main_xaxis)
             domain_traces = [self._get_domain_trace(
                 color=c, gene=gene, domain=d, yaxis='y6', xaxis=main_xaxis, showlegend=True)
                 for d, c in zip(domains, domain_colors)]
