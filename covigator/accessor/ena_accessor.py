@@ -3,7 +3,7 @@ from json import JSONDecodeError
 from requests import Response
 from sqlalchemy.orm import Session
 import covigator
-from covigator.accessor.abstract_accessor import AbstractAccessor
+from covigator.accessor.abstract_accessor import AbstractAccessor, _parse_abstract
 from covigator.exceptions import CovigatorExcludedSampleTooEarlyDateException
 from covigator.database.model import SampleEna, DataSource, Log, CovigatorModule
 from covigator.database.database import Database
