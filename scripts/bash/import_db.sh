@@ -3,12 +3,12 @@
 
 # USAGE: import_db.sh covigator_config.txt /your/data/folder
 
-source $1
-input_folder=$2
+source "$1"
+input_folder="$2"
 
-version=$COVIGATOR_TABLE_VERSION
-export PGPASSWORD=$COVIGATOR_DB_PASSWORD
-pg_uri=postgresql://$COVIGATOR_DB_USER@$COVIGATOR_DB_HOST:$COVIGATOR_DB_PORT/$COVIGATOR_DB_NAME
+version="$COVIGATOR_TABLE_VERSION"
+export PGPASSWORD="$COVIGATOR_DB_PASSWORD"
+pg_uri="postgresql://$COVIGATOR_DB_USER@$COVIGATOR_DB_HOST:$COVIGATOR_DB_PORT/$COVIGATOR_DB_NAME"
 
 
 get_import_command() {
@@ -20,8 +20,8 @@ get_delete_command() {
 }
 
 load_table() {
-  psql $pg_uri -c "$(get_delete_command $1)"
-  psql $pg_uri -c "$(get_import_command $1)"
+  psql "$pg_uri" -c "$(get_delete_command $1)"
+  psql "$pg_uri" -c "$(get_import_command $1)"
 }
 
 # references
@@ -63,7 +63,7 @@ pangolin_scorpio_version, pangolin_constellation_version, pangolin_qc_status, pa
 unpaired_reads_examined, read_pairs_examined, secondary_or_supplementary_reads, unmapped_reads, \
 unpaired_read_duplicates, read_pair_duplicates, read_pair_optical_duplicates, covigator_accessor_version, \
 covigator_processor_version, intrahost_filter, potential_coinfection"
-psql $pg_uri -c "\\copy sample_ena$version($sample_ena_fields) from program 'gzip -dc $input_folder/sample_ena.csv.gz' csv header;"
+psql "$pg_uri" -c "\\copy sample_ena$version($sample_ena_fields) from program 'gzip -dc $input_folder/sample_ena.csv.gz' csv header;"
 load_table variant
 load_table variant_cooccurrence
 load_table variant_observation
