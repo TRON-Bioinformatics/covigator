@@ -1,5 +1,5 @@
 from covigator.database.database import Database
-from covigator.database.model import Gene, get_table_versioned_name, Variant, Conservation, Domain
+from covigator.database.model import Gene, get_table_versioned_name, Conservation, Domain
 import pandas as pd
 from covigator.configuration import Configuration
 from covigator.tests.unit_tests.abstract_test import AbstractTest

@@ -1,5 +1,5 @@
 from datetime import date, datetime
-from typing import List, Union
+from typing import List, Union, Tuple
 import pandas as pd
 from logzero import logger
 import sqlalchemy
@@ -70,7 +70,7 @@ class Queries:
         klass = self.get_sample_klass(source=data_source.name)
         return self.session.query(klass).filter(klass.run_accession == run_accession).first()
 
-    def find_first_by_status(self, data_source: DataSource, status, n=100) -> List[Union[SampleEna]]:
+    def find_first_by_status(self, data_source: DataSource, status: Tuple, n=100) -> List[Union[SampleEna]]:
         klass = self.get_sample_klass(source=data_source.name)
         return self.session.query(klass) \
             .filter(klass.status.in_(status)) \
@@ -79,11 +79,11 @@ class Queries:
             .all()
 
     def find_first_pending_jobs(
-            self, data_source: DataSource, n=100, status: List = [JobStatus.DOWNLOADED]) -> List[Union[SampleEna]]:
+            self, data_source: DataSource, n=100, status: Tuple = (JobStatus.DOWNLOADED, )) -> List[Union[SampleEna]]:
         return self.find_first_by_status(data_source=data_source, status=status, n=n)
 
     def find_first_jobs_to_download(self, data_source: DataSource, n=100) -> List[Union[SampleEna]]:
-        return self.find_first_by_status(data_source=data_source, status=[JobStatus.PENDING], n=n)
+        return self.find_first_by_status(data_source=data_source, status=(JobStatus.PENDING, ), n=n)
 
     def count_jobs_in_queue(self, data_source):
         return self.count_jobs_by_status(data_source=data_source, status=JobStatus.QUEUED)

@@ -17,7 +17,7 @@ class PipelineTest(unittest.TestCase):
         #self.assertEqual(p.run(fastq1=fastq1, fastq2=fastq2), vcf_file)
         #with self.assertRaises(CovigatorPipelineError):
             #vcf_file = p.run(fastq1=fastq1, fastq2=fastq2)
-        vcf, qc = p.run(run_accession="test", fastq1=fastq1, fastq2=fastq2)
+        vcf, _ = p.run(run_accession="test", fastq1=fastq1, fastq2=fastq2)
         self.assertEqual(open(vcf).read(), open(vcf_file).read())
 
 

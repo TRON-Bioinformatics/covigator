@@ -5,8 +5,7 @@ import covigator
 from covigator.configuration import Configuration
 from covigator.database.queries import Queries
 from covigator.exceptions import CovigatorErrorProcessingCoverageResults, CovigatorExcludedSampleBadQualityReads, \
-    CovigatorExcludedSampleNarrowCoverage, \
-    CovigatorErrorProcessingDeduplicationResults
+    CovigatorExcludedSampleNarrowCoverage
 from covigator.database.model import JobStatus, DataSource, SampleEna
 from covigator.database.database import Database
 from logzero import logger

@@ -15,6 +15,44 @@ from dash import dcc
 from covigator.database.model import PrecomputedVariantsPerLineage, Variant
 
 
+def discrete_background_color_bins(df, n_bins=5, columns='all', colors='Blues'):
+    bounds = [i * (1.0 / n_bins) for i in range(n_bins + 1)]
+    if columns == 'all':
+        if 'id' in df:
+            df_numeric_columns = df.select_dtypes('number').drop(['id'], axis=1)
+        else:
+            df_numeric_columns = df.select_dtypes('number')
+    else:
+        df_numeric_columns = df[columns]
+    df_max = df_numeric_columns.max().max()
+    df_min = df_numeric_columns.min().min()
+    ranges = [
+        ((df_max - df_min) * i) + df_min
+        for i in bounds
+    ]
+    styles = []
+    for i in range(1, len(bounds)):
+        min_bound = ranges[i - 1]
+        max_bound = ranges[i]
+        backgroundColor = colorlover.scales[str(n_bins)]['seq'][colors][i - 1]
+        color = 'white' if i > len(bounds) / 2. else 'inherit'
+
+        for column in df_numeric_columns:
+            styles.append({
+                'if': {
+                    'filter_query': (
+                            '{{{column}}} >= {min_bound}' +
+                            (' && {{{column}}} < {max_bound}' if (i < len(bounds) - 1) else '')
+                    ).format(column=column, min_bound=min_bound, max_bound=max_bound),
+                    'column_id': column
+                },
+                'backgroundColor': backgroundColor,
+                'color': color
+            })
+
+    return styles
+
+
 class LineageFigures(Figures):
 
     def get_lineages_plot(self, data_source: str, countries=None, lineages=None, time_period=14):
@@ -93,43 +131,6 @@ class LineageFigures(Figures):
             ]
         return graph
 
-    def discrete_background_color_bins(self, df, n_bins=5, columns='all', colors='Blues'):
-        bounds = [i * (1.0 / n_bins) for i in range(n_bins + 1)]
-        if columns == 'all':
-            if 'id' in df:
-                df_numeric_columns = df.select_dtypes('number').drop(['id'], axis=1)
-            else:
-                df_numeric_columns = df.select_dtypes('number')
-        else:
-            df_numeric_columns = df[columns]
-        df_max = df_numeric_columns.max().max()
-        df_min = df_numeric_columns.min().min()
-        ranges = [
-            ((df_max - df_min) * i) + df_min
-            for i in bounds
-        ]
-        styles = []
-        for i in range(1, len(bounds)):
-            min_bound = ranges[i - 1]
-            max_bound = ranges[i]
-            backgroundColor = colorlover.scales[str(n_bins)]['seq'][colors][i - 1]
-            color = 'white' if i > len(bounds) / 2. else 'inherit'
-
-            for column in df_numeric_columns:
-                styles.append({
-                    'if': {
-                        'filter_query': (
-                                '{{{column}}} >= {min_bound}' +
-                                (' && {{{column}}} < {max_bound}' if (i < len(bounds) - 1) else '')
-                        ).format(column=column, min_bound=min_bound, max_bound=max_bound),
-                        'column_id': column
-                    },
-                    'backgroundColor': backgroundColor,
-                    'color': color
-                })
-
-        return styles
-
     def get_lineages_variants_table(self, data_source: str, lineages: List[str] = None, countries: List[str] = None):
 
         result = None
@@ -156,7 +157,7 @@ class LineageFigures(Figures):
             # adds together the counts from multiple countries
             data = data.groupby(["variant_id", "gene_name", "hgvs_p", "annotation_highest_impact"]).sum().reset_index()
 
-            styles_counts = self.discrete_background_color_bins(data, columns=["count_observations"])
+            styles_counts = discrete_background_color_bins(data, columns=["count_observations"])
 
             fig = dash_table.DataTable(
                 id='lineages-variants-table',

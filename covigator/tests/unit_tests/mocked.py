@@ -1,10 +1,10 @@
 import numpy as np
 from itertools import combinations
-from typing import Tuple, Union
+from typing import Union
 from faker import Faker
 from sqlalchemy.orm import Session
 
-from covigator import MISSENSE_VARIANT, SYNONYMOUS_VARIANT, INFRAME_INSERTION, INFRAME_DELETION
+from covigator import MISSENSE_VARIANT, INFRAME_INSERTION, INFRAME_DELETION
 from covigator.database.model import SampleEna, DataSource, JobStatus, Log, CovigatorModule, Variant, \
     VariantCooccurrence, VariantType, SampleCovid19Portal, VariantCovid19Portal
 from Bio.Alphabet.IUPAC import IUPACData

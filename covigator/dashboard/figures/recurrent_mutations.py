@@ -14,7 +14,6 @@ from covigator import MISSENSE_VARIANT, DISRUPTIVE_INFRAME_DELETION, CONSERVATIV
     CONSERVATIVE_INFRAME_INSERTION, DISRUPTIVE_INFRAME_INSERTION
 from covigator.dashboard.figures.figures import Figures, PLOTLY_CONFIG, TEMPLATE, MARGIN, STYLES_STRIPPED, STYLE_HEADER, \
     STYLE_CELL
-import plotly
 import plotly.express as px
 import plotly.graph_objects as go
 from dash import html
@@ -22,73 +21,113 @@ from dash import dcc
 from covigator.database.model import Gene, Domain, DataSource
 
 VARIANT_TOOLTIP = '<b>%{text}</b><br>' + 'Allele frequency: %{y:.5f}<br>' + 'Genomic Position: %{x}'
-GENE_COLORS = list(reversed(plotly.express.colors.sequential.Tealgrn))
-DOMAIN_COLORS = list(reversed(plotly.express.colors.sequential.Magenta))
+GENE_COLORS = list(reversed(px.colors.sequential.Tealgrn))
+DOMAIN_COLORS = list(reversed(px.colors.sequential.Magenta))
 OTHER_VARIANT_SYMBOL = "x"
 INSERTION_SYMBOL = "triangle-up"
 DELETION_SYMBOL = "triangle-down"
 MISSENSE_VARIANT_SYMBOL = "circle"
-VERY_COMMON_VARIANTS_COLOR = plotly.express.colors.sequential.Reds[-1]
-COMMON_VARIANTS_COLOR = plotly.express.colors.sequential.Reds[-3]
-RARE_VARIANTS_COLOR = plotly.express.colors.sequential.Reds[-7]
+VERY_COMMON_VARIANTS_COLOR = px.colors.sequential.Reds[-1]
+COMMON_VARIANTS_COLOR = px.colors.sequential.Reds[-3]
+RARE_VARIANTS_COLOR = px.colors.sequential.Reds[-7]
 COMMON_VARIANTS_THRESHOLD = 0.1
 LOW_FREQUENCY_VARIANTS_THRESHOLD = 0.01
-LOW_FREQUENCY_VARIANTS_COLOR = plotly.express.colors.sequential.Reds[-5]
+LOW_FREQUENCY_VARIANTS_COLOR = px.colors.sequential.Reds[-5]
 RARE_VARIANTS_THRESHOLD = 0.001
 MONTH_PATTERN = re.compile('[0-9]{4}-[0-9]{2}')
 
 
+def _get_color_by_af(af):
+    color = None
+    if af < RARE_VARIANTS_THRESHOLD:
+        color = RARE_VARIANTS_COLOR
+    elif RARE_VARIANTS_THRESHOLD <= af < LOW_FREQUENCY_VARIANTS_THRESHOLD:
+        color = LOW_FREQUENCY_VARIANTS_COLOR
+    elif LOW_FREQUENCY_VARIANTS_THRESHOLD <= af < COMMON_VARIANTS_THRESHOLD:
+        color = COMMON_VARIANTS_COLOR
+    elif af >= COMMON_VARIANTS_THRESHOLD:
+        color = VERY_COMMON_VARIANTS_COLOR
+    return color
+
+
+def _get_table_style_by_af():
+    return [
+        {
+            'if': {
+                'filter_query': '{{frequency}} >= 0 && {{frequency}} < {}'.format(RARE_VARIANTS_THRESHOLD),
+                'column_id': "frequency"
+            },
+            'backgroundColor': RARE_VARIANTS_COLOR,
+            'color': 'inherit'
+        },
+        {
+            'if': {
+                'filter_query': '{{frequency}} >= {} && {{frequency}} < {}'.format(
+                    RARE_VARIANTS_THRESHOLD, LOW_FREQUENCY_VARIANTS_THRESHOLD),
+                'column_id': "frequency"
+            },
+            'backgroundColor': LOW_FREQUENCY_VARIANTS_COLOR,
+            'color': 'inherit'
+        },
+        {
+            'if': {
+                'filter_query': '{{frequency}} >= {} && {{frequency}} < {}'.format(
+                    LOW_FREQUENCY_VARIANTS_THRESHOLD, COMMON_VARIANTS_THRESHOLD),
+                'column_id': "frequency"
+            },
+            'backgroundColor': COMMON_VARIANTS_COLOR,
+            'color': 'white'
+        },
+        {
+            'if': {
+                'filter_query': '{{frequency}} >= {}'.format(COMMON_VARIANTS_THRESHOLD),
+                'column_id': "frequency"
+            },
+            'backgroundColor': VERY_COMMON_VARIANTS_COLOR,
+            'color': 'white'
+        }
+    ]
+
+
+def discrete_background_color_bins(df, n_bins=5, columns='all', colors='Blues'):
+    bounds = [i * (1.0 / n_bins) for i in range(n_bins + 1)]
+    if columns == 'all':
+        if 'id' in df:
+            df_numeric_columns = df.select_dtypes('number').drop(['id'], axis=1)
+        else:
+            df_numeric_columns = df.select_dtypes('number')
+    else:
+        df_numeric_columns = df[columns]
+    df_max = df_numeric_columns.max().max()
+    df_min = df_numeric_columns.min().min()
+    ranges = [
+        ((df_max - df_min) * i) + df_min
+        for i in bounds
+    ]
+    styles = []
+    for i in range(1, len(bounds)):
+        min_bound = ranges[i - 1]
+        max_bound = ranges[i]
+        backgroundColor = colorlover.scales[str(n_bins)]['seq'][colors][i - 1]
+        color = 'white' if i > len(bounds) / 2. else 'inherit'
+
+        for column in df_numeric_columns:
+            styles.append({
+                'if': {
+                    'filter_query': (
+                            '{{{column}}} >= {min_bound}' +
+                            (' && {{{column}}} < {max_bound}' if (i < len(bounds) - 1) else '')
+                    ).format(column=column, min_bound=min_bound, max_bound=max_bound),
+                    'column_id': column
+                },
+                'backgroundColor': backgroundColor,
+                'color': color
+            })
+
+    return styles
+
+
 class RecurrentMutationsFigures(Figures):
-
-    def _get_color_by_af(self, af):
-        color = None
-        if af < RARE_VARIANTS_THRESHOLD:
-            color = RARE_VARIANTS_COLOR
-        elif RARE_VARIANTS_THRESHOLD <= af < LOW_FREQUENCY_VARIANTS_THRESHOLD:
-            color = LOW_FREQUENCY_VARIANTS_COLOR
-        elif LOW_FREQUENCY_VARIANTS_THRESHOLD <= af < COMMON_VARIANTS_THRESHOLD:
-            color = COMMON_VARIANTS_COLOR
-        elif af >= COMMON_VARIANTS_THRESHOLD:
-            color = VERY_COMMON_VARIANTS_COLOR
-        return color
-
-    def _get_table_style_by_af(self):
-        return [
-            {
-                'if': {
-                    'filter_query': '{{frequency}} >= 0 && {{frequency}} < {}'.format(RARE_VARIANTS_THRESHOLD),
-                    'column_id': "frequency"
-                },
-                'backgroundColor': RARE_VARIANTS_COLOR,
-                'color': 'inherit'
-            },
-            {
-                'if': {
-                    'filter_query': '{{frequency}} >= {} && {{frequency}} < {}'.format(
-                        RARE_VARIANTS_THRESHOLD, LOW_FREQUENCY_VARIANTS_THRESHOLD),
-                    'column_id': "frequency"
-                },
-                'backgroundColor': LOW_FREQUENCY_VARIANTS_COLOR,
-                'color': 'inherit'
-            },
-            {
-                'if': {
-                    'filter_query': '{{frequency}} >= {} && {{frequency}} < {}'.format(
-                        LOW_FREQUENCY_VARIANTS_THRESHOLD, COMMON_VARIANTS_THRESHOLD),
-                    'column_id': "frequency"
-                },
-                'backgroundColor': COMMON_VARIANTS_COLOR,
-                'color': 'white'
-            },
-            {
-                'if': {
-                    'filter_query': '{{frequency}} >= {}'.format(COMMON_VARIANTS_THRESHOLD),
-                    'column_id': "frequency"
-                },
-                'backgroundColor': VERY_COMMON_VARIANTS_COLOR,
-                'color': 'white'
-            }
-        ]
 
     def get_top_occurring_variants_plot(self, top, gene_name, domain, date_range_start, date_range_end, metric, source):
         data = self.queries.get_top_occurring_variants_precomputed(top, gene_name, domain, metric, source)
@@ -106,9 +145,9 @@ class RecurrentMutationsFigures(Figures):
             data.drop(excluded_month_colums, axis=1, inplace=True)
 
             # set the styles of the cells
-            styles_counts = self.discrete_background_color_bins(data, columns=included_month_colums)
-            styles_total_count = self.discrete_background_color_bins(data, columns=["total"], colors="Reds")
-            styles_frequency = self._get_table_style_by_af()
+            styles_counts = discrete_background_color_bins(data, columns=included_month_colums)
+            styles_total_count = discrete_background_color_bins(data, columns=["total"], colors="Reds")
+            styles_frequency = _get_table_style_by_af()
             month_columns = [{'name': ["", i], 'id': i} for i in data.columns if i.startswith("20")]
             month_columns[0]['name'][0] = 'Monthly counts' if metric == "count" else 'Monthly frequencies'
 
@@ -150,43 +189,6 @@ class RecurrentMutationsFigures(Figures):
             ]
 
         return fig
-
-    def discrete_background_color_bins(self, df, n_bins=5, columns='all', colors='Blues'):
-        bounds = [i * (1.0 / n_bins) for i in range(n_bins + 1)]
-        if columns == 'all':
-            if 'id' in df:
-                df_numeric_columns = df.select_dtypes('number').drop(['id'], axis=1)
-            else:
-                df_numeric_columns = df.select_dtypes('number')
-        else:
-            df_numeric_columns = df[columns]
-        df_max = df_numeric_columns.max().max()
-        df_min = df_numeric_columns.min().min()
-        ranges = [
-            ((df_max - df_min) * i) + df_min
-            for i in bounds
-        ]
-        styles = []
-        for i in range(1, len(bounds)):
-            min_bound = ranges[i - 1]
-            max_bound = ranges[i]
-            backgroundColor = colorlover.scales[str(n_bins)]['seq'][colors][i - 1]
-            color = 'white' if i > len(bounds) / 2. else 'inherit'
-
-            for column in df_numeric_columns:
-                styles.append({
-                    'if': {
-                        'filter_query': (
-                                '{{{column}}} >= {min_bound}' +
-                                (' && {{{column}}} < {max_bound}' if (i < len(bounds) - 1) else '')
-                        ).format(column=column, min_bound=min_bound, max_bound=max_bound),
-                        'column_id': column
-                    },
-                    'backgroundColor': backgroundColor,
-                    'color': color
-                })
-
-        return styles
 
     def get_cooccurrence_heatmap(self, sparse_matrix, selected_variants, metric="jaccard", min_cooccurrences=5):
         data = self._get_variants_cooccurrence_matrix(data=sparse_matrix)
@@ -385,14 +387,14 @@ class RecurrentMutationsFigures(Figures):
         variant_counts_traces = [
             go.Scatter(x=data.position_bin, y=data.count_variant_observations,
                        name="All variants", text="All variants", showlegend=False,
-                       line_color=plotly.express.colors.sequential.Blues[-2], line_width=1),
+                       line_color=px.colors.sequential.Blues[-2], line_width=1),
             go.Scatter(x=data.position_bin,
                        y=[mean_unique_variants_per_bin for _ in range(data.shape[0])],
                        yaxis='y2', name="Mean unique variants", text="Mean unique variants",
-                       line_width=1, showlegend=False, line_color=plotly.express.colors.sequential.Blues[-3]),
+                       line_width=1, showlegend=False, line_color=px.colors.sequential.Blues[-3]),
             go.Scatter(x=data.position_bin, y=data.count_unique_variants, yaxis='y2',
                        name="Unique variants", text="Unique variants", showlegend=False, fill='tonexty',
-                       line_color=plotly.express.colors.sequential.Blues[-4], line_width=1)
+                       line_color=px.colors.sequential.Blues[-4], line_width=1)
         ]
 
         fig = go.Figure(data=variant_counts_traces + conservation_traces + gene_traces + domain_traces, layout=layout)
@@ -470,7 +472,7 @@ class RecurrentMutationsFigures(Figures):
             count_samples = self.queries.count_samples(source=source)
             variants["af"] = variants.count_occurrences / count_samples
             variants["log_af"] = variants.af.transform(lambda x: np.log(x + 1))
-            variants["log_count"] = variants.count_occurrences.transform(lambda x: np.log(x))
+            variants["log_count"] = variants.count_occurrences.transform(np.log)
             variants.annotation_highest_impact = variants.annotation_highest_impact.transform(lambda a: a.split("&")[0])
 
             main_xaxis = 'x'
@@ -521,7 +523,7 @@ class RecurrentMutationsFigures(Figures):
 
             domain_colors = cycle(DOMAIN_COLORS)
             gene_trace = self._get_gene_trace(
-                gene, start=start, end=end, color=plotly.express.colors.sequential.Tealgrn[-1], yaxis='y5', xaxis=main_xaxis)
+                gene, start=start, end=end, color=px.colors.sequential.Tealgrn[-1], yaxis='y5', xaxis=main_xaxis)
             domain_traces = [self._get_domain_trace(
                 color=c, gene=gene, domain=d, yaxis='y6', xaxis=main_xaxis, showlegend=True)
                 for d, c in zip(domains, domain_colors)]
@@ -647,7 +649,7 @@ class RecurrentMutationsFigures(Figures):
             # opacity=0.5,
             marker=dict(
                 symbol=symbol,
-                color=variants.af.transform(self._get_color_by_af),
+                color=variants.af.transform(_get_color_by_af),
                 showscale=False
             ),
             xaxis=xaxis,

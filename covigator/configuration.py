@@ -15,6 +15,22 @@ DEFAULT_MEAN_MQ_THR = 10
 DEFAULT_MINIMUM_SEQUENCE_SIZE = 5980    # 20 % of the genome, 29903 bp
 
 
+def load_numeric_value(variable, default):
+    try:
+        value = int(os.getenv(variable, default))
+    except ValueError as e:
+        raise CovigatorDashBoardInitialisationError("{} needs to be a numeric value : {}".format(variable, str(e)))
+    return value
+
+
+def load_float_value(variable, default):
+    try:
+        value = float(os.getenv(variable, default))
+    except ValueError as e:
+        raise CovigatorDashBoardInitialisationError("{} needs to be a float value : {}".format(variable, str(e)))
+    return value
+
+
 class Configuration:
 
     # file system storage
@@ -109,24 +125,24 @@ class Configuration:
                                       version=covigator.ANALYSIS_PIPELINE_VERSION))
         self.workflow_cpus = os.getenv(self.ENV_COVIGATOR_WORKFLOW_CPUS, "1")
         self.workflow_memory = os.getenv(self.ENV_COVIGATOR_WORKFLOW_MEMORY, "3g")
-        self.batch_size = self.load_numeric_value(variable=self.ENV_COVIGATOR_BATCH_SIZE, default=1000)
-        self.retries_download = self.load_numeric_value(variable=self.ENV_COVIGATOR_RETRIES_DOWNLOAD, default=3)
-        self.low_coverage_threshold = self.load_float_value(
+        self.batch_size = load_numeric_value(variable=self.ENV_COVIGATOR_BATCH_SIZE, default=1000)
+        self.retries_download = load_numeric_value(variable=self.ENV_COVIGATOR_RETRIES_DOWNLOAD, default=3)
+        self.low_coverage_threshold = load_float_value(
             variable=self.ENV_COVIGATOR_LOW_COVERAGE_THR, default=DEFAULT_LOW_COVERAGE_AF_THR)
-        self.subclonal_threshold = self.load_float_value(
+        self.subclonal_threshold = load_float_value(
             variable=self.ENV_COVIGATOR_SUBCLONAL_THR, default=DEFAULT_SUBCLONAL_AF_THR)
-        self.lq_clonal_threshold = self.load_float_value(
+        self.lq_clonal_threshold = load_float_value(
             variable=self.ENV_COVIGATOR_LQ_CLONAL_THR, default=DEFAULT_LQ_CLONAL_AF_THR)
 
         ## sample exclusion
-        self.mean_mq_thr = self.load_numeric_value(variable=self.ENV_COVIGATOR_MEAN_MQ_THR, default=DEFAULT_MEAN_MQ_THR)
-        self.mean_bq_thr = self.load_numeric_value(variable=self.ENV_COVIGATOR_MEAN_BQ_THR, default=DEFAULT_MEAN_BQ_THR)
-        self.horizontal_coverage_thr = self.load_numeric_value(
+        self.mean_mq_thr = load_numeric_value(variable=self.ENV_COVIGATOR_MEAN_MQ_THR, default=DEFAULT_MEAN_MQ_THR)
+        self.mean_bq_thr = load_numeric_value(variable=self.ENV_COVIGATOR_MEAN_BQ_THR, default=DEFAULT_MEAN_BQ_THR)
+        self.horizontal_coverage_thr = load_numeric_value(
             variable=self.ENV_COVIGATOR_HORIZONTAL_COVERAGE_THR, default=DEFAULT_HORIZONTAL_COVERAGE_THR)
-        self.max_snvs = self.load_numeric_value(variable=self.ENV_COVIGATOR_MAX_SNVS, default=76)
-        self.max_insertions = self.load_numeric_value(variable=self.ENV_COVIGATOR_MAX_INSERTIONS, default=10)
-        self.max_deletions = self.load_numeric_value(variable=self.ENV_COVIGATOR_MAX_DELETIONS, default=10)
-        self.min_sequence_size = self.load_numeric_value(variable=self.ENV_COVIGATOR_MIN_SEQUENCE_SIZE,
+        self.max_snvs = load_numeric_value(variable=self.ENV_COVIGATOR_MAX_SNVS, default=76)
+        self.max_insertions = load_numeric_value(variable=self.ENV_COVIGATOR_MAX_INSERTIONS, default=10)
+        self.max_deletions = load_numeric_value(variable=self.ENV_COVIGATOR_MAX_DELETIONS, default=10)
+        self.min_sequence_size = load_numeric_value(variable=self.ENV_COVIGATOR_MIN_SEQUENCE_SIZE,
                                                          default=DEFAULT_MINIMUM_SEQUENCE_SIZE)
 
         # NOTE: the defaults are already set in the workflow config
@@ -134,20 +150,6 @@ class Configuration:
 
         if verbose:
             self.log_configuration()
-
-    def load_numeric_value(self, variable, default):
-        try:
-            value = int(os.getenv(variable, default))
-        except ValueError as e:
-            raise CovigatorDashBoardInitialisationError("{} needs to be a numeric value : {}".format(variable, str(e)))
-        return value
-
-    def load_float_value(self, variable, default):
-        try:
-            value = float(os.getenv(variable, default))
-        except ValueError as e:
-            raise CovigatorDashBoardInitialisationError("{} needs to be a float value : {}".format(variable, str(e)))
-        return value
 
     def log_configuration(self):
         logger.info("Configuration")
