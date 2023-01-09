@@ -1,5 +1,4 @@
 import datetime
-import unittest
 from covigator.database.model import SampleEna
 from covigator.pipeline.downloader import Downloader, CovigatorMD5CheckSumError
 import os

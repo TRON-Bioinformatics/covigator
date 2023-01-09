@@ -145,8 +145,7 @@ def set_callbacks_lineages_tab(app, session: Session):
             State(ID_DROPDOWN_LINEAGE, 'value'),
             State(ID_DROPDOWN_PERIOD, 'value'),
         ],
-        suppress_callback_exceptions=True
-    )
+        suppress_callback_exceptions=True)
     def update_lineages_plot(_, data_source, countries, lineages, time_period):
         return html.Div(children=figures.get_lineages_plot(
             data_source=data_source,
@@ -162,8 +161,7 @@ def set_callbacks_lineages_tab(app, session: Session):
             State(ID_DROPDOWN_COUNTRY, 'value'),
             State(ID_DROPDOWN_LINEAGE, 'value'),
         ],
-        suppress_callback_exceptions=True
-    )
+        suppress_callback_exceptions=True)
     def update_lineages_table(_, data_source, countries, lineages):
         return html.Div(children=figures.get_lineages_variants_table(
             data_source=data_source, lineages=lineages, countries=countries))

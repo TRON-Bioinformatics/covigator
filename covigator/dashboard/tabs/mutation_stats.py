@@ -3,9 +3,7 @@ import dash_bootstrap_components as dbc
 from dash import html
 from dash.dependencies import Output, Input, State
 from sqlalchemy.orm import Session
-
 from covigator.dashboard.figures.mutation_stats import MutationStatsFigures
-from covigator.dashboard.figures.samples import SampleFigures
 from covigator.database.model import DataSource, VariantType
 from covigator.database.queries import Queries
 
@@ -103,8 +101,7 @@ def set_callbacks_mutation_stats_tab(app, session: Session):
             State(ID_DROPDOWN_GENE, 'value'),
             State(ID_DROPDOWN_VARIANT_TYPE, 'value')
         ],
-        suppress_callback_exceptions=True
-    )
+        suppress_callback_exceptions=True)
     def update_variants_per_sample(_, data_source, genes, variant_types):
         return html.Div(children=figures.get_variants_per_sample_plot(
             data_source=data_source, genes=genes, variant_types=variant_types))
@@ -117,8 +114,7 @@ def set_callbacks_mutation_stats_tab(app, session: Session):
             State(ID_DROPDOWN_GENE, 'value'),
             State(ID_DROPDOWN_VARIANT_TYPE, 'value')
         ],
-        suppress_callback_exceptions=True
-    )
+        suppress_callback_exceptions=True)
     def update_substitutions(_, data_source, genes, variant_types):
         return html.Div(children=figures.get_substitutions_plot(
             data_source=data_source, genes=genes, variant_types=variant_types))
@@ -130,8 +126,7 @@ def set_callbacks_mutation_stats_tab(app, session: Session):
             State(ID_DROPDOWN_DATA_SOURCE, 'value'),
             State(ID_DROPDOWN_GENE, 'value')
         ],
-        suppress_callback_exceptions=True
-    )
+        suppress_callback_exceptions=True)
     def update_indel_lengths(_, data_source, genes):
         return html.Div(children=figures.get_indels_lengths_plot(data_source=data_source, genes=genes))
 
@@ -142,7 +137,6 @@ def set_callbacks_mutation_stats_tab(app, session: Session):
             State(ID_DROPDOWN_DATA_SOURCE, 'value'),
             State(ID_DROPDOWN_GENE, 'value')
         ],
-        suppress_callback_exceptions=True
-    )
+        suppress_callback_exceptions=True)
     def update_annotation(_, data_source, genes):
         return html.Div(children=figures.get_annotations_plot(data_source=data_source, genes=genes))

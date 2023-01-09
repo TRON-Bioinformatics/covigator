@@ -168,11 +168,11 @@ class EnaAccessor(AbstractAccessor):
         return sample
 
     def _parse_numeric_fields(self, ena_run):
-        ena_run.nominal_length = self._parse_abstract(ena_run.nominal_length, int)
-        ena_run.read_count = self._parse_abstract(ena_run.read_count, int)
-        ena_run.base_count = self._parse_abstract(ena_run.base_count, int)
-        ena_run.lat = self._parse_abstract(ena_run.lat, float)
-        ena_run.lon = self._parse_abstract(ena_run.lon, float)
+        ena_run.nominal_length = _parse_abstract(ena_run.nominal_length, int)
+        ena_run.read_count = _parse_abstract(ena_run.read_count, int)
+        ena_run.base_count = _parse_abstract(ena_run.base_count, int)
+        ena_run.lat = _parse_abstract(ena_run.lat, float)
+        ena_run.lon = _parse_abstract(ena_run.lon, float)
 
     def _complies_with_inclusion_criteria(self, ena_run: dict):
         # NOTE: this uses the original dictionary instead of the parsed SampleEna class for performance reasons

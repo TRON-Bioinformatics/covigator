@@ -44,7 +44,7 @@ class AbstractProcessor:
             futures = []
             while True:
                 # queries 100 jobs every time to make sending to queue faster
-                jobs = self.queries.find_first_pending_jobs(self.data_source, n=1000, status=[JobStatus.DOWNLOADED])
+                jobs = self.queries.find_first_pending_jobs(self.data_source, n=1000, status=(JobStatus.DOWNLOADED, ))
                 if jobs is None or len(jobs) == 0:
                     logger.info("No more jobs to process after sending {} runs to process".format(count))
                     break

@@ -44,7 +44,7 @@ def ena_accessor():
 
 
 def covid19_portal_accessor():
-    parser = ArgumentParser(
+    ArgumentParser(
         description="Covigator {} CoVid19 portal accessor".format(covigator.VERSION))
 
     config = Configuration(verbose=True)

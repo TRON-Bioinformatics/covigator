@@ -1,5 +1,3 @@
-import numpy as np
-
 import covigator
 import pkg_resources
 from dask.distributed import Client
@@ -43,7 +41,8 @@ class ProcessorTests(AbstractTest):
         self.fake_processor.process()
         self.assertEqual(self.queries.count_jobs_by_status(data_source=DataSource.ENA, status=JobStatus.DOWNLOADED), 0)
         self.assertEqual(self.queries.count_jobs_by_status(data_source=DataSource.ENA, status=JobStatus.FINISHED), 10)
-        finished_jobs = self.queries.find_first_by_status(data_source=DataSource.ENA, status=[JobStatus.FINISHED], n=10)
+        finished_jobs = self.queries.find_first_by_status(
+            data_source=DataSource.ENA, status=(JobStatus.FINISHED, ), n=10)
         for j in finished_jobs:
             self.assertEqual(j.status, JobStatus.FINISHED)
             self.assertIsNotNone(j.analysed_at)

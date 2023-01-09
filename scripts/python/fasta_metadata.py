@@ -6,7 +6,7 @@ from covigator.database.model import SampleCovid19Portal
 
 
 
-""""
+"""
 This is a temporary patch that has been amended in the accessor already
 """
 config = Configuration()

@@ -42,6 +42,13 @@ def _get_run_accession(sample):
     return run_accession
 
 
+def _compress_file(uncompressed_file, compressed_file):
+    with open(uncompressed_file, 'rb') as f_in:
+        with gzip.open(compressed_file, 'wb') as f_out:
+            shutil.copyfileobj(f_in, f_out)
+    os.remove(uncompressed_file)
+
+
 class Covid19PortalAccessor(AbstractAccessor):
 
     API_URL_BASE = "https://www.covid19dataportal.org/api/backend/viral-sequences/sequences"
@@ -346,20 +353,14 @@ class Covid19PortalAccessor(AbstractAccessor):
 
         return sample
 
-    def _compress_file(self, uncompressed_file, compressed_file):
-        with open(uncompressed_file, 'rb') as f_in:
-            with gzip.open(compressed_file, 'wb') as f_out:
-                shutil.copyfileobj(f_in, f_out)
-        os.remove(uncompressed_file)
-
     def _parse_dates(self, sample: SampleCovid19):
-        format = "%Y%m%d"
+        _format = "%Y%m%d"
         try:
-            sample.collection_date = datetime.strptime(sample.collection_date, format).date()
+            sample.collection_date = datetime.strptime(sample.collection_date, _format).date()
         except Exception:
             sample.collection_date = None
         try:
-            sample.first_created = datetime.strptime(sample.first_created, format).date()
+            sample.first_created = datetime.strptime(sample.first_created, _format).date()
         except Exception:
             sample.first_created = None
 

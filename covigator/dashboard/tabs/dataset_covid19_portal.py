@@ -153,5 +153,5 @@ def get_plot_bad_bases_ratio(queries: Queries, count_samples):
 
         The ratio of N and ambiguous bases over the whole sequence length measures the quality of the assembly sequence.
         {} % of samples have a ratio <= 5 %.
-        """.format(round(float(data[data["bad_bases_ratio"] <= 5]["count"].sum()) / count_samples), 1))
+        """.format(round(float(data[data["bad_bases_ratio"] <= 5]["count"].sum()) / count_samples, 1)))
     ]

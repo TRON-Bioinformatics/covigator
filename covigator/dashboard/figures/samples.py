@@ -6,8 +6,6 @@ from covigator.dashboard.figures.figures import Figures, PLOTLY_CONFIG, MARGIN, 
 import plotly.express as px
 from dash import dcc
 
-from covigator.database.model import DataSource
-
 
 class SampleFigures(Figures):
 

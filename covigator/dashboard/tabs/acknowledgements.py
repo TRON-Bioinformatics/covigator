@@ -49,9 +49,9 @@ def get_tab_acknowledgements():
                     " and all data contributors for sharing the raw reads on which this research is based."]),
                 html.P([
                     html.Sup("2"),
-                    """ Leinonen, R., Akhtar, R., Birney, E., Bower, L., Cerdeno-Tárraga, A., Cheng, Y., 
+                    """Leinonen, R., Akhtar, R., Birney, E., Bower, L., Cerdeno-Tárraga, A., Cheng, Y.,
                     Cleland, I., Faruque, N., Goodgame, N., Gibson, R., Hoad, G., Jang, M., Pakseresht, N., 
-                    Plaister, S., Radhakrishnan, R., Reddy, K., Sobhany, S., Hoopen, P. Ten, Vaughan, R., 
+                    Plaister, S., Radhakrishnan, R., Reddy, K., Sobhany, S., Hoopen, P. Ten, Vaughan, R.,
                     Zalunin V., Cochrane, G. (2011). The European nucleotide archive. Nucleic Acids Research, 
                     39(SUPPL. 1), D28. https://doi.org/10.1093/nar/gkq967"""]),
                 html.Br(),
