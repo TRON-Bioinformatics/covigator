@@ -5,6 +5,7 @@ from dash import dcc
 import dash_bootstrap_components as dbc
 from dash import html
 import logzero
+from sqlalchemy.exc import StatementError, InvalidRequestError
 from sqlalchemy.orm import Session
 from dash.dependencies import Input, Output
 import covigator
@@ -275,54 +276,64 @@ def switch_logo_callback(url):
         return html.A(html.Img(src=COVIGATOR_ENA_LOGO, height="80px"), href="/")
 
 
-def switch_lat_update_callback(url, queries):
-    page = _get_page(url)
-    if page == MAIN_PAGE:
-        return None
-    elif page == COVID19_PORTAL_PAGE:
-        return dbc.Button(
-            "last updated {date}".format(date=queries.get_last_update(DataSource.COVID19_PORTAL)),
-            outline=True, color="dark", className="me-1",
-            # 'background-color': '#b71300',
-            style={"margin-right": "15px", 'font-size': '85%'})
-    elif page == ENA_PAGE:
-        return dbc.Button(
-            "last updated {date}".format(date=queries.get_last_update(DataSource.ENA)),
-            outline=True, color="dark", className="me-1",
-            style={"margin-right": "15px", 'font-size': '85%'})
-
-
-def switch_tab_callback(at, url, queries, content_folder):
-    page = _get_page(url)
+def switch_lat_update_callback(url, session):
     try:
+        queries = Queries(session=session)
+        page = _get_page(url)
         if page == MAIN_PAGE:
-            return get_tab_overview()
-        elif at == ENA_DATASET_TAB_ID:
-            return get_tab_dataset_ena(queries=queries)
-        elif at == COVID19_PORTAL_DATASET_TAB_ID:
-            return get_tab_dataset_covid19_portal(queries=queries)
-        elif at == SAMPLES_TAB_ID:
-            return get_tab_samples(queries=queries, data_source=page)
-        elif at == MUTATIONS_TAB_ID:
-            return get_tab_mutation_stats(queries=queries, data_source=page)
-        elif at == RECURRENT_MUTATIONS_TAB_ID:
-            return get_tab_variants(queries=queries, data_source=page)
-        elif at == INTRAHOST_MUTATIONS_TAB_ID:
-            return get_tab_subclonal_variants(queries=queries)
-        elif at == DOWNLOAD_TAB_ID:
-            return get_tab_download(content_folder=content_folder)
-        elif at == HELP_TAB_ID:
-            return get_tab_acknowledgements()
-        elif at == LINEAGES_TAB_ID:
-            return get_tab_lineages(queries=queries, data_source=page)
-        return html.P("This shouldn't ever be displayed...")
-    except Exception as e:
+            return None
+        elif page == COVID19_PORTAL_PAGE:
+            return dbc.Button(
+                "last updated {date}".format(date=queries.get_last_update(DataSource.COVID19_PORTAL)),
+                outline=True, color="dark", className="me-1",
+                # 'background-color': '#b71300',
+                style={"margin-right": "15px", 'font-size': '85%'})
+        elif page == ENA_PAGE:
+            return dbc.Button(
+                "last updated {date}".format(date=queries.get_last_update(DataSource.ENA)),
+                outline=True, color="dark", className="me-1",
+                style={"margin-right": "15px", 'font-size': '85%'})
+    except StatementError | InvalidRequestError as e:
         logger.exception(e)
+        logger.error("Database error, rolling back session")
+        session.rollback()
+
+
+def switch_tab_callback(at, url, session, content_folder):
+    try:
+        queries = Queries(session=session)
+        page = _get_page(url)
+        try:
+            if page == MAIN_PAGE:
+                return get_tab_overview()
+            elif at == ENA_DATASET_TAB_ID:
+                return get_tab_dataset_ena(queries=queries)
+            elif at == COVID19_PORTAL_DATASET_TAB_ID:
+                return get_tab_dataset_covid19_portal(queries=queries)
+            elif at == SAMPLES_TAB_ID:
+                return get_tab_samples(queries=queries, data_source=page)
+            elif at == MUTATIONS_TAB_ID:
+                return get_tab_mutation_stats(queries=queries, data_source=page)
+            elif at == RECURRENT_MUTATIONS_TAB_ID:
+                return get_tab_variants(queries=queries, data_source=page)
+            elif at == INTRAHOST_MUTATIONS_TAB_ID:
+                return get_tab_subclonal_variants(queries=queries)
+            elif at == DOWNLOAD_TAB_ID:
+                return get_tab_download(content_folder=content_folder)
+            elif at == HELP_TAB_ID:
+                return get_tab_acknowledgements()
+            elif at == LINEAGES_TAB_ID:
+                return get_tab_lineages(queries=queries, data_source=page)
+            return html.P("This shouldn't ever be displayed...")
+        except Exception as e:
+            logger.exception(e)
+    except StatementError | InvalidRequestError as e:
+        logger.exception(e)
+        logger.error("Database error, rolling back session")
+        session.rollback()
 
 
 def set_callbacks(app, session: Session, content_folder):
-
-    queries = Queries(session=session)
 
     @app.callback(
         Output('tabs', "children"),
@@ -341,13 +352,13 @@ def set_callbacks(app, session: Session, content_folder):
         Output('top-right-logo', "children"),
         [Input("url", "pathname")])
     def switch_lat_update(url):
-        return switch_lat_update_callback(url=url, queries=queries)
+        return switch_lat_update_callback(url=url, session=session)
 
     @app.callback(
         Output(ID_TAB_CONTENT, "children"),
         [Input("tabs", "active_tab"), Input("url", "pathname")])
     def switch_tab(at, url):
-        return switch_tab_callback(at=at, url=url, queries=queries, content_folder=content_folder)
+        return switch_tab_callback(at=at, url=url, session=session, content_folder=content_folder)
 
 
 def main(debug=False):
