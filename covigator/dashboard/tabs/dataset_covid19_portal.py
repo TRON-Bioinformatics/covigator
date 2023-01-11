@@ -39,7 +39,21 @@ def get_covid19_portal_overview_tab_left_bar(queries: Queries, count_samples):
     return html.Div(
         className="two columns",
         children=[
-            html.Br(),
+            html.Div([
+                html.Div(dbc.Button(
+                    "Horizontal coverage",
+                    color="secondary",
+                    className="me-1",
+                    style={'font-size': '100%'}
+                )),
+                html.Br(),
+                html.Div(dbc.Button(
+                    "Ambiguous bases",
+                    color="secondary",
+                    className="me-1",
+                    style={'font-size': '100%'})),
+            ]),
+            html.Hr(),
             dcc.Markdown("""
                 The COVID-19 Data Portal (https://www.covid19dataportal.org/) provides among other things DNA assemblies, 
                 geographical information and other metadata about SARS-CoV-2 samples. 

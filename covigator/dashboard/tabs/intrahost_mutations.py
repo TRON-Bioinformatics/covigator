@@ -70,13 +70,31 @@ def get_subclonal_variants_tab_left_bar(queries: Queries):
     count_unique_only_subclonal_variant = queries.count_unique_only_subclonal_variant()
 
     return html.Div(children=[
+        html.Div([
+            html.Div(dbc.Button(
+                "Top intrahost mutations",
+                color="secondary",
+                className="me-1",
+                style={'font-size': '100%'}
+            )),
+            html.Br(),
+            html.Div(dbc.Button(
+                "Distribution of selected intrahost mutation",
+                color="secondary",
+                className="me-1",
+                style={'font-size': '100%'})),
+            html.Br(),
+            html.Div(dbc.Button(
+                "Co-occurrent clonal mutations",
+                color="secondary",
+                className="me-1",
+                style={'font-size': '100%'}))
+        ]),
+        html.Hr(),
         dcc.Markdown("""
-                    Mutations with a VAF within the interval [0.05, 0.8) are considered intrahost variants. 
-                    Intrahost mutations can only be detected when the raw reads are available.
-                    The dataset of intrahost mutations is enriched for false positive calls due to the lower 
-                    Variant Allele Frequency (VAF). (Lythgoe, 2021) and (Valesano, 2021) reported that SARS-CoV-2 
-                    intrahost variant calls with a VAF below 0.02 and 0.03 respectively had not enough quality; 
-                    although the variant calling methods differ between them and with CoVigator.
+                    Mutations with a VAF below 50 % are considered intrahost.
+                    We apply further filtering on samples and mutations to build a high quality dataset of
+                    intrahost mutations. 
 
                     Here we provide a tool to explore most frequent intrahost mutations that have not been observed 
                     before as clonal variants.

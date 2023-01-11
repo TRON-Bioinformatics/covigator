@@ -70,7 +70,22 @@ def get_variants_tab_left_bar(queries: Queries, data_source: DataSource):
     oneyearago = today - timedelta(days=356)
     oneyearago_formatted = oneyearago.strftime(MONTH_PATTERN)
 
+    if data_source == DataSource.ENA:
+        teaser = html.Div([html.Div(
+            dbc.Button("Top recurrent mutations", color="secondary", className="me-1", style={'font-size': '100%'})),
+                        html.Br(), html.Div(
+                dbc.Button("Genome/gene view", color="secondary", className="me-1", style={'font-size': '100%'})),
+                        html.Br(), html.Div(
+                dbc.Button("Co-occurrence clustering", color="secondary", className="me-1", style={'font-size': '100%'}))])
+    else:
+        teaser = html.Div([html.Div(
+            dbc.Button("Top recurrent mutations", color="secondary", className="me-1", style={'font-size': '100%'})),
+            html.Br(), html.Div(
+                dbc.Button("Genome/gene view", color="secondary", className="me-1", style={'font-size': '100%'}))])
+
     return html.Div(children=[
+        teaser,
+        html.Hr(),
         html.Br(),
         html.Div(
             dcc.Dropdown(

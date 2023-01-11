@@ -52,7 +52,33 @@ def get_ena_overview_tab_left_bar(queries: Queries):
     return html.Div(
         className="two columns",
         children=[
-            html.Br(),
+            html.Div([
+                html.Div(dbc.Button(
+                    "Distribution of samples by library strategy",
+                    color="secondary",
+                    className="me-1",
+                    style={'font-size': '100%'}
+                )),
+                html.Br(),
+                html.Div(dbc.Button(
+                    "Read trimming",
+                    color="secondary",
+                    className="me-1",
+                    style={'font-size': '100%'})),
+                html.Br(),
+                html.Div(dbc.Button(
+                    "Horizontal and vertical coverage",
+                    color="secondary",
+                    className="me-1",
+                    style={'font-size': '100%'})),
+                html.Br(),
+                html.Div(dbc.Button(
+                    "Quality readouts",
+                    color="secondary",
+                    className="me-1",
+                    style={'font-size': '100%'}))
+            ]),
+            html.Hr(),
             dcc.Markdown("""
                         The ENA database provides the raw reads and metadata from SARS-CoV-2 samples through the ENA 
                         Portal API (https://www.ebi.ac.uk/ena/portal/api/). 

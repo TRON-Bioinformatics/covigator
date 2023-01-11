@@ -49,7 +49,22 @@ def get_lineages_tab_left_bar(queries: Queries, data_source: DataSource):
     return html.Div(
         className="two columns",
         children=[
-            html.P("Lineage information is derived from the mutated sequence using Pangolin."),
+            html.Div([
+                html.Div(dbc.Button(
+                    "Lineages accumulation",
+                    color="secondary",
+                    className="me-1",
+                    style={'font-size': '100%'}
+                )),
+                html.Br(),
+                html.Div(dbc.Button(
+                    "Instantaneous lineage prevalence",
+                    color="secondary",
+                    className="me-1",
+                    style={'font-size': '100%'}
+                ))]),
+            html.Hr(),
+            html.P("Lineage information is derived from the consensus sequence using Pangolin."),
             html.Br(),
             html.Div(
                 html.Span(
