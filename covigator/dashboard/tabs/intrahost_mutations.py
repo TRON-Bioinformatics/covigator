@@ -142,11 +142,11 @@ def get_subclonal_variants_tab_left_bar(queries: Queries):
         dcc.Markdown("""Minimum VAF intrahost variants"""),
         dcc.Slider(
             id=ID_SLIDER_SUBCLONAL_VARIANTS_VAF,
-            min=0.1,
-            max=0.8,
+            min=0.0,
+            max=0.5,
             step=0.05,
-            value=0.3,
-            marks={i: '{}'.format(i) for i in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]},
+            value=0.0,
+            marks={i: '{}'.format(i) for i in [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]},
             tooltip=dict(always_visible=False, placement="right")
         ),
         html.Br(),
@@ -157,7 +157,7 @@ def get_subclonal_variants_tab_left_bar(queries: Queries):
             max=200,
             step=10,
             value=10,
-            marks={i: '{}'.format(i) for i in [10, 50, 100, 150, 200]},
+            marks={i: '{}'.format(i) for i in [10, 20, 30, 40, 50, 100, 150, 200]},
             tooltip=dict(always_visible=False, placement="right")
         ),
         html.Br(),
