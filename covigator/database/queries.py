@@ -471,7 +471,7 @@ class Queries:
         sql_query_ds_ena = text("""
         select count(*) as count, variant_id, date_trunc('month', date::timestamp) as month 
             from {variant_observation_table} 
-            where variant_id=:variant_id'
+            where variant_id=:variant_id
             and sample in (select run_accession from {sample_table} where status='FINISHED')
             group by variant_id, date_trunc('month', date::timestamp);
             """.format(
