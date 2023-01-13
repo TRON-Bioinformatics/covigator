@@ -12,6 +12,8 @@
 [![License](https://img.shields.io/badge/license-MIT-green)](https://opensource.org/licenses/MIT)
 [![Documentation Status](https://readthedocs.org/projects/covigator/badge/?version=latest)](https://covigator.readthedocs.io/en/latest/?badge=latest)
 
+![CoVigator art](covigator/dashboard/assets/wordcloud.png)
+
 **CoVigator dashboard**: [https://covigator.tron-mainz.de](https://covigator.tron-mainz.de)
 
 **CoVigator documentation**: [https://covigator.readthedocs.io/](https://covigator.readthedocs.io)
