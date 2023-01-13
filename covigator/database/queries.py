@@ -468,18 +468,17 @@ class Queries:
 
         klass = self.get_variant_observation_klass(source=source)
         sample_klass = self.get_sample_klass(source=source)
-        sql_query_ds_ena = """
+        sql_query_ds_ena = text("""
         select count(*) as count, variant_id, date_trunc('month', date::timestamp) as month 
             from {variant_observation_table} 
-            where variant_id='{variant_id}' 
+            where variant_id=:variant_id
             and sample in (select run_accession from {sample_table} where status='FINISHED')
             group by variant_id, date_trunc('month', date::timestamp);
             """.format(
             variant_observation_table=klass.__tablename__,
             sample_table=sample_klass.__tablename__,
-            variant_id=variant_id
-        )
-        data = pd.read_sql_query(sql_query_ds_ena, self.session.bind)
+        ))
+        data = pd.read_sql_query(sql_query_ds_ena, self.session.bind, params={"variant_id": variant_id})
         data['month'] = pd.to_datetime(data['month'], utc=True)
         return data[~data.month.isna()]
 
@@ -593,24 +592,25 @@ class Queries:
                     columns=["position_bin"])
 
                 # counts variants over those bins
-                sql_query = """
-                        SELECT cast("position"/{bin_size} as int)*{bin_size} AS position_bin,
+                sql_query = text("""
+                        SELECT cast("position"/:bin_size as int)*:bin_size AS position_bin,
                                COUNT(*) as count_unique_variants
                         FROM {table_name}
                         GROUP BY position_bin
                         ORDER BY position_bin;
-                        """.format(bin_size=bin_size, table_name=klass.__tablename__)
-                binned_counts_variants = pd.read_sql_query(sql_query, self.session.bind)
+                        """.format(table_name=klass.__tablename__))
+                binned_counts_variants = pd.read_sql_query(sql_query, self.session.bind, params={'bin_size': bin_size})
 
                 # counts variant observations over those bins
-                sql_query = """
-                        SELECT cast("position"/{bin_size} as int)*{bin_size} AS position_bin,
+                sql_query = text("""
+                        SELECT cast("position"/:bin_size as int)*:bin_size AS position_bin,
                                COUNT(*) as count_variant_observations
                         FROM {table_name}
                         GROUP BY position_bin
                         ORDER BY position_bin;
-                        """.format(bin_size=bin_size, table_name=klass_observation.__tablename__)
-                binned_counts_variant_observations = pd.read_sql_query(sql_query, self.session.bind)
+                        """.format(table_name=klass_observation.__tablename__))
+                binned_counts_variant_observations = pd.read_sql_query(sql_query, self.session.bind,
+                    params={'bin_size': bin_size})
 
                 histogram = pd.merge(
                     left=pd.merge(
@@ -626,8 +626,8 @@ class Queries:
 
     def get_conservation_table(self, bin_size=50, start=None, end=None) -> pd.DataFrame:
         # counts variants over those bins
-        sql_query = """
-                SELECT cast("start"/{bin_size} as int)*{bin_size} AS position_bin,
+        sql_query = text("""
+                SELECT cast("start"/:bin_size as int)*:bin_size AS position_bin,
                        AVG("conservation") as conservation,
                        AVG("conservation_sarbecovirus") as conservation_sarbecovirus,
                        AVG("conservation_vertebrates") as conservation_vertebrates
@@ -635,10 +635,11 @@ class Queries:
                 {where}
                 GROUP BY position_bin
                 ORDER BY position_bin;
-                """.format(bin_size=bin_size, table_name= Conservation.__tablename__,
-                           where="WHERE start >= {start} and start <= {end}".format(start=start, end=end)
-                           if start is not None and end is not None else "")
-        return pd.read_sql_query(sql_query, self.session.bind)
+                """.format(table_name= Conservation.__tablename__,
+                           where="WHERE start >= :start and start <= :end"
+                           if start is not None and end is not None else ""))
+        return pd.read_sql_query(sql_query, self.session.bind,
+            params={"bin_size": bin_size, "start": start, "end": end})
 
     def get_dnds_table(self, source: str, countries=None, genes=None) -> pd.DataFrame:
         self._assert_data_source(data_source=source)
@@ -729,9 +730,7 @@ class Queries:
             column,
             func.row_number(). \
                 over(order_by=column). \
-                label('rownum')
-        ). \
-            from_self(column)
+                label('rownum')).from_self(column)
         if windowsize > 1:
             q = q.filter(sqlalchemy.text("rownum %% %d=1" % windowsize))
 
