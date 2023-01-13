@@ -314,7 +314,9 @@ def set_callbacks_variants_tab(app, session: Session):
     def update_cooccurrence_heatmap(
             _, gene_name, domain, dummy, rows, selected_rows_indices, metric, min_cooccurrences, min_samples, source):
 
-        if gene_name is None and domain is None:
+        if source == DataSource.COVID19_PORTAL.name:
+            plot = html.Div()
+        elif gene_name is None and domain is None:
             plot = html.Div(
                 children=[dcc.Markdown(
                     """**Please, select a gene or domain to explore the co-occurrence analysis**""")])
