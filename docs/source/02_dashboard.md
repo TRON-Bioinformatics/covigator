@@ -220,14 +220,13 @@ that most frequently co-occur.
 **NOTE**: only available for ENA dataset
 
 The aim of this tab is to enable the exploration of intrahost mutations.
-In CoVigator we classify as intrahost all mutation observations with a VAF below 0.8.
-The same mutation can be observed as intrahost or clonal in different samples. 
+In CoVigator we classify as intrahost all mutation observations with a VAF below 50 %. 
+We then apply a set of filtering criteria on samples and mutations to obtain a high quality dataset of intrahost 
+variant calls.
+The same mutation can be observed as intrahost or clonal (VAF >= 80 %) in different samples. 
 Here we want to focus on those mutations observed as intrahost mutations that were never observed as clonal mutations.
-The dataset of intrahost mutations is enriched for false positive calls, for this reason we rank the 
-intrahost mutations by a score that combines the ConsHMM conservation and the observation count. 
-Alternatively, the list of intrahost mutations can be sorted by observation count, 
-ConsHMM or VAF only. 
-The list of intrahost mutations is by default filtered off all observations with a VAF below 0.3.
+We rank the intrahost mutations by a score that combines the ConsHMM conservation and the observation count. 
+Alternatively, the list of intrahost mutations can be sorted by observation count, ConsHMM or VAF only.
 If an intrahost mutation is selected we show the different library strategies with which the mutation was observed, 
 the temporal distribution across countries and finally the top 10 co-occurring clonal mutations.
 
@@ -253,7 +252,7 @@ the temporal distribution across countries and finally the top 10 co-occurring c
   * Y-axis: number of samples
 * **Top 10 co-occurring clonal mutations**
 
-![Intrahost mutations](_static/figures/screenshot_04_intrahost_mutations.png)
+![Intrahost mutations](_static/figures/supplementary_figure_09_intrahost_mutations_tab.png)
 
 
 ## Download the raw data
