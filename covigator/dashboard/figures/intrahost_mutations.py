@@ -44,6 +44,7 @@ class SubclonalVariantsQueries:
             from {subclonal_variants_table_name} 
             where 
                 vaf >= {min_vaf} and 
+                date is not null and
                 variant_id in (
                     select t.variant_id from (
                         select 

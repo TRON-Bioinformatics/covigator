@@ -52,6 +52,32 @@ def get_samples_tab_left_bar(queries: Queries, data_source: DataSource):
     return html.Div(
         className="two columns",
         children=[
+            html.Div([
+                html.Div(dbc.Button(
+                    "Mutations per sample",
+                    color="secondary",
+                    className="me-1",
+                    style={'font-size': '100%'})),
+                html.Br(),
+                html.Div(dbc.Button(
+                    "Most frequent base substitutions",
+                    color="secondary",
+                    className="me-1",
+                    style={'font-size': '100%'})),
+                html.Br(),
+                html.Div(dbc.Button(
+                    "Indel length distribution",
+                    color="secondary",
+                    className="me-1",
+                    style={'font-size': '100%'})),
+                html.Br(),
+                html.Div(dbc.Button(
+                    "Most frequent mutation effects",
+                    color="secondary",
+                    className="me-1",
+                    style={'font-size': '100%'}))
+            ]),
+            html.Hr(),
             html.Br(),
             html.Div(
                 dcc.Dropdown(

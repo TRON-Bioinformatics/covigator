@@ -70,7 +70,22 @@ def get_variants_tab_left_bar(queries: Queries, data_source: DataSource):
     oneyearago = today - timedelta(days=356)
     oneyearago_formatted = oneyearago.strftime(MONTH_PATTERN)
 
+    if data_source == DataSource.ENA:
+        teaser = html.Div([html.Div(
+            dbc.Button("Top recurrent mutations", color="secondary", className="me-1", style={'font-size': '100%'})),
+                        html.Br(), html.Div(
+                dbc.Button("Genome/gene view", color="secondary", className="me-1", style={'font-size': '100%'})),
+                        html.Br(), html.Div(
+                dbc.Button("Co-occurrence clustering", color="secondary", className="me-1", style={'font-size': '100%'}))])
+    else:
+        teaser = html.Div([html.Div(
+            dbc.Button("Top recurrent mutations", color="secondary", className="me-1", style={'font-size': '100%'})),
+            html.Br(), html.Div(
+                dbc.Button("Genome/gene view", color="secondary", className="me-1", style={'font-size': '100%'}))])
+
     return html.Div(children=[
+        teaser,
+        html.Hr(),
         html.Br(),
         html.Div(
             dcc.Dropdown(
@@ -299,7 +314,9 @@ def set_callbacks_variants_tab(app, session: Session):
     def update_cooccurrence_heatmap(
             _, gene_name, domain, dummy, rows, selected_rows_indices, metric, min_cooccurrences, min_samples, source):
 
-        if gene_name is None and domain is None:
+        if source == DataSource.COVID19_PORTAL.name:
+            plot = html.Div()
+        elif gene_name is None and domain is None:
             plot = html.Div(
                 children=[dcc.Markdown(
                     """**Please, select a gene or domain to explore the co-occurrence analysis**""")])

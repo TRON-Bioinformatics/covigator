@@ -37,18 +37,41 @@ def get_tab_overview():
                                 """),
                             html.Br(),
                             html.P("""
-                       CoVigator loads publicly available SARS-CoV-2 raw reads (ie: FASTQs) from 
-                       the European Nucleotide Archive (ENA) and sequences from the COVID-19 Data Portal.
-                       Some samples are present in both datasets.
-                       ENA enables a high resolution analysis into the SARS-CoV-2 mutations through the raw reads. 
-                       Intrahost mutations are of particular interest.
-                       On the other hand, the COVID-19 Data Portal sequences have a lower resolution, 
-                       but it is a more extensive dataset.
-                       """),
-                            html.Br(),
+                               CoVigator loads publicly available SARS-CoV-2 raw reads (ie: FASTQs) from 
+                               the European Nucleotide Archive (ENA) and sequences from the COVID-19 Data Portal.
+                               Some samples are present in both datasets.
+                               ENA enables a high resolution analysis into the SARS-CoV-2 mutations through the raw reads. 
+                               Intrahost mutations are of particular interest.
+                               On the other hand, the COVID-19 Data Portal sequences have a lower resolution, 
+                               but it is a more extensive dataset.
+                               """),
+
                             dbc.CardBody(
                                 dbc.Row([
-                                    dbc.Col(
+                                    dbc.Col([html.Img(src="assets/wordcloud.png", style={"width": "100%"})]),
+                                    dbc.Col([
+                                        html.Br(),
+                                        html.Div([
+                                            dbc.ListGroup(
+                                                [
+                                                    dbc.ListGroupItem("Mutations per sample"),
+                                                    dbc.ListGroupItem("Most frequent base substitutions"),
+                                                    dbc.ListGroupItem("Indel length distribution"),
+                                                    dbc.ListGroupItem("Most frequent mutation effects"),
+                                                    dbc.ListGroupItem("Samples accumulation"),
+                                                    dbc.ListGroupItem("Evolutionary pressure (dN/dS)"),
+                                                    dbc.ListGroupItem("Instantaneous lineage prevalence"),
+                                                    dbc.ListGroupItem("Top recurrent mutations"),
+                                                    dbc.ListGroupItem("Genome/gene view"),
+                                                    dbc.ListGroupItem("Co-occurrence clustering"),
+                                                    dbc.ListGroupItem("Top intrahost mutations")
+                                                ],
+                                                flush=True
+                                            )
+                                        ]),
+                                        ]),
+                                    dbc.Col([
+                                        html.Br(),
                                         dbc.Card(
                                             [
                                                 dbc.CardImg(src="/assets/ENA_logo_2021.png", top=True,
@@ -64,10 +87,9 @@ def get_tab_overview():
                                                 ),
                                             ],
                                             outline=False,
-                                            style={"width": "40rem", "height": "15rem"},
-                                        )
-                                    ),
-                                    dbc.Col(
+                                            style={"width": "40rem", "height": "15rem", "margin-left": "40px"},
+                                        ),
+                                        html.Br(),
                                         dbc.Card(
                                             [
                                                 dbc.CardImg(src="/assets/CV19DP_logo_oneliner2.svg", top=True,
@@ -76,7 +98,8 @@ def get_tab_overview():
                                                 dbc.CardBody(
                                                     [
                                                         dbc.Button(
-                                                            "Explore data derived from the COVID-19 Data Portal sequences", color="warning",
+                                                            "Explore data derived from the COVID-19 Data Portal sequences",
+                                                            color="warning",
                                                             href="/covid19-portal",
                                                             style={"margin-left": "20px", "margin-right": "20px",
                                                                    "font-size": 20}, ),
@@ -84,8 +107,8 @@ def get_tab_overview():
                                                 ),
                                             ],
                                             outline=False,
-                                            style={"width": "40rem", "height": "15rem"},
-                                        )
+                                            style={"width": "40rem", "height": "15rem", "margin-left": "40px"},
+                                        )]
                                     ),
                                 ])),
                             html.Br(),

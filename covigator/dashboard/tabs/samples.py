@@ -46,7 +46,21 @@ def get_samples_tab_left_bar(queries: Queries, data_source: DataSource):
     return html.Div(
         className="two columns",
         children=[
-            html.Br(),
+            html.Div([
+                html.Div(dbc.Button(
+                    "Samples accumulation",
+                    color="secondary",
+                    className="me-1",
+                    style={'font-size': '100%'}
+                )),
+                html.Br(),
+                html.Div(dbc.Button(
+                    "Evolutionary pressure (dN/dS)",
+                    color="secondary",
+                    className="me-1",
+                    style={'font-size': '100%'}
+                ))]),
+            html.Hr(),
             html.Div(
                 dcc.Dropdown(
                     id=ID_DROPDOWN_DATA_SOURCE,
