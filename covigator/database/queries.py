@@ -730,8 +730,7 @@ class Queries:
             column,
             func.row_number(). \
                 over(order_by=column). \
-                label('rownum')). \
-            from_self(column)
+                label('rownum')).from_self(column)
         if windowsize > 1:
             q = q.filter(sqlalchemy.text("rownum %% %d=1" % windowsize))
 
