@@ -110,26 +110,6 @@ def get_tab_overview():
                                             style={"width": "40rem", "height": "15rem", "margin-left": "40px"},
                                         )]
                                     ),
-                                    #dbc.Col(
-                                    #    dbc.Card(
-                                    #        [
-                                    #            dbc.CardImg(src="/assets/CV19DP_logo_oneliner2.svg", top=True,
-                                    #                        style={"width": "18rem", "margin-left": "20px",
-                                    #                               "margin-top": "10px"}, ),
-                                    #            dbc.CardBody(
-                                    #                [
-                                    #                    dbc.Button(
-                                    #                        "Explore data derived from the COVID-19 Data Portal sequences", color="warning",
-                                    #                        href="/covid19-portal",
-                                    #                        style={"margin-left": "20px", "margin-right": "20px",
-                                     #                              "font-size": 20}, ),
-                                    #                ]
-                                    #            ),
-                                     #       ],
-                                     #       outline=False,
-                                     #       style={"width": "40rem", "height": "15rem"},
-                                     #   )
-                                    #),
                                 ])),
                             html.Br(),
                             html.Br(),
