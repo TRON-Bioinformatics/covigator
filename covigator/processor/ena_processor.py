@@ -12,7 +12,7 @@ from logzero import logger
 from dask.distributed import Client
 from covigator.processor.abstract_processor import AbstractProcessor
 from covigator.pipeline.ena_pipeline import Pipeline
-from covigator.pipeline.vcf_loader import VcfLoader
+from covigator.pipeline.vcf_loader import load_vcf
 
 
 class EnaProcessor(AbstractProcessor):
@@ -112,7 +112,7 @@ class EnaProcessor(AbstractProcessor):
         if sample.coverage < config.horizontal_coverage_thr:
             raise CovigatorExcludedSampleNarrowCoverage("Horizontal coverage {} %".format(sample.coverage))
         if not config.skip_vcf_loading:
-            VcfLoader().load(
+            load_vcf(
                 vcf_file=sample.lofreq_vcf_path, run_accession=sample.run_accession, source=DataSource.ENA, session=queries.session)
             sample.loaded_at = datetime.now()
         return sample

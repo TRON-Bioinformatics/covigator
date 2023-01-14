@@ -10,7 +10,7 @@ from dask.distributed import Client
 from covigator.database.queries import Queries
 from covigator.processor.abstract_processor import AbstractProcessor
 from covigator.pipeline.covid19_portal_pipeline import Covid19PortalPipeline
-from covigator.pipeline.vcf_loader import VcfLoader
+from covigator.pipeline.vcf_loader import load_vcf
 
 
 class Covid19PortalProcessor(AbstractProcessor):
@@ -57,7 +57,7 @@ class Covid19PortalProcessor(AbstractProcessor):
     @staticmethod
     def load(sample: SampleCovid19Portal, queries: Queries, config: Configuration) -> SampleCovid19Portal:
         if not config.skip_vcf_loading:
-            VcfLoader().load(
+            load_vcf(
                 vcf_file=sample.vcf_path, run_accession=sample.run_accession, source=DataSource.COVID19_PORTAL,
                 session=queries.session)
             sample.loaded_at = datetime.now()

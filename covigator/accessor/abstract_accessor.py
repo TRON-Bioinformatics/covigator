@@ -41,7 +41,9 @@ class AbstractAccessor:
         sample.continent_alpha_2 = parsed_country.continent_alpha_2
         sample.continent = parsed_country.continent
 
-    def _parse_dates(self, sample: Union[SampleEna, SampleCovid19]):
+
+    @staticmethod
+    def _parse_dates(sample: Union[SampleEna, SampleCovid19]):
         sample.collection_date = _parse_abstract(sample.collection_date, date.fromisoformat)
         sample.first_created = _parse_abstract(sample.first_created, date.fromisoformat)
         if sample.collection_date is not None and sample.collection_date < MINIMUM_DATE:
