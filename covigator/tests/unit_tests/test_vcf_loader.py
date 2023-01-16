@@ -4,7 +4,7 @@ from covigator.database.model import Variant, VariantObservation, DataSource, Su
     SampleEna, LowFrequencyVariantObservation, SubclonalVariant, \
     LowFrequencyVariant, LowQualityClonalVariant, LowQualityClonalVariantObservation, VariantCovid19Portal, \
     VariantObservationCovid19Portal, SampleCovid19Portal
-from covigator.pipeline.vcf_loader import VcfLoader
+from covigator.pipeline.vcf_loader import load_vcf
 from covigator.tests.unit_tests.abstract_test import AbstractTest
 
 
@@ -28,7 +28,7 @@ class VcfLoaderTests(AbstractTest):
 
     def test_vcf_loader_ena(self):
         vcf_file = pkg_resources.resource_filename(covigator.tests.__name__, "resources/snpeff.vcf")
-        VcfLoader().load(vcf_file, run_accession=self.sample_ena.run_accession, source=DataSource.ENA, session=self.session)
+        load_vcf(vcf_file, run_accession=self.sample_ena.run_accession, source=DataSource.ENA, session=self.session)
         self.session.commit()
 
         # check that one variant of each type was loaded
@@ -107,7 +107,7 @@ class VcfLoaderTests(AbstractTest):
         No intrahost variants should be loaded if the sample has low read counts
         """
         vcf_file = pkg_resources.resource_filename(covigator.tests.__name__, "resources/snpeff.vcf")
-        VcfLoader().load(vcf_file, run_accession=self.sample_ena_low_covered_bases.run_accession, source=DataSource.ENA, session=self.session)
+        load_vcf(vcf_file, run_accession=self.sample_ena_low_covered_bases.run_accession, source=DataSource.ENA, session=self.session)
         self.session.commit()
 
         # check that one variant of each type was loaded
@@ -125,8 +125,8 @@ class VcfLoaderTests(AbstractTest):
         No intrahost mutations because the sample is excluded due to low covered bases
         """
         vcf_file = pkg_resources.resource_filename(covigator.tests.__name__, "resources/snpeff.vcf")
-        VcfLoader().load(vcf_file, run_accession=self.sample_ena_low_covered_bases.run_accession,
-                         source=DataSource.ENA, session=self.session)
+        load_vcf(vcf_file, run_accession=self.sample_ena_low_covered_bases.run_accession,
+                 source=DataSource.ENA, session=self.session)
         self.session.commit()
 
         # check that one variant of each type was loaded
@@ -144,7 +144,7 @@ class VcfLoaderTests(AbstractTest):
         All mutations are loaded as clonal when it is a C19DP sample
         """
         vcf_file = pkg_resources.resource_filename(covigator.tests.__name__, "resources/snpeff.vcf")
-        VcfLoader().load(vcf_file, run_accession=self.sample_c19dp.run_accession, source=DataSource.COVID19_PORTAL, session=self.session)
+        load_vcf(vcf_file, run_accession=self.sample_c19dp.run_accession, source=DataSource.COVID19_PORTAL, session=self.session)
         self.session.commit()
 
         # check that one variant of each type was loaded
@@ -169,34 +169,34 @@ class VcfLoaderTests(AbstractTest):
 
     def test_vcf_loader_without_dp4(self):
         vcf_file = pkg_resources.resource_filename(covigator.tests.__name__, "resources/snpeff_without_dp4.vcf")
-        VcfLoader().load(vcf_file, run_accession=self.sample_ena.run_accession, source=DataSource.ENA, session=self.session)
+        load_vcf(vcf_file, run_accession=self.sample_ena.run_accession, source=DataSource.ENA, session=self.session)
         self.session.commit()
         self.assertEqual(self.session.query(Variant).count(), 1)
         self.assertEqual(self.session.query(VariantObservation).count(), 1)
 
     def test_vcf_loader_without_annotation(self):
         vcf_file = pkg_resources.resource_filename(covigator.tests.__name__, "resources/snpeff_without_annotation.vcf")
-        VcfLoader().load(vcf_file, run_accession=self.sample_ena.run_accession, source=DataSource.ENA, session=self.session)
+        load_vcf(vcf_file, run_accession=self.sample_ena.run_accession, source=DataSource.ENA, session=self.session)
         self.session.commit()
         self.assertEqual(self.session.query(Variant).count(), 1)
         self.assertEqual(self.session.query(VariantObservation).count(), 1)
 
     def test_vcf_loader_with_insertion(self):
         vcf_file = pkg_resources.resource_filename(covigator.tests.__name__, "resources/snpeff_with_insertion.vcf")
-        VcfLoader().load(vcf_file, run_accession=self.sample_ena.run_accession, source=DataSource.ENA, session=self.session)
+        load_vcf(vcf_file, run_accession=self.sample_ena.run_accession, source=DataSource.ENA, session=self.session)
         self.session.commit()
         self.assertEqual(self.session.query(Variant).count(), 1)
         self.assertEqual(self.session.query(VariantObservation).count(), 1)
 
     def test_vcf_loader_with_deletion(self):
         vcf_file = pkg_resources.resource_filename(covigator.tests.__name__, "resources/snpeff_with_deletion.vcf")
-        VcfLoader().load(vcf_file, run_accession=self.sample_ena.run_accession, source=DataSource.ENA, session=self.session)
+        load_vcf(vcf_file, run_accession=self.sample_ena.run_accession, source=DataSource.ENA, session=self.session)
         self.session.commit()
         self.assertEqual(self.session.query(Variant).count(), 1)
         self.assertEqual(self.session.query(VariantObservation).count(), 1)
     def test_vcf_loader_vafator(self):
         vcf_file = pkg_resources.resource_filename(covigator.tests.__name__, "resources/test.lofreq.vcf.gz")
-        VcfLoader().load(vcf_file, run_accession=self.sample_ena.run_accession, source=DataSource.ENA, session=self.session)
+        load_vcf(vcf_file, run_accession=self.sample_ena.run_accession, source=DataSource.ENA, session=self.session)
         self.session.commit()
         self.assertEqual(self.session.query(Variant).count(), 2)
         self.assertEqual(self.session.query(VariantObservation).count(), 2)

@@ -159,108 +159,122 @@ def _parse_variant(variant: Variant, klass) -> CovigatorVariant:
     return parsed_variant
 
 
-class VcfLoader:
+def load_vcf(vcf_file: str, run_accession: str, source: DataSource, session: Session):
 
-    def load(self, vcf_file: str, run_accession: str, source: DataSource, session: Session):
+    assert vcf_file is not None or vcf_file == "", "Missing VCF file provided to VcfLoader"
+    assert os.path.exists(vcf_file) and os.path.isfile(vcf_file), "Non existing VCF file provided to VcfLoader"
+    assert run_accession is not None or run_accession == "", "Missing sample"
+    assert session is not None, "Missing DB session"
 
-        assert vcf_file is not None or vcf_file == "", "Missing VCF file provided to VcfLoader"
-        assert os.path.exists(vcf_file) and os.path.isfile(vcf_file), "Non existing VCF file provided to VcfLoader"
-        assert run_accession is not None or run_accession == "", "Missing sample"
-        assert session is not None, "Missing DB session"
+    observed_variants = []
+    low_quality_clonal_observed_variants = []
+    subclonal_observed_variants = []
+    low_frequency_observed_variants = []
+    specific_sample = Queries(session=session).find_sample_by_accession(
+        run_accession=run_accession, source=source)
+    assert specific_sample is not None, "Cannot find sample in database"
 
-        observed_variants = []
-        subclonal_observed_variants = []
-        low_frequency_observed_variants = []
-        specific_sample = Queries(session=session).find_sample_by_accession(
-            run_accession=run_accession, source=source)
-        assert specific_sample is not None, "Cannot find sample in database"
+    # reads whole VCF in memory to count variants (this is fine as VCFs are smallish)
+    variants = [v for v in VCF(vcf_file)]
 
-        # reads whole VCF in memory to count variants
-        variants = [v for v in VCF(vcf_file)]
+    # counts variants
+    specific_sample.count_snvs = len([v for v in variants if v.FILTER is None and len(v.REF) == 1 and len(v.ALT[0]) == 1])
+    specific_sample.count_deletions = len([v for v in variants if v.FILTER is None and len(v.REF) == 1 and len(v.ALT[0]) > 1])
+    specific_sample.count_insertions = len([v for v in variants if v.FILTER is None and len(v.REF) > 1 and len(v.ALT[0]) == 1])
 
-        # counts variants
-        specific_sample.count_snvs = len([v for v in variants if v.FILTER is None and len(v.REF) == 1 and len(v.ALT[0]) == 1])
-        specific_sample.count_deletions = len([v for v in variants if v.FILTER is None and len(v.REF) == 1 and len(v.ALT[0]) > 1])
-        specific_sample.count_insertions = len([v for v in variants if v.FILTER is None and len(v.REF) > 1 and len(v.ALT[0]) == 1])
+    if source == DataSource.ENA:
+        specific_sample.count_subclonal_snvs = len([v for v in variants if v.FILTER == "SUBCLONAL"
+                                    and len(v.REF) == 1 and len(v.ALT[0]) == 1])
+        specific_sample.count_subclonal_deletions = len([v for v in variants if v.FILTER == "SUBCLONAL"
+                                         and len(v.REF) > 1 and len(v.ALT[0]) == 1])
+        specific_sample.count_subclonal_insertions = len([v for v in variants if v.FILTER == "SUBCLONAL"
+                                          and len(v.REF) == 1 and len(v.ALT[0]) > 1])
+        specific_sample.count_low_frequency_snvs = len([v for v in variants if v.FILTER == "LOW_FREQUENCY"
+                                    and len(v.REF) == 1 and len(v.ALT[0]) == 1])
+        specific_sample.count_low_frequency_deletions = len([v for v in variants if v.FILTER == "LOW_FREQUENCY"
+                                         and len(v.REF) > 1 and len(v.ALT[0]) == 1])
+        specific_sample.count_low_frequency_insertions = len([v for v in variants if v.FILTER == "LOW_FREQUENCY"
+                                          and len(v.REF) == 1 and len(v.ALT[0]) > 1])
 
-        count_high_frequency_non_clonal = 0
-        count_subclonal = 0
-        if source == DataSource.ENA:
-            specific_sample.count_subclonal_snvs = len([v for v in variants if v.FILTER == "SUBCLONAL"
-                                        and len(v.REF) == 1 and len(v.ALT[0]) == 1])
-            specific_sample.count_subclonal_deletions = len([v for v in variants if v.FILTER == "SUBCLONAL"
-                                             and len(v.REF) > 1 and len(v.ALT[0]) == 1])
-            specific_sample.count_subclonal_insertions = len([v for v in variants if v.FILTER == "SUBCLONAL"
-                                              and len(v.REF) == 1 and len(v.ALT[0]) > 1])
-            specific_sample.count_low_frequency_snvs = len([v for v in variants if v.FILTER  == "LOW_FREQUENCY"
-                                        and len(v.REF) == 1 and len(v.ALT[0]) == 1])
-            specific_sample.count_low_frequency_deletions = len([v for v in variants if v.FILTER == "LOW_FREQUENCY"
-                                             and len(v.REF) > 1 and len(v.ALT[0]) == 1])
-            specific_sample.count_low_frequency_insertions = len([v for v in variants if v.FILTER == "LOW_FREQUENCY"
-                                              and len(v.REF) == 1 and len(v.ALT[0]) > 1])
+        count_subclonal = len([v for v in variants if v.INFO.get("vafator_af", 0.0) < 0.8])
+        specific_sample.intrahost_filter = not is_eligible_intrahost_sample(
+            sample=specific_sample, count_subclonal=count_subclonal)
 
-            count_subclonal = len([v for v in variants if v.INFO.get("vafator_af", 0.0) < 0.8])
-            specific_sample.intrahost_filter = not is_eligible_intrahost_sample(
-                sample=specific_sample, count_subclonal=count_subclonal)
-
-            count_high_frequency_non_clonal = len([v for v in variants if 0.4 <= v.INFO.get("vafator_af", 0.0) < 0.8])
-            specific_sample.potential_coinfection = count_high_frequency_non_clonal > MAX_INTRAHOST_HIGH_FREQUENCY
+        count_high_frequency_non_clonal = len([v for v in variants if 0.4 <= v.INFO.get("vafator_af", 0.0) < 0.8])
+        specific_sample.potential_coinfection = count_high_frequency_non_clonal > MAX_INTRAHOST_HIGH_FREQUENCY
 
 
-        variant: Variant
-        for variant in variants:
-            # NOTE: it accepts only variant flagged as PASS, LOW_FREQUENCY, SUBCLONAL
-            # but this classification is irrelevant as it then classifies mutations based on VAF
-            # furthermore, the classification from the pipeline may not consistent with the VAF
-            if variant.FILTER is None or variant.FILTER in ["LOW_FREQUENCY", "SUBCLONAL", "LOW_QUALITY_CLONAL"]:
-                if source == DataSource.COVID19_PORTAL:
-                    v = _parse_variant(variant, VariantCovid19Portal)
-                    observed_variants.append(
-                        _parse_variant_observation(
-                            variant, specific_sample, v, VariantObservationCovid19Portal))
-                    session.add(v)
-                else:
-                    vaf = variant.INFO.get("vafator_af", 0.0)
-                    dp = variant.INFO.get("vafator_dp", 0)
-                    ac = variant.INFO.get("vafator_ac", 0)
-                    length = abs(_get_variant_length(variant))
-                    if vaf >= 0.8:
-                        # only stores clonal high quality variants in this table
-                        v = _parse_variant(variant, CovigatorVariant)
-                        observed_variants.append(
-                            _parse_variant_observation(
-                                variant, specific_sample, v, VariantObservation))
-                        session.add(v)
-                    elif vaf >= 0.5:  # and < 0.8
-                        # stores clonal low quality variants in this table
-                        v = _parse_variant(variant, LowQualityClonalVariant)
-                        observed_variants.append(
-                            _parse_variant_observation(
-                                variant, specific_sample, v, LowQualityClonalVariantObservation))
-                        session.add(v)
-                    elif is_eligible_intrahost_mutation(ac=ac, dp=dp, length=length, vaf=vaf) and \
-                            not specific_sample.intrahost_filter and \
-                            not specific_sample.potential_coinfection:  # and vaf < 0.5
-                        # stores high quality intrahost subclonal variants in this table
-                        v = _parse_variant(variant, SubclonalVariant)
-                        subclonal_observed_variants.append(
-                            _parse_variant_observation(
-                                variant, specific_sample, v, SubclonalVariantObservation))
-                        session.add(v)
-                    else:
-                        # stores low frequency and/or low quality subclonal variants in this table (we do nothing with these variants)
-                        v = _parse_variant(variant, LowFrequencyVariant)
-                        low_frequency_observed_variants.append(
-                            _parse_variant_observation(
-                                variant, specific_sample, v, LowFrequencyVariantObservation))
-                        session.add(v)
+    variant: Variant
+    for variant in variants:
+        # NOTE: it accepts only variant flagged as PASS, LOW_FREQUENCY, SUBCLONAL
+        # but this classification is irrelevant as it then classifies mutations based on VAF
+        # furthermore, the classification from the pipeline may not consistent with the VAF
+        ov, low_quality_clonal_ov, subclonal_ov, low_frequency_ov =_load_variant(
+            session, source, specific_sample, variant)
+        if ov:
+            observed_variants.append(ov)
+        if low_quality_clonal_ov:
+            low_quality_clonal_observed_variants.append(low_quality_clonal_ov)
+        if subclonal_ov:
+            subclonal_observed_variants.append(subclonal_ov)
+        if low_frequency_ov:
+            low_frequency_observed_variants.append(low_frequency_ov)
 
-                try:
-                    session.commit()
-                except (IntegrityError, InvalidRequestError):
-                    # do nothing the variant was just added by another process between merge and commit
-                    session.rollback()
-        session.add_all(observed_variants)
-        session.add_all(subclonal_observed_variants)
-        session.add_all(low_frequency_observed_variants)
-        # NOTE: commit will happen afterwards when the job status is updated
+    # cannot add_all objects of different types.. thus the separate lists here
+    session.add_all(observed_variants)
+    session.add_all(low_quality_clonal_observed_variants)
+    session.add_all(subclonal_observed_variants)
+    session.add_all(low_frequency_observed_variants)
+    # NOTE: commit will happen afterwards when the job status is updated
+
+
+def _load_variant(session, source, specific_sample, variant):
+    observed_variant = None
+    low_quality_clonal_observed_variant = None
+    subclonal_observed_variant = None
+    low_frequency_observed_variant = None
+
+    if variant.FILTER is None or variant.FILTER in ["LOW_FREQUENCY", "SUBCLONAL", "LOW_QUALITY_CLONAL"]:
+        if source == DataSource.COVID19_PORTAL:
+            v = _parse_variant(variant, VariantCovid19Portal)
+            observed_variant = _parse_variant_observation(variant, specific_sample, v, VariantObservationCovid19Portal)
+            session.add(v)
+        else:
+            vaf = variant.INFO.get("vafator_af", 0.0)
+            dp = variant.INFO.get("vafator_dp", 0)
+            ac = variant.INFO.get("vafator_ac", 0)
+            length = abs(_get_variant_length(variant))
+            if vaf >= 0.8:
+                # only stores clonal high quality variants in this table
+                v = _parse_variant(variant, CovigatorVariant)
+                observed_variant = _parse_variant_observation(variant, specific_sample, v, VariantObservation)
+                session.add(v)
+            elif vaf >= 0.5:  # and < 0.8
+                # stores clonal low quality variants in this table
+                v = _parse_variant(variant, LowQualityClonalVariant)
+                low_quality_clonal_observed_variant = _parse_variant_observation(
+                    variant, specific_sample, v, LowQualityClonalVariantObservation)
+                session.add(v)
+            elif is_eligible_intrahost_mutation(ac=ac, dp=dp, length=length, vaf=vaf) and \
+                    not specific_sample.intrahost_filter and \
+                    not specific_sample.potential_coinfection:  # and vaf < 0.5
+                # stores high quality intrahost subclonal variants in this table
+                v = _parse_variant(variant, SubclonalVariant)
+                subclonal_observed_variant = _parse_variant_observation(
+                    variant, specific_sample, v, SubclonalVariantObservation)
+                session.add(v)
+            else:
+                # stores low frequency and/or low quality subclonal variants in this table (we do nothing with these variants)
+                v = _parse_variant(variant, LowFrequencyVariant)
+                low_frequency_observed_variant = _parse_variant_observation(
+                    variant, specific_sample, v, LowFrequencyVariantObservation)
+                session.add(v)
+
+        try:
+            session.commit()
+        except (IntegrityError, InvalidRequestError):
+            # do nothing the variant was just added by another process between merge and commit
+            session.rollback()
+
+    return observed_variant, low_quality_clonal_observed_variant, subclonal_observed_variant, \
+        low_frequency_observed_variant

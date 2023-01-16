@@ -12,6 +12,14 @@ from logzero import logger
 BATCH_SIZE = 1000
 
 
+def _parse_numeric_fields(ena_run):
+    ena_run.nominal_length = _parse_abstract(ena_run.nominal_length, int)
+    ena_run.read_count = _parse_abstract(ena_run.read_count, int)
+    ena_run.base_count = _parse_abstract(ena_run.base_count, int)
+    ena_run.lat = _parse_abstract(ena_run.lat, float)
+    ena_run.lon = _parse_abstract(ena_run.lon, float)
+
+
 class EnaAccessor(AbstractAccessor):
 
     ENA_API_URL_BASE = "https://www.ebi.ac.uk/ena/portal/api"
@@ -160,19 +168,12 @@ class EnaAccessor(AbstractAccessor):
         sample = SampleEna(**run)
         self._parse_country(sample)
         self._parse_dates(sample)
-        self._parse_numeric_fields(sample)
+        _parse_numeric_fields(sample)
         fastqs = sample.get_fastqs_ftp()
         # annotates with the number of FASTQ files, this is useful as we hold the FASTQs in a single string
         sample.num_fastqs = 0 if fastqs is None or fastqs == [""] else len(fastqs)
         sample.covigator_accessor_version = covigator.VERSION
         return sample
-
-    def _parse_numeric_fields(self, ena_run):
-        ena_run.nominal_length = _parse_abstract(ena_run.nominal_length, int)
-        ena_run.read_count = _parse_abstract(ena_run.read_count, int)
-        ena_run.base_count = _parse_abstract(ena_run.base_count, int)
-        ena_run.lat = _parse_abstract(ena_run.lat, float)
-        ena_run.lon = _parse_abstract(ena_run.lon, float)
 
     def _complies_with_inclusion_criteria(self, ena_run: dict):
         # NOTE: this uses the original dictionary instead of the parsed SampleEna class for performance reasons
