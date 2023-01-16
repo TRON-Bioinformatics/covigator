@@ -10,7 +10,7 @@ from dask.distributed import Client
 from covigator.database.queries import Queries
 from covigator.processor.abstract_processor import AbstractProcessor
 from covigator.pipeline.covid19_portal_pipeline import Covid19PortalPipeline
-from covigator.pipeline.vcf_loader import VcfLoader
+from covigator.pipeline.vcf_loader import load_vcf
 
 
 class Covid19PortalProcessor(AbstractProcessor):
@@ -39,18 +39,14 @@ class Covid19PortalProcessor(AbstractProcessor):
 
     @staticmethod
     def run_pipeline(sample: SampleCovid19Portal, queries: Queries, config: Configuration) -> SampleCovid19Portal:
+
         pipeline_results = Covid19PortalPipeline(config=config).run(sample=sample)
         sample.analysed_at = datetime.now()
         sample.sample_folder = sample.get_sample_folder(config.storage_folder)
         sample.vcf_path = pipeline_results.vcf_path
         sample.pangolin_path = pipeline_results.pangolin_path
         sample.fasta_path = pipeline_results.fasta_path
-
-        # stores the covigator version
-        sample.covigator_processor_version = covigator.VERSION
-
-        # load pangolin results
-        sample = Covid19PortalProcessor.load_pangolin(sample=sample, path=sample.pangolin_path)
+        sample.covigator_processor_version = covigator.VERSION  # stores the covigator version
 
         # NOTE: this is a counterintuititve commit. The VCF loading happening after this may do a legitimate rollback
         # but we don't want to rollback changes in the sample, hence this commit
@@ -61,7 +57,7 @@ class Covid19PortalProcessor(AbstractProcessor):
     @staticmethod
     def load(sample: SampleCovid19Portal, queries: Queries, config: Configuration) -> SampleCovid19Portal:
         if not config.skip_vcf_loading:
-            VcfLoader().load(
+            load_vcf(
                 vcf_file=sample.vcf_path, run_accession=sample.run_accession, source=DataSource.COVID19_PORTAL,
                 session=queries.session)
             sample.loaded_at = datetime.now()

@@ -14,7 +14,6 @@ from covigator import MISSENSE_VARIANT, DISRUPTIVE_INFRAME_DELETION, CONSERVATIV
     CONSERVATIVE_INFRAME_INSERTION, DISRUPTIVE_INFRAME_INSERTION
 from covigator.dashboard.figures.figures import Figures, PLOTLY_CONFIG, TEMPLATE, MARGIN, STYLES_STRIPPED, STYLE_HEADER, \
     STYLE_CELL
-import plotly
 import plotly.express as px
 import plotly.graph_objects as go
 from dash import html
@@ -22,73 +21,227 @@ from dash import dcc
 from covigator.database.model import Gene, Domain, DataSource
 
 VARIANT_TOOLTIP = '<b>%{text}</b><br>' + 'Allele frequency: %{y:.5f}<br>' + 'Genomic Position: %{x}'
-GENE_COLORS = list(reversed(plotly.express.colors.sequential.Tealgrn))
-DOMAIN_COLORS = list(reversed(plotly.express.colors.sequential.Magenta))
+GENE_COLORS = list(reversed(px.colors.sequential.Tealgrn))
+DOMAIN_COLORS = list(reversed(px.colors.sequential.Magenta))
 OTHER_VARIANT_SYMBOL = "x"
 INSERTION_SYMBOL = "triangle-up"
 DELETION_SYMBOL = "triangle-down"
 MISSENSE_VARIANT_SYMBOL = "circle"
-VERY_COMMON_VARIANTS_COLOR = plotly.express.colors.sequential.Reds[-1]
-COMMON_VARIANTS_COLOR = plotly.express.colors.sequential.Reds[-3]
-RARE_VARIANTS_COLOR = plotly.express.colors.sequential.Reds[-7]
+VERY_COMMON_VARIANTS_COLOR = px.colors.sequential.Reds[-1]
+COMMON_VARIANTS_COLOR = px.colors.sequential.Reds[-3]
+RARE_VARIANTS_COLOR = px.colors.sequential.Reds[-7]
 COMMON_VARIANTS_THRESHOLD = 0.1
 LOW_FREQUENCY_VARIANTS_THRESHOLD = 0.01
-LOW_FREQUENCY_VARIANTS_COLOR = plotly.express.colors.sequential.Reds[-5]
+LOW_FREQUENCY_VARIANTS_COLOR = px.colors.sequential.Reds[-5]
 RARE_VARIANTS_THRESHOLD = 0.001
 MONTH_PATTERN = re.compile('[0-9]{4}-[0-9]{2}')
 
 
+def _get_color_by_af(af):
+    color = None
+    if af < RARE_VARIANTS_THRESHOLD:
+        color = RARE_VARIANTS_COLOR
+    elif RARE_VARIANTS_THRESHOLD <= af < LOW_FREQUENCY_VARIANTS_THRESHOLD:
+        color = LOW_FREQUENCY_VARIANTS_COLOR
+    elif LOW_FREQUENCY_VARIANTS_THRESHOLD <= af < COMMON_VARIANTS_THRESHOLD:
+        color = COMMON_VARIANTS_COLOR
+    elif af >= COMMON_VARIANTS_THRESHOLD:
+        color = VERY_COMMON_VARIANTS_COLOR
+    return color
+
+
+def _get_table_style_by_af():
+    return [
+        {
+            'if': {
+                'filter_query': '{{frequency}} >= 0 && {{frequency}} < {}'.format(RARE_VARIANTS_THRESHOLD),
+                'column_id': "frequency"
+            },
+            'backgroundColor': RARE_VARIANTS_COLOR,
+            'color': 'inherit'
+        },
+        {
+            'if': {
+                'filter_query': '{{frequency}} >= {} && {{frequency}} < {}'.format(
+                    RARE_VARIANTS_THRESHOLD, LOW_FREQUENCY_VARIANTS_THRESHOLD),
+                'column_id': "frequency"
+            },
+            'backgroundColor': LOW_FREQUENCY_VARIANTS_COLOR,
+            'color': 'inherit'
+        },
+        {
+            'if': {
+                'filter_query': '{{frequency}} >= {} && {{frequency}} < {}'.format(
+                    LOW_FREQUENCY_VARIANTS_THRESHOLD, COMMON_VARIANTS_THRESHOLD),
+                'column_id': "frequency"
+            },
+            'backgroundColor': COMMON_VARIANTS_COLOR,
+            'color': 'white'
+        },
+        {
+            'if': {
+                'filter_query': '{{frequency}} >= {}'.format(COMMON_VARIANTS_THRESHOLD),
+                'column_id': "frequency"
+            },
+            'backgroundColor': VERY_COMMON_VARIANTS_COLOR,
+            'color': 'white'
+        }
+    ]
+
+
+def discrete_background_color_bins(df, n_bins=5, columns='all', colors='Blues'):
+    bounds = [i * (1.0 / n_bins) for i in range(n_bins + 1)]
+    if columns == 'all':
+        if 'id' in df:
+            df_numeric_columns = df.select_dtypes('number').drop(['id'], axis=1)
+        else:
+            df_numeric_columns = df.select_dtypes('number')
+    else:
+        df_numeric_columns = df[columns]
+    df_max = df_numeric_columns.max().max()
+    df_min = df_numeric_columns.min().min()
+    ranges = [
+        ((df_max - df_min) * i) + df_min
+        for i in bounds
+    ]
+    styles = []
+    for i in range(1, len(bounds)):
+        min_bound = ranges[i - 1]
+        max_bound = ranges[i]
+        backgroundColor = colorlover.scales[str(n_bins)]['seq'][colors][i - 1]
+        color = 'white' if i > len(bounds) / 2. else 'inherit'
+
+        for column in df_numeric_columns:
+            styles.append({
+                'if': {
+                    'filter_query': (
+                            '{{{column}}} >= {min_bound}' +
+                            (' && {{{column}}} < {max_bound}' if (i < len(bounds) - 1) else '')
+                    ).format(column=column, min_bound=min_bound, max_bound=max_bound),
+                    'column_id': column
+                },
+                'backgroundColor': backgroundColor,
+                'color': color
+            })
+
+    return styles
+
+
+def _get_conservation_traces(conservation, xaxis, yaxis1, yaxis2, yaxis3):
+    return [
+        go.Scatter(x=conservation.position_bin, y=conservation.conservation, yaxis=yaxis1, xaxis=xaxis,
+                   text="Conservation SARS-CoV-2", textposition="top right", showlegend=False,
+                   fill='tozeroy', line_color="grey", line_width=1),
+        go.Scatter(x=conservation.position_bin, y=conservation.conservation_sarbecovirus, yaxis=yaxis2,
+                   xaxis=xaxis, text="Conservation SARS-like betacoronavirus", textposition="top right",
+                   showlegend=False, fill='tozeroy', line_color="grey", line_width=1),
+        go.Scatter(x=conservation.position_bin, y=conservation.conservation_vertebrates, yaxis=yaxis3,
+                   xaxis=xaxis, text="Conservation vertebrates", textposition="top right",
+                   showlegend=False, fill='tozeroy', line_color="grey", line_width=1)
+    ]
+
+
+def _get_variants_scatter(variants, name, symbol, xaxis='x'):
+    return go.Scatter(
+        x=variants.position,
+        y=variants.af,
+        name=name,
+        mode='markers',
+        # opacity=0.5,
+        marker=dict(
+            symbol=symbol,
+            color=variants.af.transform(_get_color_by_af),
+            showscale=False
+        ),
+        xaxis=xaxis,
+        showlegend=True,
+        text=variants[["hgvs_p", "annotation_highest_impact"]].apply(lambda x: "{} ({})".format(x[0], x[1]), axis=1),
+        hovertemplate=VARIANT_TOOLTIP
+    )
+
+
+def _run_clustering(sparse_matrix, min_samples) -> pd.DataFrame:
+
+    data = None
+
+    if sparse_matrix is not None and sparse_matrix.shape[0] > 0:
+        diagonal = sparse_matrix.loc[sparse_matrix.variant_id_one == sparse_matrix.variant_id_two,
+                                     ["variant_id_one", "variant_id_two", "count"]]
+        sparse_matrix_with_diagonal = pd.merge(
+            left=sparse_matrix, right=diagonal, on="variant_id_one", how="left", suffixes=("", "_one"))
+        sparse_matrix_with_diagonal = pd.merge(
+            left=sparse_matrix_with_diagonal, right=diagonal, on="variant_id_two", how="left", suffixes=("", "_two"))
+
+        # calculate Jaccard index
+        sparse_matrix_with_diagonal["count_union"] = sparse_matrix_with_diagonal["count_one"] + \
+                                                     sparse_matrix_with_diagonal["count_two"] - \
+                                                     sparse_matrix_with_diagonal["count"]
+        sparse_matrix_with_diagonal["jaccard_similarity"] = sparse_matrix_with_diagonal["count"] / \
+                                                            sparse_matrix_with_diagonal.count_union
+        sparse_matrix_with_diagonal["jaccard_dissimilarity"] = 1 - sparse_matrix_with_diagonal.jaccard_similarity
+
+        # calculate Cohen's kappa
+        sparse_matrix_with_diagonal["chance_agreement"] = np.exp(-sparse_matrix_with_diagonal["count"])
+        sparse_matrix_with_diagonal["kappa"] = 1 - ((1 - sparse_matrix_with_diagonal.jaccard_similarity) / (
+                1 - sparse_matrix_with_diagonal.chance_agreement))
+        sparse_matrix_with_diagonal["kappa"] = sparse_matrix_with_diagonal["kappa"].transform(
+            lambda k: k if k > 0 else 0)
+        sparse_matrix_with_diagonal["kappa_dissimilarity"] = 1 - sparse_matrix_with_diagonal.kappa
+
+        dissimilarity_metric = "kappa_dissimilarity"
+
+        # build upper diagonal matrix
+        all_variants = sparse_matrix_with_diagonal.variant_id_one.unique()
+        empty_full_matrix = pd.DataFrame(index=pd.MultiIndex.from_product(
+            [all_variants, all_variants], names=["variant_id_one", "variant_id_two"])).reset_index()
+        upper_diagonal_matrix = pd.merge(
+            # gets only the inferior matrix without the diagnonal
+            left=empty_full_matrix.loc[empty_full_matrix.variant_id_one < empty_full_matrix.variant_id_two, :],
+            right=sparse_matrix_with_diagonal.loc[:, ["variant_id_one", "variant_id_two", dissimilarity_metric]],
+            on=["variant_id_one", "variant_id_two"], how='left')
+        upper_diagonal_matrix.fillna(1.0, inplace=True)
+        upper_diagonal_matrix.sort_values(by=["variant_id_one", "variant_id_two"], inplace=True)
+
+        logger.debug("Building square distance matrix...")
+        distance_matrix = squareform(upper_diagonal_matrix[dissimilarity_metric])
+        # this ensures the order of variants ids is coherent with the non redundant form of the distance matrix
+        ids = np.array([list(upper_diagonal_matrix.variant_id_one[0])[0]] + \
+                       list(upper_diagonal_matrix.variant_id_two[0:len(upper_diagonal_matrix.variant_id_two.unique())]))
+        distance_matrix_with_ids = DissimilarityMatrix(data=distance_matrix, ids=ids)
+
+        logger.debug("Clustering...")
+        clusters = OPTICS(min_samples=min_samples, max_eps=1.4).fit_predict(distance_matrix_with_ids.data)
+
+        logger.debug("Building clustering dataframe...")
+        data = pd.DataFrame({'variant_id': distance_matrix_with_ids.ids, 'cluster': clusters})
+
+        logger.debug("Annotate with HGVS.p ...")
+        annotations = pd.concat([
+            sparse_matrix.loc[:, ["variant_id_one", "hgvs_p_one"]].rename(
+                columns={"variant_id_one": "variant_id", "hgvs_p_one": "hgvs_p"}),
+            sparse_matrix.loc[:, ["variant_id_two", "hgvs_p_two"]].rename(
+                columns={"variant_id_two": "variant_id", "hgvs_p_two": "hgvs_p"})])
+        data = pd.merge(left=data, right=annotations, on="variant_id", how="left")
+
+        logger.debug("Annotate with cluster mean Jaccard index...")
+        data["cluster_jaccard_mean"] = 1.0
+        for c in data.cluster.unique():
+            variants_in_cluster = data[data.cluster == c].variant_id.unique()
+            data.cluster_jaccard_mean = np.where(data.cluster == c, sparse_matrix_with_diagonal[
+                (sparse_matrix.variant_id_one.isin(variants_in_cluster)) &
+                (sparse_matrix.variant_id_two.isin(variants_in_cluster)) &
+                (sparse_matrix.variant_id_one != sparse_matrix.variant_id_two)
+                ].jaccard_dissimilarity.mean(), data.cluster_jaccard_mean)
+
+        data.cluster_jaccard_mean = data.cluster_jaccard_mean.transform(lambda x: round(x, 3))
+
+        data = data.set_index("variant_id").drop_duplicates().reset_index().sort_values("cluster")
+        data = data[data.cluster != -1].loc[:, ["cluster", "variant_id", "hgvs_p", "cluster_jaccard_mean"]]
+
+    return data
+
+
 class RecurrentMutationsFigures(Figures):
-
-    def _get_color_by_af(self, af):
-        color = None
-        if af < RARE_VARIANTS_THRESHOLD:
-            color = RARE_VARIANTS_COLOR
-        elif RARE_VARIANTS_THRESHOLD <= af < LOW_FREQUENCY_VARIANTS_THRESHOLD:
-            color = LOW_FREQUENCY_VARIANTS_COLOR
-        elif LOW_FREQUENCY_VARIANTS_THRESHOLD <= af < COMMON_VARIANTS_THRESHOLD:
-            color = COMMON_VARIANTS_COLOR
-        elif af >= COMMON_VARIANTS_THRESHOLD:
-            color = VERY_COMMON_VARIANTS_COLOR
-        return color
-
-    def _get_table_style_by_af(self):
-        return [
-            {
-                'if': {
-                    'filter_query': '{{frequency}} >= 0 && {{frequency}} < {}'.format(RARE_VARIANTS_THRESHOLD),
-                    'column_id': "frequency"
-                },
-                'backgroundColor': RARE_VARIANTS_COLOR,
-                'color': 'inherit'
-            },
-            {
-                'if': {
-                    'filter_query': '{{frequency}} >= {} && {{frequency}} < {}'.format(
-                        RARE_VARIANTS_THRESHOLD, LOW_FREQUENCY_VARIANTS_THRESHOLD),
-                    'column_id': "frequency"
-                },
-                'backgroundColor': LOW_FREQUENCY_VARIANTS_COLOR,
-                'color': 'inherit'
-            },
-            {
-                'if': {
-                    'filter_query': '{{frequency}} >= {} && {{frequency}} < {}'.format(
-                        LOW_FREQUENCY_VARIANTS_THRESHOLD, COMMON_VARIANTS_THRESHOLD),
-                    'column_id': "frequency"
-                },
-                'backgroundColor': COMMON_VARIANTS_COLOR,
-                'color': 'white'
-            },
-            {
-                'if': {
-                    'filter_query': '{{frequency}} >= {}'.format(COMMON_VARIANTS_THRESHOLD),
-                    'column_id': "frequency"
-                },
-                'backgroundColor': VERY_COMMON_VARIANTS_COLOR,
-                'color': 'white'
-            }
-        ]
 
     def get_top_occurring_variants_plot(self, top, gene_name, domain, date_range_start, date_range_end, metric, source):
         data = self.queries.get_top_occurring_variants_precomputed(top, gene_name, domain, metric, source)
@@ -106,9 +259,9 @@ class RecurrentMutationsFigures(Figures):
             data.drop(excluded_month_colums, axis=1, inplace=True)
 
             # set the styles of the cells
-            styles_counts = self.discrete_background_color_bins(data, columns=included_month_colums)
-            styles_total_count = self.discrete_background_color_bins(data, columns=["total"], colors="Reds")
-            styles_frequency = self._get_table_style_by_af()
+            styles_counts = discrete_background_color_bins(data, columns=included_month_colums)
+            styles_total_count = discrete_background_color_bins(data, columns=["total"], colors="Reds")
+            styles_frequency = _get_table_style_by_af()
             month_columns = [{'name': ["", i], 'id': i} for i in data.columns if i.startswith("20")]
             month_columns[0]['name'][0] = 'Monthly counts' if metric == "count" else 'Monthly frequencies'
 
@@ -150,43 +303,6 @@ class RecurrentMutationsFigures(Figures):
             ]
 
         return fig
-
-    def discrete_background_color_bins(self, df, n_bins=5, columns='all', colors='Blues'):
-        bounds = [i * (1.0 / n_bins) for i in range(n_bins + 1)]
-        if columns == 'all':
-            if 'id' in df:
-                df_numeric_columns = df.select_dtypes('number').drop(['id'], axis=1)
-            else:
-                df_numeric_columns = df.select_dtypes('number')
-        else:
-            df_numeric_columns = df[columns]
-        df_max = df_numeric_columns.max().max()
-        df_min = df_numeric_columns.min().min()
-        ranges = [
-            ((df_max - df_min) * i) + df_min
-            for i in bounds
-        ]
-        styles = []
-        for i in range(1, len(bounds)):
-            min_bound = ranges[i - 1]
-            max_bound = ranges[i]
-            backgroundColor = colorlover.scales[str(n_bins)]['seq'][colors][i - 1]
-            color = 'white' if i > len(bounds) / 2. else 'inherit'
-
-            for column in df_numeric_columns:
-                styles.append({
-                    'if': {
-                        'filter_query': (
-                                '{{{column}}} >= {min_bound}' +
-                                (' && {{{column}}} < {max_bound}' if (i < len(bounds) - 1) else '')
-                        ).format(column=column, min_bound=min_bound, max_bound=max_bound),
-                        'column_id': column
-                    },
-                    'backgroundColor': backgroundColor,
-                    'color': color
-                })
-
-        return styles
 
     def get_cooccurrence_heatmap(self, sparse_matrix, selected_variants, metric="jaccard", min_cooccurrences=5):
         data = self._get_variants_cooccurrence_matrix(data=sparse_matrix)
@@ -379,20 +495,20 @@ class RecurrentMutationsFigures(Figures):
             self._get_gene_trace(g, start=g.start, end=g.end, color=c, yaxis='y6') for g, c in zip(genes, gene_colors)]
         domain_traces = [self._get_domain_trace(color=c, domain=d, gene=g, yaxis='y7')
                          for (g, d), c in zip(genes_and_domains, domain_colors)]
-        conservation_traces = self._get_conservation_traces(
+        conservation_traces = _get_conservation_traces(
             conservation, xaxis='x', yaxis1='y3', yaxis2='y4', yaxis3='y5')
         mean_unique_variants_per_bin = data.count_unique_variants.mean()
         variant_counts_traces = [
             go.Scatter(x=data.position_bin, y=data.count_variant_observations,
                        name="All variants", text="All variants", showlegend=False,
-                       line_color=plotly.express.colors.sequential.Blues[-2], line_width=1),
+                       line_color=px.colors.sequential.Blues[-2], line_width=1),
             go.Scatter(x=data.position_bin,
                        y=[mean_unique_variants_per_bin for _ in range(data.shape[0])],
                        yaxis='y2', name="Mean unique variants", text="Mean unique variants",
-                       line_width=1, showlegend=False, line_color=plotly.express.colors.sequential.Blues[-3]),
+                       line_width=1, showlegend=False, line_color=px.colors.sequential.Blues[-3]),
             go.Scatter(x=data.position_bin, y=data.count_unique_variants, yaxis='y2',
                        name="Unique variants", text="Unique variants", showlegend=False, fill='tonexty',
-                       line_color=plotly.express.colors.sequential.Blues[-4], line_width=1)
+                       line_color=px.colors.sequential.Blues[-4], line_width=1)
         ]
 
         fig = go.Figure(data=variant_counts_traces + conservation_traces + gene_traces + domain_traces, layout=layout)
@@ -470,7 +586,7 @@ class RecurrentMutationsFigures(Figures):
             count_samples = self.queries.count_samples(source=source)
             variants["af"] = variants.count_occurrences / count_samples
             variants["log_af"] = variants.af.transform(lambda x: np.log(x + 1))
-            variants["log_count"] = variants.count_occurrences.transform(lambda x: np.log(x))
+            variants["log_count"] = variants.count_occurrences.transform(np.log)
             variants.annotation_highest_impact = variants.annotation_highest_impact.transform(lambda a: a.split("&")[0])
 
             main_xaxis = 'x'
@@ -478,26 +594,26 @@ class RecurrentMutationsFigures(Figures):
             variants_traces = []
             missense_variants = variants[variants.annotation_highest_impact == MISSENSE_VARIANT]
             if missense_variants.shape[0] > 0:
-                variants_traces.append(self._get_variants_scatter(
+                variants_traces.append(_get_variants_scatter(
                     missense_variants, name="missense variants", symbol=MISSENSE_VARIANT_SYMBOL, xaxis=main_xaxis))
 
             deletion_variants = variants[variants.annotation_highest_impact.isin(
                 [DISRUPTIVE_INFRAME_DELETION, CONSERVATIVE_INFRAME_DELETION])]
             if deletion_variants.shape[0] > 0:
-                variants_traces.append(self._get_variants_scatter(
+                variants_traces.append(_get_variants_scatter(
                     deletion_variants, name="inframe deletions", symbol=DELETION_SYMBOL, xaxis=main_xaxis))
 
             insertion_variants = variants[variants.annotation_highest_impact.isin(
                 [DISRUPTIVE_INFRAME_INSERTION, CONSERVATIVE_INFRAME_INSERTION])]
             if insertion_variants.shape[0] > 0:
-                variants_traces.append(self._get_variants_scatter(
+                variants_traces.append(_get_variants_scatter(
                     insertion_variants, name="inframe insertions", symbol=INSERTION_SYMBOL, xaxis=main_xaxis))
 
             other_variants = variants[~variants.annotation_highest_impact.isin([
                 MISSENSE_VARIANT, DISRUPTIVE_INFRAME_DELETION, CONSERVATIVE_INFRAME_DELETION,
                 DISRUPTIVE_INFRAME_INSERTION, CONSERVATIVE_INFRAME_DELETION])]
             if other_variants.shape[0] > 0:
-                variants_traces.append(self._get_variants_scatter(
+                variants_traces.append(_get_variants_scatter(
                     other_variants, name="other variants", symbol=OTHER_VARIANT_SYMBOL, xaxis=main_xaxis))
 
             selected_variants_trace = None
@@ -521,11 +637,11 @@ class RecurrentMutationsFigures(Figures):
 
             domain_colors = cycle(DOMAIN_COLORS)
             gene_trace = self._get_gene_trace(
-                gene, start=start, end=end, color=plotly.express.colors.sequential.Tealgrn[-1], yaxis='y5', xaxis=main_xaxis)
+                gene, start=start, end=end, color=px.colors.sequential.Tealgrn[-1], yaxis='y5', xaxis=main_xaxis)
             domain_traces = [self._get_domain_trace(
                 color=c, gene=gene, domain=d, yaxis='y6', xaxis=main_xaxis, showlegend=True)
                 for d, c in zip(domains, domain_colors)]
-            conservation_traces = self._get_conservation_traces(
+            conservation_traces = _get_conservation_traces(
                 conservation, main_xaxis, yaxis1='y2', yaxis2='y3', yaxis3='y4')
 
             data = variants_traces + conservation_traces + [gene_trace] + domain_traces
@@ -586,19 +702,6 @@ class RecurrentMutationsFigures(Figures):
         else:
             return dcc.Markdown("""**No mutations for the current selection**""")
 
-    def _get_conservation_traces(self, conservation, xaxis, yaxis1, yaxis2, yaxis3):
-        return [
-            go.Scatter(x=conservation.position_bin, y=conservation.conservation, yaxis=yaxis1, xaxis=xaxis,
-                       text="Conservation SARS-CoV-2", textposition="top right", showlegend=False,
-                       fill='tozeroy', line_color="grey", line_width=1),
-            go.Scatter(x=conservation.position_bin, y=conservation.conservation_sarbecovirus, yaxis=yaxis2,
-                       xaxis=xaxis, text="Conservation SARS-like betacoronavirus", textposition="top right",
-                       showlegend=False, fill='tozeroy', line_color="grey", line_width=1),
-            go.Scatter(x=conservation.position_bin, y=conservation.conservation_vertebrates, yaxis=yaxis3,
-                       xaxis=xaxis, text="Conservation vertebrates", textposition="top right",
-                       showlegend=False, fill='tozeroy', line_color="grey", line_width=1)
-        ]
-
     @staticmethod
     def _get_domain_trace(color: str, domain: Domain, gene: Gene, yaxis='y', xaxis='x', showlegend=False):
         domain_start = gene.start + (domain.start * 3)  # domain coordinates are in the protein space
@@ -638,27 +741,9 @@ class RecurrentMutationsFigures(Figures):
             legendgroup='gene'
         )
 
-    def _get_variants_scatter(self, variants, name, symbol, xaxis='x'):
-        return go.Scatter(
-            x=variants.position,
-            y=variants.af,
-            name=name,
-            mode='markers',
-            # opacity=0.5,
-            marker=dict(
-                symbol=symbol,
-                color=variants.af.transform(self._get_color_by_af),
-                showscale=False
-            ),
-            xaxis=xaxis,
-            showlegend=True,
-            text=variants[["hgvs_p", "annotation_highest_impact"]].apply(lambda x: "{} ({})".format(x[0], x[1]), axis=1),
-            hovertemplate=VARIANT_TOOLTIP
-        )
-
     def get_variants_clustering(self, sparse_matrix, min_cooccurrence, min_samples):
 
-        data = self._run_clustering(sparse_matrix=sparse_matrix, min_samples=min_samples)
+        data = _run_clustering(sparse_matrix=sparse_matrix, min_samples=min_samples)
 
         tables = []
         if data is not None:
@@ -703,83 +788,3 @@ class RecurrentMutationsFigures(Figures):
             """.format(min_cooccurrence, min_samples)))
 
         return html.Div(children=tables)
-
-    def _run_clustering(self, sparse_matrix, min_samples) -> pd.DataFrame:
-
-        data = None
-
-        if sparse_matrix is not None and sparse_matrix.shape[0] > 0:
-            diagonal = sparse_matrix.loc[sparse_matrix.variant_id_one == sparse_matrix.variant_id_two,
-                                         ["variant_id_one", "variant_id_two", "count"]]
-            sparse_matrix_with_diagonal = pd.merge(
-                left=sparse_matrix, right=diagonal, on="variant_id_one", how="left", suffixes=("", "_one"))
-            sparse_matrix_with_diagonal = pd.merge(
-                left=sparse_matrix_with_diagonal, right=diagonal, on="variant_id_two", how="left", suffixes=("", "_two"))
-
-            # calculate Jaccard index
-            sparse_matrix_with_diagonal["count_union"] = sparse_matrix_with_diagonal["count_one"] + \
-                                                         sparse_matrix_with_diagonal["count_two"] - \
-                                                         sparse_matrix_with_diagonal["count"]
-            sparse_matrix_with_diagonal["jaccard_similarity"] = sparse_matrix_with_diagonal["count"] / \
-                                                                sparse_matrix_with_diagonal.count_union
-            sparse_matrix_with_diagonal["jaccard_dissimilarity"] = 1 - sparse_matrix_with_diagonal.jaccard_similarity
-
-            # calculate Cohen's kappa
-            sparse_matrix_with_diagonal["chance_agreement"] = np.exp(-sparse_matrix_with_diagonal["count"])
-            sparse_matrix_with_diagonal["kappa"] = 1 - ((1 - sparse_matrix_with_diagonal.jaccard_similarity) / (
-                    1 - sparse_matrix_with_diagonal.chance_agreement))
-            sparse_matrix_with_diagonal["kappa"] = sparse_matrix_with_diagonal["kappa"].transform(
-                lambda k: k if k > 0 else 0)
-            sparse_matrix_with_diagonal["kappa_dissimilarity"] = 1 - sparse_matrix_with_diagonal.kappa
-
-            dissimilarity_metric = "kappa_dissimilarity"
-
-            # build upper diagonal matrix
-            all_variants = sparse_matrix_with_diagonal.variant_id_one.unique()
-            empty_full_matrix = pd.DataFrame(index=pd.MultiIndex.from_product(
-                [all_variants, all_variants], names=["variant_id_one", "variant_id_two"])).reset_index()
-            upper_diagonal_matrix = pd.merge(
-                # gets only the inferior matrix without the diagnonal
-                left=empty_full_matrix.loc[empty_full_matrix.variant_id_one < empty_full_matrix.variant_id_two, :],
-                right=sparse_matrix_with_diagonal.loc[:, ["variant_id_one", "variant_id_two", dissimilarity_metric]],
-                on=["variant_id_one", "variant_id_two"], how='left')
-            upper_diagonal_matrix.fillna(1.0, inplace=True)
-            upper_diagonal_matrix.sort_values(by=["variant_id_one", "variant_id_two"], inplace=True)
-
-            logger.debug("Building square distance matrix...")
-            distance_matrix = squareform(upper_diagonal_matrix[dissimilarity_metric])
-            # this ensures the order of variants ids is coherent with the non redundant form of the distance matrix
-            ids = np.array([list(upper_diagonal_matrix.variant_id_one[0])[0]] + \
-                           list(upper_diagonal_matrix.variant_id_two[0:len(upper_diagonal_matrix.variant_id_two.unique())]))
-            distance_matrix_with_ids = DissimilarityMatrix(data=distance_matrix, ids=ids)
-
-            logger.debug("Clustering...")
-            clusters = OPTICS(min_samples=min_samples, max_eps=1.4).fit_predict(distance_matrix_with_ids.data)
-
-            logger.debug("Building clustering dataframe...")
-            data = pd.DataFrame({'variant_id': distance_matrix_with_ids.ids, 'cluster': clusters})
-
-            logger.debug("Annotate with HGVS.p ...")
-            annotations = pd.concat([
-                sparse_matrix.loc[:, ["variant_id_one", "hgvs_p_one"]].rename(
-                    columns={"variant_id_one": "variant_id", "hgvs_p_one": "hgvs_p"}),
-                sparse_matrix.loc[:, ["variant_id_two", "hgvs_p_two"]].rename(
-                    columns={"variant_id_two": "variant_id", "hgvs_p_two": "hgvs_p"})])
-            data = pd.merge(left=data, right=annotations, on="variant_id", how="left")
-
-            logger.debug("Annotate with cluster mean Jaccard index...")
-            data["cluster_jaccard_mean"] = 1.0
-            for c in data.cluster.unique():
-                variants_in_cluster = data[data.cluster == c].variant_id.unique()
-                data.cluster_jaccard_mean = np.where(data.cluster == c, sparse_matrix_with_diagonal[
-                    (sparse_matrix.variant_id_one.isin(variants_in_cluster)) &
-                    (sparse_matrix.variant_id_two.isin(variants_in_cluster)) &
-                    (sparse_matrix.variant_id_one != sparse_matrix.variant_id_two)
-                    ].jaccard_dissimilarity.mean(), data.cluster_jaccard_mean)
-
-            data.cluster_jaccard_mean = data.cluster_jaccard_mean.transform(lambda x: round(x, 3))
-
-            data = data.set_index("variant_id").drop_duplicates().reset_index().sort_values("cluster")
-            data = data[data.cluster != -1].loc[:, ["cluster", "variant_id", "hgvs_p", "cluster_jaccard_mean"]]
-
-        return data

@@ -9,7 +9,7 @@ def run_command(command, temporary_folder):
     p = subprocess.Popen(
         command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=temporary_folder, shell=True)
     try:
-        stdoutdata, stderrdata = p.communicate(timeout=1800)    # hard coded timeout to 30 minutes
+        _, stderrdata = p.communicate(timeout=1800)    # hard coded timeout to 30 minutes
     except subprocess.TimeoutExpired:
         raise CovigatorPipelineError("Timeout in pipeline: {}".format(command))
     logger.info("Finished in {} secs command: '{}'".format(time.time() - start, command))

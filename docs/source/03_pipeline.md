@@ -47,7 +47,7 @@ Also, the output data that we can obtain from each of these is different.
 When FASTQ files are provided the pipeline includes the following steps:
 - **Trimming**. `fastp` is used to trim reads with default values. This step also includes QC filtering.
 - **Alignment**. `BWA mem` is used for the alignment of single or paired end samples.
-- **BAM preprocessing**. BAM files are prepared and duplicate reads are marked using GATK and Picard tools.
+- **BAM preprocessing**. BAM files are prepared and duplicate reads are marked using GATK and Sambamba tools.
 - **Primer trimming**. When a BED with primers is provided, these are trimmed from the reads using iVar. This is applicable to the results from all variant callers.
 - **Coverage analysis**. `samtools coverage` and `samtools depth` are used to compute the horizontal and vertical 
   coverage respectively.
@@ -96,10 +96,14 @@ Nextflow pipelines within the TronFlow initiative [https://tronflow-docs.readthe
 
 The variants derived from a FASTQ file are annotated on the `FILTER` column using the VAFator 
 (https://github.com/TRON-Bioinformatics/vafator) variant allele frequency 
-(VAF) into `LOW_FREQUENCY`, `SUBCLONAL` and finally `PASS` variants correspond to clonal variants. By default, 
-variants with a VAF < 5 % are considered `LOW_FREQUENCY` and variants with a VAF >= 5 % and < 80 % are considered 
-`SUBCLONAL`. This thresholds can be changed with the parameters `--low_frequency_variant_threshold` and
-`--subclonal_variant_threshold`.
+(VAF) into `LOW_FREQUENCY`, `SUBCLONAL`, `LOW_QUALITY_CLONAL` and finally `PASS` variants correspond to clonal variants. 
+By default, 
+variants with a VAF < 2 % are considered low quality intrahost and are flagged as `LOW_FREQUENCY`,
+variants with a VAF >= 2 % and < 50 % are considered high quality intrahost and flagged as `SUBCLONAL` 
+and variants with a VAF >= 50 % and < 80 % are considered low quality clonal and are flagged as `LOW_QUALITY_CLONAL`. 
+These thresholds on the VAF can be changed with the parameters `--low_frequency_variant_threshold`, 
+`--lq_clonal_variant_threshold` and `--subclonal_variant_threshold`. 
+Finally, variants with a VAF >= 80 % are considered clonal and are flagged as `PASS`.
 
 VAFator technical annotations:
 
@@ -120,6 +124,10 @@ This are described in detail here [http://pcingola.github.io/SnpEff/se_inputoutp
 - `INFO/CONS_HMM_VERTEBRATE_COV` is the ConsHMM conservation score among vertebrate Corona virus
 - `INFO/PFAM_NAME` is the Interpro name for the overlapping Pfam domains
 - `INFO/PFAM_DESCRIPTION` is the Interpro description for the overlapping Pfam domains
+- `INFO/problematic` contains the filter provided in DeMaio et al. (2020) for problematic mutations
+
+According to DeMaio et al. (2020), mutations at the beginning (ie: POS <= 50) and end (ie: POS >= 29,804) of the 
+genome are filtered out.
 
 This is an example of biological annotations of a missense mutation in the spike protein on the N-terminal subunit 1 domain.
 ```
@@ -189,14 +197,15 @@ Nevertheless, mutations with lower variant allele frequency (VAF) are challengin
 analytical errors.  
 
 Mutations are annotated on the `FILTER` column using the VAF into three categories: 
-- `LOW_FREQUENCY`: subset of intrahost mutations with lowest frequencies, potentially enriched with bad calls (VAF < 5 %).
-- `SUBCLONAL`: subset of intrahost mutations with higher frequencies (5 % <= VAF < 80 %).
+- `LOW_FREQUENCY`: subset of intrahost mutations with lowest frequencies, potentially enriched with bad calls (VAF < 2 %).
+- `SUBCLONAL`: subset of intrahost mutations with higher frequencies (2 % <= VAF < 50 %).
+- `LOW_QUALITY_CLONAL`: subset of clonal mutations with lower quality (50 % <= VAF < 80 %).
 - `PASS` clonal mutations (VAF >= 80 %)
 
 Other low quality mutations are removed from the output.
 
-The VAF thresholds can be changed with the parameters `--low_frequency_variant_threshold` and
-`--subclonal_variant_threshold`.
+The VAF thresholds can be changed with the parameters `--low_frequency_variant_threshold`, 
+`--lq_clonal_variant_threshold` and `--subclonal_variant_threshold`.
 
 
 ## How to run
@@ -268,6 +277,32 @@ nextflow run tron-bioinformatics/covigator-ngs-pipeline \
 [--gff <path_to_reference>/Sars_cov_2.ASM985889v3.gff3]
 ```
 
+For VCF:
+```
+nextflow run tron-bioinformatics/covigator-ngs-pipeline \
+[-r v0.10.0] \
+[-profile conda] \
+--vcf <VCF_FILE> \
+--name example_run \
+--output <OUTPUT_FOLDER> \
+[--reference <path_to_reference>/Sars_cov_2.ASM985889v3.fa] \
+[--gff <path_to_reference>/Sars_cov_2.ASM985889v3.gff3]
+```
+
+As an optional input when processing directly VCF files you can provide BAM files to annotate VAFs:
+```
+nextflow run tron-bioinformatics/covigator-ngs-pipeline \
+[-r v0.10.0] \
+[-profile conda] \
+--vcf <VCF_FILE> \
+--bam <BAM_FILE> \
+--bai <BAI_FILE> \
+--name example_run \
+--output <OUTPUT_FOLDER> \
+[--reference <path_to_reference>/Sars_cov_2.ASM985889v3.fa] \
+[--gff <path_to_reference>/Sars_cov_2.ASM985889v3.gff3]
+```
+
 **NOTE**: We recommend using the provided `conda` profile (`-profile conda`), otherwise all dependencies will need to be installed manually and 
 made available on the path. In order to combine the `conda` profile with any other custom Nextflow configuration 
 (e.g.: a computational cluster queue like Slurm), you will need to use more than one profile. But beware that the 
@@ -299,6 +334,35 @@ where the TSV file contains two columns tab-separated columns **without header**
 | sample2   | /path/to/sample2.fasta |
 | ...       | ...                    |
 
+For batch processing of VCFs use `--input_vcfs_list`.
+```
+nextflow run tron-bioinformatics/covigator-ngs-pipeline [-profile conda] --input_vcfs_list <TSV_FILE> --output <OUTPUT_FOLDER> [--reference <path_to_reference>/Sars_cov_2.ASM985889v3.fa] [--gff <path_to_reference>/Sars_cov_2.ASM985889v3.gff3]
+```
+where the TSV file contains two columns tab-separated columns **without header**. Columns: sample name and path to VCF.
+
+| Sample    | FASTA                  |
+|-----------|------------------------|
+| sample1   | /path/to/sample1.vcf |
+| sample2   | /path/to/sample2.vcf |
+| ...       | ...                    |
+
+Optionally, provide BAM files for batch processing of VCFs using `--input_bams_list`.
+```
+nextflow run tron-bioinformatics/covigator-ngs-pipeline [-profile conda] \
+  --input_vcfs_list <TSV_FILE> \
+  --input_bams_list <TSV_FILE> \
+  --output <OUTPUT_FOLDER> \
+  [--reference <path_to_reference>/Sars_cov_2.ASM985889v3.fa] \
+  [--gff <path_to_reference>/Sars_cov_2.ASM985889v3.gff3]
+```
+where the BAMs TSV file contains three columns tab-separated columns **without header**. Columns: sample name, 
+path to BAM and path to BAI.
+
+| Sample    | BAM                  | BAI                  |
+|-----------|----------------------|----------------------|
+| sample1   | /path/to/sample1.bam | /path/to/sample1.bai |
+| sample2   | /path/to/sample2.bam | /path/to/sample2.bai |
+| ...       | ...                  | ...                  |
 
 ### Getting help
 
@@ -310,13 +374,18 @@ Usage:
     nextflow run tron-bioinformatics/covigator-ngs-pipeline -profile conda --help
 
 Input:
-    * --fastq1: the first input FASTQ file (not compatible with --fasta)
-    * --fasta: the FASTA file containing the assembly sequence (not compatible with --fastq1)
+    * --fastq1: the first input FASTQ file (not compatible with --fasta, nor --vcf)
+    * --fasta: the FASTA file containing the assembly sequence (not compatible with --fastq1, nor --vcf)
+    * --vcf: the VCF file containing mutations to analyze (not compatible with --fastq1, nor --fasta)
+    * --bam: the BAM file containing reads to annotate VAFs on a VCF (not compatible with --fastq1, nor --fasta)
+    * --bai: the BAI index for a BAM file (not compatible with --fastq1, nor --fasta)
     * --name: the sample name, output files will be named after this name
     * --output: the folder where to publish output
     * --input_fastqs_list: alternative to --name and --fastq1 for batch processing
     * --library: required only when using --input_fastqs
     * --input_fastas_list: alternative to --name and --fasta for batch processing
+    * --input_vcfs_list: alternative to --name and --vcf for batch processing
+    * --input_bams_list: alternative to --name, --vcf, --bam and --bai for batch processing
 
 Optional input only required to use a custom reference:
     * --reference: the reference genome FASTA file, *.fai, *.dict and bwa indexes are required.
@@ -332,20 +401,28 @@ Optional input:
     * --min_mapping_quality: minimum mapping quality to take a read into account for variant calling (default: 20)
     * --vafator_min_base_quality: minimum base call quality to take a base into account for VAF annotation (default: 0)
     * --vafator_min_mapping_quality: minimum mapping quality to take a read into account for VAF annotation (default: 0)
-    * --low_frequency_variant_threshold: VAF threshold to mark a variant as low frequency (default: 0.2)
-    * --subclonal_variant_threshold: VAF superior threshold to mark a variant as subclonal (default: 0.8)
+    * --low_frequency_variant_threshold: VAF threshold to mark a variant as low frequency (default: 0.02)
+    * --subclonal_variant_threshold: VAF superior threshold to mark a variant as subclonal  (default: 0.5)
+    * --lq_clonal_variant_threshold: VAF superior threshold to mark a variant as loq quality clonal (default: 0.8)
     * --memory: the ammount of memory used by each job (default: 3g)
     * --cpus: the number of CPUs used by each job (default: 1)
     * --skip_lofreq: skips calling variants with LoFreq
     * --skip_gatk: skips calling variants with GATK
     * --skip_bcftools: skips calling variants with BCFTools
     * --skip_ivar: skips calling variants with iVar
+    * --skip_pangolin: skips lineage determination with pangolin
     * --match_score: global alignment match score, only applicable for assemblies (default: 2)
     * --mismatch_score: global alignment mismatch score, only applicable for assemblies (default: -1)
     * --open_gap_score: global alignment open gap score, only applicable for assemblies (default: -3)
     * --extend_gap_score: global alignment extend gap score, only applicable for assemblies (default: -0.1)
     * --skip_sarscov2_annotations: skip some of the SARS-CoV-2 specific annotations (default: false)
     * --keep_intermediate: keep intermediate files (ie: BAM files and intermediate VCF files)
+    * --args_bcftools_mpileup: additional arguments for bcftools mpileup command (eg: --args_bcftools_mpileup='--ignore-overlaps')
+    * --args_bcftools_call: additional arguments for bcftools call command (eg: --args_bcftools_call='--something')
+    * --args_lofreq: additional arguments for lofreq command (eg: --args_lofreq='--something')
+    * --args_gatk: additional arguments for gatk command (eg: --args_gatk='--something')
+    * --args_ivar_samtools: additional arguments for ivar samtools mpileup command (eg: --args_ivar_samtools='--ignore-overlaps')
+    * --args_ivar: additional arguments for ivar command (eg: --args_ivar='--something')
 
 Output:
     * Output a VCF file for each of BCFtools, GATK, LoFreq and iVar when FASTQ files are
@@ -354,7 +431,6 @@ Output:
     * Only when FASTQs are provided:
       * FASTP statistics
       * Depth and breadth of coverage analysis results
-      * Picard's deduplication metrics
       
 ```
 
@@ -430,3 +506,4 @@ is a technical artifact that would need to be avoided.
 - Shifu Chen, Yanqing Zhou, Yaru Chen, Jia Gu; fastp: an ultra-fast all-in-one FASTQ preprocessor, Bioinformatics, Volume 34, Issue 17, 1 September 2018, Pages i884–i890, https://doi.org/10.1093/bioinformatics/bty560
 - Kwon, S. Bin, & Ernst, J. (2021). Single-nucleotide conservation state annotation of the SARS-CoV-2 genome. Communications Biology, 4(1), 1–11. https://doi.org/10.1038/s42003-021-02231-w
 - Cock, P. J., Antao, T., Chang, J. T., Chapman, B. A., Cox, C. J., Dalke, A., et al. (2009). Biopython: freely available Python tools for computational molecular biology and bioinformatics. Bioinformatics, 25(11), 1422–1423.
+- Artem Tarasov, Albert J. Vilella, Edwin Cuppen, Isaac J. Nijman, Pjotr Prins, Sambamba: fast processing of NGS alignment formats, Bioinformatics, Volume 31, Issue 12, 15 June 2015, Pages 2032–2034, https://doi.org/10.1093/bioinformatics/btv098

@@ -39,7 +39,21 @@ def get_covid19_portal_overview_tab_left_bar(queries: Queries, count_samples):
     return html.Div(
         className="two columns",
         children=[
-            html.Br(),
+            html.Div([
+                html.Div(dbc.Button(
+                    "Horizontal coverage",
+                    color="secondary",
+                    className="me-1",
+                    style={'font-size': '100%'}
+                )),
+                html.Br(),
+                html.Div(dbc.Button(
+                    "Ambiguous bases",
+                    color="secondary",
+                    className="me-1",
+                    style={'font-size': '100%'})),
+            ]),
+            html.Hr(),
             dcc.Markdown("""
                 The COVID-19 Data Portal (https://www.covid19dataportal.org/) provides among other things DNA assemblies, 
                 geographical information and other metadata about SARS-CoV-2 samples. 
@@ -153,5 +167,5 @@ def get_plot_bad_bases_ratio(queries: Queries, count_samples):
 
         The ratio of N and ambiguous bases over the whole sequence length measures the quality of the assembly sequence.
         {} % of samples have a ratio <= 5 %.
-        """.format(round(float(data[data["bad_bases_ratio"] <= 5]["count"].sum()) / count_samples), 1))
+        """.format(round(float(data[data["bad_bases_ratio"] <= 5]["count"].sum()) / count_samples, 1)))
     ]

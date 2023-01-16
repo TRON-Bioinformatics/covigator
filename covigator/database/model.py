@@ -22,9 +22,11 @@ COVID19_PORTAL_VARIANT_COOCCURRENCE_TABLE_NAME = get_table_versioned_name('covid
 VARIANT_OBSERVATION_TABLE_NAME = get_table_versioned_name('variant_observation', config=config)
 SUBCLONAL_VARIANT_OBSERVATION_TABLE_NAME = get_table_versioned_name('subclonal_variant_observation', config=config)
 LOW_FREQUENCY_VARIANT_OBSERVATION_TABLE_NAME = get_table_versioned_name('low_frequency_variant_observation', config=config)
+LOW_QUALITY_CLONAL_VARIANT_OBSERVATION_TABLE_NAME = get_table_versioned_name('lq_clonal_variant_observation', config=config)
 COVID19_PORTAL_VARIANT_OBSERVATION_TABLE_NAME = get_table_versioned_name('variant_observation_covid19portal', config=config)
 VARIANT_TABLE_NAME = get_table_versioned_name('variant', config=config)
 SUBCLONAL_VARIANT_TABLE_NAME = get_table_versioned_name('subclonal_variant', config=config)
+LOW_QUALITY_CLONAL_VARIANT_TABLE_NAME = get_table_versioned_name('lq_clonal_variant', config=config)
 LOW_FREQUENCY_VARIANT_TABLE_NAME = get_table_versioned_name('low_frequency_variant', config=config)
 COVID19_PORTAL_VARIANT_TABLE_NAME = get_table_versioned_name('variant_covid19portal', config=config)
 SAMPLE_ENA_TABLE_NAME = get_table_versioned_name('sample_ena', config=config)
@@ -115,6 +117,7 @@ class VariantType(enum.Enum):
     INSERTION = 2
     DELETION = 3
     MNV = 4
+    COMPLEX = 5
 
 
 class SampleEna(Base):
@@ -248,6 +251,10 @@ class SampleEna(Base):
     read_pair_duplicates = Column(Integer)
     read_pair_optical_duplicates = Column(Integer)
 
+    # intrahost sample filters
+    intrahost_filter = Column(Boolean, default=False)
+    potential_coinfection = Column(Boolean, default=False)
+
     covigator_accessor_version = Column(String)
     covigator_processor_version = Column(String)
 
@@ -345,7 +352,7 @@ class SampleCovid19Portal(Base):
     covigator_accessor_version = Column(String)
     covigator_processor_version = Column(String)
 
-    def get_sample_folder(self, base_folder):
+    def get_sample_folder(self, base_folder: str):
         return os.path.join(
             base_folder,
             self.collection_date.strftime("%Y%m%d") if self.collection_date is not None else "nodate",
@@ -525,6 +532,49 @@ class SubclonalVariant(Base):
 
 class LowFrequencyVariant(Base):
     __tablename__ = LOW_FREQUENCY_VARIANT_TABLE_NAME
+
+    variant_id = Column(String, primary_key=True)
+    chromosome = Column(String)
+    position = Column(Integer, index=True)
+    reference = Column(String)
+    alternate = Column(String)
+    overlaps_multiple_genes = Column(Boolean, default=False)
+
+    annotation = Column(String, index=True)
+    annotation_highest_impact = Column(String, index=True)
+    annotation_impact = Column(String, index=True)
+    gene_name = Column(String, index=True)
+    gene_id = Column(String)
+    biotype = Column(String)
+    hgvs_c = Column(String)
+    hgvs_p = Column(String)
+    cdna_pos_length = Column(String)
+    cds_pos_length = Column(String)
+    aa_pos_length = Column(String)
+
+    # derived annotations
+    variant_type = Column(Enum(VariantType, name=VariantType.__constraint_name__))
+    length = Column(Integer)
+    reference_amino_acid = Column(String)
+    alternate_amino_acid = Column(String)
+    position_amino_acid = Column(Integer)
+
+    # ConsHMM conservation annotations
+    cons_hmm_sars_cov_2 = Column(Float)
+    cons_hmm_sarbecovirus = Column(Float)
+    cons_hmm_vertebrate_cov = Column(Float)
+
+    # Pfam protein domains
+    pfam_name = Column(String)
+    pfam_description = Column(String)
+
+    def get_variant_id(self):
+        return "{}:{}>{}".format(self.position, self.reference, self.alternate)
+
+
+class LowQualityClonalVariant(Base):
+
+    __tablename__ = LOW_QUALITY_CLONAL_VARIANT_TABLE_NAME
 
     variant_id = Column(String, primary_key=True)
     chromosome = Column(String)
@@ -828,6 +878,67 @@ class LowFrequencyVariantObservation(Base):
         Index("{}_i1".format(LOW_FREQUENCY_VARIANT_OBSERVATION_TABLE_NAME), "position"),
         Index("{}_i2".format(LOW_FREQUENCY_VARIANT_OBSERVATION_TABLE_NAME), "annotation_highest_impact", "vaf"),
         Index("{}_i3".format(LOW_FREQUENCY_VARIANT_OBSERVATION_TABLE_NAME), "vaf"),
+    )
+
+
+class LowQualityClonalVariantObservation(Base):
+    """
+    A variant observation in a particular sample. This contains all annotations of a specific observation of a variant.
+    """
+    __tablename__ = LOW_QUALITY_CLONAL_VARIANT_OBSERVATION_TABLE_NAME
+
+    sample = Column(String, primary_key=True)
+    variant_id = Column(String, primary_key=True)
+    chromosome = Column(String)
+    position = Column(Integer)
+    reference = Column(String)
+    alternate = Column(String)
+    quality = Column(Float)
+    filter = Column(String)
+    dp = Column(Integer)
+    ac = Column(Integer)
+    dp4_ref_forward = Column(Integer)
+    dp4_ref_reverse = Column(Integer)
+    dp4_alt_forward = Column(Integer)
+    dp4_alt_reverse = Column(Integer)
+    vaf = Column(Float)
+    strand_bias = Column(Integer)
+
+    # fields replicated from Variant for performance reasons
+    annotation = Column(String)
+    annotation_impact = Column(String)
+    biotype = Column(String)
+    annotation_highest_impact = Column(String, index=True)
+    gene_name = Column(String)
+    hgvs_c = Column(String)
+    hgvs_p = Column(String)
+
+    # fields replicated from sample for performance reasons
+    date = Column(Date)
+
+    # derived annotations
+    variant_type = Column(Enum(VariantType, name=VariantType.__constraint_name__))
+    length = Column(Integer)
+    reference_amino_acid = Column(String)
+    alternate_amino_acid = Column(String)
+    position_amino_acid = Column(Integer)
+
+    # ConsHMM conservation annotations
+    cons_hmm_sars_cov_2 = Column(Float)
+    cons_hmm_sarbecovirus = Column(Float)
+    cons_hmm_vertebrate_cov = Column(Float)
+
+    # Pfam protein domains
+    pfam_name = Column(String)
+    pfam_description = Column(String)
+
+    ForeignKeyConstraint([sample], [SampleEna.run_accession])
+    ForeignKeyConstraint([variant_id], [LowQualityClonalVariant.variant_id])
+
+    __table_args__ = (
+        Index("{}_i1".format(LOW_QUALITY_CLONAL_VARIANT_OBSERVATION_TABLE_NAME), "position"),
+        Index("{}_i2".format(LOW_QUALITY_CLONAL_VARIANT_OBSERVATION_TABLE_NAME), "annotation_highest_impact", "vaf"),
+        Index("{}_i3".format(LOW_QUALITY_CLONAL_VARIANT_OBSERVATION_TABLE_NAME), "vaf"),
     )
 
 

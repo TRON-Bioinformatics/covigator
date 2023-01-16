@@ -1,12 +1,12 @@
 import numpy as np
 from itertools import combinations
-from typing import Tuple, Union
+from typing import Union
 from faker import Faker
 from sqlalchemy.orm import Session
 
-from covigator import MISSENSE_VARIANT, SYNONYMOUS_VARIANT, INFRAME_INSERTION, INFRAME_DELETION
+from covigator import MISSENSE_VARIANT, INFRAME_INSERTION, INFRAME_DELETION
 from covigator.database.model import SampleEna, DataSource, JobStatus, Log, CovigatorModule, Variant, \
-    VariantCooccurrence, VariantType
+    VariantCooccurrence, VariantType, SampleCovid19Portal, VariantCovid19Portal
 from Bio.Alphabet.IUPAC import IUPACData
 
 from covigator.database.queries import Queries
@@ -59,10 +59,10 @@ def get_mocked_variant(faker: Faker, chromosome=None, gene_name=None, source=Dat
 
 
 def get_mocked_variant_observation(
-        sample: Union[SampleEna], variant: Union[Variant], faker=Faker()):
+        sample: Union[SampleEna, SampleCovid19Portal], variant: Union[Variant, VariantCovid19Portal], faker=Faker()):
 
     klass = Queries.get_variant_observation_klass(
-        DataSource.ENA.name if isinstance(sample, SampleEna) else DataSource.GISAID.name)
+        DataSource.ENA.name if isinstance(sample, SampleEna) else DataSource.COVID19_PORTAL.name)
     return klass(
         sample=sample.run_accession if sample else faker.unique.uuid4(),
         variant_id=variant.variant_id,
@@ -130,19 +130,25 @@ def get_mocked_variant_cooccurrence(faker: Faker, variant_one: Variant, variant_
     return cooccurrence
 
 
-def mock_samples_and_variants(faker, session: Session, num_samples=10):
-    existing_variants = {DataSource.ENA.name: set(), DataSource.GISAID.name: set()}
-    samples = mock_samples(faker=faker, session=session, num_samples=num_samples, source=DataSource.ENA)
-    for sample in samples:
-        source = DataSource.ENA
-        variants = [get_mocked_variant(faker=faker, source=source.name, session=session) for _ in range(10)]
-        # this aims at removing potentially repeated variants
+def mock_samples_and_variants(faker, session: Session, num_samples=10, source = DataSource.ENA):
+
+    existing_variants = set()
+    samples = mock_samples(faker=faker, session=session, num_samples=num_samples, source=source)
+    # introduce some not finished samples, which happen to have variants too...
+    failed_samples = mock_samples(faker=faker, session=session, num_samples=num_samples, source=source,
+                           job_status=JobStatus.FAILED_PROCESSING)
+    # introduce a variant that is shared by all samples (eg: like 23403:A>G)
+    shared_variant = get_mocked_variant(faker=faker, source=source.name, session=session)
+    for sample in samples + failed_samples:
+        variants = [get_mocked_variant(faker=faker, source=source.name, session=session) for _ in range(9)] + \
+                   [shared_variant]
+        # NOTE: this aims at removing potentially repeated variants
         variants_dict = {v.variant_id: v for v in variants}
         variants = variants_dict.values()
-        new_variants = list(filter(lambda x: x.variant_id not in existing_variants.get(source.name), variants))
+        new_variants = list(filter(lambda x: x.variant_id not in existing_variants, variants))
         session.add_all(new_variants)
         session.commit()
-        existing_variants.get(source.name).update([v.variant_id for v in variants])
+        existing_variants.update([v.variant_id for v in variants])
 
         variants_observations = [get_mocked_variant_observation(faker=faker, variant=v, sample=sample)
                                  for v in variants]

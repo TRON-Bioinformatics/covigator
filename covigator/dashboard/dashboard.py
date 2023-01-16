@@ -5,6 +5,7 @@ from dash import dcc
 import dash_bootstrap_components as dbc
 from dash import html
 import logzero
+from sqlalchemy.exc import StatementError, InvalidRequestError
 from sqlalchemy.orm import Session
 from dash.dependencies import Input, Output
 import covigator
@@ -210,81 +211,74 @@ class Dashboard:
         return app
 
 
-def set_callbacks(app, session: Session, content_folder):
+MAIN_PAGE = "main"
+ENA_PAGE = DataSource.ENA
+COVID19_PORTAL_PAGE = DataSource.COVID19_PORTAL
+ACKNOWLEDGEMENTS_PAGE = "acknowledgements"
+DOWNLOAD_PAGE = "download"
 
-    queries = Queries(session=session)
 
-    MAIN_PAGE = "main"
-    ENA_PAGE = DataSource.ENA
-    COVID19_PORTAL_PAGE = DataSource.COVID19_PORTAL
-    ACKNOWLEDGEMENTS_PAGE = "acknowledgements"
-    DOWNLOAD_PAGE = "download"
+def _get_page(url):
+    if url in ["", HOME_HREF]:
+        return MAIN_PAGE
+    elif url == COVID_PORTAL_HREF:
+        return COVID19_PORTAL_PAGE
+    elif url == ENA_HREF:
+        return ENA_PAGE
+    elif url == ACKNOWLEDGEMENTS_HREF:
+        return ACKNOWLEDGEMENTS_PAGE
+    elif url == DOWNLOAD_HREF:
+        return DOWNLOAD_PAGE
+    else:
+        raise ValueError("This URL does not exist")
 
-    def _get_page(url):
-        if url in ["", HOME_HREF]:
-            return MAIN_PAGE
-        elif url == COVID_PORTAL_HREF:
-            return COVID19_PORTAL_PAGE
-        elif url == ENA_HREF:
-            return ENA_PAGE
-        elif url == ACKNOWLEDGEMENTS_HREF:
-            return ACKNOWLEDGEMENTS_PAGE
-        elif url == DOWNLOAD_HREF:
-            return DOWNLOAD_PAGE
-        else:
-            raise ValueError("This URL does not exist")
+def switch_page_callback(url):
+    page = _get_page(url)
+    if page == MAIN_PAGE:
+        # show overview with links
+        return None, None
+    elif page == COVID19_PORTAL_PAGE:
+        # show gisaid tabs
+        return [
+            dbc.Tab(label="Overview", tab_id=COVID19_PORTAL_DATASET_TAB_ID, label_style=TAB_STYLE),
+            dbc.Tab(label="Samples", tab_id=SAMPLES_TAB_ID, label_style=TAB_STYLE),
+            dbc.Tab(label="Lineages", tab_id=LINEAGES_TAB_ID, label_style=TAB_STYLE),
+            dbc.Tab(label="Mutation statistics", tab_id=MUTATIONS_TAB_ID, label_style=TAB_STYLE),
+            dbc.Tab(label="Recurrent mutations", tab_id=RECURRENT_MUTATIONS_TAB_ID, label_style=TAB_STYLE),
+        ], COVID19_PORTAL_DATASET_TAB_ID
+    elif page == ENA_PAGE:
+        # show ena tabs
+        return [
+            dbc.Tab(label="Overview", tab_id=ENA_DATASET_TAB_ID, label_style=TAB_STYLE),
+            dbc.Tab(label="Samples", tab_id=SAMPLES_TAB_ID, label_style=TAB_STYLE),
+            dbc.Tab(label="Lineages", tab_id=LINEAGES_TAB_ID, label_style=TAB_STYLE),
+            dbc.Tab(label="Mutation statistics", tab_id=MUTATIONS_TAB_ID, label_style=TAB_STYLE),
+            dbc.Tab(label="Recurrent mutations", tab_id=RECURRENT_MUTATIONS_TAB_ID, label_style=TAB_STYLE),
+            dbc.Tab(label="Intrahost mutations", tab_id=INTRAHOST_MUTATIONS_TAB_ID, label_style=TAB_STYLE)], \
+            ENA_DATASET_TAB_ID
+    elif page == ACKNOWLEDGEMENTS_PAGE:
+        return [
+            dbc.Tab(label="Acknowledgements", tab_id=HELP_TAB_ID,
+                    label_style={"color": "#003c78", 'display': 'none'})], HELP_TAB_ID
+    elif page == DOWNLOAD_PAGE:
+        return [
+            dbc.Tab(label="Download", tab_id=DOWNLOAD_TAB_ID,
+                    label_style={"color": "#003c78", 'display': 'none'})], DOWNLOAD_TAB_ID
 
-    @app.callback(
-        Output('tabs', "children"),
-        Output('tabs', "active_tab"),
-        [Input("url", "pathname")])
-    def switch_page(url):
-        page = _get_page(url)
-        if page == MAIN_PAGE:
-            # show overview with links
-            return None, None
-        elif page == COVID19_PORTAL_PAGE:
-            # show gisaid tabs
-            return [
-                dbc.Tab(label="Overview", tab_id=COVID19_PORTAL_DATASET_TAB_ID, label_style=TAB_STYLE),
-                dbc.Tab(label="Samples", tab_id=SAMPLES_TAB_ID, label_style=TAB_STYLE),
-                dbc.Tab(label="Lineages", tab_id=LINEAGES_TAB_ID, label_style=TAB_STYLE),
-                dbc.Tab(label="Mutation statistics", tab_id=MUTATIONS_TAB_ID, label_style=TAB_STYLE),
-                dbc.Tab(label="Recurrent mutations", tab_id=RECURRENT_MUTATIONS_TAB_ID, label_style=TAB_STYLE),
-                ], COVID19_PORTAL_DATASET_TAB_ID
-        elif page == ENA_PAGE:
-            # show ena tabs
-            return [
-               dbc.Tab(label="Overview", tab_id=ENA_DATASET_TAB_ID, label_style=TAB_STYLE),
-                dbc.Tab(label="Samples", tab_id=SAMPLES_TAB_ID, label_style=TAB_STYLE),
-                dbc.Tab(label="Lineages", tab_id=LINEAGES_TAB_ID, label_style=TAB_STYLE),
-                dbc.Tab(label="Mutation statistics", tab_id=MUTATIONS_TAB_ID, label_style=TAB_STYLE),
-                dbc.Tab(label="Recurrent mutations", tab_id=RECURRENT_MUTATIONS_TAB_ID, label_style=TAB_STYLE),
-                dbc.Tab(label="Intrahost mutations", tab_id=INTRAHOST_MUTATIONS_TAB_ID, label_style=TAB_STYLE)], \
-                   ENA_DATASET_TAB_ID
-        elif page == ACKNOWLEDGEMENTS_PAGE:
-            return [
-                dbc.Tab(label="Acknowledgements", tab_id=HELP_TAB_ID, label_style={"color": "#003c78", 'display': 'none'})], HELP_TAB_ID
-        elif page == DOWNLOAD_PAGE:
-            return [
-                dbc.Tab(label="Download", tab_id=DOWNLOAD_TAB_ID, label_style={"color": "#003c78", 'display': 'none'})], DOWNLOAD_TAB_ID
 
-    @app.callback(
-        Output('logo', "children"),
-        [Input("url", "pathname")])
-    def switch_logo(url):
-        page = _get_page(url)
-        if page in [MAIN_PAGE, ACKNOWLEDGEMENTS_PAGE, DOWNLOAD_PAGE]:
-            return html.A(html.Img(src=COVIGATOR_LOGO, height="80px"), href="/")
-        elif page == COVID19_PORTAL_PAGE:
-            return html.A(html.Img(src=COVIGATOR_COVID19_LOGO, height="80px"), href="/")
-        elif page == ENA_PAGE:
-            return html.A(html.Img(src=COVIGATOR_ENA_LOGO, height="80px"), href="/")
+def switch_logo_callback(url):
+    page = _get_page(url)
+    if page in [MAIN_PAGE, ACKNOWLEDGEMENTS_PAGE, DOWNLOAD_PAGE]:
+        return html.A(html.Img(src=COVIGATOR_LOGO, height="80px"), href="/")
+    elif page == COVID19_PORTAL_PAGE:
+        return html.A(html.Img(src=COVIGATOR_COVID19_LOGO, height="80px"), href="/")
+    elif page == ENA_PAGE:
+        return html.A(html.Img(src=COVIGATOR_ENA_LOGO, height="80px"), href="/")
 
-    @app.callback(
-        Output('top-right-logo', "children"),
-        [Input("url", "pathname")])
-    def switch_lat_update(url):
+
+def switch_lat_update_callback(url, session):
+    try:
+        queries = Queries(session=session)
         page = _get_page(url)
         if page == MAIN_PAGE:
             return None
@@ -299,11 +293,15 @@ def set_callbacks(app, session: Session, content_folder):
                 "last updated {date}".format(date=queries.get_last_update(DataSource.ENA)),
                 outline=True, color="dark", className="me-1",
                 style={"margin-right": "15px", 'font-size': '85%'})
+    except StatementError | InvalidRequestError as e:
+        logger.exception(e)
+        logger.error("Database error, rolling back session")
+        session.rollback()
 
-    @app.callback(
-        Output(ID_TAB_CONTENT, "children"),
-        [Input("tabs", "active_tab"), Input("url", "pathname")])
-    def switch_tab(at, url):
+
+def switch_tab_callback(at, url, session, content_folder):
+    try:
+        queries = Queries(session=session)
         page = _get_page(url)
         try:
             if page == MAIN_PAGE:
@@ -329,6 +327,38 @@ def set_callbacks(app, session: Session, content_folder):
             return html.P("This shouldn't ever be displayed...")
         except Exception as e:
             logger.exception(e)
+    except StatementError | InvalidRequestError as e:
+        logger.exception(e)
+        logger.error("Database error, rolling back session")
+        session.rollback()
+
+
+def set_callbacks(app, session: Session, content_folder):
+
+    @app.callback(
+        Output('tabs', "children"),
+        Output('tabs', "active_tab"),
+        [Input("url", "pathname")])
+    def switch_page(url):
+        return switch_page_callback(url)
+
+    @app.callback(
+        Output('logo', "children"),
+        [Input("url", "pathname")])
+    def switch_logo(url):
+        return switch_logo_callback(url)
+
+    @app.callback(
+        Output('top-right-logo', "children"),
+        [Input("url", "pathname")])
+    def switch_lat_update(url):
+        return switch_lat_update_callback(url=url, session=session)
+
+    @app.callback(
+        Output(ID_TAB_CONTENT, "children"),
+        [Input("tabs", "active_tab"), Input("url", "pathname")])
+    def switch_tab(at, url):
+        return switch_tab_callback(at=at, url=url, session=session, content_folder=content_folder)
 
 
 def main(debug=False):

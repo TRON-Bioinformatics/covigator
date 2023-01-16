@@ -2,28 +2,51 @@ import gzip
 import os
 import pathlib
 import shutil
-from datetime import datetime
+from datetime import datetime, date
 from io import StringIO
 from json import JSONDecodeError
+import random
+import time
+from typing import Tuple
+import pandas as pd
+
 from Bio import SeqIO
-from covigator.accessor import MINIMUM_DATE
+from sqlalchemy.exc import IntegrityError
+
 from covigator.configuration import Configuration
+
+from covigator.accessor import MINIMUM_DATE
 from requests import Response
 from sqlalchemy.orm import Session
 import covigator
 from covigator.accessor.abstract_accessor import AbstractAccessor, SampleCovid19
 from covigator.exceptions import CovigatorExcludedSampleTooEarlyDateException, CovigatorExcludedFailedDownload, \
-    CovigatorExcludedTooManyEntries, CovigatorExcludedEmptySequence, CovigatorExcludedHorizontalCoverage, \
-    CovigatorExcludedBadBases, CovigatorExcludedSampleException, CovigatorExcludedMissingDateException
+    CovigatorExcludedTooManyEntries, CovigatorExcludedEmptySequence, \
+    CovigatorExcludedBadBases, CovigatorExcludedSampleException, CovigatorExcludedMissingDateException, \
+    CovigatorExcludedHorizontalCoverage
 from covigator.database.model import DataSource, Log, CovigatorModule, SampleCovid19Portal, JobStatus
 from covigator.database.database import Database
 from logzero import logger
 
-NUMBER_RETRIES = 5
+NUMBER_RETRIES = -1
 BATCH_SIZE = 1000
 THRESHOLD_NON_VALID_BASES_RATIO = 0.2
 THRESHOLD_GENOME_COVERAGE = 0.2
 GENOME_LENGTH = 29903
+
+
+def _get_run_accession(sample):
+    run_accession = sample.get('id')
+    if run_accession is None:
+        run_accession = sample.get('acc')
+    return run_accession
+
+
+def _compress_file(uncompressed_file, compressed_file):
+    with open(uncompressed_file, 'rb') as f_in:
+        with gzip.open(compressed_file, 'wb') as f_out:
+            shutil.copyfileobj(f_in, f_out)
+    os.remove(uncompressed_file)
 
 
 class Covid19PortalAccessor(AbstractAccessor):
@@ -32,6 +55,7 @@ class Covid19PortalAccessor(AbstractAccessor):
     FASTA_URL_BASE = "https://www.ebi.ac.uk/ena/browser/api/fasta"
     # while ENA API is in principle organism agnostic, this is SARS-CoV-2 specific, thus taxon is hard-coded
     HOST = "Homo sapiens"
+    HOST2 = "Human"
     TAX_ID = "2697049"
 
     def __init__(self, database: Database, storage_folder):
@@ -61,29 +85,33 @@ class Covid19PortalAccessor(AbstractAccessor):
     def access(self):
         logger.info("Starting Covid19 portal accessor")
         session = self.database.get_database_session()
+
         # NOTE: holding in memory the whole list of existing ids is much faster than querying every time
-        # it assumes there will be no repetitions
-        existing_sample_ids = [value for value, in session.query(SampleCovid19Portal.run_accession).all()]
+        # using a set is way faster than a list
+        existing_sample_ids = set([value for value, in session.query(SampleCovid19Portal.run_accession).all()])
         try:
             logger.info("Reading...")
-            page = 1    # it has to start with 1
-            list_runs = self._get_page(page=page, size=BATCH_SIZE)
-            num_entries = len(list_runs.get('entries'))
-            count = num_entries
-            # gets total expected number of results from first page
-            logger.info("Processing {} Covid19 Portal samples...".format(num_entries))
-            self._process_runs(list_runs, existing_sample_ids, session)
+            count = 0
 
-            while True:
-                page += 1
-                list_runs = self._get_page(page=page, size=BATCH_SIZE)
-                entries = list_runs.get('entries')
-                if entries is None or entries == []:
-                    break
-                num_entries = len(entries)
-                count += num_entries
-                self._process_runs(list_runs, existing_sample_ids, session)
-                logger.info("Processed {} of Covid19 Portal samples...".format(count))
+            # queries data by month since December 2019, the API does not support paginating over more than 1M entries
+            # there is no month with more than 1M entries... at least for now...
+            months = pd.date_range('2019-12-01', date.today().strftime("%Y-%m-%d"), freq='MS').strftime("%Y%m").tolist()
+            for m in months:
+                page = 0
+                logger.info("Querying for month {}".format(m))
+                while True:
+                    page += 1   # page starts at 1
+                    status_code, list_runs = self._get_page(page=page, size=BATCH_SIZE, month=m)
+                    entries = list_runs.get('entries')
+                    if entries is None or entries == []:
+                        logger.info("Last page reached!")
+                        logger.info("Status code: {}".format(status_code))
+                        logger.info("Content: {}".format(str(list_runs)))
+                        break
+                    num_entries = len(entries)
+                    count += num_entries
+                    self._process_runs(list_runs, existing_sample_ids, session)
+                    logger.info("Processed {} of Covid19 Portal samples...".format(count))
 
             logger.info("All samples processed!")
         except Exception as e:
@@ -97,68 +125,107 @@ class Covid19PortalAccessor(AbstractAccessor):
             self._log_results()
             logger.info("Finished Covid19 Portal accessor")
 
-    def _get_page(self, page, size) -> dict:
-        # as communicated by ENA support we use limit=0 and offset=0 to get all records in one query
-        response: Response = self.get_with_retries(
-            "{url_base}?page={page}&size={size}".format(url_base=self.API_URL_BASE, page=page, size=size))
-        try:
-            json = response.json()
-        except JSONDecodeError as e:
-            logger.exception(e)
-            raise e
-        return json
+    def _get_page(self, page, size, month) -> Tuple[int, dict]:
+        # the API is sometimes unstable returning bad json, we retry
+        success = False
+        json = None
+        status_code = None
+        retries_count = 0
+        backoff_iteration = 1
+        truncate_iteration = 8
+        while not success:
+            response: Response = self.get_with_retries(
+                "{url_base}?page={page}&size={size}&query=collection_date:({month})&fields=lineage,coverage,collection_date,country,host,TAXON,"
+                "creation_date,last_modification_date,center_name,isolate,molecule_type".format(
+                    url_base=self.API_URL_BASE, page=page, size=size, month=month))
+            try:
+                json = response.json()
+                status_code = response.status_code
+                success = True
+            except JSONDecodeError:
+                # retry
+                retries_count += 1
+                # waits for an increasing random time
+                random_sleep = random.randrange(0, (2 ** backoff_iteration) - 1)
+                logger.info("Retrying connection after %s seconds" % str(random_sleep))
+                time.sleep(random_sleep)
+                # when it reaches the maximum value that it may wait it stops increasing time
+                if backoff_iteration < truncate_iteration:
+                    backoff_iteration += 1
+        return status_code, json
 
     def _process_runs(self, list_samples, existing_sample_ids, session: Session):
 
         included_samples = []
         for sample_dict in list_samples.get('entries'):
             if isinstance(sample_dict, dict):
-                if sample_dict.get("acc") in existing_sample_ids:
+                run_accession = _get_run_accession(sample_dict)
+                if run_accession in existing_sample_ids:
                     self.excluded_existing += 1
                     continue    # skips runs already registered in the database
                 if not self._complies_with_inclusion_criteria(sample_dict):
                     continue    # skips runs not complying with inclusion criteria
-                # NOTE: this parse operation is costly
-                try:
-                    # parses sample into DB model
-                    sample = self._parse_covid19_portal_sample(sample_dict)
-                    # downloads FASTA file
-                    sample = self._download_fasta(sample=sample)
-                    self.included += 1
-                    included_samples.append(sample)
-                except CovigatorExcludedSampleTooEarlyDateException:
-                    self.excluded_by_date += 1
-                    self.excluded += 1
-                except CovigatorExcludedMissingDateException:
-                    self.excluded_missing_date += 1
-                    self.excluded += 1
-                except CovigatorExcludedFailedDownload:
-                    self.excluded_failed_download += 1
-                    self.excluded += 1
-                except CovigatorExcludedEmptySequence:
-                    self.excluded_empty_sequence += 1
-                    self.excluded += 1
-                except CovigatorExcludedTooManyEntries:
-                    self.excluded_too_many_entries += 1
-                    self.excluded += 1
-                except CovigatorExcludedHorizontalCoverage:
-                    self.excluded_horizontal_coverage += 1
-                    self.excluded += 1
-                except CovigatorExcludedBadBases:
-                    self.excluded_bad_bases += 1
-                    self.excluded += 1
-                except CovigatorExcludedSampleException:
-                    self.excluded += 1
+                self._process_run(included_samples, sample_dict)
             else:
                 logger.error("Sample without the expected format")
 
         if len(included_samples) > 0:
-            session.add_all(included_samples)
-            session.commit()
+            try:
+                session.add_all(included_samples)
+                session.commit()
+            except IntegrityError:
+                # NOTE: we observed that the API may return repeated samples, thus when this error is raised,
+                # we insert one by one and ignore the failing sample
+                # this is slower but it happens rarely
+                session.rollback()
+                for s in included_samples:
+                    try:
+                        session.add(s)
+                        session.commit()
+                    except IntegrityError:
+                        logger.warning("Repeated sample: {}".format(s.run_accession))
+                        session.rollback()
+        self._log_results()
+
+    def _process_run(self, included_samples, sample_dict):
+        # NOTE: this parse operation is costly
+        try:
+            # parses sample into DB model
+            sample = self._parse_covid19_portal_sample(sample_dict)
+            # downloads FASTA file
+            sample = self._download_fasta(sample=sample)
+            self.included += 1
+            included_samples.append(sample)
+        except CovigatorExcludedSampleTooEarlyDateException:
+            self.excluded_by_date += 1
+            self.excluded += 1
+        except CovigatorExcludedMissingDateException:
+            self.excluded_missing_date += 1
+            self.excluded += 1
+        except CovigatorExcludedFailedDownload:
+            self.excluded_failed_download += 1
+            self.excluded += 1
+        except CovigatorExcludedEmptySequence:
+            self.excluded_empty_sequence += 1
+            self.excluded += 1
+        except CovigatorExcludedTooManyEntries:
+            self.excluded_too_many_entries += 1
+            self.excluded += 1
+        except CovigatorExcludedHorizontalCoverage:
+            self.excluded_horizontal_coverage += 1
+            self.excluded += 1
+        except CovigatorExcludedBadBases:
+            self.excluded_bad_bases += 1
+            self.excluded += 1
+        except CovigatorExcludedSampleException:
+            self.excluded += 1
 
     def _parse_covid19_portal_sample(self, sample: dict) -> SampleCovid19Portal:
+        run_accession = _get_run_accession(sample)
+        if run_accession is None:
+            raise CovigatorExcludedSampleException("Missing sample id")
         sample = SampleCovid19Portal(
-            run_accession=sample.get('acc'),
+            run_accession=run_accession,  # this used to be "acc"
             first_created=next(iter(sample.get('fields').get('creation_date')), None),
             collection_date=next(iter(sample.get('fields').get('collection_date')), None),
             last_modification_date=next(iter(sample.get('fields').get('last_modification_date')), None),
@@ -166,8 +233,9 @@ class Covid19PortalAccessor(AbstractAccessor):
             isolate=next(iter(sample.get('fields').get('isolate')), None),
             molecule_type=next(iter(sample.get('fields').get('molecule_type')), None),
             country=next(iter(sample.get('fields').get('country')), None),
+            pangolin_lineage=next(iter(sample.get('fields').get('lineage')), None),
             # build FASTA URL here
-            fasta_url="{base}/{acc}".format(base=self.FASTA_URL_BASE, acc=sample.get('acc'))
+            fasta_url="{base}/{acc}".format(base=self.FASTA_URL_BASE, acc=run_accession)
         )
         self._parse_country(sample)
         self._parse_dates(sample)
@@ -179,7 +247,7 @@ class Covid19PortalAccessor(AbstractAccessor):
         included = True
 
         host = next(iter(sample.get('fields').get('host')), None)
-        if host is None or host.strip() == "" or host != self.HOST:
+        if host is None or not self._match_host(host):
             included = False    # skips runs where the host is empty or does not match
             self.excluded_samples_by_host_tax_id[str(host)] = \
                 self.excluded_samples_by_host_tax_id.get(str(host), 0) + 1
@@ -194,6 +262,9 @@ class Covid19PortalAccessor(AbstractAccessor):
             self.excluded += 1
         return included
 
+    def _match_host(self, host: str):
+        return host.startswith(self.HOST) or host.startswith(self.HOST2)
+
     def _log_results(self):
         logger.info("Included new runs = {}".format(self.included))
         logger.info("Excluded already existing samples = {}".format(self.excluded_existing))
@@ -201,6 +272,11 @@ class Covid19PortalAccessor(AbstractAccessor):
         logger.info("Excluded by host = {}".format(self.excluded_samples_by_host_tax_id))
         logger.info("Excluded by host = {}".format(self.excluded_samples_by_tax_id))
         logger.info("Excluded failed download = {}".format(self.excluded_failed_download))
+        logger.info("Excluded empty sequence = {}".format(self.excluded_empty_sequence))
+        logger.info("Excluded horizontal coverage = {}".format(self.excluded_horizontal_coverage))
+        logger.info("Excluded too many entries = {}".format(self.excluded_too_many_entries))
+        logger.info("Excluded bad bases = {}".format(self.excluded_bad_bases))
+        logger.info("Excluded missing date = {}".format(self.excluded_missing_date))
 
     def _write_execution_log(self, session: Session):
         end_time = datetime.now()
@@ -277,20 +353,14 @@ class Covid19PortalAccessor(AbstractAccessor):
 
         return sample
 
-    def _compress_file(self, uncompressed_file, compressed_file):
-        with open(uncompressed_file, 'rb') as f_in:
-            with gzip.open(compressed_file, 'wb') as f_out:
-                shutil.copyfileobj(f_in, f_out)
-        os.remove(uncompressed_file)
-
     def _parse_dates(self, sample: SampleCovid19):
-        format = "%Y%m%d"
+        _format = "%Y%m%d"
         try:
-            sample.collection_date = datetime.strptime(sample.collection_date, format).date()
+            sample.collection_date = datetime.strptime(sample.collection_date, _format).date()
         except Exception:
             sample.collection_date = None
         try:
-            sample.first_created = datetime.strptime(sample.first_created, format).date()
+            sample.first_created = datetime.strptime(sample.first_created, _format).date()
         except Exception:
             sample.first_created = None
 

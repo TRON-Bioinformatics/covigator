@@ -19,6 +19,7 @@ INDEL_TYPE_COLOR_MAP = {
 }
 
 
+
 class MutationStatsFigures(Figures):
 
     def get_annotations_plot(self, data_source: str = None, genes: List[str] = None):

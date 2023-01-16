@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date
 from typing import Union
 import requests
 from covigator.misc.country_parser import CountryParser
@@ -7,11 +7,19 @@ from covigator.accessor import MINIMUM_DATE
 from covigator.exceptions import CovigatorExcludedSampleTooEarlyDateException
 from covigator.misc import backoff_retrier
 
-NUMBER_RETRIES = 5
+NUMBER_RETRIES = -1
 
 
 class SampleCovid19:
     pass
+
+
+def _parse_abstract(value, _type):
+    try:
+        value = _type(value)
+    except (ValueError, TypeError):
+        value = None
+    return value
 
 
 class AbstractAccessor:
@@ -33,15 +41,10 @@ class AbstractAccessor:
         sample.continent_alpha_2 = parsed_country.continent_alpha_2
         sample.continent = parsed_country.continent
 
-    def _parse_dates(self, sample: Union[SampleEna, SampleCovid19]):
-        sample.collection_date = self._parse_abstract(sample.collection_date, date.fromisoformat)
-        sample.first_created = self._parse_abstract(sample.first_created, date.fromisoformat)
+
+    @staticmethod
+    def _parse_dates(sample: Union[SampleEna, SampleCovid19]):
+        sample.collection_date = _parse_abstract(sample.collection_date, date.fromisoformat)
+        sample.first_created = _parse_abstract(sample.first_created, date.fromisoformat)
         if sample.collection_date is not None and sample.collection_date < MINIMUM_DATE:
             raise CovigatorExcludedSampleTooEarlyDateException
-
-    def _parse_abstract(self, value, type):
-        try:
-            value = type(value)
-        except (ValueError, TypeError):
-            value = None
-        return value

@@ -14,6 +14,7 @@ ID_APPLY_BUTTOM = 'lineages-apply-buttom'
 ID_DROPDOWN_DATA_SOURCE = "lineages-dropdown-data-source"
 ID_DROPDOWN_COUNTRY = 'lineages-dropdown-country'
 ID_DROPDOWN_LINEAGE = 'lineages-dropdown-lineage'
+ID_DROPDOWN_PERIOD = 'lineages-dropdown-period'
 ID_LINEAGES_GRAPH = 'lineages-graph'
 ID_LINEAGES_TABLE = 'lineages-table'
 
@@ -48,7 +49,22 @@ def get_lineages_tab_left_bar(queries: Queries, data_source: DataSource):
     return html.Div(
         className="two columns",
         children=[
-            html.P("Lineage information is derived from the mutated sequence using Pangolin."),
+            html.Div([
+                html.Div(dbc.Button(
+                    "Lineages accumulation",
+                    color="secondary",
+                    className="me-1",
+                    style={'font-size': '100%'}
+                )),
+                html.Br(),
+                html.Div(dbc.Button(
+                    "Instantaneous lineage prevalence",
+                    color="secondary",
+                    className="me-1",
+                    style={'font-size': '100%'}
+                ))]),
+            html.Hr(),
+            html.P("Lineage information is derived from the consensus sequence using Pangolin."),
             html.Br(),
             html.Div(
                 html.Span(
@@ -82,6 +98,14 @@ def get_lineages_tab_left_bar(queries: Queries, data_source: DataSource):
                 options=[{'label': c, 'value': c} for c in queries.get_lineages(data_source.name)],
                 value=None,
                 multi=True
+            ),
+            html.Br(),
+            dcc.Markdown("""Select time period for smoothing"""),
+            dcc.Dropdown(
+                id=ID_DROPDOWN_PERIOD,
+                options=[{'label': '{} days'.format(c), 'value': c} for c in range(1, 32)] + [{'label': 'Disable', 'value': False}],
+                value=14,
+                multi=False
             ),
             html.Br(),
             html.P("Select a single lineage to explore its corresponding mutations."),
@@ -134,14 +158,15 @@ def set_callbacks_lineages_tab(app, session: Session):
             State(ID_DROPDOWN_DATA_SOURCE, 'value'),
             State(ID_DROPDOWN_COUNTRY, 'value'),
             State(ID_DROPDOWN_LINEAGE, 'value'),
+            State(ID_DROPDOWN_PERIOD, 'value'),
         ],
-        suppress_callback_exceptions=True
-    )
-    def update_lineages_plot(_, data_source, countries, lineages):
+        suppress_callback_exceptions=True)
+    def update_lineages_plot(_, data_source, countries, lineages, time_period):
         return html.Div(children=figures.get_lineages_plot(
             data_source=data_source,
             countries=countries,
-            lineages=lineages))
+            lineages=lineages,
+            time_period=time_period))
 
     @app.callback(
         Output(ID_LINEAGES_TABLE, 'children'),
@@ -151,8 +176,7 @@ def set_callbacks_lineages_tab(app, session: Session):
             State(ID_DROPDOWN_COUNTRY, 'value'),
             State(ID_DROPDOWN_LINEAGE, 'value'),
         ],
-        suppress_callback_exceptions=True
-    )
+        suppress_callback_exceptions=True)
     def update_lineages_table(_, data_source, countries, lineages):
         return html.Div(children=figures.get_lineages_variants_table(
             data_source=data_source, lineages=lineages, countries=countries))

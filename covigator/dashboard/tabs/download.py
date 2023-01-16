@@ -13,20 +13,21 @@ def get_tab_download(content_folder):
                 dcc.Markdown("""
                     ** Download the raw CoVigator data** 
                     
-                    Data releases that may be behind the information shown in the dashboard.
+                    Data releases behind the information shown in the dashboard.
                     See the README file for more details.
                     
                     ENA dataset
-                    * `variant_observation` contains the individual variant calls
-                    * `subclonal_variant_observation` contains the variant calls with a VAF < 80 % and >= 5 %
-                    * `low_frequency_variant_observation` contains the variant calls with a VAF < 5 %
-                    * `variant` contains the unique variants without any sample specific information
+                    * `variant` contains the unique clonal variants (VAF >= 80 %) without any sample specific information
+                    * `variant_observation` contains the individual clonal variant calls (VAF >= 80 %)
+                    * `subclonal_variant_observation` contains the high quality intrahost variant calls (VAF >= 2 % and < 50 %)
+                    * `low_frequency_variant_observation` contains the low quality intrahost variant calls (VAF < 50 %)
+                    * `lq_clonal_variant_observation` contains the low quality clonal variant calls (VAF >= 50 % and < 80 %)
                     * `variant_cooccurrence` contains the cooccurrence matrix between clonal variants
-                    * `sample_ena` contains the samples metadata and some sample level derived data (eg: pangolin, coverage analysis, etc.)
+                    * `sample_ena` contains the samples metadata and some sample level derived data (eg: lineage, coverage analysis, etc.)
                     
                     Covid19 data portal sequences dataset
-                    * `variant_observation_covid19portal` contains the individual variant calls
                     * `variant_covid19portal` contains the unique variants without any sample specific information
+                    * `variant_observation_covid19portal` contains the individual variant calls
                     * `sample_covid19_portal` contains the samples metadata and some sample level derived data (eg: pangolin, coverage analysis, etc.)
                     
                     Annotations
