@@ -55,14 +55,26 @@ def discrete_background_color_bins(df, n_bins=5, columns='all', colors='Blues'):
 
 class LineageFigures(Figures):
 
-    def get_lineages_plot(self, data_source: str, countries=None, lineages=None, time_period=14):
+    def get_lineages_plot(self, data_source: str, date_start, date_end, countries=None, lineages=None, time_period=14, prevalence=0):
         logger.debug("Getting data on samples by country...")
         data = self.queries.get_accumulated_lineages_by_country(
             data_source=data_source, countries=countries, lineages=lineages)
         graph = dcc.Markdown("""**No data for the current selection**""")
         if data is not None and data.shape[0] > 0:
+            # Filter data based on start and end range
+            data = data.loc[(data.date >= date_start) & (data.date <= date_end)]
             logger.debug("Prepare plot on samples by lineage...")
             lineages = list(data.sort_values("cumsum", ascending=False).lineage.unique())
+            if prevalence > 0:
+                # Calculate cumsum for selected time interval --> Count of samples in interval
+                cumsum_for_range = data.groupby('lineage')[['count_y']].sum()
+                cumsum_for_range = cumsum_for_range.reset_index(level="lineage").rename(columns={'count_y': 'cumsum_for_range'})
+                # Add cumsums grouped by lineages to get total number of samples in time interval
+                total_in_range = cumsum_for_range["cumsum_for_range"].sum()
+                cumsum_for_range["prevalence_in_range"] = cumsum_for_range["cumsum_for_range"] / total_in_range
+                # Get lineages with certain prevalence in time interval
+                prevalent_lineages = cumsum_for_range.loc[cumsum_for_range.prevalence_in_range > prevalence].get('lineage').tolist()
+                data = data.loc[data.lineage.isin(prevalent_lineages)]
 
             fig = make_subplots(rows=2, cols=1)
 
@@ -110,7 +122,7 @@ class LineageFigures(Figures):
                     'range': [0, 1],
                     'title': '% samples'
                 },
-                height=700,
+                height=700
             )
             fig.update_xaxes(showspikes=True)
 
