@@ -78,13 +78,14 @@ class LineageFigures(Figures):
 
             fig = make_subplots(rows=2, cols=1)
 
+            fig1_hovertemplate = "num.samples=%{y}, % daily samples=%{customdata[0]:.0%}, increment=%{customdata[1]}"
             fig1 = px.area(
                 data, x="date", y="cumsum", color="lineage",
                 category_orders={"lineage": lineages[::-1]},
-                labels={"ratio_per_date": "% daily samples", "cumsum": "num. samples", "count": "increment"},
-                hover_data=["ratio_per_date", "count"],
+                labels={"cumsum": "num. samples"},
+                custom_data=["ratio_per_date", "count"],
                 color_discrete_sequence=px.colors.qualitative.Vivid)
-            fig1.update_traces(line=dict(width=0.5), showlegend=False)
+            fig1.update_traces(line=dict(width=0.5), showlegend=False, hovertemplate=fig1_hovertemplate)
 
             # Perform smoothing by using a simple moving average
             # If time_period is False the un-smoothed data is plotted
@@ -96,13 +97,14 @@ class LineageFigures(Figures):
                 sma_df = sma_df.reset_index(level='lineage')[['ratio_per_date']]
                 # Update columns with moving average over selected period
                 smooth_data.update(sma_df)
+            fig2_hovertemplate = "daily samples: %{y}"
             fig2 = px.area(
                 smooth_data, x="date", y="ratio_per_date", color="lineage",
                 category_orders={"lineage": lineages[::-1]},
                 labels={"ratio_per_date": "% daily samples", "cumsum": "num. samples", "count": "increment"},
                 hover_data=["cumsum", "count"],
                 color_discrete_sequence=px.colors.qualitative.Vivid)
-            fig2.update_traces(line=dict(width=0.5))
+            fig2.update_traces(line=dict(width=0.5), hovertemplate=fig2_hovertemplate)
 
             for trace in fig1["data"]:
                 fig.append_trace(trace, row=1, col=1)
@@ -122,7 +124,8 @@ class LineageFigures(Figures):
                     'range': [0, 1],
                     'title': '% samples'
                 },
-                height=700
+                height=700,
+                hovermode="x unified"
             )
             fig.update_xaxes(showspikes=True)
 

@@ -138,14 +138,14 @@ def get_lineages_tab_left_bar(queries: Queries, data_source: DataSource):
                         clearable=False
                     ))]),
             html.Br(),
-            dcc.Markdown("""Minimum prevalence of lineage to be plotted"""),
+            dcc.Markdown("""Minimum prevalence of lineage in the time interval to be plotted"""),
             dcc.Slider(
                 id=ID_SLIDER_PREVALENCE,
                 min=0.0,
-                max=1.0,
+                max=0.5,
                 step=0.05,
                 value=0.0,
-                marks={i: '{}'.format(i) for i in [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]},
+                marks={i: '{}'.format(i) for i in [0, 0.1, 0.2, 0.3, 0.4, 0.5]},
                 tooltip=dict(always_visible=False, placement="right")
             ),
             html.Br(),
