@@ -73,8 +73,17 @@ class LineageFigures(Figures):
                 total_in_range = cumsum_for_range["cumsum_for_range"].sum()
                 cumsum_for_range["prevalence_in_range"] = cumsum_for_range["cumsum_for_range"] / total_in_range
                 # Get lineages with certain prevalence in time interval
-                prevalent_lineages = cumsum_for_range.loc[cumsum_for_range.prevalence_in_range > prevalence].get('lineage').tolist()
-                data = data.loc[data.lineage.isin(prevalent_lineages)]
+                prevalent_lineages = cumsum_for_range.loc[
+                    cumsum_for_range.prevalence_in_range > prevalence].get('lineage').tolist()
+                # Group non-prevalent lineages and sum ratio_per_date, cumsum and count
+                others = data.loc[~data.lineage.isin(prevalent_lineages)].groupby('date')\
+                    [['ratio_per_date', 'cumsum', 'count']].sum().reset_index()
+                others['lineage'] = 'others'
+                data = data.loc[data.lineage.isin(prevalent_lineages),
+                    ['date', 'lineage', 'ratio_per_date', 'cumsum', 'count']]
+                data = pd.concat([data, others], ignore_index=True)
+                data.sort_values(by='date', inplace=True)
+
 
             fig = make_subplots(rows=2, cols=1)
 
