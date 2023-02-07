@@ -144,7 +144,7 @@ def get_lineages_tab_left_bar(queries: Queries, data_source: DataSource):
                 min=0.0,
                 max=0.2,
                 step=0.01,
-                value=0.0,
+                value=0.01,
                 marks={i: '{}'.format(i) for i in [0, 0.05, 0.1, 0.15, 0.2]},
                 tooltip=dict(always_visible=False, placement="right")
             ),
