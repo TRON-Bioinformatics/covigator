@@ -66,52 +66,50 @@ class LineageFigures(Figures):
             logger.debug("Prepare plot on samples by lineage...")
             lineages = list(data.sort_values("cumsum", ascending=False).lineage.unique())
             if prevalence > 0:
-                # Calculate cumsum for selected time interval --> Count of samples in interval
+                # Calculate cumulative sum for each lineage in selected time interval
                 cumsum_for_range = data.groupby('lineage')[['count_y']].sum()
                 cumsum_for_range = cumsum_for_range.reset_index(level="lineage").rename(columns={'count_y': 'cumsum_for_range'})
-                # Add cumsums grouped by lineages to get total number of samples in time interval
+                # Add cumulative sums grouped by lineages to get total number of samples in time interval
                 total_in_range = cumsum_for_range["cumsum_for_range"].sum()
                 cumsum_for_range["prevalence_in_range"] = cumsum_for_range["cumsum_for_range"] / total_in_range
                 # Get lineages with certain prevalence in time interval
                 prevalent_lineages = cumsum_for_range.loc[
                     cumsum_for_range.prevalence_in_range > prevalence].get('lineage').tolist()
-                # Group non-prevalent lineages and sum ratio_per_date, cumsum and count
+                # Group non-prevalent lineages into others and sum columns ratio_per_date, cumsum and count
                 others = data.loc[~data.lineage.isin(prevalent_lineages)].groupby('date')\
                     [['ratio_per_date', 'cumsum', 'count']].sum().reset_index()
                 others['lineage'] = 'others'
                 data = data.loc[data.lineage.isin(prevalent_lineages),
                     ['date', 'lineage', 'ratio_per_date', 'cumsum', 'count']]
+                # Merge others back with top prevalent lineages
                 data = pd.concat([data, others], ignore_index=True)
                 data.sort_values(by='date', inplace=True)
 
-
+            data = data.loc[:, ['date', 'lineage', 'ratio_per_date', 'cumsum', 'count']]
             fig = make_subplots(rows=2, cols=1)
 
             fig1_hovertemplate = "num.samples=%{y}, % daily samples=%{customdata[0]:.0%}, increment=%{customdata[1]}"
             fig1 = px.area(
                 data, x="date", y="cumsum", color="lineage",
                 category_orders={"lineage": lineages[::-1]},
-                labels={"cumsum": "num. samples"},
                 custom_data=["ratio_per_date", "count"],
                 color_discrete_sequence=px.colors.qualitative.Vivid)
             fig1.update_traces(line=dict(width=0.5), showlegend=False, hovertemplate=fig1_hovertemplate)
 
             # Perform smoothing by using a simple moving average
             # If time_period is False the un-smoothed data is plotted
-            smooth_data = data.loc[:, ['date', 'lineage', 'ratio_per_date', 'cumsum', 'count']]
             if time_period:
                 # Group data by lineage to calculate correct average for each lineage in df
-                sma_df = smooth_data.groupby('lineage')[['lineage', 'ratio_per_date']]
+                sma_df = data.groupby('lineage')[['lineage', 'ratio_per_date']]
                 sma_df = sma_df.rolling(time_period, min_periods=1).mean()
                 sma_df = sma_df.reset_index(level='lineage')[['ratio_per_date']]
                 # Update columns with moving average over selected period
-                smooth_data.update(sma_df)
+                data.update(sma_df)
+            # Custom hover tooltip label for lineages plot
             fig2_hovertemplate = "daily samples: %{y}"
             fig2 = px.area(
-                smooth_data, x="date", y="ratio_per_date", color="lineage",
+                data, x="date", y="ratio_per_date", color="lineage",
                 category_orders={"lineage": lineages[::-1]},
-                labels={"ratio_per_date": "% daily samples", "cumsum": "num. samples", "count": "increment"},
-                hover_data=["cumsum", "count"],
                 color_discrete_sequence=px.colors.qualitative.Vivid)
             fig2.update_traces(line=dict(width=0.5), hovertemplate=fig2_hovertemplate)
 
