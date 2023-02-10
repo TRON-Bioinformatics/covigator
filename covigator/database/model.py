@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import List
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, String, Float, Enum, DateTime, Integer, Boolean, Date, ForeignKey, \
-    ForeignKeyConstraint, BigInteger, JSON, Index
+    ForeignKeyConstraint, BigInteger, JSON, Index, ARRAY
 import enum
 from covigator.configuration import Configuration
 
@@ -47,6 +47,7 @@ DATA_SOURCE_CONSTRAINT_NAME = get_table_versioned_name('data_source', config=con
 COVIGATOR_MODULE_CONSTRAINT_NAME = get_table_versioned_name('covigator_module', config=config)
 REGION_TYPE_CONSTRAINT_NAME = get_table_versioned_name('region_type', config=config)
 VARIANT_TYPE_CONSTRAINT_NAME = get_table_versioned_name('variant_type', config=config)
+LINEAGE_TABLE_NAME = get_table_versioned_name('lineage', config=config)
 SEPARATOR = ";"
 
 Base = declarative_base()
@@ -358,7 +359,6 @@ class SampleCovid19Portal(Base):
             self.collection_date.strftime("%Y%m%d") if self.collection_date is not None else "nodate",
             self.run_accession)
 
-
 class Variant(Base):
     """
     A variant with its specific annotations. THis does not contain any sample specific annotations.
@@ -530,8 +530,9 @@ class SubclonalVariant(Base):
         return "{}:{}>{}".format(self.position, self.reference, self.alternate)
 
 
-class LowFrequencyVariant(Base):
-    __tablename__ = LOW_FREQUENCY_VARIANT_TABLE_NAME
+class LowQualityClonalVariant(Base):
+
+    __tablename__ = LOW_QUALITY_CLONAL_VARIANT_TABLE_NAME
 
     variant_id = Column(String, primary_key=True)
     chromosome = Column(String)
@@ -572,9 +573,8 @@ class LowFrequencyVariant(Base):
         return "{}:{}>{}".format(self.position, self.reference, self.alternate)
 
 
-class LowQualityClonalVariant(Base):
-
-    __tablename__ = LOW_QUALITY_CLONAL_VARIANT_TABLE_NAME
+class LowFrequencyVariant(Base):
+    __tablename__ = LOW_FREQUENCY_VARIANT_TABLE_NAME
 
     variant_id = Column(String, primary_key=True)
     chromosome = Column(String)
@@ -1128,3 +1128,20 @@ class PrecomputedVariantsPerLineage(Base):
     country = Column(String)
     count_observations = Column(Integer)
     source = Column(Enum(DataSource, name=DataSource.__constraint_name__))
+
+
+class Lineages(Base):
+    """
+    Annotate pangolin lineage identifiers with WHO desgination, VOC, parent name
+    """
+    __tablename__ = LINEAGE_TABLE_NAME
+
+    pangolin_lineage_id = Column(String, primary_key=True)
+    # WHO label with pangolin lineage id as additional information
+    # Multiple sub-lineages have the same WHO label assigned (might be nice description)
+    constellation_label = Column(String, primary_key=True)
+    who_label = Column(String)
+    # VOC information
+    phe_label = Column(String)
+    # Parent in same table: how to handle?
+    parent_lineage_id = Column(String)
