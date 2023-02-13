@@ -36,6 +36,7 @@ COVID_PORTAL_HREF = "/covid19-portal"
 ENA_HREF = "/ena"
 DOWNLOAD_HREF = "/download"
 ACKNOWLEDGEMENTS_HREF = "/acknowledgements"
+FEEDBACK_HREF = "https://feedback.userreport.com/ca0af557-f613-475f-b1d4-0519d4186f69/"
 TAB_STYLE = {"color": "#003c78", 'margin-right': '15px'}
 
 ID_TAB_CONTENT = "tab-content"
@@ -124,6 +125,9 @@ class Dashboard:
                                                 dbc.DropdownMenuItem(
                                                     "Acknowledgements", href=ACKNOWLEDGEMENTS_HREF,
                                                     style={'font-size': '150%', "color": "#003c78"}),
+                                                dbc.DropdownMenuItem(
+                                                    "Feedback", href=FEEDBACK_HREF, target="_blank",
+                                                    style={'font-size': '150%', "color": "#003c78"}),
                                             ],
                                             align_end=True,
                                             size="lg",
@@ -193,8 +197,8 @@ class Dashboard:
                 #
                 # Necessary for "true" mobile support.
                 {
-                  'name': 'viewport',
-                  'content': 'width=device-width, initial-scale=1.0'
+                    'name': 'viewport',
+                    'content': 'width=device-width, initial-scale=1.0'
                 }
             ]
         )
