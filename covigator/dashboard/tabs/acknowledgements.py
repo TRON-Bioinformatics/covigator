@@ -86,13 +86,7 @@ def get_tab_acknowledgements():
                 ]),
 
                 html.Br(),
-                html.P("We value your feedback!"),
-                html.P("If you found an error or have a feature request, please, report it:"),
-                html.Iframe(srcDoc="""
-                        <a class="github-button" href="https://github.com/tron-bioinformatics/covigator/issues/new?assignees=&labels=bug&template=bug_report.md&title=" data-color-scheme="no-preference: light; light: light; dark: light;" data-size="large" data-show-count="false" aria-label="Issue tron-bioinformatics/covigator on GitHub">Issue</a>
-                        <a class="github-button" href="https://github.com/tron-bioinformatics/covigator/issues/new?assignees=&labels=bug&template=feature_request.md&title=" data-color-scheme="no-preference: light; light: light; dark: light;" data-size="large" data-show-count="false" aria-label="Issue tron-bioinformatics/covigator on GitHub">Feature request</a>
-                        <script async defer src="https://buttons.github.io/buttons.js"></script>
-                       """, style={'border': 0, 'height': '50px'}),
+
                 html.P("If you liked our work support us in GitHub:"),
                 html.Iframe(srcDoc="""
                             <a class="github-button" href="https://github.com/tron-bioinformatics/covigator" data-color-scheme="no-preference: light; light: light; dark: light;" data-icon="octicon-star" data-size="large" data-show-count="true" aria-label="Star tron-bioinformatics/covigator on GitHub">Star</a>
