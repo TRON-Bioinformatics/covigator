@@ -1143,5 +1143,8 @@ class Lineages(Base):
     who_label = Column(String)
     # VOC information
     phe_label = Column(String)
+    date = Column(Date)
+    variant_of_concern = Column(Boolean, default=False)
+    variant_under_investigation = Column(Boolean, default=False)
     # Parent in same table: how to handle?
     parent_lineage_id = Column(String)

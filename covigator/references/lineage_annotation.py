@@ -7,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from covigator.database.model import Lineages
 from logzero import logger
+from datetime import datetime
 
 
 class LineageAnnotationsLoader:
@@ -24,10 +25,6 @@ class LineageAnnotationsLoader:
         json_files = list(Path(self.lineage_constellation_directory).glob('*.json'))
         return json_files
 
-    def _parse_name_from_file(self, file: Path):
-        name = file.stem
-        return name
-
     def load_data(self):
         count_lineages = 0
         # Iterate over all json constellation files
@@ -40,6 +37,33 @@ class LineageAnnotationsLoader:
             # Optional records not present in all lineage constellations
             who_label = data["variant"].get("WHO_label", "")
             phe_label = data["variant"].get("PHE_label", "")
+            date = ""
+            variant_of_concern = False
+            variant_under_investigation = False
+            tags = data["tags"]
+            for this_tag in tags:
+                if this_tag.startswith("VOC-"):
+                    variant_of_concern = True
+                    # Remove prefix from phe label date
+                    constellation_date = phe_label.lstrip("VOC-")
+                elif this_tag.startswith("V-"):
+                    variant_under_investigation = True
+                    constellation_date = phe_label.lstrip("V-")
+            #if phe_label:
+            #    # The PHE label shows the date when the variant was classified as variant of concern/interest
+            #    # Check if string begins with VOC- or just V- and removes prefix to get classification date
+            #    if phe_label.startswith("VOC-"):
+            #        variant_of_concern = True
+            #        # Remove prefix from phe label date
+            #        constellation_date = phe_label.lstrip("VOC-")
+            #    else:
+            #        variant_of_interest = True
+            #        constellation_date = phe_label.lstrip("V-")
+
+                # Dates are formatted in the json file the following way: 2021APR-02
+            constellation_date = datetime.strptime(constellation_date, "%y%b-%d")
+            date = constellation_date.strftime("%Y-%m-%d")
+
             parent_lineage_id = data["variant"].get("parent_lineage", "")
             incompatible_lineage_calls = set(data["variant"].get("incompatible_lineage_calls", []))
             # Drop incompatible lineage calls from pango identifier list
@@ -54,7 +78,10 @@ class LineageAnnotationsLoader:
                     constellation_label=constellation_label,
                     who_label=who_label,
                     phe_label=phe_label,
-                    parent_lineage_id=parent_lineage_id
+                    parent_lineage_id=parent_lineage_id,
+                    date=date,
+                    variant_under_investigation=variant_under_investigation,
+                    variant_of_concern=variant_of_concern
                 )
                 self.session.add(lineage)
                 self.session.commit()

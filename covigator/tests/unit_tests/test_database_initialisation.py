@@ -1,5 +1,5 @@
 from covigator.database.database import Database
-from covigator.database.model import Gene, get_table_versioned_name, Conservation, Domain
+from covigator.database.model import Gene, get_table_versioned_name, Conservation, Domain, Lineages
 import pandas as pd
 from covigator.configuration import Configuration
 from covigator.tests.unit_tests.abstract_test import AbstractTest
@@ -66,3 +66,11 @@ class DatabaseInitialisationTests(AbstractTest):
         gene_names = [g.name for g in genes]
         unique_gene_names = set(gene_names)
         self.assertEqual(len(gene_names), len(unique_gene_names))
+
+    def test_lineage_initialisation(self):
+        database = Database(test=True, config=self.config)
+        session = database.get_database_session()
+        self.assertGreater(session.query(Lineages).count(), 0)
+        for d in session.query(Lineages).all():
+            self.assertIsNotNone(d.pangolin_lineage_id)
+            self.assertIsNotNone(d.constellation_label)
