@@ -48,6 +48,7 @@ COVIGATOR_MODULE_CONSTRAINT_NAME = get_table_versioned_name('covigator_module', 
 REGION_TYPE_CONSTRAINT_NAME = get_table_versioned_name('region_type', config=config)
 VARIANT_TYPE_CONSTRAINT_NAME = get_table_versioned_name('variant_type', config=config)
 LINEAGE_TABLE_NAME = get_table_versioned_name('lineage', config=config)
+LINEAGE_MUTATION_TABLE_NAME = get_table_versioned_name('lineage_mutation', config=config)
 SEPARATOR = ";"
 
 Base = declarative_base()
@@ -1138,13 +1139,28 @@ class Lineages(Base):
 
     pangolin_lineage_id = Column(String, primary_key=True)
     # WHO label with pangolin lineage id as additional information
-    # Multiple sub-lineages have the same WHO label assigned (might be nice description)
     constellation_label = Column(String, primary_key=True)
     who_label = Column(String)
-    # VOC information
+    # VOC/VUI/V information
     phe_label = Column(String)
     date = Column(Date)
     variant_of_concern = Column(Boolean, default=False)
     variant_under_investigation = Column(Boolean, default=False)
-    # Parent in same table: how to handle?
     parent_lineage_id = Column(String)
+    tags = Column(String)
+
+
+class LineageMutations(Base):
+    """
+    Store lineage defining mutations
+    """
+    __tablename__ = LINEAGE_MUTATION_TABLE_NAME
+
+    mutation_id = Column(String, primary_key=True)
+    mutation_type = Column(String)
+    lineage_id = Column(String)
+    constellation_label = Column(String)
+    protein = Column(String)
+    position = Column(Integer)
+    reference = Column(String)
+    alternate = Column(String)
