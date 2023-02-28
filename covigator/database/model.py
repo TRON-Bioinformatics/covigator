@@ -2,6 +2,7 @@ import os
 from datetime import datetime
 from typing import List
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship
 from sqlalchemy import Column, String, Float, Enum, DateTime, Integer, Boolean, Date, ForeignKey, \
     ForeignKeyConstraint, BigInteger, JSON, Index, ARRAY
 import enum
@@ -48,7 +49,8 @@ COVIGATOR_MODULE_CONSTRAINT_NAME = get_table_versioned_name('covigator_module', 
 REGION_TYPE_CONSTRAINT_NAME = get_table_versioned_name('region_type', config=config)
 VARIANT_TYPE_CONSTRAINT_NAME = get_table_versioned_name('variant_type', config=config)
 LINEAGE_TABLE_NAME = get_table_versioned_name('lineage', config=config)
-LINEAGE_MUTATION_TABLE_NAME = get_table_versioned_name('lineage_mutation', config=config)
+CONSTELLATION_SITES_TABLE_NAME = get_table_versioned_name('constellation_sites', config=config)
+LINEAGE_SITES_JUNCTION_TABLE_NAME = get_table_versioned_name('lineages_sites', config=config)
 SEPARATOR = ";"
 
 Base = declarative_base()
@@ -1131,15 +1133,23 @@ class PrecomputedVariantsPerLineage(Base):
     source = Column(Enum(DataSource, name=DataSource.__constraint_name__))
 
 
+#lineages_sites = Table(
+#    LINEAGE_SITES_JUNCTION_TABLE_NAME,
+#    Base.metadata,
+#    Column('lineage_id', ForeignKey("{}.pangolin_lineage_id".format(LINEAGE_TABLE_NAME)), primary_key=True),
+#    Column('constellation_label', ForeignKey("{}.".format(LINEAGE_TABLE_NAME)), primary_key=True),
+#
+#)
+
 class Lineages(Base):
     """
     Annotate pangolin lineage identifiers with WHO desgination, VOC, parent name
     """
     __tablename__ = LINEAGE_TABLE_NAME
 
-    pangolin_lineage_id = Column(String, primary_key=True)
+    pango_lineage_id = Column(String, primary_key=True)
     # WHO label with pangolin lineage id as additional information
-    constellation_label = Column(String, primary_key=True)
+    constellation_id = Column(String, primary_key=True)
     who_label = Column(String)
     # VOC/VUI/V information
     phe_label = Column(String)
@@ -1148,19 +1158,44 @@ class Lineages(Base):
     variant_under_investigation = Column(Boolean, default=False)
     parent_lineage_id = Column(String)
     tags = Column(String)
-
-
-class LineageMutations(Base):
+    variants = relationship(
+        "ConstellationSites",
+        secondary=LINEAGE_SITES_JUNCTION_TABLE_NAME,
+        back_populates='constellations',
+    )
+class ConstellationSites(Base):
     """
     Store lineage defining mutations
     """
-    __tablename__ = LINEAGE_MUTATION_TABLE_NAME
+    __tablename__ = CONSTELLATION_SITES_TABLE_NAME
 
-    mutation_id = Column(String, primary_key=True)
-    mutation_type = Column(String)
-    lineage_id = Column(String)
-    constellation_label = Column(String)
+    variant_id = Column(String, primary_key=True)
+    variant_type = Column(String)
     protein = Column(String)
-    position = Column(Integer)
+    position = Column(Integer, index=True)
     reference = Column(String)
     alternate = Column(String)
+    constellations = relationship(
+        "Lineages",
+        secondary=LINEAGE_SITES_JUNCTION_TABLE_NAME,
+        back_populates="variants")
+
+    def get_variant_id(self):
+        return "{}:{}>{}".format(self.position, self.reference, self.alternate)
+
+
+class LineagesSites(Base):
+    """
+    Junction table that maps constellation sites to their respective lineage
+    """
+    __tablename__ = LINEAGE_SITES_JUNCTION_TABLE_NAME
+    constellation_id = Column(String, primary_key=True)
+    pango_lineage_id = Column(String, primary_key=True)
+    variant_id = Column(ForeignKey(ConstellationSites.variant_id), primary_key=True)
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ['constellation_id', 'pango_lineage_id'],
+            [Lineages.constellation_id, Lineages.pango_lineage_id],
+        ),
+    )

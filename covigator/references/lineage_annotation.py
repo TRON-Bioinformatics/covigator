@@ -46,59 +46,62 @@ class LineageAnnotationsLoader:
 
     def _parse_mutation_sites(self, site_list):
         """
-        Parse mutation list from constellation file
-        for now limited to SNPs
+        Parse mutation list from pango constellation file
+        for now limited to SNPs in genomic coordinates
         """
         snp_pattern = re.compile('([ACTGUN]+)([0-9]+)([ACTGUN]+)')
         insertion_pattern = re.compile(r'(\w+):(\d+)\+([a-zA-Z]+)')
-        aa_mutation = re.compile('([a-zA-Z-*]+)(\d+)([a-zA-Z-*]*)')
+        aa_mutation = re.compile(r'([a-zA-Z-*]+)(\d+)([a-zA-Z-*]*)')
         mutation_list = []
         for this_site in site_list:
-            # This parsing is based on the code of Scorpio
-            this_mut = this_site.split([":"])
+            # This parsing is simplified code based on the utility script of Scorpio
+            this_mut = this_site.split(":")
             # Insertions -> eiter nucleotide or protein coordinates
             if "+" in this_mut[1]:
                 match = re.match(insertion_pattern, this_mut[1])
                 if not match:
                     logger.warning("Could not parse the following site definition: {}".format(this_site))
-                    mutation_list.append({})
-                # How to get reference allele so we can compare
-                mutation_info = {"site": this_mut, "type": "Insertion", "position": match[1], "length": length(match[2]),
-                                 "protein": self._match_protein_name(match[0]), "alternate": match[2]}
+                    continue
+                # ToDo support insertions and ambigous mutations that are in nuc coordinates
+                # How to get reference allele so we can compare?
+                mutation_info = {"site": this_site, "type": "Insertion", "position": match[2], "length": length(match[2]),
+                                 "protein": self._match_protein_name(match[1]), "alternate": match[3]}
                 # Not typed in scorpio --> how to handle?2
             # Deletions -> coordinates in nucleotide coordinates
-            if this_mut[0] == "del":
-                length = int(this_mut[3])
-                mutation_info = {"site": this_mut, "type": "Deletion", "position": this_mut[1], "length": length,
+            elif this_mut[0] == "del":
+                length = int(this_mut[2])
+                mutation_info = {"site": this_site, "type": "Deletion", "position": this_mut[1], "length": length,
                                  "protein": None}
             # SNPs -> coordinates in nucleotide coordinates
-            if this_mut[0] in ["snp", "nuc"]:
+            elif this_mut[0] in ["snp", "nuc"]:
                 match = re.match(snp_pattern, this_mut[1])
                 if not match:
                     logger.warning("Could not parse the following site definition: {}".format(this_site))
-                    mutation_list.append({})
-                mutation_info = {"site": this_mut, "type": "SNV", "position": int(match[1]),
-                                 "reference": int(match[0]), "alternate": int(match[2]), "protein": None}
+                    continue
+                mutation_info = {"site": this_site, "type": "SNV", "position": int(match[2]),
+                                 "reference": match[1], "alternate": match[3], "protein": None}
             # Amino acid substitutions --> can be SNVs, Deletions and Indels?
             # Ambigous codes are problematic for the DB
             else:
                 match = re.match(aa_mutation, this_mut[1])
                 if not match:
                     logger.warning("Could not parse the following site definition: {}".format(this_site))
-                protein = self.match_protein_name(this_mut[0])
-                mutation_info = {"site": this_mut, "type": "", "position": int(match[1]),
-                                 "reference": int(match[0]), "alternate": int(match[2]), "protein": protein
+                    continue
+                protein = self._match_protein_name(this_mut[0])
+                mutation_info = {"site": this_site, "type": "", "position": int(match[2]),
+                                 "reference": match[1], "alternate": match[3], "protein": protein
                                  }
                 if mutation_info["alternate"] == '':
                     mutation_info["ambiguous_alternate"] = True
                 elif mutation_info["alternate"] in ["-", "del"]:
-                    mutation_info["type"] = "Deletion"
+                    mutation_info["type"] = "AA_Deletion"
                     mutation_info["length"] = len(mutation_info["reference"])
                     mutation_info["ambiguous_alternate"] = False
                 else:
                     mutation_info["ambiguous_alternate"] = False
-
             mutation_list.append(mutation_info)
+
+        return mutation_list
 
     def _read_constellation_files(self):
         lineage_constellation = {}
@@ -118,6 +121,7 @@ class LineageAnnotationsLoader:
             variant_of_concern = False
             variant_under_investigation = False
             tags = "|".join(data["tags"])
+            sites = self._parse_mutation_sites(data['sites'])
             if phe_label:
                 if phe_label.startswith("VOC-"):
                     variant_of_concern = True
@@ -142,9 +146,23 @@ class LineageAnnotationsLoader:
                 "variant_of_concern": variant_of_concern,
                 "variant_under_investigation": variant_under_investigation,
                 "tags": tags,
-                "parent_lineage_id": parent_lineage_id
+                "parent_lineage_id": parent_lineage_id,
+                "sites": sites
             }
         return lineage_constellation
+
+    def _find_parent_sites(self, lineage, lineage_constellation):
+        """
+        Include for each constellation also the mutations present up in the phylogenetic tree.
+        """
+        parent = lineage_constellation[lineage].get("parent_lineage", "")
+        sites = lineage_constellation[lineage].get("sites")
+        # Convert sites into set for quick union operation
+        if not parent:
+            return sites
+        else:
+            sites.extend([x for x in self._find_parent_sites(parent, lineage_constellation) if x not in sites])
+        return sites
 
     def _fill_lineage_table(self, lineage_constellation):
         count_lineages = 0
@@ -158,11 +176,11 @@ class LineageAnnotationsLoader:
                 continue
             for pangolin_lineage_id in annotation["pangolin_lineage_list"]:
                 # It seems we can have multiple pangolin identifiers in the pango designation field.
-                # That is the case for delta sublineages that were classified AY.X
+                # That is the case for delta sublineages AY.1 adn AY.2
                 # I decide for now to store pango lineages together with the constellation label as unique keys
                 lineage = Lineages(
-                    pangolin_lineage_id=pangolin_lineage_id,
-                    constellation_label=constellation,
+                    pango_lineage_id=pangolin_lineage_id,
+                    constellation_id=constellation,
                     who_label=annotation["who_label"],
                     phe_label=annotation["phe_label"],
                     parent_lineage_id=annotation["parent_lineage_id"],
@@ -175,6 +193,10 @@ class LineageAnnotationsLoader:
                 self.session.commit()
                 count_lineages += 1
         logger.info("Loaded into the database {} lineages".format(count_lineages))
+
+    def _fill_sites_table(self, lineage_constellation):
+        pass
+
 
     def load_data(self):
         # Fill lineage annotation table
