@@ -72,5 +72,9 @@ class DatabaseInitialisationTests(AbstractTest):
         session = database.get_database_session()
         self.assertGreater(session.query(Lineages).count(), 0)
         for d in session.query(Lineages).all():
-            self.assertIsNotNone(d.pangolin_lineage_id)
-            self.assertIsNotNone(d.constellation_label)
+            self.assertIsNotNone(d.pango_lineage_id)
+            self.assertIsNotNone(d.constellation_id)
+            self.assertIsNotNone(d.variant_of_concern)
+            self.assertIsNotNone(d.variant_under_investigation)
+        #lineages_with_parents = pd.read_sql(session.query(Lineages).statement, session.bind)
+
