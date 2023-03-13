@@ -99,7 +99,7 @@ class DatabaseInitialisationTests(AbstractTest):
         self.assertTrue(all([x in ["B.1.1.529", "XE-parent2"] for x in omicron.parent_lineage_id]))
 
         # check that VOC information is parsed correctly
-        voc_query = session.query(Lineages).filter(Lineages.variant_of_concern.isnot(None))
+        voc_query = session.query(Lineages).filter(Lineages.variant_of_concern.is_(True))
         voc_lineages = pd.read_sql(voc_query.statement, session.bind)
         self.assertEqual(voc_lineages.shape[0], 9)
         who_labels = set(voc_lineages.who_lable.drop_na())
