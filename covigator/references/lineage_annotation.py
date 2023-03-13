@@ -29,8 +29,7 @@ class LineageAnnotationsLoader:
 
     def _read_constellation_files(self):
         """
-        Parse lineage defining constellation files and store information
-        as a dict of dicts
+        Parse lineage defining constellation JSON files and store information
         """
         lineage_constellation = {}
         # Iterate over all json constellation files
@@ -40,7 +39,7 @@ class LineageAnnotationsLoader:
             # Get lineage annotation information
             pangolin_lineage_list = set(data["variant"].get("Pango_lineages", []))
             if not pangolin_lineage_list:
-                # MRCA lineages are either not present or an empty string ""
+                # MRCA lineage info is either not present or literally an empty string ""
                 lineage_name = data["variant"].get("mrca_lineage", "")
                 if not lineage_name:
                     lineage_name = data["variant"].get("lineage_name", "")
@@ -54,19 +53,32 @@ class LineageAnnotationsLoader:
             variant_of_concern = False
             variant_under_investigation = False
             tags = "|".join(data["tags"])
+            # Extract VOC/VOI/VUI information from tags field
             for this_tag in data["tags"]:
-                if this_tag.startswith("VOC-"):
+                if this_tag.startswith("VOC-") or this_tag.startswith("VOC "):
                     variant_of_concern = True
-                    voc_date = datetime.strptime(this_tag.lstrip("VOC-"), "%y%b-%d")
-                    voc_date = voc_date.strftime("%Y-%m-%d")
+                    if this_tag.startswith("VOC-"):
+                        voc_date = datetime.strptime(this_tag.lstrip("VOC-"), "%y%b-%d")
+                        voc_date = voc_date.strftime("%Y-%m-%d")
+                    # edge case for B1.1.7 constellation file
+                    else:
+                        voc_date = datetime.strptime(this_tag.lstrip("VOC "), "%Y%m/%d")
+                        voc_date = voc_date.strftime("%Y-%m-%d")
+                # Some constellations bring both VUI and V tags, others only one of the two.
+                # Therefore, we have to check both cases, even if this means that we overwrite the information once.
                 if this_tag.startswith("V-"):
                     variant_under_investigation = True
                     vui_date = datetime.strptime(this_tag.lstrip("V-"), "%y%b-%d")
                     vui_date = vui_date.strftime("%Y-%m-%d")
+                if this_tag.startswith("VUI-"):
+                    variant_under_investigation = True
+                    vui_date = datetime.strptime(this_tag.lstrip("VUI-"), "%y%b-%d")
+                    vui_date = vui_date.strftime("%Y-%m-%d")
+
             parent_lineage_id = data["variant"].get("parent_lineage", None)
             # Drop incompatible lineage calls from pangolin identifier list
-            # These calls are used by
-            incompatible_lineage_calls = set(data["variant"].get("incompatible_lineage_calls", []))
+            # These calls are incompatible with the scorpio constellation
+            incompatible_lineage_calls = set(data["variant"].get("incompatible_lineage_calls", set()))
             pangolin_lineage_list = pangolin_lineage_list - incompatible_lineage_calls
             lineage_constellation[constellation_label] = {
                 "pangolin_lineage_list": pangolin_lineage_list,
@@ -87,23 +99,22 @@ class LineageAnnotationsLoader:
         """
         count_lineages = 0
         # Get a list of pangolin lineage ids with a PHE label
-        lineages_with_phe = [y.get("pangolin_lineage_list") for x, y in lineage_constellation.items() if y.get("phe_label")]
+        lineages_with_phe = [y.get("pangolin_lineage_list") for x, y in lineage_constellation.items()
+                             if y.get("phe_label")]
         lineages_with_phe = {x for lineage in lineages_with_phe for x in lineage}
         for constellation, annotation in lineage_constellation.items():
-            # Drop "duplicated" lineages as we don't need to annotate them twice in the database.
-            # This is the case when a separate constellation file was created for an already existing lineage
-            # just to store it with an additional mutation. As it is still the same lineage we only store in the lineage
-            # table the constellation with a set PHE label
+            # Drop "duplicated" lineages, as we do not need to annotate them twice in the database.
+            # This is the case when a separate constellation file was created for an already existing lineage,
+            # just to store it with an additional mutation, e.g. B.1.1.7+E484K.json and B.1.617.2+K417N.
+            # Because it is still the same lineage, we store in the table only the constellation with a given PHE label
             pango_lineages = annotation["pangolin_lineage_list"]
             if not annotation["phe_label"]:
-                # Skip lineages that occur multiple times in the constellation files
                 pango_lineages = annotation["pangolin_lineage_list"] - lineages_with_phe
 
             for pangolin_lineage_id in pango_lineages:
-                # Multiple pangolin identifiers can point to the same lineage.
-                # That is the case for e.g. the delta sub-lineages AY.1 and AY.2 that were created to track local
-                # spreadings
-                # For now we store the pango lineages together with the constellation label as unique keys
+                # Multiple pangolin identifiers can be presented in a constellation.
+                # That is the case, e.g., for the delta sub-lineages AY.1 and AY.2, that were created to track local
+                # spread. For now, we store the pango-lineages together with the constellation label as unique keys
                 lineage = Lineages(
                     pango_lineage_id=pangolin_lineage_id,
                     constellation_id=constellation,
