@@ -47,8 +47,8 @@ class LineageAnnotationsLoader:
                 pangolin_lineage_list = set([lineage_name])
             constellation_label = data["label"]
             # Optional records not present in all lineage constellations
-            who_label = data["variant"].get("WHO_label", "")
-            phe_label = data["variant"].get("PHE_label", "")
+            who_label = data["variant"].get("WHO_label", None)
+            phe_label = data["variant"].get("PHE_label", None)
             voc_date = None
             vui_date = None
             variant_of_concern = False
@@ -63,7 +63,7 @@ class LineageAnnotationsLoader:
                     variant_under_investigation = True
                     vui_date = datetime.strptime(this_tag.lstrip("V-"), "%y%b-%d")
                     vui_date = vui_date.strftime("%Y-%m-%d")
-            parent_lineage_id = data["variant"].get("parent_lineage", "")
+            parent_lineage_id = data["variant"].get("parent_lineage", None)
             # Drop incompatible lineage calls from pangolin identifier list
             # These calls are used by
             incompatible_lineage_calls = set(data["variant"].get("incompatible_lineage_calls", []))
