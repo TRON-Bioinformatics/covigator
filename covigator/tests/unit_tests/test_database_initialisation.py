@@ -41,7 +41,7 @@ class DatabaseInitialisationTests(AbstractTest):
 
         self.assertEqual(count_genes, count_genes_2)
         self.assertEqual(count_domains, count_domains_2)
-        self.assertEqual(count_genes, count_lineages_2)
+        self.assertEqual(count_lineages, count_lineages_2)
         self.assertGreater(count_genes, 0)
         self.assertGreater(count_domains, 0)
         self.assertGreater(count_lineages, 0)
@@ -88,7 +88,7 @@ class DatabaseInitialisationTests(AbstractTest):
         unique_pango_ids = set(pango_ids)
         self.assertEqual(len(pango_ids), len(unique_pango_ids))
 
-        parent_query = session.query(Lineages).filter(Lineages.parent_lineage_id.is_not(None))
+        parent_query = session.query(Lineages).filter(Lineages.parent_lineage_id.isnot(None))
         lineages_with_parents = pd.read_sql(parent_query.statement, session.bind)
         self.assertEqual(lineages_with_parents.shape[0], 10)
         self.assertEqual(lineages_with_parents.shape[1], 10)
