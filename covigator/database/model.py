@@ -4,7 +4,7 @@ from typing import List
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy import Column, String, Float, Enum, DateTime, Integer, Boolean, Date, ForeignKey, \
-    ForeignKeyConstraint, BigInteger, JSON, Index, ARRAY
+    ForeignKeyConstraint, BigInteger, JSON, Index
 import enum
 from covigator.configuration import Configuration
 
@@ -533,9 +533,9 @@ class SubclonalVariant(Base):
         return "{}:{}>{}".format(self.position, self.reference, self.alternate)
 
 
-class LowQualityClonalVariant(Base):
+class LowFrequencyVariant(Base):
 
-    __tablename__ = LOW_QUALITY_CLONAL_VARIANT_TABLE_NAME
+    __tablename__ = LOW_FREQUENCY_VARIANT_TABLE_NAME
 
     variant_id = Column(String, primary_key=True)
     chromosome = Column(String)
@@ -576,8 +576,9 @@ class LowQualityClonalVariant(Base):
         return "{}:{}>{}".format(self.position, self.reference, self.alternate)
 
 
-class LowFrequencyVariant(Base):
-    __tablename__ = LOW_FREQUENCY_VARIANT_TABLE_NAME
+class LowQualityClonalVariant(Base):
+
+    __tablename__ = LOW_QUALITY_CLONAL_VARIANT_TABLE_NAME
 
     variant_id = Column(String, primary_key=True)
     chromosome = Column(String)
