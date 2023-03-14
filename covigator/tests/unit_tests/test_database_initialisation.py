@@ -102,7 +102,7 @@ class DatabaseInitialisationTests(AbstractTest):
         voc_query = session.query(Lineages).filter(Lineages.variant_of_concern.is_(True))
         voc_lineages = pd.read_sql(voc_query.statement, session.bind)
         self.assertEqual(voc_lineages.shape[0], 9)
-        who_labels = set(voc_lineages.who_lable.drop_na())
+        who_labels = set(voc_lineages["who_label"].drop_na())
         self.assertEqual(len(who_labels) == 5)
 
 
