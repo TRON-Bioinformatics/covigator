@@ -103,8 +103,4 @@ class DatabaseInitialisationTests(AbstractTest):
         voc_lineages = pd.read_sql(voc_query.statement, session.bind)
         self.assertEqual(voc_lineages.shape[0], 9)
         who_labels = set(voc_lineages["who_label"].dropna())
-        self.assertEqual(len(who_labels) == 5)
-
-
-
-
+        self.assertEqual(len(who_labels), 5)
