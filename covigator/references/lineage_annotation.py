@@ -1,9 +1,7 @@
 import os
 import json
-import re
 from pathlib import Path
 
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from covigator.database.model import Lineages
 from logzero import logger
