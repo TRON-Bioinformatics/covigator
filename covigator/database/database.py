@@ -75,7 +75,7 @@ def session_scope(config: Configuration = None, database: Database = None, initi
         database.engine.dispose()
 
 
-@tenacity.retry(wait=wait_exponential(multiplier=2, min=1, max=30), stop=stop_after_attempt(5))
+@tenacity.retry(wait=wait_exponential(multiplier=2, min=1, max=10), stop=stop_after_attempt(5))
 def get_database(config: Configuration, initialize=False, verbose=False) -> Database:
     try:
         database = Database(config=config, initialize=initialize, verbose=verbose)
