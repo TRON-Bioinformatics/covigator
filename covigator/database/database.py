@@ -6,10 +6,11 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker, Session
 from tenacity import wait_exponential, stop_after_attempt
 from covigator.configuration import Configuration
-from covigator.database.model import Base, Gene, Conservation
+from covigator.database.model import Base, Gene, Conservation, Lineages
 from covigator.exceptions import CovigatorDatabaseConnectionException
 from covigator.references.conservation import ConservationLoader
 from covigator.references.gene_annotations import GeneAnnotationsLoader
+from covigator.references.lineage_annotation import LineageAnnotationsLoader
 
 
 class Database:
@@ -45,6 +46,8 @@ class Database:
             GeneAnnotationsLoader(session).load_data()
         if session.query(Conservation).count() == 0:
             ConservationLoader(session).load_data()
+        if session.query(Lineages).count() == 0:
+            LineageAnnotationsLoader(session).load_data()
 
     def get_database_session(self) -> Session:
         return self.Session()
