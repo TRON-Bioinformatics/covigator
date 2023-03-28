@@ -1189,8 +1189,7 @@ class LineageVariant(Base):
     Junction table that maps constellation sites to their respective lineage
     """
     __tablename__ = LINEAGE_SITES_JUNCTION_TABLE_NAME
-    #constellation_id = Column(String, primary_key=True)
-    #pango_lineage_id = Column(String, primary_key=True)
+
     pango_lineage_id = Column(ForeignKey(Lineages.pango_lineage_id), primary_key=True)
     variant_id = Column(ForeignKey(LineageDefiningVariants.variant_id), primary_key=True)
 

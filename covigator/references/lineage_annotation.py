@@ -133,16 +133,33 @@ class LineageAnnotationsLoader:
                 mutation_info["type"] = "MNV"
         return mutation_info
 
-    def _find_parent_sites(self, lineage: str, lineage_constellation: str):
+    @staticmethod
+    def _create_constellation_pango_mapping(lineage_constellation: dict):
+        """
+        Creates a dictionary, mapping pango lineage identifiers to constellation labels. This mapping
+        is required in find_parent_sites to find the constellation label for a parent lineage id as
+        parent lineages are given as pango ids.
+        """
+        lineage_mapping = {}
+        for constellation, annotation in lineage_constellation.items():
+            for pango_id in annotation["pangolin_lineage_list"]:
+                lineage_mapping[pango_id] = constellation
+        return lineage_mapping
+
+    def _find_parent_sites(self, lineage: str, lineage_constellation: dict, pango_constellation_mapping: dict):
         """
         Include for each constellation also the mutations present up in the phylogenetic tree.
         """
-        parent = lineage_constellation[lineage].get("parent_lineage", None)
-        sites = lineage_constellation[lineage].get("lineage_mutations")
+        # Returns parent as pangolin identifier
+        parent_pango = lineage_constellation[lineage].get("parent_lineage_id", None)
+        # Get corresponding constellation label to look up mutations
+        parent = pango_constellation_mapping.get(parent_pango, None)
+        sites = lineage_constellation[lineage].get("lineage_mutations", None)
         if parent is None:
             return sites
         else:
-            sites.extend([x for x in self._find_parent_sites(parent, lineage_constellation) if x not in sites])
+            sites.extend([x for x in self._find_parent_sites(parent, lineage_constellation, pango_constellation_mapping)
+                          if x not in sites])
         return sites
 
     def _find_constellation_files(self):
@@ -294,20 +311,28 @@ class LineageAnnotationsLoader:
         """
         count_relationship = 0
         mutation_lineage_mapping = {}
+        pango_constellation_mapping = self._create_constellation_pango_mapping(lineage_constellation)
+        # Pick up all mutations/lineage combinations
         for constellation, annotation in lineage_constellation.items():
             # Include mutations from parent lineages as well
-            all_mutations_of_lineage = self._find_parent_sites(constellation, lineage_constellation)
-            for mut in all_mutations_of_lineage:
-                if mut not in mutation_lineage_mapping:
-                    mutation_lineage_mapping[mut["site"]] = annotation["pangolin_lineage_list"]
+            all_mutations_of_lineage = self._find_parent_sites(constellation, lineage_constellation,
+                                                               pango_constellation_mapping)
+            for this_mut in all_mutations_of_lineage:
+                # Skip mutations that are not on AA level
+                # This can be safely deleted as soon as nucleotide level problems are solved
+                if this_mut["level"] != "aa":
+                    continue
+                var_id = this_mut["variant_id"]
+                if var_id not in mutation_lineage_mapping.keys():
+                    mutation_lineage_mapping[var_id] = annotation["pangolin_lineage_list"]
                 else:
                     # Create union of pango lineages with the mutation
-                    mutation_lineage_mapping[mut["site"]] |= annotation["pangolin_lineage_list"]
+                    mutation_lineage_mapping[var_id] = mutation_lineage_mapping[var_id] | annotation["pangolin_lineage_list"]
 
         for variant_id, lineages in mutation_lineage_mapping.items():
-            for pango_lineage_id in lineages:
+            for pango_id in lineages:
                 lineage_variant = LineageVariant(
-                    pango_lineage_id=pango_lineage_id,
+                    pango_lineage_id=pango_id,
                     variant_id=variant_id
                 )
                 self.session.add(lineage_variant)
@@ -319,5 +344,4 @@ class LineageAnnotationsLoader:
         # Fill lineage annotation table
         lineage_constellation = self._read_constellation_files()
         self._fill_lineage_mutation_table(lineage_constellation)
-        #self._fill_mutation_table(lineage_constellation)
-        #self._fill_relation_ship_table(lineage_constellation)
+        self._fill_relation_ship_table(lineage_constellation)
