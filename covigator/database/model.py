@@ -1174,14 +1174,13 @@ class LineageDefiningVariants(Base):
     alternate = Column(String)
     ambiguous_alternate = Column(Boolean, default=False)
     annotation = Column(String, default="non-synonymous")
+    hgvs = Column(String)
 
     constellations = relationship(
         "Lineages",
         secondary=LINEAGE_SITES_JUNCTION_TABLE_NAME,
         back_populates="variants")
 
-    def get_variant_id(self):
-        return "{}:{}{}{}".format(self.protein, self.reference, self.position, self.alternate)
 
 
 class LineageVariant(Base):
@@ -1193,9 +1192,3 @@ class LineageVariant(Base):
     pango_lineage_id = Column(ForeignKey(Lineages.pango_lineage_id), primary_key=True)
     variant_id = Column(ForeignKey(LineageDefiningVariants.variant_id), primary_key=True)
 
-    #__table_args__ = (
-    #    ForeignKeyConstraint(
-    #        ['constellation_id', 'pango_lineage_id'],
-    #        [Lineages.constellation_id, Lineages.pango_lineage_id],
-    #    ),
-    #)

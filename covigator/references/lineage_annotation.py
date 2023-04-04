@@ -2,9 +2,10 @@ import os
 import json
 import re
 from pathlib import Path
-
+import pandas as pd
+from Bio.Seq import Seq
 from sqlalchemy.orm import Session
-from covigator.database.model import Lineages, LineageDefiningVariants, LineageVariant
+from covigator.database.model import Lineages, LineageDefiningVariants, LineageVariant, Gene
 from logzero import logger
 from datetime import datetime
 
@@ -12,12 +13,21 @@ from datetime import datetime
 class LineageAnnotationsLoader:
 
     LINEAGE_CONSTELLATION_DIRECTORY = "constellations/constellations/definitions"
+    LINEAGE_CONSTELLATION_GENOME = "constellations/constellations/data/SARS-CoV-2.json"
 
     def __init__(self, session: Session):
         self.session = session
 
         self.lineage_constellation_directory = os.path.join(
             os.path.abspath(os.path.dirname(__file__)), self.LINEAGE_CONSTELLATION_DIRECTORY)
+        self.gene_df = pd.read_sql(self.session.query(Gene).order_by(Gene.start).statement, self.session.bind)
+        self.genome = self.load_genome()
+
+    def load_genome(self):
+        genome_file = os.path.join(os.path.abspath(os.path.dirname(__file__)), self.LINEAGE_CONSTELLATION_GENOME)
+        with open(genome_file, "r") as file_handle:
+            constellation_genome = json.load(file_handle)
+        return constellation_genome.get("genome")
 
     @staticmethod
     def _match_protein_name(protein_name: str):
@@ -42,6 +52,60 @@ class LineageAnnotationsLoader:
                 return canonical_name
         return protein_name
 
+    def get_hgvs_from_nuc_deletion(self, variant: dict):
+        """
+        Take pangolin nucleotide description and convert to hgvs notation
+        """
+        genomic_position = variant.get("position")
+        deletion_length = variant.get("length")
+        gene_coordinates = self.gene_df.query("start <= @genomic_position & end >= @genomic_position").get(
+            ["name", "start", "end"])
+        if gene_coordinates.shape[0] == 0:
+            logger.info("Deletion does not overlap any protein...")
+            return
+        protein_start = gene_coordinates.get("start").item()
+        # Given a nucleotide position calculate position relative to reference protein coordinates
+        # minus as positions given in df are inclusive on both sides
+        genomic_position = genomic_position - (protein_start - 1)
+        genomic_position += 1
+        # Positions are non inclusive ->  the next genomic position is affected by the deletion
+        # Get protein position affected by the deletion
+        protein_position = genomic_position // 3 + 1 if genomic_position % 3 != 0 else genomic_position // 3
+        #protein_position += 1
+        # Codon positions relative to protein location
+        codon = [protein_position * 3 - 2, protein_position * 3 - 1, protein_position * 3]
+
+        # Frameshift mutation
+        if deletion_length % 3 != 0:
+            # Calculate codon start & stop position relative to genome
+            ref_start = (protein_start - 1) + codon[0]
+            ref_end = (protein_start - 1) + codon[2]
+            ref_seq = str(Seq(self.genome[ref_start: ref_end]).translate())
+            hgvs = "p.{wt_aa}{pos_aa}fs".format(wt_aa=ref_seq, pos_aa=protein_position)
+            #print(hgvs)
+        else:
+            ref_start = (protein_start - 1) + codon[0]
+            ref_end = ref_start + deletion_length
+            ref_seq = str(Seq(self.genome[ref_start - 1:ref_end]).translate())
+            #print(str(Seq(self.genome[21991:21994]).translate()))
+            if deletion_length / 3 > 1:
+                hgvs = "p.{first_aa}{first_pos}_{last_aa}{last_pos}del".format(
+                    first_aa=ref_seq[0],
+                    first_pos=protein_position,
+                    last_aa=ref_seq[-1],
+                    last_pos=protein_position + deletion_length // 3 - 1
+                )
+            else:
+                hgvs = "p.{aa}{pos}del".format(aa=ref_seq, pos=protein_position)
+            return hgvs
+
+    def translate_snps_into_protein(self, variant, protein_coordinates):
+        position = variant.get("position")
+        protein_coordinates = protein_coordinates.query("start <= @genomic_position & end >= @genomic_position").get(
+            ["gene", "start", "end"])
+        protein_start = protein_coordinates.get("start").item()
+
+
     def _parse_mutation_sites(self, variant_string: str):
         """
         Parse mutation list from pango constellation files. This code
@@ -61,7 +125,7 @@ class LineageAnnotationsLoader:
         snp_pattern = re.compile('([ACTGUN]+)([0-9]+)([ACTGUN]+)')
         insertion_pattern = re.compile(r'(\w+):(\d+)\+([a-zA-Z]+)')
         aa_mutation = re.compile(r'([a-zA-Z-*]+)(\d+)([a-zA-Z-*]*)')
-        mutation_info = {}
+        mutation_list = []
         # This parsing is simplified code based on the utility script of Scorpio
         this_mut = variant_string.split(":")
         # Insertions -> eiter nucleotide or protein coordinates
@@ -69,7 +133,7 @@ class LineageAnnotationsLoader:
             match = re.match(insertion_pattern, variant_string)
             if not match:
                 logger.warning("Could not parse the following site definition: {}".format(variant_string))
-                return
+                return [None]
             # Does not work with aa level insertions but None are present in the current constellation files
             mutation_info = {"site": variant_string,
                              "type": "Insertion",
@@ -77,10 +141,11 @@ class LineageAnnotationsLoader:
                              "length": len(match[2]),
                              "protein": self._match_protein_name(match[1]),
                              "alternate": match[3],
-                             "level": "nuc"}
+                             "level": "nuc",
+                             "hgvs_p": None}
             if not this_mut[0] in ["snp", "nuc"]:
                 mutation_info["level"] = "aa"
-
+            mutation_list.append(mutation_info)
         # Deletions -> coordinates on nucleotide level
         elif this_mut[0] == "del":
             length = int(this_mut[2])
@@ -89,49 +154,88 @@ class LineageAnnotationsLoader:
                              "position": this_mut[1],
                              "length": length,
                              "protein": None,
-                             "level": "nuc"}
+                             "level": "nuc",
+                             "hgvs_p": None}
+            mutation_list.append(mutation_info)
         # SNPs -> coordinates on nucleotide level, non-synonymous or intergenic?
         elif this_mut[0] in ["snp", "nuc"]:
             match = re.match(snp_pattern, this_mut[1])
             if not match:
                 logger.warning("Could not parse the following site definition: {}".format(variant_string))
-                return
+                return [None]
             mutation_info = {"site": variant_string,
                              "type": "SNV",
                              "position": int(match[2]),
                              "reference": match[1],
                              "alternate": match[3],
                              "protein": None,
-                             "level": "nuc"}
+                             "level": "nuc",
+                             "hgvs_p": None}
             mutation_info['variant_id'] = "{}:{}{}{}".format(mutation_info["protein"], mutation_info["reference"],
                                                              mutation_info["position"], mutation_info["alternate"])
+            mutation_list.append(mutation_info)
         # Amino acid substitutions --> can be SNVs, MNVs, Deletions and Indels
         else:
             match = re.match(aa_mutation, this_mut[1])
             if not match:
                 logger.warning("Could not parse the following site definition: {}".format(variant_string))
-                return
+                return [None]
             protein = self._match_protein_name(this_mut[0])
-            mutation_info = {"site": variant_string,
-                             "type": "SNV",
-                             "position": int(match[2]),
-                             "reference": match[1],
-                             "alternate": match[3],
-                             "protein": protein,
-                             "ambiguous_alternate": False,
-                             "length": len(match[1]),
-                             "level": "aa"}
-            mutation_info['variant_id'] = "{}:{}{}{}".format(mutation_info["protein"], mutation_info["reference"],
-                                                             mutation_info["position"], mutation_info["alternate"])
-            # Ambigous alternatives are possible
-            if mutation_info["alternate"] == '':
-                mutation_info["ambiguous_alternate"] = True
-            # If AA mutation is a deletion
-            if mutation_info["alternate"] in ["-", "del"]:
-                mutation_info["type"] = "Deletion"
-            elif len(mutation_info["alternate"]) == len(mutation_info["reference"]) and mutation_info["length"] > 1:
-                mutation_info["type"] = "MNV"
-        return mutation_info
+            reference = match[1]
+            alternate = match[3]
+            position = int(match[2])
+            if alternate not in ['-', 'del']:
+                if len(reference) == len(alternate) and len(reference) > 1:
+                    for protein_pos, aa_mutations in enumerate(zip(reference, alternate), start=position):
+                        variant_id = "{}:{}{}{}".format(protein, aa_mutations[0], protein_pos, aa_mutations[1])
+                        mutation_info = {"site": variant_id,
+                                         "variant_id": variant_id,
+                                         "hgvs_p": "p.{}{}{}".format(aa_mutations[0], protein_pos, aa_mutations[1]),
+                                         "type": "SNV",
+                                         "position": protein_pos,
+                                         "reference": aa_mutations[0],
+                                         "alternate": aa_mutations[1],
+                                         "protein": protein,
+                                         "ambiguous_alternate": False,
+                                         "length": len(aa_mutations[0]),
+                                         "level": "aa"}
+                        mutation_list.append(mutation_info)
+                else:
+                    variant_id = "{}:{}{}{}".format(protein, reference, position, alternate)
+                    mutation_info = {"site": variant_string,
+                                     "variant_id": variant_id,
+                                     "hgvs_p": "p.{}{}{}".format(reference, position, alternate),
+                                     "type": "SNV",
+                                     "position": position,
+                                     "reference": reference,
+                                     "alternate": alternate,
+                                     "protein": protein,
+                                     "ambiguous_alternate": True if alternate == "" else False,
+                                     "length": len(reference),
+                                     "level": "aa"}
+                    mutation_list.append(mutation_info)
+            else:
+                alternate = "del" if alternate == "-" else "del"
+                variant_id = "{}:{}{}{}".format(protein, reference, position, alternate)
+                if len(reference) > 1:
+                    hgvs_p = "p.{}{}_{}{}del".format(reference[0], position, reference[-1],
+                                                     position + len(reference)-1)
+                else:
+                    hgvs_p = "p.{}{}del".format(reference, position)
+
+                mutation_info = {"site": variant_string,
+                                 "variant_id": variant_id,
+                                 "hgvs_p": hgvs_p,
+                                 "type": "DELETION",
+                                 "position": position,
+                                 "reference": reference,
+                                 "alternate": alternate,
+                                 "protein": protein,
+                                 "ambiguous_alternate": False,
+                                 "length": len(reference),
+                                 "level": "aa"}
+                mutation_list.append(mutation_info)
+        return mutation_list
 
     @staticmethod
     def _create_constellation_pango_mapping(lineage_constellation: dict):
@@ -223,7 +327,7 @@ class LineageAnnotationsLoader:
             incompatible_lineage_calls = set(data["variant"].get("incompatible_lineage_calls", set()))
             pangolin_lineage_list = pangolin_lineage_list - incompatible_lineage_calls
             lineage_mutations = [self._parse_mutation_sites(x) for x in data["sites"]]
-            lineage_mutations = [x for x in lineage_mutations if x is not None]
+            lineage_mutations = [mut for x in lineage_mutations for mut in x if mut is not None]
             lineage_constellation[constellation_label] = {
                 "pangolin_lineage_list": pangolin_lineage_list,
                 "who_label": who_label,
@@ -279,7 +383,7 @@ class LineageAnnotationsLoader:
                 self.session.add(lineage)
                 self.session.commit()
                 count_lineages += 1
-            # Store mutations in dict
+            # Store mutations in list of seen mutations
             for this_mut in annotation["lineage_mutations"]:
                 if this_mut["level"] != "aa":
                     continue
@@ -293,6 +397,7 @@ class LineageAnnotationsLoader:
             # Skip variants on nucleotide level for now
             mutation = LineageDefiningVariants(
                 variant_id=this_mut["variant_id"],
+                hgvs=this_mut["hgvs_p"],
                 variant_type=this_mut["type"],
                 protein=this_mut["protein"],
                 position=this_mut["position"],
