@@ -57,10 +57,20 @@ class LineageFigures(Figures):
 
     def get_lineages_plot(self, data_source: str, date_start, date_end, countries=None, lineages=None, time_period=14, prevalence=0):
         logger.debug("Getting data on samples by country...")
+        who_label = self.queries.get_lineages_who_label()
         data = self.queries.get_accumulated_lineages_by_country(
             data_source=data_source, countries=countries, lineages=lineages)
         graph = dcc.Markdown("""**No data for the current selection**""")
         if data is not None and data.shape[0] > 0:
+            # Generate a dictionary mapping pangolin lineage ids to the WHO labels in the database
+            # Create a new combo label of pangolin ids + WHO labels between brackets e.g. B.1.1.7 - Alpha
+            # to be used in the legend of the lineages plot
+            label_names = data.merge(who_label, how="left", left_on="lineage", right_on="pangolin_lineage")[['lineage', 'who_label']]
+            label_names["label_value"] = label_names.apply(lambda x: f"{x.lineage} - {x.who_label}"
+                if not pd.isnull(x.who_label) else f"{x.lineage}", axis=1)
+            label_names = label_names.set_index("lineage").to_dict()["label_value"]
+            # Append others to label dict in case of prevalence grouping
+            label_names["others"] = "others"
             # Filter data based on start and end range
             data = data.loc[(data.date >= date_start) & (data.date <= date_end)]
             logger.debug("Prepare plot on samples by lineage...")
@@ -135,12 +145,13 @@ class LineageFigures(Figures):
                 hovermode="x unified"
             )
             fig.update_xaxes(showspikes=True)
+            fig.for_each_trace(lambda x: x.update(name=label_names[x.name]))
 
             top_lineages = lineages[0: min(5, len(lineages))]
             top_lineages_and_cumsum = data[data.lineage.isin(top_lineages)][["lineage", "cumsum"]] \
                 .groupby("lineage").max().reset_index().sort_values("cumsum", ascending=False)
             top_lineages_tooltip = list(
-                top_lineages_and_cumsum.apply(lambda x: "{} ({})".format(x[0], int(x[1])), axis=1))
+                top_lineages_and_cumsum.apply(lambda x: "{} ({})".format(label_names[x[0]], int(x[1])), axis=1))
 
             graph = [
                 dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
