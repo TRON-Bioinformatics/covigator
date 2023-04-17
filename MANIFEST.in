@@ -3,4 +3,5 @@ include covigator/references/*.bed
 include covigator/references/*.csv
 include covigator/references/*.json
 include covigator/references/constellations/constellations/definitions/*.json
+include covigator/references/constellations/constellations/data/SARS-CoV-2.json 
 include covigator/tests/resources/*

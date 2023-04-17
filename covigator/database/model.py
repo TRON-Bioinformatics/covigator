@@ -1173,7 +1173,7 @@ class LineageDefiningVariants(Base):
     reference = Column(String)
     alternate = Column(String)
     ambiguous_alternate = Column(Boolean, default=False)
-    annotation = Column(String, default="non-synonymous")
+    annotation = Column(String, default="missense")
     hgvs = Column(String)
 
     constellations = relationship(
