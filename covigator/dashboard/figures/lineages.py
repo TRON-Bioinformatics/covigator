@@ -62,10 +62,9 @@ class LineageFigures(Figures):
             data_source=data_source, countries=countries, lineages=lineages)
         graph = dcc.Markdown("""**No data for the current selection**""")
         if data is not None and data.shape[0] > 0:
-            # Generate a dictionary mapping pangolin lineage ids to the WHO labels in the database
-            # Create a new combo label of pangolin ids + WHO labels between brackets e.g. B.1.1.7 - Alpha
-            # to be used in the legend of the lineages plot
-            label_names = data.merge(who_label, how="left", left_on="lineage", right_on="pangolin_lineage")[['lineage', 'who_label']]
+            # Generate a dictionary mapping pangolin lineage ids in the dataframe to the WHO labels in the database
+            # Use combo label of pangolin ids + WHO labels separated by a hyphen in the legend of the lineages plot
+            label_names = data.merge(who_label, how="left", left_on="lineage", right_on="pangolin_lineage")[["lineage","who_label"]]
             label_names["label_value"] = label_names.apply(lambda x: f"{x.lineage} - {x.who_label}"
                 if not pd.isnull(x.who_label) else f"{x.lineage}", axis=1)
             label_names = label_names.set_index("lineage").to_dict()["label_value"]

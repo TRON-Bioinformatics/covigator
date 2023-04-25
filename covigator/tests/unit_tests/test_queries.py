@@ -5,7 +5,7 @@ from parameterized import parameterized
 from covigator import SYNONYMOUS_VARIANT
 from covigator.precomputations.loader import PrecomputationsLoader
 from covigator.precomputations.load_ns_s_counts import NsSCountsLoader
-from covigator.database.model import JobStatus, DataSource, Gene, RegionType, Domain
+from covigator.database.model import JobStatus, DataSource, Gene, RegionType, Domain, Lineages
 from covigator.database.queries import Queries
 from covigator.tests.unit_tests.abstract_test import AbstractTest
 from covigator.tests.unit_tests.mocked import get_mocked_variant, \
@@ -198,6 +198,19 @@ class QueriesTests(AbstractTest):
             self.assertIsInstance(d, Domain)
             self.assertIsNotNone(d.name)
             self.assertEqual(d.gene_name, "S")
+
+    def test_get_lineages_who_label(self):
+        who_labels = self.queries.get_lineages_who_label()
+        self.assertIsNotNone(who_labels)
+        self.assertGreater(who_labels.shape[0], 0)
+        self.assertGreater(who_labels[~who_labels.who_label.isna()].shape[0], 0) # no emtpy who labels
+
+    def test_find_parent_who_label(self):
+        query = self.session.query(Lineages.pango_lineage_id.label("pangolin_lineage"), Lineages.who_label,
+                                   Lineages.parent_lineage_id)
+        data = pd.read_sql(query.statement, self.session.bind)
+        who_label = self.queries.find_parent_who_label("AY.4.2", data)
+        self.assertEqual(who_label, "Delta")
 
     def test_count_jobs_in_queue(self):
         mock_samples(faker=self.faker, session=self.session, job_status=JobStatus.QUEUED, num_samples=50)

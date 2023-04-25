@@ -43,6 +43,8 @@ def get_samples_tab_graphs():
 
 
 def get_samples_tab_left_bar(queries: Queries, data_source: DataSource):
+
+    lineages = queries.get_combined_labels(data_source.name)
     return html.Div(
         className="two columns",
         children=[
@@ -81,7 +83,7 @@ def get_samples_tab_left_bar(queries: Queries, data_source: DataSource):
             dcc.Markdown("""Select one or more lineages"""),
             dcc.Dropdown(
                 id=ID_DROPDOWN_LINEAGE,
-                options=[{'label': c, 'value': c} for c in queries.get_lineages(data_source.name)],
+                options=[{'label': c, 'value': v} for c, v in zip(lineages.combined_label, lineages.pangolin_lineage)],
                 value=None,
                 multi=True
             ),
@@ -117,8 +119,8 @@ def set_callbacks_samples_tab(app, session: Session):
 
     countries_ena = queries.get_countries(DataSource.ENA.name)
     countries_covid19_portal = queries.get_countries(DataSource.COVID19_PORTAL.name)
-    lineages_ena = queries.get_lineages(DataSource.ENA.name)
-    lineages_covid19_portal = queries.get_lineages(DataSource.COVID19_PORTAL.name)
+    lineages_ena = queries.get_combined_labels(source=DataSource.ENA.name)
+    lineages_covid19_portal = queries.get_combined_labels(source=DataSource.COVID19_PORTAL.name)
 
     @app.callback(
         Output(ID_DROPDOWN_COUNTRY, 'options'),
@@ -129,9 +131,9 @@ def set_callbacks_samples_tab(app, session: Session):
         """
         countries = []
         if source == DataSource.ENA.name:
-            countries = [{'label': c, 'value': c} for c in countries_ena]
+            countries = [{'label': c, 'value': c} for c in lineages_ena]
         elif source == DataSource.COVID19_PORTAL.name:
-            countries = [{'label': c, 'value': c} for c in countries_covid19_portal]
+            countries = [{'label': c, 'value': c} for c in lineages_covid19_portal]
         return countries
 
     @app.callback(
@@ -143,9 +145,9 @@ def set_callbacks_samples_tab(app, session: Session):
         """
         lineages = []
         if source == DataSource.ENA.name:
-            lineages = [{'label': c, 'value': c} for c in lineages_ena]
+            lineages = [{'label': c, 'value': v} for c, v in zip(lineages_ena.combined_label, lineages_ena.pangolin_lineage)]
         elif source == DataSource.COVID19_PORTAL.name:
-            lineages = [{'label': c, 'value': c} for c in lineages_covid19_portal]
+            lineages = [{'label': c, 'value': v} for c, v in zip(lineages_covid19_portal.combined_label, lineages_covid19_portal.pangolin_lineage)]
         return lineages
 
     @app.callback(

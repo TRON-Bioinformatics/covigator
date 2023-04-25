@@ -124,20 +124,30 @@ class Queries:
         else:
             return self.find_parent_who_label(parent, parent_mapping)
 
-
     def get_lineages_who_label(self) -> pd.DataFrame:
         """
         Query database for lineage WHO label annotation. Returns a DataFrame with columns: pangolin_lineage, who_label
         """
         query = self.session.query(Lineages.pango_lineage_id.label("pangolin_lineage"), Lineages.who_label,
                                    Lineages.parent_lineage_id)
-        data = pd.read_sql(query.statement, self.session.bind)
+        lineages = pd.read_sql(query.statement, self.session.bind)
         # Include WHO label for sublineages of VOC
-        data['who_label'] = data.apply(lambda x: self.find_parent_who_label(x.pangolin_lineage, data)
+        lineages["who_label"] = lineages.apply(lambda x: self.find_parent_who_label(x.pangolin_lineage, lineages)
             if pd.isnull(x.who_label) else x.who_label, axis=1)
-        data = data[["pangolin_lineage", "who_label"]].dropna()
-        return data
+        lineages = lineages[["pangolin_lineage", "who_label"]]
+        return lineages
 
+    def get_combined_labels(self, source: str) -> pd.DataFrame:
+        """
+        Generate a mapping of pangolin IDs to WHO label and create a combined label that is used in the
+        dashboard
+        """
+        who_labels = self.get_lineages_who_label()
+        lineages = pd.DataFrame(self.get_lineages(source), columns=["pangolin_lineage"])
+        lineages = lineages.merge(who_labels, how="left")
+        lineages["combined_label"] = lineages.apply(lambda x: f"{x.pangolin_lineage} - {x.who_label}" \
+            if not pd.isnull(x.who_label) else f"{x.pangolin_lineage}", axis=1)
+        return lineages
 
     def get_variants_per_sample(self, data_source: str, genes: List[str], variant_types: List[str]):
         """

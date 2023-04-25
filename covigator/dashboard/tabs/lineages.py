@@ -50,11 +50,8 @@ def get_lineages_tab_graphs():
 
 def get_lineages_tab_left_bar(queries: Queries, data_source: DataSource):
 
-    lineages = pd.DataFrame(queries.get_lineages(source=data_source.name), columns=["pangolin_lineage"])
-    lineages = lineages.merge(queries.get_lineages_who_label(), how="left")
-    lineages["dropdown_label"] = lineages.apply(lambda x: f"{x.pangolin_lineage} - {x.who_label}"
-        if not pd.isnull(x.who_label) else f"{x.pangolin_lineage}", axis=1)
     # Get all available months from collection_date column in sample table
+    lineages = queries.get_combined_labels(data_source.name)
     months = queries.get_sample_months(MONTH_PATTERN, data_source=data_source.name)
     today = datetime.now()
     today_formatted = today.strftime(MONTH_PATTERN)
@@ -111,7 +108,7 @@ def get_lineages_tab_left_bar(queries: Queries, data_source: DataSource):
             dcc.Markdown("""Select one or more lineages"""),
             dcc.Dropdown(
                 id=ID_DROPDOWN_LINEAGE,
-                options=[{'label': c, 'value': v} for c, v in zip(lineages.dropdown_label, lineages.pangolin_lineage)],
+                options=[{'label': c, 'value': v} for c, v in zip(lineages.combined_label, lineages.pangolin_lineage)],
                 value=None,
                 multi=True
             ),
@@ -163,22 +160,12 @@ def set_callbacks_lineages_tab(app, session: Session):
 
     queries = Queries(session=session)
     figures = LineageFigures(queries)
-    # Get dataframe mapping pangolin lineage ids to WHO labels
-    who_labels = queries.get_lineages_who_label()
 
     countries_ena = queries.get_countries(DataSource.ENA.name)
     countries_covid19_portal = queries.get_countries(DataSource.COVID19_PORTAL.name)
 
-    # Append WHO label to dataframe of ENA/Covid19_Portal lineages and create label for dropdown menus.
-    lineages_ena = pd.DataFrame(queries.get_lineages(DataSource.ENA.name), columns=["pangolin_lineage"])
-    lineages_ena = lineages_ena.merge(who_labels, how="left")
-    lineages_ena["dropdown_label"] = lineages_ena.apply(lambda x: f"{x.pangolin_lineage} - {x.who_label}"
-        if not pd.isnull(x.who_label) else f"{x.pangolin_lineage}", axis=1)
-
-    lineages_covid19_portal = pd.DataFrame(queries.get_lineages(DataSource.COVID19_PORTAL.name), columns=["pangolin_lineage"])
-    lineages_covid19_portal = lineages_covid19_portal.merge(who_labels, how="left")
-    lineages_covid19_portal["dropdown_label"] = lineages_covid19_portal.apply(lambda x: f"{x.pangolin_lineage} - {x.who_label}"
-        if not pd.isnull(x.who_label) else f"{x.pangolin_lineage}", axis=1)
+    lineages_ena = queries.get_combined_labels(DataSource.ENA.name)
+    lineages_covid19_portal = queries.get_combined_labels(DataSource.COVID19_PORTAL.name)
 
     # Get months from ENA/Covid19 table
     months_from_db_ena = queries.get_sample_months(MONTH_PATTERN, data_source=DataSource.ENA.name)
@@ -207,9 +194,9 @@ def set_callbacks_lineages_tab(app, session: Session):
         """
         lineages = []
         if source == DataSource.ENA.name:
-            lineages = [{'label': c, 'value': v} for c, v in zip(lineages_ena.dropdown_label, lineages_ena.pangolin_lineage)]
+            lineages = [{'label': c, 'value': v} for c, v in zip(lineages_ena.combined_label, lineages_ena.pangolin_lineage)]
         elif source == DataSource.COVID19_PORTAL.name:
-            lineages = [{'label': c, 'value': v} for c, v in zip(lineages_covid19_portal.dropdown_label, lineages_covid19_portal.pangolin_lineage)]
+            lineages = [{'label': c, 'value': v} for c, v in zip(lineages_covid19_portal.combined_label, lineages_covid19_portal.pangolin_lineage)]
         return lineages
 
     @app.callback(
