@@ -12,7 +12,6 @@ from covigator.tests.unit_tests.mocked import get_mocked_variant, \
     get_mocked_variant_observation, mock_samples, mock_cooccurrence_matrix, mock_samples_and_variants, MOCKED_DOMAINS, \
     get_mocked_sample
 
-
 class QueriesTests(AbstractTest):
 
     def setUp(self) -> None:
@@ -206,6 +205,7 @@ class QueriesTests(AbstractTest):
         self.assertGreater(who_labels[~who_labels.who_label.isna()].shape[0], 0) # no emtpy who labels
 
     def test_find_parent_who_label(self):
+        import pandas as pd
         query = self.session.query(Lineages.pango_lineage_id.label("pangolin_lineage"), Lineages.who_label,
                                    Lineages.parent_lineage_id)
         data = pd.read_sql(query.statement, self.session.bind)
