@@ -211,6 +211,23 @@ class QueriesTests(AbstractTest):
         data = pd.read_sql(query.statement, self.session.bind)
         who_label = self.queries.find_parent_who_label("AY.4.2", data)
         self.assertEqual(who_label, "Delta")
+        who_label = self.queries.find_parent_who_label("AY.4", data)
+        self.assertEqual(who_label, "Delta")
+
+    @parameterized.expand([(DataSource.ENA,)])
+    def test_get_combined_labels(self, source):
+        # Mock some ENA samples
+        labels = self.queries.get_combined_labels(source.name)
+        self.assertIsNone(labels)
+
+        test_samples = [get_mocked_sample(faker=self.faker, source=source) for _ in range(10)]
+        self.session.add_all(test_samples)
+        self.session.commit()
+
+        labels = self.queries.get_combined_labels(source.name)
+        self.assertIsNotNone(labels)
+        self.assertGreater(labels.shape[0], 0)
+        self.assertEqual(labels[labels.combined_label.isna()].shape[0], 0)
 
     def test_count_jobs_in_queue(self):
         mock_samples(faker=self.faker, session=self.session, job_status=JobStatus.QUEUED, num_samples=50)
