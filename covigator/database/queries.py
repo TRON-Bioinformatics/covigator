@@ -145,7 +145,7 @@ class Queries:
         who_labels = self.get_lineages_who_label()
         lineages = pd.DataFrame(self.get_lineages(source), columns=["pangolin_lineage"])
         lineages = lineages.merge(who_labels, how="left")
-        lineages["combined_label"] = lineages.apply(lambda x: f"{x.pangolin_lineage} - {x.who_label}" \
+        lineages["combined_label"] = lineages.apply(lambda x: f"{x.pangolin_lineage} - {x.who_label}"
             if not pd.isnull(x.who_label) else f"{x.pangolin_lineage}", axis=1)
         return lineages
 
