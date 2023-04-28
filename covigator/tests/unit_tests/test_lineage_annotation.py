@@ -14,7 +14,7 @@ class LineageAnnotationTest(AbstractTest):
         intergenic_locations = [265, 21556]
         for loc in gene_locations:
             x = self.loader.find_gene(loc)
-            self.assertEqual(x, ['ORF1ab', '266',  '21555'])
+            self.assertEqual(x, ['ORF1ab', 266,  21555])
         for loc in intergenic_locations:
             x = self.loader.find_gene(loc)
             self.assertIsNone(x[0])
@@ -35,7 +35,7 @@ class LineageAnnotationTest(AbstractTest):
         )
         x = self.loader.get_hgvs_from_nuc_snp(intergenic_snp)
         self.assertEqual(
-            x, {'hgvs_p': None, 'position': 240, 'reference': 'T', 'alternate': 'C', 'annotation': 'intergenic'}
+            x, {'hgvs_p': None, 'position': 240, 'reference': 'C', 'alternate': 'T', 'annotation': 'intergenic'}
         )
 
     def test_get_hgvs_from_nuc_deletion(self):
