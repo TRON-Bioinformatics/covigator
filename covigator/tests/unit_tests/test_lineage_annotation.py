@@ -10,7 +10,7 @@ class LineageAnnotationTest(AbstractTest):
         self.queries = Queries(session=self.session)
         self.loader = LineageAnnotationsLoader(self.session)
     def test_find_gene(self):
-        gene_locations = [266, 21555]
+        gene_locations = [266, 13483]
         intergenic_locations = [265, 21556]
         for loc in gene_locations:
             x = self.loader.find_gene(loc)
@@ -78,18 +78,18 @@ class LineageAnnotationTest(AbstractTest):
 
     def _create_constellation_pango_mapping(self):
         fake_lineage_constellation = {
-            "A": {"pango_lineage_list": set("A.1"), "parent_lineage_id": None},
-            "B": {"pango_lineage_list": set("B.1"), "parent_lineage_id": "A.1"}}
+            "A": {"pangolin_lineage_list": set("A.1"), "parent_lineage_id": None},
+            "B": {"pangolin_lineage_list": set("B.1"), "parent_lineage_id": "A.1"}}
         mapping = self.loader._create_constellation_pango_mapping(fake_lineage_constellation)
         self.assertIsInstance(fake_lineage_constellation, dict)
         self.assertEqual(len(mapping), 2)
 
     def test_find_parent_sites(self):
         fake_lineage_constellation = {
-            "A": {"pango_lineage_list": set("A.1"),
+            "A": {"pangolin_lineage_list": set("A.1"),
                   "parent_lineage_id": None,
                   "lineage_mutations": [{"variant_id": 1}, {"variant_id": 2}]},
-            "B": {"pango_lineage_list": set("B.1"),
+            "B": {"pangolin_lineage_list": set("B.1"),
                   "parent_lineage_id": "A.1",
                   "lineage_mutations": [{"variant_id": 3}, {"variant_id": 4}]}
         }
@@ -97,4 +97,7 @@ class LineageAnnotationTest(AbstractTest):
             fake_lineage_constellation, LineageAnnotationsLoader._create_constellation_pango_mapping(fake_lineage_constellation))
         self.assertIsNotNone(b_sites)
         self.assertEqual(len(b_sites), 4)
+        # Test that parent sites are returned
+        self.assertTrue({"variant_id": 1} in b_sites)
+        self.assertTrue({"variant_id": 2} in b_sites)
 
