@@ -43,10 +43,14 @@ class LineageAnnotationTest(AbstractTest):
         normal_deletion = {"genomic_position": 21990, "length": 3}
         # 21990:TTTATTACCA>T = p.Y144_H146del
         normal_deletion_long = {"genomic_position": 21990, "length": 9}
+        # 22029:AGTTCAG>A = p.F157_R158del
+        normal_deletion_long_2 = {"genomic_position": 22029, "length": 6}
         # 21992:TA>T = p.Y144fs
         fs_deletion = {"genomic_position": 21992, "length": 2}
         # 21992:TATTACCACAAAAACAACAAAAGTTGGATGGAAA>T = p.Y144_S155delinsC
         insdel_deletion = {"genomic_position": 21992, "length": 33}
+        # 21633:TACCCCCTGCATA>T = p.L24_Y28delinsF
+        insdel_deletion_2 = {"genomic_position": 21633, "length": 12}
 
         self.assertEqual(
             self.loader.get_hgvs_from_nuc_deletion(normal_deletion),
@@ -57,12 +61,20 @@ class LineageAnnotationTest(AbstractTest):
             {'hgvs_p': 'p.Y144_H146del', 'reference': 'YYH', 'alternate': 'del', 'position': 144}
         )
         self.assertEqual(
+            self.loader.get_hgvs_from_nuc_deletion(normal_deletion_long_2),
+            {'hgvs_p': 'p.F157_R158del', 'reference': 'FR', 'alternate': 'del', 'position': 157}
+        )
+        self.assertEqual(
             self.loader.get_hgvs_from_nuc_deletion(fs_deletion),
             {'hgvs_p': 'p.Y144fs', 'reference': 'Y', 'alternate': 'del', 'position': 144}
         )
         self.assertEqual(
             self.loader.get_hgvs_from_nuc_deletion(insdel_deletion),
             {'hgvs_p': 'p.Y144_S155delinsC', 'reference': 'YYHKNNKSWMES', 'alternate': 'del', 'position': 144}
+        )
+        self.assertEqual(
+            self.loader.get_hgvs_from_nuc_deletion(insdel_deletion_2),
+            {'hgvs_p': 'p.L24_Y28delinsF', 'reference': 'LPPAY', 'alternate': 'del', 'position': 24}
         )
 
     def test_parse_mutation_sites(self):
@@ -71,10 +83,18 @@ class LineageAnnotationTest(AbstractTest):
         self.assertIsNotNone(parsed_site)
         self.assertEqual(len(parsed_site), 1)
         self.assertIsInstance(parsed_site[0], dict)
+
+        parsed_site = self.loader._parse_mutation_sites("spike:D614G")
+        self.assertIsNotNone(parsed_site)
+        self.assertEqual(len(parsed_site), 1)
+        self.assertIsInstance(parsed_site[0], dict)
+
         # Test that grouped AA level mutation are split into separate mutations
         parsed_site = self.loader._parse_mutation_sites("n:RG203KR")
         self.assertIsNotNone(parsed_site)
         self.assertEqual(len(parsed_site), 2)
+        self.assertTrue(parsed_site[0]["variant_id"] == "N:R203K")
+        self.assertTrue(parsed_site[1]["variant_id"] == "N:G204R")
 
     def _create_constellation_pango_mapping(self):
         fake_lineage_constellation = {
@@ -97,4 +117,5 @@ class LineageAnnotationTest(AbstractTest):
             fake_lineage_constellation, LineageAnnotationsLoader._create_constellation_pango_mapping(fake_lineage_constellation))
         self.assertIsNotNone(b_sites)
         self.assertEqual(len(b_sites), 4)
+
 
