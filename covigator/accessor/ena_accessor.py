@@ -192,7 +192,7 @@ class EnaAccessor(AbstractAccessor):
             self.excluded_samples_by_fastq_ftp += 1
         instrument_platform = ena_run.get("instrument_platform")
         # Include Illumina and Nanopore samples
-        if instrument_platform.upper() != "ILLUMINA" and instrument_platform.upper() != "OXFORD_NANOPORE":
+        if instrument_platform.upper() not in ["ILLUMINA", "OXFORD_NANOPORE"]:
             included = False    # skips non Illumina and Nanopore data
             self.excluded_samples_by_instrument_platform[str(instrument_platform)] = \
                 self.excluded_samples_by_instrument_platform.get(str(instrument_platform), 0) + 1
