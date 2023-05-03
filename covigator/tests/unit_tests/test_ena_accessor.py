@@ -28,13 +28,29 @@ class EnaAccessorTests(AbstractTest):
              "library_strategy": "WGS",
              "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/005/ERR4080485/ERR4080485_1.fastq.gz",
              "fastq_md5": "4de269d2b5831e1c5175586af694d21e",
-             "host_tax_id": "9606"}
+             "host_tax_id": "9606"},
+            {"run_accession": "ERR4080475",
+             "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
+             "instrument_platform": "OXFORD_NANOPORE",
+             "library_strategy": "AMPLICON",
+             "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/005/ERR4080475/ERR4080475_1.fastq.gz",
+             "fastq_md5": "4684c147507fdd0b3f6ea59800a1a7e6",
+             "host_tax_id": "9606"},
+            {"run_accession": "ERR4080473",
+             "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
+             "instrument_platform": "OXFORD_NANOPORE",
+             "library_strategy": "OTHER",
+             "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/003/ERR4080473/ERR4080473_1.fastq.gz",
+             "fastq_md5": "312b51c9422663b1c0d322f3f083dcad",
+             "host_tax_id": "9606"},
+
         ])
         ena_accessor.access()
-        self.assertEqual(ena_accessor.included, 1)
-        self.assertEqual(ena_accessor.excluded, 2)
+        self.assertEqual(ena_accessor.included, 2)
+        self.assertEqual(ena_accessor.excluded, 3)
         self.assertEqual(ena_accessor.excluded_samples_by_library_strategy.get("AMPLICON"), 1)
         self.assertEqual(ena_accessor.excluded_samples_by_library_strategy.get("OTHER"), 1)
+        self.assertEqual(ena_accessor.excluded_ont_samples_by_library_strategy.get("OTHER"), 1)
 
     def test_filtering_by_instrument_platform(self):
         ena_accessor = FakeEnaAccessor([
@@ -61,9 +77,8 @@ class EnaAccessorTests(AbstractTest):
              "host_tax_id": "9606"}
         ])
         ena_accessor.access()
-        self.assertEqual(ena_accessor.included, 1)
-        self.assertEqual(ena_accessor.excluded, 2)
-        self.assertEqual(ena_accessor.excluded_samples_by_instrument_platform.get("OXFORD_NANOPORE"), 1)
+        self.assertEqual(ena_accessor.included, 2)
+        self.assertEqual(ena_accessor.excluded, 1)
         self.assertEqual(ena_accessor.excluded_samples_by_instrument_platform.get("SANGER"), 1)
 
     def test_filtering_by_host_taxid(self):
