@@ -60,11 +60,13 @@ class EnaAccessor(AbstractAccessor):
         "lon",
         "country"
     ]
+    # Update and include library strategies for NanoPore data
     INCLUDED_LIBRARY_STRATEGIES = [
         "WGA",
         "WGS",
         "Targeted-Capture"
     ]
+    ONT_INCLUDED_LIBRARY_STRATEGIES = INCLUDED_LIBRARY_STRATEGIES.append("AMPLICON")
 
     def __init__(self, tax_id: str, host_tax_id: str, database: Database, maximum=None):
 
@@ -87,6 +89,7 @@ class EnaAccessor(AbstractAccessor):
         self.excluded_samples_by_fastq_ftp = 0
         self.excluded_samples_by_instrument_platform = {}
         self.excluded_samples_by_library_strategy = {}
+        self.excluded_ont_samples_by_library_strategy = {}
         self.excluded_existing = 0
         self.included = 0
         self.excluded = 0
@@ -188,15 +191,23 @@ class EnaAccessor(AbstractAccessor):
             included = False    # skips runs without FTP URL
             self.excluded_samples_by_fastq_ftp += 1
         instrument_platform = ena_run.get("instrument_platform")
-        if instrument_platform.upper() != "ILLUMINA":
-            included = False    # skips non Illumina data
+        # Include Illumina and Nanopore samples
+        if instrument_platform.upper() != "ILLUMINA" and instrument_platform.upper() != "OXFORD_NANOPORE":
+            included = False    # skips non Illumina and Nanopore data
             self.excluded_samples_by_instrument_platform[str(instrument_platform)] = \
                 self.excluded_samples_by_instrument_platform.get(str(instrument_platform), 0) + 1
         library_strategy = ena_run.get("library_strategy")
-        if library_strategy not in self.INCLUDED_LIBRARY_STRATEGIES:
+        # Add exception library exception for Nanopore data
+        if instrument_platform.upper() == "ILLUMINA" and library_strategy not in self.INCLUDED_LIBRARY_STRATEGIES:
             included = False  # skips not included library strategies
             self.excluded_samples_by_library_strategy[str(library_strategy)] = \
                 self.excluded_samples_by_library_strategy.get(str(library_strategy), 0) + 1
+        if instrument_platform.upper() == "OXFORD_NANOPORE" and \
+                library_strategy not in self.ONT_INCLUDED_LIBRARY_STRATEGIES:
+            included = False # Skip not supported Nanopore library strategies
+            self.excluded_ont_samples_by_library_strategy[str(library_strategy)] = \
+                self.excluded_ont_samples_by_library_strategy.get(str(library_strategy), 0) + 1
+
         if not included:
             self.excluded += 1
         return included
@@ -208,7 +219,8 @@ class EnaAccessor(AbstractAccessor):
         logger.info("Excluded due to empty FASTQ FTP URL runs = {}".format(self.excluded_samples_by_fastq_ftp))
         logger.info("Excluded by platform runs = {}".format(self.excluded_samples_by_instrument_platform))
         logger.info("Excluded by host if runs = {}".format(self.excluded_samples_by_host_tax_id))
-        logger.info("Excluded by library strategy = {}".format(self.excluded_samples_by_library_strategy))
+        logger.info("Excluded Illumina runs by library strategy = {}".format(self.excluded_samples_by_library_strategy))
+        logger.info("Excluded Nanopore runs by library strategy = {}".format(self.excluded_ont_samples_by_library_strategy))
 
     def _write_execution_log(self, session: Session):
         end_time = datetime.now()
@@ -229,6 +241,7 @@ class EnaAccessor(AbstractAccessor):
                     "missing_fastq": self.excluded_samples_by_fastq_ftp,
                     "platform": self.excluded_samples_by_instrument_platform,
                     "library_strategy": self.excluded_samples_by_library_strategy,
+                    "ont_library_strategy": self.excluded_ont_samples_by_library_strategy,
                     "host": self.excluded_samples_by_host_tax_id
                 }
             }
