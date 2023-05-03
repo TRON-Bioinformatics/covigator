@@ -86,10 +86,10 @@ class LineageAnnotationTest(AbstractTest):
 
     def test_find_parent_sites(self):
         fake_lineage_constellation = {
-            "A": {"pangolin_lineage_list": set("A.1"),
+            "A": {"pangolin_lineage_list": set(["A.1"]),
                   "parent_lineage_id": None,
                   "lineage_mutations": [{"variant_id": 1}, {"variant_id": 2}]},
-            "B": {"pangolin_lineage_list": set("B.1"),
+            "B": {"pangolin_lineage_list": set(["B.1"]),
                   "parent_lineage_id": "A.1",
                   "lineage_mutations": [{"variant_id": 3}, {"variant_id": 4}]}
         }
