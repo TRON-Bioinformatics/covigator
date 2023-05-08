@@ -99,8 +99,8 @@ class LineageAnnotationTest(AbstractTest):
 
     def test_create_constellation_pango_mapping(self):
         fake_lineage_constellation = {
-            "A": {"pangolin_lineage_list": set("A.1"), "parent_lineage_id": None},
-            "B": {"pangolin_lineage_list": set("B.1"), "parent_lineage_id": "A.1"}}
+            "A": {"pangolin_lineage_list": set(["A.1"]), "parent_lineage_id": None},
+            "B": {"pangolin_lineage_list": set(["B.1"]), "parent_lineage_id": "A.1"}}
         mapping = self.loader._create_constellation_pango_mapping(fake_lineage_constellation)
         self.assertIsInstance(fake_lineage_constellation, dict)
         self.assertEqual(len(mapping), 2)
