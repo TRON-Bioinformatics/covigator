@@ -20,7 +20,7 @@ class LineageAnnotationTest(AbstractTest):
             self.assertIsNone(x[0])
 
     def test_get_hgvs_from_nuc_snp(self):
-        # Test if different SNP classes
+        # Test for different SNP classes
         missense_snp = {"genomic_position": 21765, "reference": "T", "alternate": "C"}
         synonymous_snp = {"genomic_position": 913, "reference": "C", "alternate": "T"}
         intergenic_snp = {"genomic_position": 240, "reference": "C", "alternate": "T"}
@@ -39,6 +39,7 @@ class LineageAnnotationTest(AbstractTest):
         )
 
     def test_get_hgvs_from_nuc_deletion(self):
+        # Test deletions with different effects
         # 21990:TTTA>T = p.Y144del
         normal_deletion = {"genomic_position": 21990, "length": 3}
         # 21990:TTTATTACCA>T = p.Y144_H146del
@@ -96,7 +97,7 @@ class LineageAnnotationTest(AbstractTest):
         self.assertTrue(parsed_site[0]["variant_id"] == "N:R203K")
         self.assertTrue(parsed_site[1]["variant_id"] == "N:G204R")
 
-    def _create_constellation_pango_mapping(self):
+    def test_create_constellation_pango_mapping(self):
         fake_lineage_constellation = {
             "A": {"pangolin_lineage_list": set("A.1"), "parent_lineage_id": None},
             "B": {"pangolin_lineage_list": set("B.1"), "parent_lineage_id": "A.1"}}
@@ -114,7 +115,8 @@ class LineageAnnotationTest(AbstractTest):
                   "lineage_mutations": [{"variant_id": 3}, {"variant_id": 4}]}
         }
         b_sites = self.loader._find_parent_sites("B",
-            fake_lineage_constellation, LineageAnnotationsLoader._create_constellation_pango_mapping(fake_lineage_constellation))
+            fake_lineage_constellation,
+            LineageAnnotationsLoader._create_constellation_pango_mapping(fake_lineage_constellation))
         self.assertIsNotNone(b_sites)
         self.assertEqual(len(b_sites), 4)
         # Test that parent sites are returned

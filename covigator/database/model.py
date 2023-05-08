@@ -1175,12 +1175,12 @@ class LineageDefiningVariants(Base):
     ambiguous_alternate = Column(Boolean, default=False)
     annotation = Column(String, default="missense")
     hgvs = Column(String)
+    variant_level = Column(String)
 
     constellations = relationship(
         "Lineages",
         secondary=LINEAGE_SITES_JUNCTION_TABLE_NAME,
         back_populates="variants")
-
 
 
 class LineageVariant(Base):

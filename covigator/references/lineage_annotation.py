@@ -107,71 +107,72 @@ class LineageAnnotationsLoader:
         protein_position = position_in_cds // 3 + 1 if position_in_cds % 3 != 0 else position_in_cds // 3
         codon = [protein_position * 3 - 2, protein_position * 3 - 1, protein_position * 3]
         delins = False
-        last_position = ""
+        first_changed = False
+        position_last = ""
         codon_last = []
 
         # Example: ORF1ab p.S3675_F3677del
         # Position is last base of the codon (3674). The next AA position(s) are affected by the deletion
         if position_in_cds % 3 == 0:
+            first_changed = True
             protein_position += 1
-            codon = [protein_position * 3 - 2, protein_position * 3 - 1, protein_position * 3]
             # If the deletion is longer than one codon get last codon affected by deletion
             if deletion_length / 3 > 1 and deletion_length % 3 == 0:
-                last_position = protein_position + deletion_length // 3 - 1
-                codon_last = [last_position * 3 - 2, last_position * 3 - 1, last_position * 3]
+                position_last = protein_position + deletion_length // 3 - 1
 
         # Deletion starts at first base of codon (second and third position of codon part of the deletion)
         elif position_in_cds % 3 == 1:
             # Created deleted and WT sequence and check if AA has changed -->
-            # If the AA at that position has not changed the following AAs are deleted
+            # If the AA at that position has not changed the following (deletion_length -1) AAs are deleted
             wt_aa = str(Seq(self.genome[(cds_start - 1) + codon[0] - 1: (cds_start - 1) + codon[2]]).translate())
             mt_end = (cds_start - 1) + codon[0] + deletion_length
             mt_aa = str(Seq(self.genome[(cds_start - 1) + codon[0] - 1] + self.genome[mt_end: mt_end + 2]).translate())
             if wt_aa == mt_aa:
+                first_changed = True
                 protein_position += 1
-                codon = [protein_position * 3 - 2, protein_position * 3 - 1, protein_position * 3]
                 # Get last codon affected by deletion
                 if deletion_length / 3 > 1 and deletion_length % 3 == 0:
-                    last_position = protein_position + deletion_length // 3 - 1
-                    codon_last = [last_position * 3 - 2, last_position * 3 - 1, last_position * 3]
+                    position_last = protein_position + deletion_length // 3 - 1
             else:
                 # If the AA has changed get the last codon affected by the deletion and set inserted AA
                 # Example: p.D119_I121delinsV
+
                 if deletion_length / 3 >= 1 and deletion_length % 3 == 0:
                     delins = True
                     inserted_aa = mt_aa
-                    last_position = protein_position + deletion_length // 3
-                    codon_last = [last_position * 3 - 2, last_position * 3 - 1, last_position * 3]
+                    position_last = protein_position + deletion_length // 3
 
         # Deletion starts at second base of codon (third base of codon part of deletion)
         elif position_in_cds % 3 == 2:
             # Created deleted and WT sequence and check if AA has changed -->
-            # If the AA at that position has not changed the following AA are deleted
+            # If the AA at that position has not changed the following (deletion_length - 1) AA are deleted
             wt_start = (cds_start - 1) + codon[0]
             wt_end = (cds_start - 1) + codon[2]
             wt_aa = str(Seq(self.genome[wt_start - 1: wt_end]).translate())
             mt_end = (cds_start - 1) + codon[1] + deletion_length
             mt_aa = str(Seq(self.genome[wt_start - 1] + self.genome[wt_start] + self.genome[mt_end]).translate())
             if mt_aa == wt_aa:
+                first_changed = True
                 protein_position += 1
-                codon = [protein_position * 3 - 2, protein_position * 3 - 1, protein_position * 3]
                 # If the deletion is longer than one codon get last codon affected by deletion
                 if deletion_length / 3 > 1 and deletion_length % 3 == 0:
-                    last_position = protein_position + deletion_length // 3 - 1
-                    codon_last = [last_position * 3 - 2, last_position * 3 - 1, last_position * 3]
+                    position_last = protein_position + deletion_length // 3 - 1
             else:
                 # If the AA has changed get the last codon affected by the deletion and set inserted AA
                 # Example: p.D119_I121delinsV
                 if deletion_length / 3 >= 1 and deletion_length % 3 == 0:
                     delins = True
                     inserted_aa = mt_aa
-                    last_position = protein_position + deletion_length // 3
-                    codon_last = [last_position * 3 - 2, last_position * 3 - 1, last_position * 3]
+                    position_last = protein_position + deletion_length // 3
 
-        # Depending on the effect of the mutation the first and last codon position shown the HGVS notation change
-        # Get nucleotide sequence and translate to AA
+        # The first and last codon position shown the HGVS annotation depend on the effect of the mutation
+        # Calculate codon for the first affected amino acid
+        if first_changed:
+            codon = [protein_position * 3 - 2, protein_position * 3 - 1, protein_position * 3]
         first_aa = str(Seq(self.genome[(cds_start - 1) + codon[0] - 1: (cds_start - 1) + codon[2]]).translate())
-        if last_position:
+        # Calculate codon for the last affected amino acid
+        if position_last:
+            codon_last = [position_last * 3 - 2, position_last * 3 - 1, position_last * 3]
             last_aa = str(Seq(self.genome[(cds_start - 1) + codon_last[0] - 1: (cds_start - 1) + codon_last[2]]).translate())
 
         # Create HGVS notations for different effects of the mutation
@@ -188,7 +189,7 @@ class LineageAnnotationsLoader:
                 first_aa=first_aa,
                 first_pos=protein_position,
                 last_aa=last_aa,
-                last_pos=last_position,
+                last_pos=position_last,
                 ins=inserted_aa
             )
             # Return all AA that were deleted
@@ -202,7 +203,7 @@ class LineageAnnotationsLoader:
                     first_aa=first_aa,
                     first_pos=protein_position,
                     last_aa=last_aa,
-                    last_pos=last_position
+                    last_pos=position_last
                 )
                 ref_aa = str(Seq(self.genome[(cds_start - 1) + codon[0] - 1:
                                              (cds_start - 1) + codon_last[2]]).translate())
@@ -291,7 +292,7 @@ class LineageAnnotationsLoader:
                 return [None]
             # Does not work with aa level insertions but None are present in the current constellation files
             mutation_info = {"site": variant_string,
-                             "type": "Insertion",
+                             "type": "INSERTION",
                              "position": match[2],
                              "length": len(match[2]),
                              "protein": self._match_protein_name(match[1]),
@@ -329,6 +330,7 @@ class LineageAnnotationsLoader:
                 mutation_info["variant_id"] = "{}:{}>{}".format(mutation_info["position"],
                                                                 mutation_info["reference"],
                                                                 mutation_info["alternate"])
+                mutation_info["level"] = "nuc"
             mutation_list.append(mutation_info)
         # SNPs (nucleotide level, can be non-synonymous, missense and intergenic) => translated to protein level
         elif this_mut[0] in ["snp", "nuc"]:
@@ -359,6 +361,7 @@ class LineageAnnotationsLoader:
                 mutation_info["variant_id"] = "{}:{}>{}".format(mutation_info["position"],
                                                                 mutation_info["reference"],
                                                                 mutation_info["alternate"])
+                mutation_info["level"] = "nuc"
             mutation_list.append(mutation_info)
         # Amino acid mutations => SNVs, MNVs, Deletions
         else:
@@ -577,7 +580,7 @@ class LineageAnnotationsLoader:
             # Append all lineage defining mutations to a list of seen mutations
             for this_mut in annotation["lineage_mutations"]:
                 # Skip variants on nucleotide level
-                if this_mut["level"] != "aa":
+                if this_mut["type"] == "INSERTION":
                     continue
                 if this_mut["variant_id"] not in seen_mutations:
                     seen_mutations.add(this_mut["variant_id"])
@@ -595,7 +598,8 @@ class LineageAnnotationsLoader:
                 reference=this_mut["reference"],
                 alternate=this_mut["alternate"],
                 ambiguous_alternate=this_mut["ambiguous_alternate"],
-                annotation=this_mut["annotation"]
+                annotation=this_mut["annotation"],
+                variant_level=this_mut["level"]
             )
             self.session.add(mutation)
             self.session.commit()
@@ -615,9 +619,8 @@ class LineageAnnotationsLoader:
             all_mutations_of_lineage = self._find_parent_sites(constellation, lineage_constellation,
                                                                pango_constellation_mapping)
             for this_mut in all_mutations_of_lineage:
-                # Skip mutations that are not on AA level
-                # This can be safely deleted as soon as nucleotide level problems are solved
-                if this_mut["level"] != "aa":
+                # Skip Insertions
+                if this_mut["type"] == "INSERTION":
                     continue
                 var_id = this_mut["variant_id"]
                 if var_id not in mutation_lineage_mapping.keys():
