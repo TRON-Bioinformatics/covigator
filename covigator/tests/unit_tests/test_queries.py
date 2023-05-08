@@ -217,7 +217,7 @@ class QueriesTests(AbstractTest):
         self.assertEqual(who_label, "Omicron")
 
 
-    @parameterized.expand([(DataSource.ENA, DataSource.COVID19_PORTAL)])
+    @parameterized.expand([(DataSource.ENA,), (DataSource.COVID19_PORTAL,)])
     def test_get_combined_labels(self, source):
         # Mock some ENA samples
         labels = self.queries.get_combined_labels(source.name)
