@@ -96,7 +96,7 @@ class DatabaseInitialisationTests(AbstractTest):
         # Check that parents are all present in lineage table
         self.assertTrue(all([x in pango_ids for x in lineages_with_parents.parent_lineage_id]))
         omicron = lineages_with_parents.loc[lineages_with_parents["who_label"] == "Omicron"]
-        self.assertTrue(all([x in ["B.1.1.529", "XE-parent2"] for x in omicron.parent_lineage_id]))
+        self.assertTrue(all([x in ["B.1.1.529", "XE-parent2", "XE-parent1"] for x in omicron.parent_lineage_id]))
 
         # check that VOC information is parsed correctly
         voc_query = session.query(Lineages).filter(Lineages.variant_of_concern.is_(True))
