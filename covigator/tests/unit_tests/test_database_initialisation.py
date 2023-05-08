@@ -121,15 +121,15 @@ class DatabaseInitialisationTests(AbstractTest):
         # Test that mutations are parsed and stored for a lineage correctly
         query_delta = session.query(LineageVariant).filter(LineageVariant.pango_lineage_id == "B.1.617.2")
         query_delta = pd.read_sql(query_delta.statement, session.bind)
-        self.assertEqual(query_delta.shape[1], 14)
+        self.assertEqual(query_delta.shape[0], 14)
 
         # Test that parental mutations are parsed and stored correctly
         query_ay42 = session.query(LineageVariant).filter(LineageVariant.pango_lineage_id == "AY.4.2")
         query_ay42 = pd.read_sql(query_ay42.statement, session.bind)
-        self.assertEqual(query_ay42.shape[1], 35)
+        self.assertEqual(query_ay42.shape[0], 35)
 
         query_ay4 = session.query(LineageVariant).filter(LineageVariant.pango_lineage_id == "AY.4")
         query_ay4 = pd.read_sql(query_ay4.statement, session.bind)
-        self.assertEqual(query_ay4.shape[1], 32)
-        # Test that mutations from parent lineages are all present
+        self.assertEqual(query_ay4.shape[0], 32)
+        # Test that mutations from parent lineage(s) are all present
         self.assertTrue(all([x in query_ay42.variant_id.values for x in query_ay4.variant_id]))
