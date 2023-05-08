@@ -128,19 +128,15 @@ class Queries:
         """
         Query database for lineage WHO label annotation. Returns a DataFrame with columns: pangolin_lineage, who_label
         """
-        query = self.session.query(Lineages.pango_lineage_id.label("pangolin_lineage"), Lineages.who_label,
-                                   Lineages.parent_lineage_id)
+        query = self.session.query(Lineages.pango_lineage_id.label("pangolin_lineage"), Lineages.who_label)
         lineages = pd.read_sql(query.statement, self.session.bind)
-        # Include WHO label for sublineages of VOC
-        lineages["who_label"] = lineages.apply(lambda x: self.find_parent_who_label(x.pangolin_lineage, lineages)
-            if pd.isnull(x.who_label) else x.who_label, axis=1)
         lineages = lineages[["pangolin_lineage", "who_label"]]
         return lineages
 
     def get_combined_labels(self, source: str) -> pd.DataFrame:
         """
-        Generate a mapping of pangolin IDs to WHO label and create a combined label that is used in the
-        dashboard
+        Create a mapping from pangolin IDs in the data source to WHO identifiers and create a combined
+        label to be used in the dashboard
         """
         who_labels = self.get_lineages_who_label()
         lineages = self.get_lineages(source)

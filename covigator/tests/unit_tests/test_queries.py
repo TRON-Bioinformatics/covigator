@@ -213,8 +213,11 @@ class QueriesTests(AbstractTest):
         self.assertEqual(who_label, "Delta")
         who_label = self.queries.find_parent_who_label("AY.4", data)
         self.assertEqual(who_label, "Delta")
+        who_label = self.queries.find_parent_who_label("XE-parent2", data)
+        self.assertEqual(who_label, "Omicron")
 
-    @parameterized.expand([(DataSource.ENA,)])
+
+    @parameterized.expand([(DataSource.ENA, DataSource.COVID19_PORTAL)])
     def test_get_combined_labels(self, source):
         # Mock some ENA samples
         labels = self.queries.get_combined_labels(source.name)

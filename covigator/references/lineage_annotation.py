@@ -1,9 +1,11 @@
 import os
 import json
 from pathlib import Path
-
+import pandas as pd
 from sqlalchemy.orm import Session
+from sqlalchemy import update
 from covigator.database.model import Lineages
+from covigator.database.queries import Queries
 from logzero import logger
 from datetime import datetime
 
@@ -14,6 +16,7 @@ class LineageAnnotationsLoader:
 
     def __init__(self, session: Session):
         self.session = session
+        self.queries = Queries(session=session)
 
         self.lineage_constellation_directory = os.path.join(
             os.path.abspath(os.path.dirname(__file__)), self.LINEAGE_CONSTELLATION_DIRECTORY)
@@ -130,7 +133,31 @@ class LineageAnnotationsLoader:
                 count_lineages += 1
         logger.info("Loaded into the database {} lineages".format(count_lineages))
 
+    def _update_sublineages_who(self):
+        """
+        Update lineage table to annotate sublineages of a VOC with the WHO label
+        """
+        update_counter = 0
+        # Get lineage annotations from database
+        query = self.session.query(Lineages.pango_lineage_id.label("pangolin_lineage"), Lineages.who_label,
+                                   Lineages.parent_lineage_id)
+        lineages = pd.read_sql(query.statement, self.session.bind)
+        lineages_without_who = lineages[lineages.who_label.isna()]
+        # Find and update sublineages of VOC
+        for this_lineage in lineages_without_who.itertuples():
+            # skip lineages without a parent as these are not sublineages from a VOC
+            if pd.isnull(this_lineage.parent_lineage_id):
+                continue
+            who_label = self.queries.find_parent_who_label(this_lineage.pangolin_lineage, lineages)
+            self.session.query(Lineages).filter(Lineages.pango_lineage_id == this_lineage.pangolin_lineage).\
+                update({'who_label': who_label},synchronize_session=False)
+            self.session.commit()
+            update_counter += 1
+        logger.info("Updated {} sublineages to include WHO label from parental VOC".format(update_counter))
+
+
     def load_data(self):
         # Fill lineage annotation table
         lineage_constellation = self._read_constellation_files()
         self._fill_lineage_table(lineage_constellation)
+        self._update_sublineages_who()
