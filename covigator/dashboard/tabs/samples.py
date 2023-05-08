@@ -131,9 +131,9 @@ def set_callbacks_samples_tab(app, session: Session):
         """
         countries = []
         if source == DataSource.ENA.name:
-            countries = [{'label': c, 'value': c} for c in lineages_ena]
+            countries = [{'label': c, 'value': c} for c in countries_ena]
         elif source == DataSource.COVID19_PORTAL.name:
-            countries = [{'label': c, 'value': c} for c in lineages_covid19_portal]
+            countries = [{'label': c, 'value': c} for c in countries_covid19_portal]
         return countries
 
     @app.callback(
