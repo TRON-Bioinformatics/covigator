@@ -14,7 +14,7 @@ class LineageAnnotationTest(AbstractTest):
         intergenic_locations = [265, 21556]
         for loc in gene_locations:
             x = self.loader.find_gene(loc)
-            self.assertEqual(x, ['ORF1ab', 266,  21555])
+            self.assertEqual(x, ['ORF1ab', 266, 21555])
         for loc in intergenic_locations:
             x = self.loader.find_gene(loc)
             self.assertIsNone(x[0])
