@@ -13,7 +13,7 @@ from covigator.database.model import DataSource, SampleEna, JobStatus, \
     SubclonalVariantObservation, PrecomputedVariantsPerSample, PrecomputedSubstitutionsCounts, PrecomputedIndelLength, \
     VariantType, PrecomputedAnnotation, PrecomputedOccurrence, PrecomputedTableCounts, \
     PrecomputedVariantAbundanceHistogram, PrecomputedSynonymousNonSynonymousCounts, RegionType, Domain, \
-    LastUpdate, SampleCovid19Portal, VariantObservationCovid19Portal, VariantCovid19Portal
+    LastUpdate, SampleCovid19Portal, VariantObservationCovid19Portal, VariantCovid19Portal, Lineages
 from covigator.exceptions import CovigatorQueryException, CovigatorDashboardMissingPrecomputedData
 
 
@@ -106,6 +106,47 @@ class Queries:
         return [c for c, in self.session.query(klass.pangolin_lineage).filter(
             and_(klass.status == JobStatus.FINISHED.name, klass.pangolin_lineage != None)).distinct().order_by(
                 klass.pangolin_lineage.asc()).all()]
+
+    def find_parent_who_label(self, lineage, parent_mapping) -> str:
+        """
+        In some instances a constellation does not include a WHO label. Nevertheless, these sublineages also belong to
+        this VOC and should also be grouped with this label. Returns a string containing the WHO label of the topmost
+        parent in the tree if present, otherwise just the label.
+
+        Examples are local lineage variations such as AY.4.2 and AY.4 --> Delta
+        """
+        lineage = parent_mapping.query("pangolin_lineage == @lineage").get(["pangolin_lineage", "who_label",
+                                                                            "parent_lineage_id"])
+        # No or last parent in tree --> return WHO label
+        parent = lineage.get("parent_lineage_id").item()
+        if pd.isnull(parent):
+            return lineage.get("who_label").item()
+        else:
+            return self.find_parent_who_label(parent, parent_mapping)
+
+    def get_lineages_who_label(self) -> pd.DataFrame:
+        """
+        Query database for lineage WHO label annotation. Returns a DataFrame with columns: pangolin_lineage, who_label
+        """
+        query = self.session.query(Lineages.pango_lineage_id.label("pangolin_lineage"), Lineages.who_label)
+        lineages = pd.read_sql(query.statement, self.session.bind)
+        lineages = lineages[["pangolin_lineage", "who_label"]]
+        return lineages
+
+    def get_combined_labels(self, source: str) -> pd.DataFrame:
+        """
+        Create a mapping from pangolin IDs in the data source to WHO identifiers and create a combined
+        label to be used in the dashboard
+        """
+        who_labels = self.get_lineages_who_label()
+        lineages = self.get_lineages(source)
+        if not lineages:
+            return None
+        lineages = pd.DataFrame(lineages, columns=["pangolin_lineage"])
+        lineages = lineages.merge(who_labels, how="left")
+        lineages["combined_label"] = lineages.apply(lambda x: f"{x.pangolin_lineage} - {x.who_label}"
+            if not pd.isnull(x.who_label) else f"{x.pangolin_lineage}", axis=1)
+        return lineages
 
     def get_variants_per_sample(self, data_source: str, genes: List[str], variant_types: List[str]):
         """

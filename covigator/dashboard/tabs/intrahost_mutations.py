@@ -79,7 +79,7 @@ def get_subclonal_variants_tab_left_bar(queries: Queries):
             )),
             html.Br(),
             html.Div(dbc.Button(
-                "Distribution of selected intrahost mutation",
+                "Selected intrahost mutation",
                 color="secondary",
                 className="me-1",
                 style={'font-size': '100%'})),

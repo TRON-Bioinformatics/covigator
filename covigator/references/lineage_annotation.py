@@ -6,6 +6,7 @@ import pandas as pd
 from Bio.Seq import Seq
 from sqlalchemy.orm import Session
 from covigator.database.model import Lineages, LineageDefiningVariants, LineageVariant, Gene
+from covigator.database.queries import Queries
 from logzero import logger
 from datetime import datetime
 from typing import List, Dict
@@ -18,6 +19,7 @@ class LineageAnnotationsLoader:
 
     def __init__(self, session: Session):
         self.session = session
+        self.queries = Queries(session=session)
 
         self.lineage_constellation_directory = os.path.join(
             os.path.abspath(os.path.dirname(__file__)), self.LINEAGE_CONSTELLATION_DIRECTORY)
@@ -586,7 +588,7 @@ class LineageAnnotationsLoader:
                     seen_mutations.add(this_mut["variant_id"])
                     all_mutations.append(this_mut)
         logger.info("Loaded into the database {} lineages".format(count_lineages))
-
+        
         # Store all observed lineage defining mutations in database
         for this_mut in all_mutations:
             mutation = LineageDefiningVariants(
@@ -640,8 +642,32 @@ class LineageAnnotationsLoader:
                 count_relationship += 1
         logger.info("Loaded into the database {} lineage-variant relationships".format(count_relationship))
 
+    def _update_sublineages_who(self):
+        """
+        Update lineage table to annotate sublineages of a VOC with the WHO label
+        """
+        update_counter = 0
+        # Get lineage annotations from database
+        query = self.session.query(Lineages.pango_lineage_id.label("pangolin_lineage"), Lineages.who_label,
+                                   Lineages.parent_lineage_id)
+        lineages = pd.read_sql(query.statement, self.session.bind)
+        lineages_without_who = lineages[lineages.who_label.isna()]
+        # Find and update sublineages of VOC
+        for this_lineage in lineages_without_who.itertuples():
+            # skip lineages without a parent as these are not sublineages from a VOC
+            if pd.isnull(this_lineage.parent_lineage_id):
+                continue
+            who_label = self.queries.find_parent_who_label(this_lineage.pangolin_lineage, lineages)
+            self.session.query(Lineages).filter(Lineages.pango_lineage_id == this_lineage.pangolin_lineage).\
+                update({'who_label': who_label},synchronize_session=False)
+            self.session.commit()
+            update_counter += 1
+        logger.info("Updated {} sublineages to include WHO label from parental VOC".format(update_counter))
+
     def load_data(self):
         # Fill lineage annotation table
         lineage_constellation = self._read_constellation_files()
+
         self._fill_lineage_mutation_table(lineage_constellation)
+        self._update_sublineages_who()
         self._fill_relation_ship_table(lineage_constellation)
