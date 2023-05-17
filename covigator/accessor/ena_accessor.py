@@ -66,7 +66,7 @@ class EnaAccessor(AbstractAccessor):
         "WGS",
         "Targeted-Capture"
     ]
-    ONT_INCLUDED_LIBRARY_STRATEGIES = INCLUDED_LIBRARY_STRATEGIES.append("AMPLICON")
+    ONT_INCLUDED_LIBRARY_STRATEGIES = INCLUDED_LIBRARY_STRATEGIES + ["AMPLICON"]
 
     def __init__(self, tax_id: str, host_tax_id: str, database: Database, maximum=None):
 
