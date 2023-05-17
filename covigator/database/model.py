@@ -1162,18 +1162,26 @@ class Lineages(Base):
 
 class LineageDefiningVariants(Base):
     """
-    Store lineage defining mutations
+    Store lineage defining mutations as defined in the scorpio constellation files. Mutations can be on nucleotide
+    (intergenic) or proteomic space. The columns variant_id, position, reference and alternate therefore have different
+    meanings and formatting
+
+    Variant_id: position_in_genome:[reference_bases]>[alternate_nuc] (genomic level)
+                canonical_protein_name:[reference_aa]position_in_protein[alternate_aa]
+    position: position_in_genome (genomic level) or position_in_protein (proteomic level)
+    reference: reference_bases (genomic level) or reference_aa (proteomic level)
+    alternate: alternate_bases (genomic level) or alternate_aa (proteomic level)
     """
     __tablename__ = CONSTELLATION_SITES_TABLE_NAME
 
     variant_id = Column(String, primary_key=True)
-    variant_type = Column(String)
+    variant_type = Column(Enum(VariantType, name=VariantType.__constraint_name__))
     protein = Column(String)
     position = Column(Integer, index=True)
     reference = Column(String)
     alternate = Column(String)
     ambiguous_alternate = Column(Boolean, default=False)
-    annotation = Column(String, default="missense")
+    annotation = Column(String)
     hgvs = Column(String)
     variant_level = Column(String)
 

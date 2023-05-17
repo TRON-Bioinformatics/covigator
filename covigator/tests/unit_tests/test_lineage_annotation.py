@@ -14,7 +14,7 @@ class LineageAnnotationTest(AbstractTest):
         intergenic_locations = [265, 21556]
         for loc in gene_locations:
             x = self.loader.find_gene(loc)
-            self.assertEqual(x, ['ORF1ab', 266,  21555])
+            self.assertEqual(x, ('ORF1ab', 266,  21555))
         for loc in intergenic_locations:
             x = self.loader.find_gene(loc)
             self.assertIsNone(x[0])
@@ -27,15 +27,18 @@ class LineageAnnotationTest(AbstractTest):
 
         x = self.loader.get_hgvs_from_nuc_snp(missense_snp)
         self.assertEqual(
-            x, {'hgvs_p': 'p.I68T', 'position': 68, 'reference': 'I', 'alternate': 'T', 'annotation': 'missense'}
+            x, {'hgvs_p': 'p.I68T', 'position': 68, 'reference': 'I', 'alternate': 'T',
+                'annotation': 'missense_variant', 'protein': 'S'}
         )
         x = self.loader.get_hgvs_from_nuc_snp(synonymous_snp)
         self.assertEqual(
-            x, {'hgvs_p': 'p.S216S', 'position': 216, 'reference': 'S', 'alternate': 'S', 'annotation': 'synonymous'}
+            x, {'hgvs_p': 'p.S216S', 'position': 216, 'reference': 'S', 'alternate': 'S',
+                'annotation': 'synonymous_variant', 'protein': 'ORF1ab'}
         )
         x = self.loader.get_hgvs_from_nuc_snp(intergenic_snp)
         self.assertEqual(
-            x, {'hgvs_p': None, 'position': 240, 'reference': 'C', 'alternate': 'T', 'annotation': 'intergenic'}
+            x, {'hgvs_p': None, 'position': 240, 'reference': 'C', 'alternate': 'T',
+                'annotation': 'intergenic_variant', 'protein': None}
         )
 
     def test_get_hgvs_from_nuc_deletion(self):
@@ -55,27 +58,33 @@ class LineageAnnotationTest(AbstractTest):
 
         self.assertEqual(
             self.loader.get_hgvs_from_nuc_deletion(normal_deletion),
-            {'hgvs_p': 'p.Y144del', 'reference': 'Y', 'alternate': 'del', 'position': 144}
+            {'hgvs_p': 'p.Y144del', 'reference': 'Y', 'alternate': 'del',
+             'position': 144, "annotation": "conservative_inframe_deletion", "protein": "S"}
         )
         self.assertEqual(
             self.loader.get_hgvs_from_nuc_deletion(normal_deletion_long),
-            {'hgvs_p': 'p.Y144_H146del', 'reference': 'YYH', 'alternate': 'del', 'position': 144}
+            {'hgvs_p': 'p.Y144_H146del', 'reference': 'YYH', 'alternate': 'del',
+             'position': 144, "annotation": "disruptive_inframe_deletion", "protein": "S"}
         )
         self.assertEqual(
             self.loader.get_hgvs_from_nuc_deletion(normal_deletion_long_2),
-            {'hgvs_p': 'p.F157_R158del', 'reference': 'FR', 'alternate': 'del', 'position': 157}
+            {'hgvs_p': 'p.F157_R158del', 'reference': 'FR', 'alternate': 'del',
+             'position': 157, "annotation": "disruptive_inframe_deletion", 'protein': "S"}
         )
         self.assertEqual(
             self.loader.get_hgvs_from_nuc_deletion(fs_deletion),
-            {'hgvs_p': 'p.Y144fs', 'reference': 'Y', 'alternate': 'del', 'position': 144}
+            {'hgvs_p': 'p.Y144fs', 'reference': 'Y', 'alternate': 'del',
+             'position': 144, 'annotation': 'frameshift_variant', 'protein': 'S'}
         )
         self.assertEqual(
             self.loader.get_hgvs_from_nuc_deletion(insdel_deletion),
-            {'hgvs_p': 'p.Y144_S155delinsC', 'reference': 'YYHKNNKSWMES', 'alternate': 'del', 'position': 144}
+            {'hgvs_p': 'p.Y144_S155delinsC', 'reference': 'YYHKNNKSWMES', 'alternate': 'del',
+             'position': 144, "annotation": "disruptive_inframe_deletion", "protein": "S"}
         )
         self.assertEqual(
             self.loader.get_hgvs_from_nuc_deletion(insdel_deletion_2),
-            {'hgvs_p': 'p.L24_Y28delinsF', 'reference': 'LPPAY', 'alternate': 'del', 'position': 24}
+            {'hgvs_p': 'p.L24_Y28delinsF', 'reference': 'LPPAY', 'alternate': 'del',
+             'position': 24, "annotation": "disruptive_inframe_deletion", "protein": "S"}
         )
 
     def test_parse_mutation_sites(self):

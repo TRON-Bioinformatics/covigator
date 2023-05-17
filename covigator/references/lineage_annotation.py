@@ -5,16 +5,21 @@ from pathlib import Path
 import pandas as pd
 from Bio.Seq import Seq
 from sqlalchemy.orm import Session
-from covigator.database.model import Lineages, LineageDefiningVariants, LineageVariant, Gene
+from covigator import SYNONYMOUS_VARIANT, MISSENSE_VARIANT, INTERGENIC_VARIANT, INTERGENIC_DELETION, INFRAME_DELETION,\
+    CONSERVATIVE_INFRAME_DELETION, DISRUPTIVE_INFRAME_DELETION, FRAMESHIFT_VARIANT, CANONICAL_PROTEIN_MAPPING
+from covigator.database.model import Lineages, LineageDefiningVariants, LineageVariant, Gene, VariantType
 from logzero import logger
 from datetime import datetime
-from typing import List, Dict
+from typing import List, Dict, Tuple
+
 
 
 class LineageAnnotationsLoader:
 
     LINEAGE_CONSTELLATION_DIRECTORY = "constellations/constellations/definitions"
     LINEAGE_CONSTELLATION_GENOME = "constellations/constellations/data/SARS-CoV-2.json"
+    protein_mapping = {synonym: canonical for canonical, list_of_synonyms in CANONICAL_PROTEIN_MAPPING.items()
+                       for synonym in list_of_synonyms}
 
     def __init__(self, session: Session):
         self.session = session
@@ -33,46 +38,23 @@ class LineageAnnotationsLoader:
             constellation_genome = json.load(file_handle)
         return constellation_genome.get("genome")
 
-    @staticmethod
-    def _match_protein_name(protein_name: str):
-        """
-        This method provides a mapping between canonical protein/gene names and common synonyms.
-        """
-        protein_mapping = {
-            "S": ["S", "s", "spike"],
-            "N": ["N", "n"],
-            "M": ["M", "m"],
-            "E": ["E", "e"],
-            "ORF1ab": ["ORF1ab", "1ab", "orf1ab", "ORF1a", "ORF1b", "orf1a", "orf1b", "nsp3", "nsp6", "nsp5", "nsp4",
-                       "nsp15", "nsp13", "nsp7", "nsp12", "NSP2"],
-            "ORF3a": ["ORF3a", "orf3a"],
-            "ORF8": ["ORF8", "8"],
-            "ORF6": ["ORF6", "orf6"]
-        }
-        if protein_name is None:
-            return None
-        for canonical_name, synonyms in protein_mapping.items():
-            if protein_name in synonyms:
-                return canonical_name
-        return protein_name
-
-    def find_gene(self, position: int) -> List:
+    def find_gene(self, position: int) -> Tuple:
         """
         For a given nucleotide position find the overlapping gene and return the canonical name with start and end
         coordinates.
         """
         if position is None:
-            return [None]
+            return None, None, None
         gene_coordinates = self.gene_df.query("start <= @position & end > @position").get(
             ["name", "start", "end"])
         if gene_coordinates.shape[0] == 0:
             logger.info("Position does not overlap any gene...")
-            return [None]
+            return None, None, None
         gene_name = gene_coordinates.get("name").item()
         gene_start = gene_coordinates.get("start").item()
         gene_end = gene_coordinates.get("end").item()
-        gene_name = self._match_protein_name(gene_name)
-        return [gene_name, gene_start, gene_end]
+        gene_name = LineageAnnotationsLoader.protein_mapping.get(gene_name)
+        return gene_name, gene_start, gene_end
 
     def get_hgvs_from_nuc_deletion(self, variant: dict) -> Dict:
         """
@@ -86,30 +68,32 @@ class LineageAnnotationsLoader:
         """
         genomic_position = variant.get("genomic_position")
         deletion_length = variant.get("length")
-        gene_coordinates = self.find_gene(genomic_position)
+        gene, gene_start, gene_end = self.find_gene(genomic_position)
         # If deletions falls into intergenic space return nucleotide level reference, alternate and position
-        if gene_coordinates[0] is None:
+        if gene is None:
             logger.info("Deletion does not overlap any protein...")
             return {
                 "hgvs_p": None,
                 "reference": self.genome[genomic_position - 1: genomic_position + deletion_length],
                 "alternate": self.genome[genomic_position - 1],
                 "position": genomic_position,
-                "annotation": "intergenic"
+                "annotation": INTERGENIC_DELETION,
+                "protein": gene
             }
-
-        cds_start = gene_coordinates[1]
+        cds_start = gene_start - 1
         # Given a nucleotide position calculate position relative to CDS coordinates
         # minus one as positions given in df are inclusive on both sides. Deletion positions
         # are non-inclusive => the next genomic position is affected by the deletion
-        position_in_cds = genomic_position - (cds_start - 1)
+        position_in_cds = genomic_position - cds_start
         # Get position in the protein and calculate the coordinates of the corresponding codon
         protein_position = position_in_cds // 3 + 1 if position_in_cds % 3 != 0 else position_in_cds // 3
         codon = [protein_position * 3 - 2, protein_position * 3 - 1, protein_position * 3]
         delins = False
         first_changed = False
-        position_last = ""
+        position_last = 0
         codon_last = []
+        # Annotate deletions according to SO terms.
+        annotation = CONSERVATIVE_INFRAME_DELETION
 
         # Example: ORF1ab p.S3675_F3677del
         # Position is last base of the codon (3674). The next AA position(s) are affected by the deletion
@@ -122,11 +106,20 @@ class LineageAnnotationsLoader:
 
         # Deletion starts at first base of codon (second and third position of codon part of the deletion)
         elif position_in_cds % 3 == 1:
-            # Created deleted and WT sequence and check if AA has changed -->
+            # Created deleted and WT sequence and check if AA and the sequence of the codons has changed -->
             # If the AA at that position has not changed the following (deletion_length -1) AAs are deleted
-            wt_aa = str(Seq(self.genome[(cds_start - 1) + codon[0] - 1: (cds_start - 1) + codon[2]]).translate())
-            mt_end = (cds_start - 1) + codon[0] + deletion_length
-            mt_aa = str(Seq(self.genome[(cds_start - 1) + codon[0] - 1] + self.genome[mt_end: mt_end + 2]).translate())
+            wt_codon = Seq(self.genome[cds_start + codon[0] - 1:
+                                       cds_start + codon[2]])
+            wt_aa = str(wt_codon.translate())
+            mt_end = cds_start + codon[0] + deletion_length
+            mt_codon = Seq(self.genome[cds_start + codon[0] - 1] +  # First base of WT codon
+                           self.genome[mt_end: mt_end + 2])         # First and second base after deletion
+            mt_aa = str(mt_codon.translate())
+            # If the codon sequence (nucleotide) has not changed the deletion is annotated as conservative
+            # else it is classified as disruptive. We follow here the classification of SNPEff to keep compatibility
+            # with mutations called by the pipeline.
+            annotation = CONSERVATIVE_INFRAME_DELETION if str(wt_codon) == str(mt_codon) \
+                else DISRUPTIVE_INFRAME_DELETION
             if wt_aa == mt_aa:
                 first_changed = True
                 protein_position += 1
@@ -136,7 +129,6 @@ class LineageAnnotationsLoader:
             else:
                 # If the AA has changed get the last codon affected by the deletion and set inserted AA
                 # Example: p.D119_I121delinsV
-
                 if deletion_length / 3 >= 1 and deletion_length % 3 == 0:
                     delins = True
                     inserted_aa = mt_aa
@@ -146,11 +138,19 @@ class LineageAnnotationsLoader:
         elif position_in_cds % 3 == 2:
             # Created deleted and WT sequence and check if AA has changed -->
             # If the AA at that position has not changed the following (deletion_length - 1) AA are deleted
-            wt_start = (cds_start - 1) + codon[0]
-            wt_end = (cds_start - 1) + codon[2]
-            wt_aa = str(Seq(self.genome[wt_start - 1: wt_end]).translate())
-            mt_end = (cds_start - 1) + codon[1] + deletion_length
-            mt_aa = str(Seq(self.genome[wt_start - 1] + self.genome[wt_start] + self.genome[mt_end]).translate())
+            wt_codon = Seq(self.genome[cds_start + codon[0] - 1:
+                                       cds_start + codon[2]])
+            wt_aa = str(wt_codon.translate())
+            mt_end = cds_start + codon[1] + deletion_length
+            mt_codon = Seq(self.genome[cds_start + codon[0] - 1] +  # first position of WT codon
+                           self.genome[cds_start + codon[0]] +      # second position of WT codon
+                           self.genome[mt_end])                     # first base after deletion
+            mt_aa = str(mt_codon.translate())
+            # If the codon sequence (nucleotide) has not changed the deletion is annotated as conservative
+            # else it is classified as disruptive. We follow here the classification of SNPEff to keep compatibility
+            # with mutations called by the pipeline.
+            annotation = CONSERVATIVE_INFRAME_DELETION if str(wt_codon) == str(mt_codon) \
+                else DISRUPTIVE_INFRAME_DELETION
             if mt_aa == wt_aa:
                 first_changed = True
                 protein_position += 1
@@ -169,15 +169,17 @@ class LineageAnnotationsLoader:
         # Calculate codon for the first affected amino acid
         if first_changed:
             codon = [protein_position * 3 - 2, protein_position * 3 - 1, protein_position * 3]
-        first_aa = str(Seq(self.genome[(cds_start - 1) + codon[0] - 1: (cds_start - 1) + codon[2]]).translate())
+        first_aa = str(Seq(self.genome[cds_start + codon[0] - 1: cds_start + codon[2]]).translate())
         # Calculate codon for the last affected amino acid
         if position_last:
             codon_last = [position_last * 3 - 2, position_last * 3 - 1, position_last * 3]
-            last_aa = str(Seq(self.genome[(cds_start - 1) + codon_last[0] - 1: (cds_start - 1) + codon_last[2]]).translate())
+            last_aa = str(Seq(self.genome[cds_start + codon_last[0] - 1: cds_start + codon_last[2]]).translate())
 
         # Create HGVS notations for different effects of the mutation
         # HGVS for frameshift deletion
         if deletion_length % 3 != 0:
+            # Redefine in case we have frameshift variant
+            annotation = FRAMESHIFT_VARIANT
             hgvs = "p.{aa}{pos}fs".format(
                 aa=first_aa,
                 pos=protein_position
@@ -193,20 +195,20 @@ class LineageAnnotationsLoader:
                 ins=inserted_aa
             )
             # Return all AA that were deleted
-            ref_aa = str(Seq(self.genome[(cds_start - 1) + codon[0] - 1:
-                                         (cds_start - 1) + codon_last[2]]).translate())
+            ref_aa = str(Seq(self.genome[cds_start + codon[0] - 1:
+                                         cds_start + codon_last[2]]).translate())
         # HGVS for deletion of one of multiple codons
         else:
             # Deletion spans multiple codons --> hgvs consists of first and last affected AA
-            if deletion_length / 3 > 1 and deletion_length % 3 == 0:
+            if position_last - protein_position > 0:
                 hgvs = "p.{first_aa}{first_pos}_{last_aa}{last_pos}del".format(
                     first_aa=first_aa,
                     first_pos=protein_position,
                     last_aa=last_aa,
                     last_pos=position_last
                 )
-                ref_aa = str(Seq(self.genome[(cds_start - 1) + codon[0] - 1:
-                                             (cds_start - 1) + codon_last[2]]).translate())
+                ref_aa = str(Seq(self.genome[cds_start + codon[0] - 1:
+                                             cds_start + codon_last[2]]).translate())
             # Single codon deleted
             else:
                 hgvs = "p.{aa}{pos}del".format(
@@ -218,7 +220,9 @@ class LineageAnnotationsLoader:
         return {"hgvs_p": hgvs,
                 "reference": ref_aa,
                 "alternate": "del",
-                "position": protein_position}
+                "position": protein_position,
+                "annotation": annotation,
+                "protein": gene}
 
     def get_hgvs_from_nuc_snp(self, variant) -> dict:
         """
@@ -234,18 +238,18 @@ class LineageAnnotationsLoader:
         position = variant.get("genomic_position")
         ref_base = variant.get("reference")
         alt_base = variant.get("alternate")
-        annotation = "synonymous"
-        gene_annot = self.find_gene(position)
+        annotation = SYNONYMOUS_VARIANT
+        gene, gene_start, gene_end = self.find_gene(position)
         # If mutation does not overlap any gene --> Intergenic
-        if gene_annot[0] is None:
-            annotation = "intergenic"
+        if gene is None:
             return {"hgvs_p": None,
                     "position": position,
                     "reference": ref_base,
                     "alternate": alt_base,
-                    "annotation": annotation}
+                    "annotation": INTERGENIC_VARIANT,
+                    "protein": gene}
 
-        position_in_cds = position - (gene_annot[1] - 1)
+        position_in_cds = position - (gene_start - 1)
         protein_position = position_in_cds // 3 + 1 if position_in_cds % 3 != 0 else position_in_cds // 3
         # Get wild type and mutated codon sequence
         if position_in_cds % 3 == 0:
@@ -261,7 +265,7 @@ class LineageAnnotationsLoader:
         wt_aa = str(Seq(wt_aa).translate())
         mt_aa = str(Seq(mt_aa).translate())
         if wt_aa != mt_aa:
-            annotation = "missense"
+            annotation = MISSENSE_VARIANT
         hgvs_p = "p.{ref}{aa_pos}{alt}".format(
             ref=wt_aa,
             aa_pos=protein_position,
@@ -271,7 +275,8 @@ class LineageAnnotationsLoader:
                 "position": protein_position,
                 "reference": wt_aa,
                 "alternate": mt_aa,
-                "annotation": annotation}
+                "annotation": annotation,
+                "protein": gene}
 
     def _parse_mutation_sites(self, variant_string: str) -> List[Dict]:
         """
@@ -279,7 +284,7 @@ class LineageAnnotationsLoader:
         is based on the parser found in the utility script of scorpio. Mutations
         on nucleotide level are parsed and translated to protein level.
         """
-        snp_pattern = re.compile('([ACTGUN]+)([0-9]+)([ACTGUN]+)')
+        snp_pattern = re.compile('([ACTG]+)([0-9]+)([ACTG]+)')
         insertion_pattern = re.compile(r'(\w+):(\d+)\+([a-zA-Z]+)')
         aa_mutation = re.compile(r'([a-zA-Z-*]+)(\d+)([a-zA-Z-*]*)')
         mutation_list = []
@@ -292,10 +297,10 @@ class LineageAnnotationsLoader:
                 return [None]
             # Does not work with aa level insertions but None are present in the current constellation files
             mutation_info = {"site": variant_string,
-                             "type": "INSERTION",
+                             "type": VariantType.INSERTION.name,
                              "position": match[2],
                              "length": len(match[2]),
-                             "protein": self._match_protein_name(match[1]),
+                             "protein": LineageAnnotationsLoader.protein_mapping.get(match[1]),
                              "alternate": match[3],
                              "level": "nuc",
                              "hgvs_p": None,
@@ -306,24 +311,23 @@ class LineageAnnotationsLoader:
         # Deletions (nucleotide level) => translated to protein level
         elif this_mut[0] == "del":
             length = int(this_mut[2])
-            protein = self.find_gene(int(this_mut[1]))[0]
             mutation_info = {"site": variant_string,
                              "variant_id": "",
-                             "type": "DELETION",
+                             "type": VariantType.DELETION.name,
                              "genomic_position": int(this_mut[1]),
                              "position": "",
                              "reference": "",
                              "alternate": "del",
                              "ambiguous_alternate": False,
                              "length": length,
-                             "protein": protein,
+                             "protein": None,
                              "level": "aa",
                              "hgvs_p": None,
                              "annotation": None}
             mutation_info.update(self.get_hgvs_from_nuc_deletion(mutation_info))
             # Generate protein level variant ID if not intergenic
             # else drop back to database compatible nucleotide variant ID
-            if protein is not None:
+            if mutation_info["protein"] is not None:
                 mutation_info["variant_id"] = "{}:{}{}{}".format(mutation_info["protein"], mutation_info["reference"],
                                                                  mutation_info["position"], mutation_info["alternate"])
             else:
@@ -338,23 +342,22 @@ class LineageAnnotationsLoader:
             if not match:
                 logger.warning("Could not parse the following site definition: {}".format(variant_string))
                 return [None]
-            protein = self.find_gene(int(match[2]))[0]
             mutation_info = {"site": variant_string,
                              "variant_id": "",
-                             "type": "SNV",
+                             "type": VariantType.SNV.name,
                              "genomic_position": int(match[2]),
                              "position": "",
                              "reference": match[1],
                              "alternate": match[3],
                              "ambiguous_alternate": False,
-                             "protein": protein,
+                             "protein": None,
                              "level": "aa",
                              "hgvs_p": None,
                              "annotation": None}
             mutation_info.update(self.get_hgvs_from_nuc_snp(mutation_info))
             # Generate protein level variant ID if not intergenic
             # else drop back to database compatible nucleotide variant ID
-            if protein is not None:
+            if mutation_info["protein"] is not None:
                 mutation_info["variant_id"] = "{}:{}{}{}".format(mutation_info["protein"], mutation_info["reference"],
                                                                  mutation_info["position"], mutation_info["alternate"])
             else:
@@ -369,7 +372,7 @@ class LineageAnnotationsLoader:
             if not match:
                 logger.warning("Could not parse the following site definition: {}".format(variant_string))
                 return [None]
-            protein = self._match_protein_name(this_mut[0])
+            protein = LineageAnnotationsLoader.protein_mapping.get(this_mut[0])
             reference = match[1]
             alternate = match[3]
             position = int(match[2])
@@ -378,10 +381,11 @@ class LineageAnnotationsLoader:
                 if len(reference) == len(alternate) and len(reference) > 1:
                     for protein_pos, aa_mutations in enumerate(zip(reference, alternate), start=position):
                         variant_id = "{}:{}{}{}".format(protein, aa_mutations[0], protein_pos, aa_mutations[1])
+                        annotation = MISSENSE_VARIANT if aa_mutations[0] != aa_mutations[1] else SYNONYMOUS_VARIANT
                         mutation_info = {"site": variant_id,
                                          "variant_id": variant_id,
                                          "hgvs_p": "p.{}{}{}".format(aa_mutations[0], protein_pos, aa_mutations[1]),
-                                         "type": "SNV",
+                                         "type": VariantType.SNV.name,
                                          "position": protein_pos,
                                          "reference": aa_mutations[0],
                                          "alternate": aa_mutations[1],
@@ -389,14 +393,15 @@ class LineageAnnotationsLoader:
                                          "ambiguous_alternate": False,
                                          "length": len(aa_mutations[0]),
                                          "level": "aa",
-                                         "annotation": "missense"}
+                                         "annotation": annotation}
                         mutation_list.append(mutation_info)
                 else:
                     variant_id = "{}:{}{}{}".format(protein, reference, position, alternate)
+                    annotation = MISSENSE_VARIANT if reference != alternate else SYNONYMOUS_VARIANT
                     mutation_info = {"site": variant_string,
                                      "variant_id": variant_id,
                                      "hgvs_p": "p.{}{}{}".format(reference, position, alternate),
-                                     "type": "SNV",
+                                     "type": VariantType.SNV.name,
                                      "position": position,
                                      "reference": reference,
                                      "alternate": alternate,
@@ -404,7 +409,7 @@ class LineageAnnotationsLoader:
                                      "ambiguous_alternate": True if alternate == "" else False,
                                      "length": len(reference),
                                      "level": "aa",
-                                     "annotation": "missense"}
+                                     "annotation": annotation}
                     mutation_list.append(mutation_info)
             else:
                 alternate = "del" if alternate == "-" else "del"
@@ -419,7 +424,7 @@ class LineageAnnotationsLoader:
                 mutation_info = {"site": variant_string,
                                  "variant_id": variant_id,
                                  "hgvs_p": hgvs_p,
-                                 "type": "DELETION",
+                                 "type": VariantType.DELETION.name,
                                  "position": position,
                                  "reference": reference,
                                  "alternate": alternate,
@@ -427,7 +432,7 @@ class LineageAnnotationsLoader:
                                  "ambiguous_alternate": False,
                                  "length": len(reference),
                                  "level": "aa",
-                                 "annotation": "missense"}
+                                 "annotation": CONSERVATIVE_INFRAME_DELETION}
                 mutation_list.append(mutation_info)
         return mutation_list
 
