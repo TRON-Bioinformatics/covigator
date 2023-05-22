@@ -64,7 +64,8 @@ def get_tab_overview():
                                                     dbc.ListGroupItem("Top recurrent mutations"),
                                                     dbc.ListGroupItem("Genome/gene view"),
                                                     dbc.ListGroupItem("Co-occurrence clustering"),
-                                                    dbc.ListGroupItem("Top intrahost mutations")
+                                                    dbc.ListGroupItem("Top intrahost mutations"),
+                                                    dbc.ListGroupItem("Lineage comparison")
                                                 ],
                                                 flush=True
                                             )
@@ -108,7 +109,26 @@ def get_tab_overview():
                                             ],
                                             outline=False,
                                             style={"width": "40rem", "height": "15rem", "margin-left": "40px"},
-                                        )]
+                                        ),
+                                        dbc.Card(
+                                            [
+                                                #dbc.CardImg(src="/assets/CV19DP_logo_oneliner2.svg", top=True,
+                                                #            style={"width": "18rem", "margin-left": "20px",
+                                                #                   "margin-top": "10px"}, ),
+                                                dbc.CardBody(
+                                                    [
+                                                        dbc.Button(
+                                                            "Explore and compare SARS-CoV-2 lineages",
+                                                            color="warning",
+                                                            href="/lineages-portal",
+                                                            style={"margin-left": "20px", "margin-right": "20px",
+                                                                   "font-size": 20}, ),
+                                                    ]
+                                                ),
+                                            ],
+                                            outline=False,
+                                            style={"width": "40rem", "height": "15rem", "margin-left": "40px"},
+                                        ),]
                                     ),
                                 ])),
                             html.Br(),

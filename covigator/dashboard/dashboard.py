@@ -15,6 +15,7 @@ from covigator.dashboard.tabs.acknowledgements import get_tab_acknowledgements
 from covigator.dashboard.tabs.dataset_ena import get_tab_dataset_ena
 from covigator.dashboard.tabs.dataset_covid19_portal import get_tab_dataset_covid19_portal
 from covigator.dashboard.tabs.download import set_callbacks_download_tab, get_tab_download
+from covigator.dashboard.tabs.lineages_dashboard import get_tab_lineages_dashboard
 from covigator.dashboard.tabs.footer import get_footer
 from covigator.dashboard.tabs.lineages import set_callbacks_lineages_tab, get_tab_lineages
 from covigator.dashboard.tabs.mutation_stats import get_tab_mutation_stats, set_callbacks_mutation_stats_tab
@@ -37,6 +38,7 @@ ENA_HREF = "/ena"
 DOWNLOAD_HREF = "/download"
 ACKNOWLEDGEMENTS_HREF = "/acknowledgements"
 FEEDBACK_HREF = "https://feedback.userreport.com/ca0af557-f613-475f-b1d4-0519d4186f69/"
+LINEAGES_DASHBOARD_HREF = "/lineages-portal"
 TAB_STYLE = {"color": "#003c78", 'margin-right': '15px'}
 
 ID_TAB_CONTENT = "tab-content"
@@ -50,6 +52,7 @@ MUTATIONS_TAB_ID = "mutation-stats"
 COVID19_PORTAL_DATASET_TAB_ID = "covid19-portal-dataset"
 ENA_DATASET_TAB_ID = "ena-dataset"
 OVERVIEW_TAB_ID = "overview"
+LINEAGES_DASHBOARD_TAB_ID = "lineages-dashboard"
 
 
 class Dashboard:
@@ -114,6 +117,9 @@ class Dashboard:
                                                     style={'font-size' : '150%', "color": "#003c78"}),
                                                 dbc.DropdownMenuItem(
                                                     "COVID-19 Data Portal sequences dashboard", href=COVID_PORTAL_HREF,
+                                                    style={'font-size': '150%', "color": "#003c78"}),
+                                                dbc.DropdownMenuItem(
+                                                    "SARS-CoV-2 lineages dashboard", href=LINEAGES_DASHBOARD_HREF,
                                                     style={'font-size': '150%', "color": "#003c78"}),
                                                 dbc.DropdownMenuItem(
                                                     "Documentation", href="https://covigator.readthedocs.io/en/latest",
@@ -220,6 +226,7 @@ ENA_PAGE = DataSource.ENA
 COVID19_PORTAL_PAGE = DataSource.COVID19_PORTAL
 ACKNOWLEDGEMENTS_PAGE = "acknowledgements"
 DOWNLOAD_PAGE = "download"
+LINEAGES_DASHBOARD_PAGE = "lineages-portal"
 
 
 def _get_page(url):
@@ -233,6 +240,8 @@ def _get_page(url):
         return ACKNOWLEDGEMENTS_PAGE
     elif url == DOWNLOAD_HREF:
         return DOWNLOAD_PAGE
+    elif url == LINEAGES_DASHBOARD_HREF:
+        return LINEAGES_DASHBOARD_PAGE
     else:
         raise ValueError("This URL does not exist")
 
@@ -268,11 +277,15 @@ def switch_page_callback(url):
         return [
             dbc.Tab(label="Download", tab_id=DOWNLOAD_TAB_ID,
                     label_style={"color": "#003c78", 'display': 'none'})], DOWNLOAD_TAB_ID
+    elif page == LINEAGES_DASHBOARD_PAGE:
+        return [
+            dbc.Tab(label="Lineages", tab_id=LINEAGES_DASHBOARD_TAB_ID,
+                    label_style={"color": "#003c78", 'display': 'none'})], LINEAGES_DASHBOARD_TAB_ID
 
 
 def switch_logo_callback(url):
     page = _get_page(url)
-    if page in [MAIN_PAGE, ACKNOWLEDGEMENTS_PAGE, DOWNLOAD_PAGE]:
+    if page in [MAIN_PAGE, ACKNOWLEDGEMENTS_PAGE, DOWNLOAD_PAGE, LINEAGES_DASHBOARD_PAGE]:
         return html.A(html.Img(src=COVIGATOR_LOGO, height="80px"), href="/")
     elif page == COVID19_PORTAL_PAGE:
         return html.A(html.Img(src=COVIGATOR_COVID19_LOGO, height="80px"), href="/")
@@ -328,6 +341,8 @@ def switch_tab_callback(at, url, session, content_folder):
                 return get_tab_acknowledgements()
             elif at == LINEAGES_TAB_ID:
                 return get_tab_lineages(queries=queries, data_source=page)
+            elif at == LINEAGES_DASHBOARD_TAB_ID:
+                return get_tab_lineages_dashboard()
             return html.P("This shouldn't ever be displayed...")
         except Exception as e:
             logger.exception(e)
