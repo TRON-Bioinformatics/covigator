@@ -73,7 +73,6 @@ class LineageAnnotationsLoader:
         gene, gene_start, gene_end = self.find_gene(genomic_position)
         # If deletions falls into intergenic space return nucleotide level reference, alternate and position
         if gene is None:
-            logger.info("Deletion does not overlap any protein...")
             return {
                 "hgvs_p": None,
                 "reference": self.genome[genomic_position - 1: genomic_position + deletion_length],
@@ -595,6 +594,7 @@ class LineageAnnotationsLoader:
         logger.info("Loaded into the database {} lineages".format(count_lineages))
         
         # Store all observed lineage defining mutations in database
+        lineage_mutations = []
         for this_mut in all_mutations:
             mutation = LineageDefiningVariants(
                 variant_id=this_mut["variant_id"],
@@ -608,9 +608,11 @@ class LineageAnnotationsLoader:
                 annotation=this_mut["annotation"],
                 variant_level=this_mut["level"]
             )
-            self.session.add(mutation)
-            self.session.commit()
+            lineage_mutations.append(mutation)
             count_mutations += 1
+        # Add all mutations at one for performance reasons
+        self.session.add_all(lineage_mutations)
+        self.session.commit()
         logger.info("Loaded into the database {} mutations".format(count_mutations))
 
     def _fill_relation_ship_table(self, lineage_constellation):
@@ -618,6 +620,7 @@ class LineageAnnotationsLoader:
         Store lineage/mutation N:M relationships.
         """
         count_relationship = 0
+        relationship = []
         # Collect mutations and lineages including it into a dictionary
         mutation_lineage_mapping = {}
         pango_constellation_mapping = self._create_constellation_pango_mapping(lineage_constellation)
@@ -642,9 +645,11 @@ class LineageAnnotationsLoader:
                     pango_lineage_id=pango_id,
                     variant_id=variant_id
                 )
-                self.session.add(lineage_variant)
-                self.session.commit()
+                relationship.append(lineage_variant)
                 count_relationship += 1
+
+        self.session.add_all(relationship)
+        self.session.commit()
         logger.info("Loaded into the database {} lineage-variant relationships".format(count_relationship))
 
     def _update_sublineages_who(self):

@@ -1162,12 +1162,12 @@ class Lineages(Base):
 
 class LineageDefiningVariants(Base):
     """
-    Store lineage defining mutations as defined in the scorpio constellation files. Mutations can be on nucleotide
+    Store lineage defining mutations as defined in the scorpio constellation files. Mutations can be in nucleotide
     (intergenic) or proteomic space. The columns variant_id, position, reference and alternate therefore have different
     meanings and formatting
 
     Variant_id: position_in_genome:[reference_bases]>[alternate_nuc] (genomic level)
-                canonical_protein_name:[reference_aa]position_in_protein[alternate_aa]
+                canonical_protein_name:[reference_aa]position_in_protein[alternate_aa] (proteomic level)
     position: position_in_genome (genomic level) or position_in_protein (proteomic level)
     reference: reference_bases (genomic level) or reference_aa (proteomic level)
     alternate: alternate_bases (genomic level) or alternate_aa (proteomic level)
