@@ -1,9 +1,11 @@
 from covigator.database.database import Database
 from covigator.database.model import Gene, get_table_versioned_name, Conservation, Domain, Lineages, \
-    LineageDefiningVariants, LineageVariant
+    LineageDefiningVariants, LineageVariant, VariantType, VariantLevel
 import pandas as pd
 from covigator.configuration import Configuration
 from covigator.tests.unit_tests.abstract_test import AbstractTest
+from Bio.Alphabet.IUPAC import protein as valid_protein
+from Bio.Alphabet.IUPAC import unambiguous_dna as valid_nucleotide
 
 
 class DatabaseInitialisationTests(AbstractTest):
@@ -117,6 +119,26 @@ class DatabaseInitialisationTests(AbstractTest):
             self.assertIsNotNone(d.alternate)
             self.assertIsNotNone(d.variant_type)
             self.assertIsNotNone(d.position)
+            # Check type of reference and alternate
+            if d.variant_level == VariantLevel.PROTEOMIC.name:
+                if d.variant_type == VariantType.DELETION.name:
+                    self.assertTrue(
+                        all([x in valid_protein.letters for x in d.reference])
+                    )
+                    # For proteomic level deletions alternate is always "del"
+                    self.assertTrue(d.alternate == "del")
+                else:
+                    # Add stop_lost / stop_gained to valid alphabet letters
+                    self.assertTrue(d.reference in valid_protein.letters + "*")
+                    self.assertTrue(d.alternate in valid_protein.letters + "*")
+            # Check nucleotide level SNVs and Deletions
+            else:
+                self.assertTrue(
+                    all([x in valid_nucleotide.letters for x in d.reference])
+                )
+                self.assertTrue(
+                    all([x in valid_nucleotide.letters for x in d.alternate])
+                )
 
         # Test that mutations are parsed and stored for a lineage correctly
         query_delta = session.query(LineageVariant).filter(LineageVariant.pango_lineage_id == "B.1.617.2")

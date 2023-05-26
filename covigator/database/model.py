@@ -51,6 +51,7 @@ VARIANT_TYPE_CONSTRAINT_NAME = get_table_versioned_name('variant_type', config=c
 LINEAGE_TABLE_NAME = get_table_versioned_name('lineage', config=config)
 CONSTELLATION_SITES_TABLE_NAME = get_table_versioned_name('lineage_defining_variant', config=config)
 LINEAGE_SITES_JUNCTION_TABLE_NAME = get_table_versioned_name('lineage_variant', config=config)
+VARIANT_LEVEL_CONSTRAINT_NAME = get_table_versioned_name('variant_level', config=config)
 SEPARATOR = ";"
 
 Base = declarative_base()
@@ -1160,6 +1161,13 @@ class Lineages(Base):
     )
 
 
+class VariantLevel(enum.Enum):
+    __constraint_name__ = VARIANT_LEVEL_CONSTRAINT_NAME
+
+    PROTEOMIC = 1
+    NUCLEOTIDE = 2
+
+
 class LineageDefiningVariants(Base):
     """
     Store lineage defining mutations as defined in the scorpio constellation files. Mutations can be in nucleotide
@@ -1183,7 +1191,7 @@ class LineageDefiningVariants(Base):
     ambiguous_alternate = Column(Boolean, default=False)
     annotation = Column(String)
     hgvs = Column(String)
-    variant_level = Column(String)
+    variant_level = Column(Enum(VariantLevel, name=VariantLevel.__constraint_name__))
 
     constellations = relationship(
         "Lineages",

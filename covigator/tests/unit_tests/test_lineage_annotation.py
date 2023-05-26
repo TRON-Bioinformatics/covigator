@@ -2,7 +2,7 @@ from covigator.database.database import Database
 from covigator.database.queries import Queries
 from covigator.configuration import Configuration
 from covigator.tests.unit_tests.abstract_test import AbstractTest
-from covigator.references.lineage_annotation import LineageAnnotationsLoader
+from covigator.references.lineage_annotation import LineageAnnotationsLoader, Hgvs, MutationInfo
 
 
 class LineageAnnotationTest(AbstractTest):
@@ -14,7 +14,7 @@ class LineageAnnotationTest(AbstractTest):
         intergenic_locations = [265, 21556]
         for loc in gene_locations:
             x = self.loader.find_gene(loc)
-            self.assertEqual(x, ('ORF1ab', 266,  21555))
+            self.assertEqual(x, ('ORF1ab', 266, 21555))
         for loc in intergenic_locations:
             x = self.loader.find_gene(loc)
             self.assertIsNone(x[0])
@@ -26,20 +26,28 @@ class LineageAnnotationTest(AbstractTest):
         intergenic_snp = {"genomic_position": 240, "reference": "C", "alternate": "T"}
 
         x = self.loader.get_hgvs_from_nuc_snp(missense_snp)
-        self.assertEqual(
-            x, {'hgvs_p': 'p.I68T', 'position': 68, 'reference': 'I', 'alternate': 'T',
-                'annotation': 'missense_variant', 'protein': 'S'}
-        )
+        self.assertTrue(x.hgvs_p == 'p.I68T')
+        self.assertTrue(x.position == 68)
+        self.assertTrue(x.reference == "I")
+        self.assertTrue(x.alternate == "T")
+        self.assertTrue(x.annotation == "missense_variant")
+        self.assertTrue(x.protein == "S")
+
         x = self.loader.get_hgvs_from_nuc_snp(synonymous_snp)
-        self.assertEqual(
-            x, {'hgvs_p': 'p.S216S', 'position': 216, 'reference': 'S', 'alternate': 'S',
-                'annotation': 'synonymous_variant', 'protein': 'ORF1ab'}
-        )
+        self.assertTrue(x.hgvs_p == 'p.S216S')
+        self.assertTrue(x.position == 216)
+        self.assertTrue(x.reference == "S")
+        self.assertTrue(x.alternate == "S")
+        self.assertTrue(x.annotation == "synonymous_variant")
+        self.assertTrue(x.protein == "ORF1ab")
+
         x = self.loader.get_hgvs_from_nuc_snp(intergenic_snp)
-        self.assertEqual(
-            x, {'hgvs_p': None, 'position': 240, 'reference': 'C', 'alternate': 'T',
-                'annotation': 'intergenic_variant', 'protein': None}
-        )
+        self.assertTrue(x.hgvs_p is None)
+        self.assertTrue(x.position == 240)
+        self.assertTrue(x.reference == "C")
+        self.assertTrue(x.alternate == "T")
+        self.assertTrue(x.annotation == "intergenic_variant")
+        self.assertTrue(x.protein is None)
 
     def test_get_hgvs_from_nuc_deletion(self):
         # Test deletions with different effects
@@ -56,55 +64,73 @@ class LineageAnnotationTest(AbstractTest):
         # 21633:TACCCCCTGCATA>T = p.L24_Y28delinsF
         insdel_deletion_2 = {"genomic_position": 21633, "length": 12}
 
-        self.assertEqual(
-            self.loader.get_hgvs_from_nuc_deletion(normal_deletion),
-            {'hgvs_p': 'p.Y144del', 'reference': 'Y', 'alternate': 'del',
-             'position': 144, "annotation": "conservative_inframe_deletion", "protein": "S"}
-        )
-        self.assertEqual(
-            self.loader.get_hgvs_from_nuc_deletion(normal_deletion_long),
-            {'hgvs_p': 'p.Y144_H146del', 'reference': 'YYH', 'alternate': 'del',
-             'position': 144, "annotation": "disruptive_inframe_deletion", "protein": "S"}
-        )
-        self.assertEqual(
-            self.loader.get_hgvs_from_nuc_deletion(normal_deletion_long_2),
-            {'hgvs_p': 'p.F157_R158del', 'reference': 'FR', 'alternate': 'del',
-             'position': 157, "annotation": "disruptive_inframe_deletion", 'protein': "S"}
-        )
-        self.assertEqual(
-            self.loader.get_hgvs_from_nuc_deletion(fs_deletion),
-            {'hgvs_p': 'p.Y144fs', 'reference': 'Y', 'alternate': 'del',
-             'position': 144, 'annotation': 'frameshift_variant', 'protein': 'S'}
-        )
-        self.assertEqual(
-            self.loader.get_hgvs_from_nuc_deletion(insdel_deletion),
-            {'hgvs_p': 'p.Y144_S155delinsC', 'reference': 'YYHKNNKSWMES', 'alternate': 'del',
-             'position': 144, "annotation": "disruptive_inframe_deletion", "protein": "S"}
-        )
-        self.assertEqual(
-            self.loader.get_hgvs_from_nuc_deletion(insdel_deletion_2),
-            {'hgvs_p': 'p.L24_Y28delinsF', 'reference': 'LPPAY', 'alternate': 'del',
-             'position': 24, "annotation": "disruptive_inframe_deletion", "protein": "S"}
-        )
+        x = self.loader.get_hgvs_from_nuc_deletion(normal_deletion)
+        self.assertTrue(x.hgvs_p == "p.Y144del")
+        self.assertTrue(x.reference == "Y")
+        self.assertTrue(x.alternate == "del")
+        self.assertTrue(x.position == 144)
+        self.assertTrue(x.annotation == "conservative_inframe_deletion")
+        self.assertTrue(x.protein == "S")
+
+        x = self.loader.get_hgvs_from_nuc_deletion(normal_deletion_long)
+        self.assertTrue(x.hgvs_p == "p.Y144_H146del")
+        self.assertTrue(x.reference == "YYH")
+        self.assertTrue(x.alternate == "del")
+        self.assertTrue(x.position == 144)
+        self.assertTrue(x.annotation == "disruptive_inframe_deletion")
+        self.assertTrue(x.protein == "S")
+
+        x = self.loader.get_hgvs_from_nuc_deletion(normal_deletion_long_2)
+        self.assertTrue(x.hgvs_p == "p.F157_R158del")
+        self.assertTrue(x.reference == "FR")
+        self.assertTrue(x.alternate == "del")
+        self.assertTrue(x.position == 157)
+        self.assertTrue(x.annotation == "disruptive_inframe_deletion")
+        self.assertTrue(x.protein == "S")
+
+        x = self.loader.get_hgvs_from_nuc_deletion(fs_deletion)
+        self.assertTrue(x.hgvs_p == "p.Y144fs")
+        self.assertTrue(x.reference == "Y")
+        self.assertTrue(x.alternate == "del")
+        self.assertTrue(x.position == 144)
+        self.assertTrue(x.annotation == "frameshift_variant")
+        self.assertTrue(x.protein == "S")
+
+        x = self.loader.get_hgvs_from_nuc_deletion(insdel_deletion)
+        self.assertTrue(x.hgvs_p == "p.Y144_S155delinsC")
+        self.assertTrue(x.reference == "YYHKNNKSWMES")
+        self.assertTrue(x.alternate == "del")
+        self.assertTrue(x.position == 144)
+        self.assertTrue(x.annotation == "disruptive_inframe_deletion")
+        self.assertTrue(x.protein == "S")
+
+        x = self.loader.get_hgvs_from_nuc_deletion(insdel_deletion_2)
+        self.assertTrue(x.hgvs_p == "p.L24_Y28delinsF")
+        self.assertTrue(x.reference == "LPPAY")
+        self.assertTrue(x.alternate == "del")
+        self.assertTrue(x.position == 24)
+        self.assertTrue(x.annotation == "disruptive_inframe_deletion")
+        self.assertTrue(x.protein == "S")
+
 
     def test_parse_mutation_sites(self):
         # Test that pangolin mutation definitions are parsed correctly
         parsed_site = self.loader._parse_mutation_sites("nuc:C16176T")
         self.assertIsNotNone(parsed_site)
         self.assertEqual(len(parsed_site), 1)
-        self.assertIsInstance(parsed_site[0], dict)
+        self.assertIsInstance(parsed_site[0], Hgvs)
 
         parsed_site = self.loader._parse_mutation_sites("spike:D614G")
         self.assertIsNotNone(parsed_site)
         self.assertEqual(len(parsed_site), 1)
-        self.assertIsInstance(parsed_site[0], dict)
+        self.assertIsInstance(parsed_site[0], Hgvs)
 
         # Test that grouped AA level mutation are split into separate mutations
         parsed_site = self.loader._parse_mutation_sites("n:RG203KR")
         self.assertIsNotNone(parsed_site)
         self.assertEqual(len(parsed_site), 2)
-        self.assertTrue(parsed_site[0]["variant_id"] == "N:R203K")
-        self.assertTrue(parsed_site[1]["variant_id"] == "N:G204R")
+        self.assertTrue(parsed_site[0].variant_id == "N:R203K")
+        self.assertTrue(parsed_site[1].variant_id == "N:G204R")
 
     def test_create_constellation_pango_mapping(self):
         fake_lineage_constellation = {
@@ -115,13 +141,18 @@ class LineageAnnotationTest(AbstractTest):
         self.assertEqual(len(mapping), 2)
 
     def test_find_parent_sites(self):
+        fake_lineage_a_mutations = [Hgvs(hgvs_p=1, reference="A", alternate="T", position=1, annotation="A", protein="S"),
+                                    Hgvs(hgvs_p=2, reference="A", alternate="T", position=1, annotation="A", protein="S")]
+        fake_lineage_b_mutations = [Hgvs(hgvs_p=3, reference="A", alternate="T", position=1, annotation="A", protein="S"),
+                                    Hgvs(hgvs_p=4, reference="A", alternate="T", position=1, annotation="A", protein="S")]
+
         fake_lineage_constellation = {
             "A": {"pangolin_lineage_list": set(["A.1"]),
                   "parent_lineage_id": None,
-                  "lineage_mutations": [{"variant_id": 1}, {"variant_id": 2}]},
+                  "lineage_mutations": fake_lineage_a_mutations},
             "B": {"pangolin_lineage_list": set(["B.1"]),
                   "parent_lineage_id": "A.1",
-                  "lineage_mutations": [{"variant_id": 3}, {"variant_id": 4}]}
+                  "lineage_mutations": fake_lineage_b_mutations}
         }
         b_sites = self.loader._find_parent_sites("B",
             fake_lineage_constellation,
@@ -129,7 +160,7 @@ class LineageAnnotationTest(AbstractTest):
         self.assertIsNotNone(b_sites)
         self.assertEqual(len(b_sites), 4)
         # Test that parent sites are returned
-        self.assertTrue({"variant_id": 1} in b_sites)
-        self.assertTrue({"variant_id": 2} in b_sites)
+        self.assertTrue(fake_lineage_a_mutations[0] in b_sites)
+        self.assertTrue(fake_lineage_a_mutations[1] in b_sites)
 
 
