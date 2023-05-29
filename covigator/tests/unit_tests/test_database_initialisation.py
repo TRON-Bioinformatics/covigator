@@ -118,10 +118,14 @@ class DatabaseInitialisationTests(AbstractTest):
             self.assertIsNotNone(d.reference)
             self.assertIsNotNone(d.alternate)
             self.assertIsNotNone(d.variant_type)
+            self.assertIsNotNone(d.variant_level)
             self.assertIsNotNone(d.position)
             # Check type of reference and alternate
-            if d.variant_level == VariantLevel.PROTEOMIC.name:
-                if d.variant_type == VariantType.DELETION.name:
+            # Not working why?
+            # if d.variant_level == VariantLevel.PROTEOMIC.name:
+            if d.variant_level == "PROTEOMIC":
+                if d.variant_type == "DELETION":
+                # if d.variant_type == VariantType.DELETION.name:
                     self.assertTrue(
                         all([x in valid_protein.letters for x in d.reference])
                     )
