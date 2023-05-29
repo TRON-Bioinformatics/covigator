@@ -118,12 +118,12 @@ class LineageAnnotationTest(AbstractTest):
         parsed_site = self.loader._parse_mutation_sites("nuc:C16176T")
         self.assertIsNotNone(parsed_site)
         self.assertEqual(len(parsed_site), 1)
-        self.assertIsInstance(parsed_site[0], Hgvs)
+        self.assertIsInstance(parsed_site[0], MutationInfo)
 
         parsed_site = self.loader._parse_mutation_sites("spike:D614G")
         self.assertIsNotNone(parsed_site)
         self.assertEqual(len(parsed_site), 1)
-        self.assertIsInstance(parsed_site[0], Hgvs)
+        self.assertIsInstance(parsed_site[0], MutationInfo)
 
         # Test that grouped AA level mutation are split into separate mutations
         parsed_site = self.loader._parse_mutation_sites("n:RG203KR")
