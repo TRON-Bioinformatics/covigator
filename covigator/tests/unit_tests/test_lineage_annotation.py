@@ -183,7 +183,7 @@ class LineageAnnotationTest(AbstractTest):
     def test_get_frameshift_hgvs(self):
         hgvs = LineageAnnotationsLoader._get_frameshift_hgvs("A", 1)
         self.assertIsNotNone(hgvs)
-        self.assertTrue(hgvs == "p.1Afs")
+        self.assertTrue(hgvs == "p.A1fs")
 
     def test_get_insdel_hgvs(self):
         hgvs = LineageAnnotationsLoader._get_insdel_hgvs("A", 1, "V", 2, "G")
