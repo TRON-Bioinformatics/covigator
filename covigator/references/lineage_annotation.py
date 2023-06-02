@@ -86,7 +86,8 @@ class LineageAnnotationsLoader:
     def _build_hgvs_annotation(self, frameshift, delins, ):
         pass
 
-    def _get_protein_position(self, position_in_cds):
+    @staticmethod
+    def get_protein_position(position_in_cds):
         """
         Calculate position in amino acid sequence
         """
@@ -94,22 +95,54 @@ class LineageAnnotationsLoader:
             return position_in_cds // 3 + 1
         return position_in_cds // 3
 
-
-    def _is_frameshift(self, deletion_length):
+    @staticmethod
+    def is_frameshift(deletion_length):
         """
         Given a deletion length, check if is frameshift deletion or not
         """
         return deletion_length % 3 != 0
 
-    def _get_last_position_of_deletion(self, protein_position, deletion_length):
+    @staticmethod
+    def get_last_position_of_deletion(protein_position, deletion_length):
         """
         Given the deletion_length (nucleotides) and the protein position return the last position affected by the
         deletion
         """
-        if self._is_frameshift(deletion_length):
+        if LineageAnnotationsLoader.is_frameshift(deletion_length):
             return protein_position
 
         return protein_position + deletion_length // 3
+
+    def get_frameshift_hgvs(self, ref_aa, position):
+        hgvs_p = "p.{aa}{pos}fs".format(aa=ref_aa, pos=position)
+        return hgvs_p
+
+    def get_insdel_hgvs(self, first_aa: str, first_pos: str, last_aa: str, last_pos: str, inserted_aa: str):
+        hgvs = "p.{first_aa}{first_pos}_{last_aa}{last_pos}delins{ins}".format(
+            first_aa=first_aa,
+            first_pos=first_pos,
+            last_aa=last_aa,
+            last_pos=last_pos,
+            ins=inserted_aa
+        )
+        return hgvs
+
+    def get_deletion_hgvs(self, first_aa, first_pos, last_aa, last_pos):
+
+        if first_pos - last_pos > 0:
+            hgvs = "p.{first_aa}{first_pos}_{last_aa}{last_pos}del".format(
+                first_aa=first_aa,
+                first_pos=first_pos,
+                last_aa=last_aa,
+                last_pos=last_pos
+            )
+        else:
+            hgvs = "p.{aa}{pos}del".format(
+                aa=first_aa,
+                pos=first_aa
+            )
+        return hgvs
+
 
 
     def get_hgvs_from_nuc_deletion(self, variant: dict) -> Hgvs:
@@ -141,7 +174,7 @@ class LineageAnnotationsLoader:
         # are non-inclusive => the next genomic position is affected by the deletion
         position_in_cds = genomic_position - cds_start
         # Get position in the protein and calculate the coordinates of the corresponding codon
-        protein_position = self._get_protein_position(position_in_cds)
+        protein_position = self.get_protein_position(position_in_cds)
         codon = [protein_position * 3 - 2, protein_position * 3 - 1, protein_position * 3]
         delins = False
         first_changed = False
@@ -156,8 +189,8 @@ class LineageAnnotationsLoader:
             first_changed = True
             protein_position += 1
             # If the deletion is longer than one codon get last codon affected by deletion
-            position_last = self._get_last_position_of_deletion(protein_position - 1,
-                                                                deletion_length)
+            position_last = self.get_last_position_of_deletion(protein_position - 1,
+                                                               deletion_length)
 
         # Deletion starts at first base of codon (second and third position of codon part of the deletion)
         elif position_in_cds % 3 == 1:
@@ -179,11 +212,11 @@ class LineageAnnotationsLoader:
                 first_changed = True
                 protein_position += 1
                 # Get last codon affected by deletion
-                position_last = self._get_last_position_of_deletion(protein_position - 1, deletion_length)
+                position_last = self.get_last_position_of_deletion(protein_position - 1, deletion_length)
             else:
                 # If the AA has changed get the last codon affected by the deletion and set inserted AA
                 # Example: p.D119_I121delinsV
-                position_last = self._get_last_position_of_deletion(protein_position, deletion_length)
+                position_last = self.get_last_position_of_deletion(protein_position, deletion_length)
                 delins = True
                 inserted_aa = mt_aa
 
@@ -208,11 +241,11 @@ class LineageAnnotationsLoader:
                 first_changed = True
                 protein_position += 1
                 # If the deletion is longer than one codon get last codon affected by deletion
-                position_last = self._get_last_position_of_deletion(protein_position - 1, deletion_length)
+                position_last = self.get_last_position_of_deletion(protein_position - 1, deletion_length)
             else:
                 # If the AA has changed get the last codon affected by the deletion and set inserted AA
                 # Example: p.D119_I121delinsV
-                position_last = self._get_last_position_of_deletion(protein_position, deletion_length)
+                position_last = self.get_last_position_of_deletion(protein_position, deletion_length)
                 delins = True
                 inserted_aa = mt_aa
 
@@ -221,7 +254,7 @@ class LineageAnnotationsLoader:
         if first_changed:
             codon = [protein_position * 3 - 2, protein_position * 3 - 1, protein_position * 3]
         first_aa = str(Seq(self.genome[cds_start + codon[0] - 1: cds_start + codon[2]]).translate())
-        # Calculate codon for the last affected amino acid if deletion is longer than one codon
+        # Calculate codon for the last affected amino acid if deletion spans more than one codon
         # Check consists of comparing position_last with protein_position. If they are the same only a single codon
         # is affected and therefore the codon and the AA not required
         if position_last != protein_position:
@@ -230,7 +263,7 @@ class LineageAnnotationsLoader:
 
         # Create HGVS notations for different effects of the mutation
         # HGVS for frameshift deletion
-        if self._is_frameshift(deletion_length):
+        if self.is_frameshift(deletion_length):
             # Redefine in case we have frameshift variant
             annotation = FRAMESHIFT_VARIANT
             hgvs = "p.{aa}{pos}fs".format(
@@ -278,7 +311,7 @@ class LineageAnnotationsLoader:
             annotation=annotation,
             protein=gene)
 
-    def get_hgvs_from_nuc_snp(self, variant) -> Hgvs:
+    def get_hgvs_from_nuc_snp(self, variant: dict) -> Hgvs:
         """
         Translate pangolin nucleotide level SNPs description into hgvs protein annotation. Returns the variant
         as hgvs string and the annotation of this variant
@@ -334,14 +367,14 @@ class LineageAnnotationsLoader:
             annotation=annotation,
             protein=gene)
 
-    def _generate_variant_id(self, hgvs: Hgvs) -> str:
+    def _generate_variant_id(self, protein: str, position: str, reference: str, alternate: str) -> str:
         """
-        Generate variant id based on hgvs object
+        Generate variant id for nucleotide and proteomic variants
         """
-        if hgvs.protein is None:
-            return "{}:{}>{}".format(hgvs.position, hgvs.reference, hgvs.alternate)
+        if protein is None:
+            return "{}:{}>{}".format(position, reference, alternate)
 
-        return "{}:{}{}{}".format(hgvs.protein, hgvs.reference, hgvs.position, hgvs.alternate)
+        return "{}:{}{}{}".format(protein, reference, position, alternate)
 
 
     def _parse_mutation_sites(self, variant_string: str) -> List[Dict]:
@@ -361,7 +394,7 @@ class LineageAnnotationsLoader:
         # Deletions (nucleotide level) => translated to protein level
         elif this_mut[0] == "del":
             hgvs = self.get_hgvs_from_nuc_deletion({"genomic_position": int(this_mut[1]), "length": int(this_mut[2])})
-            variant_id = self._generate_variant_id(hgvs)
+            variant_id = self._generate_variant_id(hgvs.protein, hgvs.position, hgvs.reference, hgvs.alternate)
             mutation_info = MutationInfo(
                 site=variant_string,
                 variant_id=variant_id,
@@ -384,7 +417,7 @@ class LineageAnnotationsLoader:
                 return [None]
             hgvs = self.get_hgvs_from_nuc_snp({"genomic_position": int(match[2]), "reference": match[1],
                                                "alternate": match[3]})
-            variant_id = self._generate_variant_id(hgvs)
+            variant_id = self._generate_variant_id(hgvs.protein, hgvs.position, hgvs.reference, hgvs.alternate)
             mutation_info = MutationInfo(
                 site=variant_string,
                 variant_id=variant_id,
@@ -413,7 +446,7 @@ class LineageAnnotationsLoader:
                 # Split grouped protein mutations e.g. KR204RG into K204R & R205G
                 if len(reference) == len(alternate) and len(reference) > 1:
                     for protein_pos, aa_mutations in enumerate(zip(reference, alternate), start=position):
-                        variant_id = "{}:{}{}{}".format(protein, aa_mutations[0], protein_pos, aa_mutations[1])
+                        variant_id = self._generate_variant_id(protein, protein_pos, aa_mutations[0], aa_mutations[1])
                         annotation = MISSENSE_VARIANT if aa_mutations[0] != aa_mutations[1] else SYNONYMOUS_VARIANT
                         mutation_info = MutationInfo(
                             site=variant_id,
@@ -430,7 +463,7 @@ class LineageAnnotationsLoader:
                         )
                         mutation_list.append(mutation_info)
                 else:
-                    variant_id = "{}:{}{}{}".format(protein, reference, position, alternate)
+                    variant_id = self._generate_variant_id(protein, position, reference, alternate)
                     annotation = MISSENSE_VARIANT if reference != alternate else SYNONYMOUS_VARIANT
                     mutation_info = MutationInfo(
                         site=variant_string,
@@ -449,7 +482,7 @@ class LineageAnnotationsLoader:
                     mutation_list.append(mutation_info)
             else:
                 alternate = "del" if alternate == "-" else "del"
-                variant_id = "{}:{}{}{}".format(protein, reference, position, alternate)
+                variant_id = self._generate_variant_id(protein, position, reference, alternate)
                 # Generate HGVS notation for deletion
                 if len(reference) > 1:
                     hgvs_p = "p.{}{}_{}{}del".format(reference[0], position, reference[-1],

@@ -140,6 +140,7 @@ class DatabaseInitialisationTests(AbstractTest):
                 self.assertTrue(
                     all([x in valid_nucleotide.letters for x in d.reference])
                 )
+                print(d.alternate)
                 self.assertTrue(
                     all([x in valid_nucleotide.letters for x in d.alternate])
                 )

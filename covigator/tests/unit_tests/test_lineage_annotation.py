@@ -163,4 +163,22 @@ class LineageAnnotationTest(AbstractTest):
         self.assertTrue(fake_lineage_a_mutations[0] in b_sites)
         self.assertTrue(fake_lineage_a_mutations[1] in b_sites)
 
+    def test_is_frameshift(self):
+        self.assertTrue(LineageAnnotationsLoader.is_frameshift(2))
+        self.assertFalse(LineageAnnotationsLoader.is_frameshift(3))
+
+    def test_get_protein_position(self):
+        self.assertTrue(LineageAnnotationsLoader.get_protein_position(1) == 1)
+        self.assertTrue(LineageAnnotationsLoader.get_protein_position(2) == 1)
+        self.assertTrue(LineageAnnotationsLoader.get_protein_position(4) == 2)
+        self.assertTrue(LineageAnnotationsLoader.get_protein_position(10) == 4)
+
+    def test_get_last_position_of_deletion(self):
+        self.assertTrue(LineageAnnotationsLoader.get_last_position_of_deletion(100, 2) == 100)
+        self.assertTrue(LineageAnnotationsLoader.get_last_position_of_deletion(100, 3) == 101)
+        self.assertTrue(LineageAnnotationsLoader.get_last_position_of_deletion(100, 4) == 100)
+        self.assertTrue(LineageAnnotationsLoader.get_last_position_of_deletion(100, 6) == 102)
+        self.assertTrue(LineageAnnotationsLoader.get_last_position_of_deletion(100, 9) == 103)
+
+
 
