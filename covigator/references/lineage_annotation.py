@@ -338,7 +338,7 @@ class LineageAnnotationsLoader:
                 protein=gene)
 
         position_in_cds = position - (gene_start - 1)
-        protein_position = self._get_protein_position(position_in_cds)
+        protein_position = self.get_protein_position(position_in_cds)
         # Get wild type and mutated codon sequence
         if position_in_cds % 3 == 0:
             wt_codon = self.genome[(position - 2) - 1: position]
