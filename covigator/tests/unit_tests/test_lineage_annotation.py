@@ -164,21 +164,50 @@ class LineageAnnotationTest(AbstractTest):
         self.assertTrue(fake_lineage_a_mutations[1] in b_sites)
 
     def test_is_frameshift(self):
-        self.assertTrue(LineageAnnotationsLoader.is_frameshift(2))
-        self.assertFalse(LineageAnnotationsLoader.is_frameshift(3))
+        self.assertTrue(LineageAnnotationsLoader._is_frameshift(2))
+        self.assertFalse(LineageAnnotationsLoader._is_frameshift(3))
 
     def test_get_protein_position(self):
-        self.assertTrue(LineageAnnotationsLoader.get_protein_position(1) == 1)
-        self.assertTrue(LineageAnnotationsLoader.get_protein_position(2) == 1)
-        self.assertTrue(LineageAnnotationsLoader.get_protein_position(4) == 2)
-        self.assertTrue(LineageAnnotationsLoader.get_protein_position(10) == 4)
+        self.assertTrue(LineageAnnotationsLoader._get_protein_position(1) == 1)
+        self.assertTrue(LineageAnnotationsLoader._get_protein_position(2) == 1)
+        self.assertTrue(LineageAnnotationsLoader._get_protein_position(4) == 2)
+        self.assertTrue(LineageAnnotationsLoader._get_protein_position(10) == 4)
 
     def test_get_last_position_of_deletion(self):
-        self.assertTrue(LineageAnnotationsLoader.get_last_position_of_deletion(100, 2) == 100)
-        self.assertTrue(LineageAnnotationsLoader.get_last_position_of_deletion(100, 3) == 101)
-        self.assertTrue(LineageAnnotationsLoader.get_last_position_of_deletion(100, 4) == 100)
-        self.assertTrue(LineageAnnotationsLoader.get_last_position_of_deletion(100, 6) == 102)
-        self.assertTrue(LineageAnnotationsLoader.get_last_position_of_deletion(100, 9) == 103)
+        self.assertTrue(LineageAnnotationsLoader._get_last_position_of_deletion(100, 2) == 100)
+        self.assertTrue(LineageAnnotationsLoader._get_last_position_of_deletion(100, 3) == 101)
+        self.assertTrue(LineageAnnotationsLoader._get_last_position_of_deletion(100, 4) == 100)
+        self.assertTrue(LineageAnnotationsLoader._get_last_position_of_deletion(100, 6) == 102)
+        self.assertTrue(LineageAnnotationsLoader._get_last_position_of_deletion(100, 9) == 103)
+
+    def test_get_frameshift_hgvs(self):
+        hgvs = LineageAnnotationsLoader._get_frameshift_hgvs("A", 1)
+        self.assertIsNotNone(hgvs)
+        self.assertTrue(hgvs == "p.1Afs")
+
+    def test_get_insdel_hgvs(self):
+        hgvs = LineageAnnotationsLoader._get_insdel_hgvs("A", 1, "V", 2, "G")
+        self.assertIsNotNone(hgvs)
+        self.assertTrue(hgvs == "p.A1_V2delinsG")
+
+    def test_get_deletion_hgvs(self):
+        hgvs = LineageAnnotationsLoader._get_deletion_hgvs("A", 1, "V", 2)
+        self.assertIsNotNone(hgvs)
+        self.assertTrue(hgvs == "p.A1_V2del")
+        hgvs = LineageAnnotationsLoader._get_deletion_hgvs("A", 1, None, 1)
+        self.assertIsNotNone(hgvs)
+        self.assertTrue(hgvs == "p.A1del")
+
+    def test_generate_variant_id(self):
+        # Test nucleotide level variant id
+        var_id = LineageAnnotationsLoader._generate_variant_id(None, 1, "A", "G")
+        self.assertIsNotNone(var_id)
+        self.assertTrue(var_id == "1:A>G")
+        # Test proteomic variant id
+        var_id = LineageAnnotationsLoader._generate_variant_id("S", 144, "G", "R")
+        self.assertIsNotNone(var_id)
+        self.assertTrue(var_id == "S:G144R")
+
 
 
 
