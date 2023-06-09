@@ -1081,7 +1081,7 @@ class RegionType(enum.Enum):
 
     GENE = 1
     DOMAIN = 2
-    CODING_REGION=3
+    CODING_REGION = 3
 
 
 class PrecomputedSynonymousNonSynonymousCounts(Base):
@@ -1165,7 +1165,7 @@ class VariantLevel(enum.Enum):
     __constraint_name__ = VARIANT_LEVEL_CONSTRAINT_NAME
 
     PROTEOMIC = 1
-    NUCLEOTIDE = 2
+    GENOMIC = 2
 
 
 class LineageDefiningVariants(Base):

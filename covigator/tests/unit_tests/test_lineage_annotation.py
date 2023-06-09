@@ -12,12 +12,16 @@ class LineageAnnotationTest(AbstractTest):
     def test_find_gene(self):
         gene_locations = [266, 13483]
         intergenic_locations = [265, 21556]
+        # Normal positions
         for loc in gene_locations:
             x = self.loader.find_gene(loc)
             self.assertEqual(x, ('ORF1ab', 266, 21555))
+        # Test intergenic positions and None case
         for loc in intergenic_locations:
             x = self.loader.find_gene(loc)
             self.assertIsNone(x[0])
+        x = self.loader.find_gene(None)
+        self.assertIsNone(x[0])
 
     def test_get_hgvs_from_nuc_snp(self):
         # Test for different SNP classes
@@ -91,7 +95,7 @@ class LineageAnnotationTest(AbstractTest):
         x = self.loader.get_hgvs_from_nuc_deletion(fs_deletion)
         self.assertTrue(x.hgvs_p == "p.Y144fs")
         self.assertTrue(x.reference == "Y")
-        self.assertTrue(x.alternate == "del")
+        self.assertTrue(x.alternate == "fs")
         self.assertTrue(x.position == 144)
         self.assertTrue(x.annotation == "frameshift_variant")
         self.assertTrue(x.protein == "S")
@@ -99,7 +103,7 @@ class LineageAnnotationTest(AbstractTest):
         x = self.loader.get_hgvs_from_nuc_deletion(insdel_deletion)
         self.assertTrue(x.hgvs_p == "p.Y144_S155delinsC")
         self.assertTrue(x.reference == "YYHKNNKSWMES")
-        self.assertTrue(x.alternate == "del")
+        self.assertTrue(x.alternate == "delinsC")
         self.assertTrue(x.position == 144)
         self.assertTrue(x.annotation == "disruptive_inframe_deletion")
         self.assertTrue(x.protein == "S")
@@ -107,7 +111,7 @@ class LineageAnnotationTest(AbstractTest):
         x = self.loader.get_hgvs_from_nuc_deletion(insdel_deletion_2)
         self.assertTrue(x.hgvs_p == "p.L24_Y28delinsF")
         self.assertTrue(x.reference == "LPPAY")
-        self.assertTrue(x.alternate == "del")
+        self.assertTrue(x.alternate == "delinsF")
         self.assertTrue(x.position == 24)
         self.assertTrue(x.annotation == "disruptive_inframe_deletion")
         self.assertTrue(x.protein == "S")

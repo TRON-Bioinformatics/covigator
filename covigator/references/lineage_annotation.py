@@ -72,8 +72,7 @@ class LineageAnnotationsLoader:
         """
         if position is None:
             return None, None, None
-        gene_coordinates = self.gene_df.query("start <= @position & end > @position").get(
-            ["name", "start", "end"])
+        gene_coordinates = self.gene_df.query("start <= @position & end > @position").get(["name", "start", "end"])
         if gene_coordinates.shape[0] == 0:
             logger.info("Position does not overlap any gene...")
             return None, None, None
@@ -88,9 +87,11 @@ class LineageAnnotationsLoader:
         """
         Given a CDS position, calculate position in the amino acid sequence
         """
+        protein_position = position_in_cds // 3
         if position_in_cds % 3 != 0:
-            return position_in_cds // 3 + 1
-        return position_in_cds // 3
+            protein_position = position_in_cds // 3 + 1
+
+        return protein_position
 
     @staticmethod
     def _is_frameshift(deletion_length):
@@ -105,10 +106,11 @@ class LineageAnnotationsLoader:
         Given the deletion_length (nucleotides) and the protein position return the last position affected by the
         deletion
         """
-        if LineageAnnotationsLoader._is_frameshift(deletion_length):
-            return protein_position
+        last_position = protein_position
+        if not LineageAnnotationsLoader._is_frameshift(deletion_length):
+            last_position = protein_position + deletion_length // 3
 
-        return protein_position + deletion_length // 3
+        return last_position
 
     @staticmethod
     def _get_frameshift_hgvs(ref_aa, position):
@@ -176,6 +178,7 @@ class LineageAnnotationsLoader:
         # minus one as positions given in df are inclusive on both sides. Deletion positions
         # are non-inclusive => the next genomic position is affected by the deletion
         position_in_cds = genomic_position - cds_start
+        relative_position_in_cds = position_in_cds % 3
         # Get position in the protein and calculate the coordinates of the corresponding codon
         protein_position = self._get_protein_position(position_in_cds)
         codon = [protein_position * 3 - 2, protein_position * 3 - 1, protein_position * 3]
@@ -188,7 +191,7 @@ class LineageAnnotationsLoader:
 
         # Example: ORF1ab p.S3675_F3677del
         # Position is last base of the codon (3674). The next AA position(s) are affected by the deletion
-        if position_in_cds % 3 == 0:
+        if relative_position_in_cds == 0:
             first_changed = True
             protein_position += 1
             # If the deletion is longer than one codon get last codon affected by deletion
@@ -196,7 +199,7 @@ class LineageAnnotationsLoader:
                                                                 deletion_length)
 
         # Deletion starts at first base of codon (second and third position of codon part of the deletion)
-        elif position_in_cds % 3 == 1:
+        elif relative_position_in_cds == 1:
             # Created deleted and WT sequence and check if AA and the sequence of the codons has changed -->
             # If the AA at that position has not changed the following (deletion_length -1) AAs are deleted
             wt_codon = Seq(self.genome[cds_start + codon[0] - 1:
@@ -224,7 +227,7 @@ class LineageAnnotationsLoader:
                 inserted_aa = mt_aa
 
         # Deletion starts at second base of codon (third base of codon part of deletion)
-        elif position_in_cds % 3 == 2:
+        elif relative_position_in_cds == 2:
             # Created deleted and WT sequence and check if AA has changed -->
             # If the AA at that position has not changed the following (deletion_length - 1) AA are deleted
             wt_codon = Seq(self.genome[cds_start + codon[0] - 1:
@@ -265,32 +268,35 @@ class LineageAnnotationsLoader:
             last_aa = str(Seq(self.genome[cds_start + codon_last[0] - 1: cds_start + codon_last[2]]).translate())
 
         # Set reference AA as first deleted AA. If deletion is longer than one codon this is redefined
-        ref_aa = first_aa
-
+        reference = first_aa
+        alternate = "del"
         # Create HGVS notations for different effects of the mutation
         # HGVS for frameshift deletion
         if self._is_frameshift(deletion_length):
             annotation = FRAMESHIFT_VARIANT
             hgvs = self._get_frameshift_hgvs(first_aa, protein_position)
+            alternate = "fs"
 
         # HGVS for a site where the deletion leads to an insertion of a new AA
         elif delins:
             hgvs = self._get_insdel_hgvs(first_aa, protein_position, last_aa, position_last, inserted_aa)
-            # Return all AA that were deleted
-            ref_aa = str(Seq(self.genome[cds_start + codon[0] - 1:
-                                         cds_start + codon_last[2]]).translate())
+            # Get all wild type amino acids that were deleted
+            reference = str(Seq(self.genome[cds_start + codon[0] - 1:
+                                            cds_start + codon_last[2]]).translate())
+            alternate = "delins{}".format(inserted_aa)
         # HGVS for deletion of one of multiple codons
         else:
             # Deletion spans multiple codons --> hgvs consists of first and last affected AA else only the first
             hgvs = self._get_deletion_hgvs(first_aa, protein_position, last_aa, position_last)
             if last_aa:
-                ref_aa = str(Seq(self.genome[cds_start + codon[0] - 1:
-                                             cds_start + codon_last[2]]).translate())
+                # Get all wild type amino acids that were deleted
+                reference = str(Seq(self.genome[cds_start + codon[0] - 1:
+                                                cds_start + codon_last[2]]).translate())
 
         return Hgvs(
             hgvs_p=hgvs,
-            reference=ref_aa,
-            alternate="del",
+            reference=reference,
+            alternate=alternate,
             position=protein_position,
             annotation=annotation,
             protein=gene)
@@ -322,12 +328,13 @@ class LineageAnnotationsLoader:
                 protein=gene)
 
         position_in_cds = position - (gene_start - 1)
+        relative_position_in_cds = position_in_cds % 3
         protein_position = self._get_protein_position(position_in_cds)
         # Get wild type and mutated codon sequence
-        if position_in_cds % 3 == 0:
+        if relative_position_in_cds == 0:
             wt_codon = self.genome[(position - 2) - 1: position]
             mt_codon = wt_codon[0:2] + alt_base
-        elif position_in_cds % 3 == 1:
+        elif relative_position_in_cds == 1:
             wt_codon = self.genome[position - 1: position + 2]
             mt_codon = alt_base + wt_codon[1::]
         else:
@@ -357,9 +364,10 @@ class LineageAnnotationsLoader:
         Generate variant id for nucleotide and proteomic variants
         """
         if protein is None:
-            return "{}:{}>{}".format(position, reference, alternate)
-
-        return "{}:{}{}{}".format(protein, reference, position, alternate)
+            variant_id = "{}:{}>{}".format(position, reference, alternate)
+        else:
+            variant_id = "{}:{}{}{}".format(protein, reference, position, alternate)
+        return variant_id
 
     def _parse_amino_acid_site(self,
                                variant_string: str,
@@ -372,6 +380,7 @@ class LineageAnnotationsLoader:
 
         :returns: MutationInfo
         """
+        # Amino acid level mutations
         mutation_list = []
         if alternate not in ['-', 'del']:
             # Split grouped protein mutations e.g. KR204RG into K204R & R205G
@@ -393,7 +402,7 @@ class LineageAnnotationsLoader:
                         annotation=annotation
                     )
                     mutation_list.append(mutation_info)
-            # Single AA mutations
+            # Single amino acid mutations
             else:
                 variant_id = self._generate_variant_id(protein, position, reference, alternate)
                 annotation = MISSENSE_VARIANT if reference != alternate else SYNONYMOUS_VARIANT
@@ -412,7 +421,7 @@ class LineageAnnotationsLoader:
                     annotation=annotation
                 )
                 mutation_list.append(mutation_info)
-        # Nucleotide deletions
+        # Amino acid level deletions
         else:
             alternate = "del" if alternate == "-" else "del"
             variant_id = self._generate_variant_id(protein, position, reference, alternate)
@@ -451,7 +460,7 @@ class LineageAnnotationsLoader:
             reference=hgvs.reference,
             alternate=hgvs.alternate,
             protein=hgvs.protein,
-            level=VariantLevel.PROTEOMIC.name if hgvs.protein is not None else VariantLevel.NUCLEOTIDE.name,
+            level=VariantLevel.PROTEOMIC.name if hgvs.protein is not None else VariantLevel.GENOMIC.name,
             hgvs_p=hgvs.hgvs_p,
             length=1,
             annotation=hgvs.annotation
@@ -472,7 +481,7 @@ class LineageAnnotationsLoader:
             alternate=hgvs.alternate,
             length=len(hgvs.reference),
             protein=hgvs.protein,
-            level=VariantLevel.PROTEOMIC.name if hgvs.protein is not None else VariantLevel.NUCLEOTIDE.name,
+            level=VariantLevel.PROTEOMIC.name if hgvs.protein is not None else VariantLevel.GENOMIC.name,
             hgvs_p=hgvs.hgvs_p,
             annotation=hgvs.annotation
         )
@@ -489,7 +498,8 @@ class LineageAnnotationsLoader:
         aa_mutation = re.compile(r'([a-zA-Z-*]+)(\d+)([a-zA-Z-*]*)')
         mutation_list = []
         this_mut = variant_string.split(":")
-        # Insertions -> eiter nucleotide or protein coordinates
+        # Insertions will be skipped as there are only two lineage defining insertions for now. We insert them manually
+        # with a SQL script
         if "+" in variant_string:
             logger.warning("Skipping nucleotide insertion {}...".format(variant_string))
         # Deletions (nucleotide level) => translated to protein level
@@ -541,9 +551,7 @@ class LineageAnnotationsLoader:
         # Get corresponding constellation label to look up mutations
         parent = pango_constellation_mapping.get(parent_pango, None)
         sites = lineage_constellation[lineage].get("lineage_mutations", None)
-        if parent is None:
-            return sites
-        else:
+        if parent is not None:
             sites.extend([x for x in self._find_parent_sites(parent, lineage_constellation, pango_constellation_mapping)
                           if x not in sites])
         return sites
@@ -688,6 +696,9 @@ class LineageAnnotationsLoader:
                 variant_level=this_mut.level
             )
             lineage_mutations.append(mutation)
+            print(this_mut)
+            self.session.add(mutation)
+            self.session.commit()
             count_mutations += 1
         # Add all mutations at one for performance reasons
         self.session.add_all(lineage_mutations)
