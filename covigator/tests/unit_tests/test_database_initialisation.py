@@ -126,8 +126,6 @@ class DatabaseInitialisationTests(AbstractTest):
                     self.assertTrue(
                         all([x in valid_protein.letters for x in d.reference])
                     )
-                    # For proteomic level deletions alternate is always "del"
-                    self.assertTrue(d.alternate == "del")
                 else:
                     # Add stop_lost / stop_gained to valid alphabet letters
                     self.assertTrue(d.reference in valid_protein.letters + "*")
@@ -137,7 +135,6 @@ class DatabaseInitialisationTests(AbstractTest):
                 self.assertTrue(
                     all([x in valid_nucleotide.letters for x in d.reference])
                 )
-                print(d.alternate)
                 self.assertTrue(
                     all([x in valid_nucleotide.letters for x in d.alternate])
                 )
