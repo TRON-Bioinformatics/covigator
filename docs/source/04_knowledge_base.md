@@ -42,7 +42,7 @@ queries each of the APIs to fetch new samples periodically.
 
 Both accessor and processor are automated to run periodically.
 
-![CoVigator system design](_static/figures/system_design.drawio.png)
+![CoVigator system design](_static/figures/system_design_manuscript.png)
 
 All automated data download performs MD5 checksums to ensure data integrity. Also, all network requests implement
 an exponential backoff retry mechanism to minimise failures in a non reliable network.

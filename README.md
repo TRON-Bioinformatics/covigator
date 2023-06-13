@@ -59,7 +59,7 @@ The dashboard is implemented in the visualization framework [Dash](https://dash.
 The computation is distributed through our cluster with a library of similar name [Dask](https://dask.org/).
 The analysis pipeline is implemented in the [Nextflow](https://www.nextflow.io/) framework.
 
-![CoVigator system](docs/source/_static/figures/system_design.drawio.png)
+![CoVigator system](docs/source/_static/figures/system_design_manuscript.png)
 
 <p align = "center">
 <b>Figure 3: System design</b>
