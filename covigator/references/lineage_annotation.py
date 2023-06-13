@@ -511,7 +511,7 @@ class LineageAnnotationsLoader:
             match = re.match(snp_pattern, this_mut[1])
             if not match:
                 logger.warning("Could not parse the following site definition: {}".format(variant_string))
-                return [None]
+                return []
             hgvs = self.get_hgvs_from_nuc_snp({"genomic_position": int(match[2]), "reference": match[1],
                                                "alternate": match[3]})
             mutation_list.append(self._parse_nucleotide_level_snp(variant_string, hgvs))
@@ -520,7 +520,7 @@ class LineageAnnotationsLoader:
             match = re.match(aa_mutation, this_mut[1])
             if not match:
                 logger.warning("Could not parse the following site definition: {}".format(variant_string))
-                return [None]
+                return []
             protein = LineageAnnotationsLoader.protein_mapping.get(this_mut[0])
             reference = match[1]
             alternate = match[3]
@@ -616,8 +616,7 @@ class LineageAnnotationsLoader:
             # These calls are incompatible with the scorpio constellation
             incompatible_lineage_calls = set(data["variant"].get("incompatible_lineage_calls", set()))
             pangolin_lineage_list = pangolin_lineage_list - incompatible_lineage_calls
-            lineage_mutations = [self._parse_mutation_sites(x) for x in data["sites"]]
-            lineage_mutations = [mut for x in lineage_mutations for mut in x if mut is not None]
+            lineage_mutations = [mut for site in [self._parse_mutation_sites(x) for x in data["sites"]] for mut in site]
             lineage_constellation[constellation_label] = {
                 "pangolin_lineage_list": pangolin_lineage_list,
                 "who_label": who_label,
