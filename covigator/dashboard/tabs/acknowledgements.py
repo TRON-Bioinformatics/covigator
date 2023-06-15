@@ -19,6 +19,17 @@ def get_tab_acknowledgements():
                 html.Br(),
                 html.P("If you want to cite us:"),
                 html.P([
+                    "Bukur, T., Riesgo-Ferreiro, P., Sorn, P., Gudimella, R., Hausmann, J., Rösler, T., "
+                    "Löwer, M., Schrörs, B., & Sahin, U. CoVigator – a Knowledge Base for Navigating SARS-CoV-2 Genomic Variants. "
+                    "Preprints.org 2023, 2023060010.",
+                ],
+                    style={"font-style": "italic", "margin-left": "50px"}),
+                html.P(
+                    html.A("https://doi.org/10.20944/preprints202306.0010.v1",
+                           href="https://doi.org/10.20944/preprints202306.0010.v1", target="_blank"),
+                    style={"text-indent": "50px"}
+                ),
+                html.P([
                     "Schrörs, B., Riesgo-Ferreiro, P., Sorn, P., Gudimella, R., Bukur, T., Rösler, T., "
                     "Löwer, M., & Sahin, U. (2021). Large-scale analysis of SARS-CoV-2 spike-glycoprotein mutants "
                     "demonstrates the need for continuous screening of virus isolates. PLOS ONE, 16(9), e0249254.",

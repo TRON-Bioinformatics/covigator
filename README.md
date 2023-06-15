@@ -59,7 +59,7 @@ The dashboard is implemented in the visualization framework [Dash](https://dash.
 The computation is distributed through our cluster with a library of similar name [Dask](https://dask.org/).
 The analysis pipeline is implemented in the [Nextflow](https://www.nextflow.io/) framework.
 
-![CoVigator system](docs/source/_static/figures/system_design.drawio.png)
+![CoVigator system](docs/source/_static/figures/system_design_manuscript.png)
 
 <p align = "center">
 <b>Figure 3: System design</b>
@@ -72,6 +72,10 @@ The project was kindly supported by
 
 ## How to cite
 
-* Schrörs, B., Riesgo-Ferreiro, P., Sorn, P., Gudimella, R., Bukur, T., Rösler, T., Löwer, M., & Sahin, U. (2021). 
+*   Bukur, T., Riesgo-Ferreiro, P., Sorn, P., Gudimella, R., Hausmann, J., Rösler, T., Löwer, M., Schrörs, B., & Sahin, U. 
+CoVigator – a Knowledge Base for Navigating SARS-CoV-2 Genomic Variants. Preprints.org 2023, 2023060010. 
+[10.20944/preprints202306.0010.v1](https://doi.org/10.20944/preprints202306.0010.v1)
+
+*   Schrörs, B., Riesgo-Ferreiro, P., Sorn, P., Gudimella, R., Bukur, T., Rösler, T., Löwer, M., & Sahin, U. (2021). 
 Large-scale analysis of SARS-CoV-2 spike-glycoprotein mutants demonstrates the need for continuous screening of virus 
 isolates. PLOS ONE, 16(9), e0249254. [10.1371/journal.pone.0249254](https://doi.org/10.1371/journal.pone.0249254)
