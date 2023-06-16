@@ -13,7 +13,8 @@ from covigator.database.model import DataSource, SampleEna, JobStatus, \
     SubclonalVariantObservation, PrecomputedVariantsPerSample, PrecomputedSubstitutionsCounts, PrecomputedIndelLength, \
     VariantType, PrecomputedAnnotation, PrecomputedOccurrence, PrecomputedTableCounts, \
     PrecomputedVariantAbundanceHistogram, PrecomputedSynonymousNonSynonymousCounts, RegionType, Domain, \
-    LastUpdate, SampleCovid19Portal, VariantObservationCovid19Portal, VariantCovid19Portal, Lineages
+    LastUpdate, SampleCovid19Portal, VariantObservationCovid19Portal, VariantCovid19Portal, Lineages, LineageVariant, \
+    LineageDefiningVariants
 from covigator.exceptions import CovigatorQueryException, CovigatorDashboardMissingPrecomputedData
 
 
@@ -147,6 +148,16 @@ class Queries:
         lineages["combined_label"] = lineages.apply(lambda x: f"{x.pangolin_lineage} - {x.who_label}"
             if not pd.isnull(x.who_label) else f"{x.pangolin_lineage}", axis=1)
         return lineages
+
+    def get_lineage_defining_variants(self) -> pd.DataFrame:
+        """
+        Query database for lineage defining variants. Returns a dataframe with columns: pangolin_lineage, variant_id, hgvs
+        """
+        query = self.session.query(LineageVariant.pango_lineage_id.label("pangolin_lineage"), LineageVariant.variant_id,
+                                   LineageDefiningVariants.hgvs).join(LineageDefiningVariants)
+        lineage_variants = pd.read_sql(query.statement, self.session.bind)
+        lineage_variants["variant"] = lineage_variants.apply(lambda x: x.variant_id if pd.isnull(x) else x.hgvs)
+        return lineage_variants[["lineage", "variant"]]
 
     def get_variants_per_sample(self, data_source: str, genes: List[str], variant_types: List[str]):
         """

@@ -275,7 +275,7 @@ class RecurrentMutationsFigures(Figures):
                                 {"name": ["Variant", "Gene"], "id": "gene_name"},
                                 {"name": ["", "DNA mutation"], "id": "dna_mutation"},
                                 {"name": ["", "Protein mutation"], "id": "hgvs_p"},
-                                {"name": ["", "Effect"], "id": "annotation"},
+                                # {"name": ["", "Effect"], "id": "annotation"},
                                 {"name": ["", "Frequency"], "id": "frequency"},
                                 {"name": ["", "Count"], "id": "total"},
                             ] + month_columns,
