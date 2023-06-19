@@ -1,5 +1,7 @@
 from datetime import date, datetime
 from typing import List, Union, Tuple
+
+import numpy as np
 import pandas as pd
 from logzero import logger
 import sqlalchemy
@@ -151,13 +153,14 @@ class Queries:
 
     def get_lineage_defining_variants(self) -> pd.DataFrame:
         """
-        Query database for lineage defining variants. Returns a dataframe with columns: pangolin_lineage, variant_id, hgvs
+        Query database for lineage defining variants. Returns a dataframe with columns: pangolin_lineage, variant
         """
         query = self.session.query(LineageVariant.pango_lineage_id.label("pangolin_lineage"), LineageVariant.variant_id,
-                                   LineageDefiningVariants.hgvs).join(LineageDefiningVariants)
+                                   LineageDefiningVariants.hgvs.label("hgvs_p")).join(LineageDefiningVariants)
         lineage_variants = pd.read_sql(query.statement, self.session.bind)
-        lineage_variants["variant"] = lineage_variants.apply(lambda x: x.variant_id if pd.isnull(x) else x.hgvs)
-        return lineage_variants[["lineage", "variant"]]
+        lineage_variants["dna_mutation"] = lineage_variants.apply(lambda x: x.variant_id if pd.isnull(x.hgvs_p)
+                                                                  else None)
+        return lineage_variants[["lineage", "hgvs_p", "dna_mutation"]]
 
     def get_variants_per_sample(self, data_source: str, genes: List[str], variant_types: List[str]):
         """

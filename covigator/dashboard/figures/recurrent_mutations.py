@@ -245,6 +245,11 @@ class RecurrentMutationsFigures(Figures):
 
     def get_top_occurring_variants_plot(self, top, gene_name, domain, date_range_start, date_range_end, metric, source):
         data = self.queries.get_top_occurring_variants_precomputed(top, gene_name, domain, metric, source)
+        lineage_mutations = self.queries.get_lineage_defining_variants()
+        aa_level_mutations = lineage_mutations[~pd.isnull(lineage_mutations.hgvs_p)]
+        nucleotide_level_mutations = lineage_mutations[~pd.isnull(lineage_mutations.dna_mutation)]
+        data = data.merge(aa_level_mutations, how="left", left_on="hgvs_p", right_on="hgvs_p")
+        data = data.merge(nucleotide_level_mutations, how="left", left_on="dna_mutation", right_on="dna_mutation")
 
         fig = [
             dash_table.DataTable(id="top-occurring-variants-table"),
@@ -275,7 +280,7 @@ class RecurrentMutationsFigures(Figures):
                                 {"name": ["Variant", "Gene"], "id": "gene_name"},
                                 {"name": ["", "DNA mutation"], "id": "dna_mutation"},
                                 {"name": ["", "Protein mutation"], "id": "hgvs_p"},
-                                # {"name": ["", "Effect"], "id": "annotation"},
+                                {"name": ["", "Pangolin lineage"], "id": "pangolin_lineage"},
                                 {"name": ["", "Frequency"], "id": "frequency"},
                                 {"name": ["", "Count"], "id": "total"},
                             ] + month_columns,
