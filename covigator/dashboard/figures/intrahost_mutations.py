@@ -202,19 +202,13 @@ class IntrahostMutationsFigures(Figures):
             unique_subclonal_variants.reset_index(inplace=True)
 
             # Merge with nulceotide and amino acid level mutations
-            unique_subclonal_variants = unique_subclonal_variants.merge(lineage_mutation_aa, how="left", left_on="hgvs_p", right_on="hgvs_p")
-            unique_subclonal_variants = unique_subclonal_variants.merge(lineage_mutation_nuc, how="left", left_on="variant_id", right_on="variant_id")
-            # Rename and drop unnecessary columns
-            unique_subclonal_variants["pangolin_lineage_x"].fillna(unique_subclonal_variants["pangolin_lineage_y"], inplace=True)
-            unique_subclonal_variants.drop(columns=["pangolin_lineage_y"])
-            unique_subclonal_variants.rename(columns={"pangolin_lineage_x": "pangolin_lineage"}, inplace=True)
-            # Count lineages containing variant to create hover label
-            unique_subclonal_variants["no_of_lineages"] = unique_subclonal_variants.fillna({"pangolin_lineage": ""}).apply(
-                lambda x: len(x.pangolin_lineage.split(",")), axis=1)
+            unique_subclonal_variants = self.queries._merge_with_lineage_defining_variants(unique_subclonal_variants)
+            #unique_subclonal_variants = unique_subclonal_variants.merge(lineage_mutation_aa, how="left", left_on="hgvs_p", right_on="hgvs_p")
+            #unique_subclonal_variants = unique_subclonal_variants.merge(lineage_mutation_nuc, how="left", left_on="variant_id", right_on="variant_id")
             # Create hover label if mutation part of more than three lineages
-            unique_subclonal_variants['pangolin_hover'] = unique_subclonal_variants.apply(
-                lambda x: "{} lineages".format(x.no_of_lineages) if x.no_of_lineages > 3 else x.pangolin_lineage,
-                    axis=1)
+            #unique_subclonal_variants['pangolin_hover'] = unique_subclonal_variants.apply(
+            #    lambda x: "{} lineages".format(x.no_of_lineages) if x.no_of_lineages > 3 else x.pangolin_lineage,
+            #        axis=1)
 
             if order_by == "score":
                 ordered_data = unique_subclonal_variants.sort_values("score", ascending=True)

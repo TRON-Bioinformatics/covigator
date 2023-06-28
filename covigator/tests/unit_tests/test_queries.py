@@ -243,6 +243,21 @@ class QueriesTests(AbstractTest):
         self.assertTrue("dna_mutation" in lineage_mutation_nuc.columns)
         self.assertTrue("hgvs_p" in lineage_mutation_aa.columns)
 
+    def test_merge_with_lineage_defining_variants(self):
+        import pandas as pd
+        data = {"variant_id": ["23403:A>G", "10029:C>T", "22995:C>A", "11201:A>G"], "hgvs_p": ["p.D614G", "p.T3255I", "p.T478K", "p.T3646A"]}
+        df = pd.DataFrame(data=data)
+        merged_table = self.queries._merge_with_lineage_defining_variants(df)
+        self.assertIsNotNone(merged_table)
+        self.assertGreater(merged_table.shape[0], 0)
+        # All mutations overlap with lineage mutations
+        self.assertEqual(merged_table[merged_table.no_of_samples.isna()], 0)
+        # Correct lineage numbers returned
+        self.assertTrue(merged_table.no_of_samples.values.tolist() == [21, 19, 20, 2])
+        # Check that hover label is created correctly
+        self.assertTrue(merged_table.no_of_samples.pangolin_hover.tolist() == ["21 lineages", "19 lineages", "20 lineages", "AY.4,AY.4.2"])
+
+
     def test_count_jobs_in_queue(self):
         mock_samples(faker=self.faker, session=self.session, job_status=JobStatus.QUEUED, num_samples=50)
         mock_samples(faker=self.faker, session=self.session, job_status=JobStatus.FINISHED, num_samples=50)

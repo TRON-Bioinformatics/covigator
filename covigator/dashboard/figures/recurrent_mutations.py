@@ -258,11 +258,6 @@ class RecurrentMutationsFigures(Figures):
             excluded_month_colums = [c for c in month_columns if c < date_range_start or c > date_range_end]
             data.drop(excluded_month_colums, axis=1, inplace=True)
 
-            # Generate hover text for lineage column
-            data["pangolin_hover"] = data.apply(
-                lambda x: "{} lineages".format(x.no_of_lineages) if x.no_of_lineages > 3 else x.pangolin_lineage,
-                    axis=1)
-
             # set the styles of the cells
             styles_counts = discrete_background_color_bins(data, columns=included_month_colums)
             styles_total_count = discrete_background_color_bins(data, columns=["total"], colors="Reds")
