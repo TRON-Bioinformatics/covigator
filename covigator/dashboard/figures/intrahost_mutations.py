@@ -170,8 +170,6 @@ class IntrahostMutationsFigures(Figures):
         logger.debug("Getting data on top occurring intrahost mutations...")
         data = SubclonalVariantsQueries(session=self.queries.session).get_top_occurring_subclonal_variants(
             top=top, gene_name=gene_name, domain=domain, min_vaf=min_vaf, order_by=order_by)
-        lineage_mutation_aa, lineage_mutation_nuc = self.queries.get_lineage_defining_variants()
-        lineage_mutation_nuc.rename(columns={'dna_mutation': 'variant_id'}, inplace=True)
         fig = dcc.Markdown("""**No intrahost variants for the current selection**""")
         if data is not None and data.shape[0] > 0:
             logger.debug("Preparing plot on top occurring intrahost variants...")
