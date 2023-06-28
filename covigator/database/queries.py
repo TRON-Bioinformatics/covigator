@@ -156,11 +156,20 @@ class Queries:
         Query database for lineage defining variants. Returns a dataframe with columns: pangolin_lineage, variant
         """
         query = self.session.query(LineageVariant.pango_lineage_id.label("pangolin_lineage"), LineageVariant.variant_id,
-                                   LineageDefiningVariants.hgvs.label("hgvs_p")).join(LineageDefiningVariants)
+                                   LineageDefiningVariants.hgvs).join(LineageDefiningVariants)
         lineage_variants = pd.read_sql(query.statement, self.session.bind)
-        lineage_variants["dna_mutation"] = lineage_variants.apply(lambda x: x.variant_id if pd.isnull(x.hgvs_p)
-                                                                  else None)
-        return lineage_variants[["lineage", "hgvs_p", "dna_mutation"]]
+        # Rename columns to match columns used in recurrent/intrahost mutations tab
+        lineage_variants["dna_mutation"] = lineage_variants.apply(lambda x: x.variant_id if pd.isnull(x.hgvs)
+                                                                  else None, axis=1)
+        lineage_variants = lineage_variants.rename(columns={"hgvs":"hgvs_p"})
+        aa_level_mutations = lineage_variants[~pd.isnull(lineage_variants.hgvs_p)].loc[:, ['pangolin_lineage','hgvs_p']]
+        aa_level_mutations = aa_level_mutations.groupby('hgvs_p')['pangolin_lineage'].agg(','.join).reset_index()
+
+        nucleotide_level_mutations = lineage_variants[~pd.isnull(lineage_variants.dna_mutation)].loc[:, ['pangolin_lineage','dna_mutation']]
+        nucleotide_level_mutations = nucleotide_level_mutations.groupby('dna_mutation')['pangolin_lineage'].agg(','.join).reset_index()
+
+        return aa_level_mutations, nucleotide_level_mutations   
+    
 
     def get_variants_per_sample(self, data_source: str, genes: List[str], variant_types: List[str]):
         """
@@ -609,13 +618,23 @@ class Queries:
         else:
             raise CovigatorQueryException("Not supported metric for top occurring variants")
 
+        lineage_mutation_aa, lineage_mutation_nuc = self.get_lineage_defining_variants()
+        lineage_mutation_nuc.rename(columns={'dna_mutation': 'variant_id'}, inplace=True)
+        
         top_occurring_variants = pd.read_sql(query.statement, self.session.bind)
-
+        top_occurring_variants = top_occurring_variants.merge(lineage_mutation_aa, how="left", left_on="hgvs_p", right_on="hgvs_p")
+        top_occurring_variants = top_occurring_variants.merge(lineage_mutation_nuc, how="left", left_on="variant_id", right_on="variant_id")
+        # Fill up lineage information for integenic variants
+        top_occurring_variants["pangolin_lineage_x"].fillna(top_occurring_variants["pangolin_lineage_y"], inplace=True)
+        top_occurring_variants.drop(columns=["pangolin_lineage_y"])
         # formats the DNA mutation
-        top_occurring_variants.rename(columns={'variant_id': 'dna_mutation'}, inplace=True)
+        top_occurring_variants.rename(columns={"variant_id": "dna_mutation", "pangolin_lineage_x": "pangolin_lineage"}, inplace=True)
+        top_occurring_variants["no_of_lineages"] = top_occurring_variants.fillna({"pangolin_lineage": ""}).apply(
+                lambda x: len(x.pangolin_lineage.split(",")), axis=1)
+
         # pivots the table over months
         top_occurring_variants = pd.pivot_table(
-            top_occurring_variants, index=['gene_name', 'dna_mutation', 'hgvs_p', 'annotation', "frequency", "total"],
+            top_occurring_variants, index=['gene_name', 'dna_mutation', 'hgvs_p', 'annotation', "frequency", "total", "pangolin_lineage", "no_of_lineages"],
             columns=["month"], values=[metric], fill_value=0).droplevel(0, axis=1).reset_index()
 
         return top_occurring_variants.sort_values(by="frequency", ascending=False).head(top)

@@ -245,11 +245,6 @@ class RecurrentMutationsFigures(Figures):
 
     def get_top_occurring_variants_plot(self, top, gene_name, domain, date_range_start, date_range_end, metric, source):
         data = self.queries.get_top_occurring_variants_precomputed(top, gene_name, domain, metric, source)
-        lineage_mutations = self.queries.get_lineage_defining_variants()
-        aa_level_mutations = lineage_mutations[~pd.isnull(lineage_mutations.hgvs_p)]
-        nucleotide_level_mutations = lineage_mutations[~pd.isnull(lineage_mutations.dna_mutation)]
-        data = data.merge(aa_level_mutations, how="left", left_on="hgvs_p", right_on="hgvs_p")
-        data = data.merge(nucleotide_level_mutations, how="left", left_on="dna_mutation", right_on="dna_mutation")
 
         fig = [
             dash_table.DataTable(id="top-occurring-variants-table"),
@@ -262,6 +257,11 @@ class RecurrentMutationsFigures(Figures):
             included_month_colums = [c for c in month_columns if c >= date_range_start and c <= date_range_end]
             excluded_month_colums = [c for c in month_columns if c < date_range_start or c > date_range_end]
             data.drop(excluded_month_colums, axis=1, inplace=True)
+
+            # Generate hover text for lineage column
+            data["pangolin_hover"] = data.apply(
+                lambda x: "{} lineages".format(x.no_of_lineages) if x.no_of_lineages > 3 else x.pangolin_lineage,
+                    axis=1)
 
             # set the styles of the cells
             styles_counts = discrete_background_color_bins(data, columns=included_month_colums)
@@ -280,7 +280,7 @@ class RecurrentMutationsFigures(Figures):
                                 {"name": ["Variant", "Gene"], "id": "gene_name"},
                                 {"name": ["", "DNA mutation"], "id": "dna_mutation"},
                                 {"name": ["", "Protein mutation"], "id": "hgvs_p"},
-                                {"name": ["", "Pangolin lineage"], "id": "pangolin_lineage"},
+                                {"name": ["", "Pangolin lineage"], "id": "pangolin_hover"},
                                 {"name": ["", "Frequency"], "id": "frequency"},
                                 {"name": ["", "Count"], "id": "total"},
                             ] + month_columns,
@@ -290,7 +290,13 @@ class RecurrentMutationsFigures(Figures):
                     style_header=STYLE_HEADER,
                     style_cell=STYLE_CELL,
                     sort_by=[{"column_id": "frequency", "direction": "desc"}],
-                    row_selectable='multi'
+                    row_selectable='multi',
+                    tooltip_data=[
+                        {
+                            'pangolin_hover': {'value': row['pangolin_lineage'], 'type': 'markdown'}
+                        } for row in data.to_dict('records')
+                    ],
+                    tooltip_duration=None
                 ),
                 html.Br(),
                 html.Div(children=[
