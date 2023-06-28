@@ -253,9 +253,9 @@ class QueriesTests(AbstractTest):
         # All mutations overlap with lineage mutations
         self.assertEqual(merged_table[merged_table.no_of_lineages.isna()], 0)
         # Correct lineage numbers returned
-        self.assertTrue(merged_table.no_of_samples.values.tolist() == [21, 19, 20, 2])
+        self.assertTrue(merged_table.no_of_lineages.values.tolist() == [21, 19, 20, 2])
         # Check that hover label is created correctly
-        self.assertTrue(merged_table.no_of_samples.pangolin_hover.tolist() == ["21 lineages", "19 lineages", "20 lineages", "AY.4,AY.4.2"])
+        self.assertTrue(merged_table.pangolin_hover.tolist() == ["21 lineages", "19 lineages", "20 lineages", "AY.4,AY.4.2"])
 
 
     def test_count_jobs_in_queue(self):
