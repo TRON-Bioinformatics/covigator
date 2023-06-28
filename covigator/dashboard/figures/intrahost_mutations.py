@@ -201,14 +201,8 @@ class IntrahostMutationsFigures(Figures):
 
             unique_subclonal_variants.reset_index(inplace=True)
 
-            # Merge with nulceotide and amino acid level mutations
+            # Merge with llineage defining mutations
             unique_subclonal_variants = self.queries._merge_with_lineage_defining_variants(unique_subclonal_variants)
-            #unique_subclonal_variants = unique_subclonal_variants.merge(lineage_mutation_aa, how="left", left_on="hgvs_p", right_on="hgvs_p")
-            #unique_subclonal_variants = unique_subclonal_variants.merge(lineage_mutation_nuc, how="left", left_on="variant_id", right_on="variant_id")
-            # Create hover label if mutation part of more than three lineages
-            #unique_subclonal_variants['pangolin_hover'] = unique_subclonal_variants.apply(
-            #    lambda x: "{} lineages".format(x.no_of_lineages) if x.no_of_lineages > 3 else x.pangolin_lineage,
-            #        axis=1)
 
             if order_by == "score":
                 ordered_data = unique_subclonal_variants.sort_values("score", ascending=True)

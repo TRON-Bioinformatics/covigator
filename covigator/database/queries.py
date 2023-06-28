@@ -174,8 +174,8 @@ class Queries:
         Merge tables from recurrent and intrahost mutations tab with lineage defining mutations
         """
         
-        assert "variant_id" in data.columns
-        assert "hgvs_p" in data.columns
+        assert "variant_id" in data.columns, "Column variant_id is missing..."
+        assert "hgvs_p" in data.columns, "Column hgvs_p is missing..."
         lineage_mutation_aa, lineage_mutation_nuc = self.get_lineage_defining_variants()
         lineage_mutation_nuc.rename(columns={'dna_mutation': 'variant_id'}, inplace=True)
 
@@ -640,17 +640,10 @@ class Queries:
             query = query.order_by(PrecomputedOccurrence.frequency.desc())
         else:
             raise CovigatorQueryException("Not supported metric for top occurring variants")
-
-        #lineage_mutation_aa, lineage_mutation_nuc = self.get_lineage_defining_variants()
-        #lineage_mutation_nuc.rename(columns={'dna_mutation': 'variant_id'}, inplace=True)
         
         top_occurring_variants = pd.read_sql(query.statement, self.session.bind)
+        # Merge with lineage defining variants
         top_occurring_variants = self._merge_with_lineage_defining_variants(top_occurring_variants)
-        #top_occurring_variants = top_occurring_variants.merge(lineage_mutation_aa, how="left", left_on="hgvs_p", right_on="hgvs_p")
-        #top_occurring_variants = top_occurring_variants.merge(lineage_mutation_nuc, how="left", left_on="variant_id", right_on="variant_id")
-        # Fill up lineage information for integenic variants
-        #top_occurring_variants["pangolin_lineage_x"].fillna(top_occurring_variants["pangolin_lineage_y"], inplace=True)
-        #top_occurring_variants.drop(columns=["pangolin_lineage_y"])
         # formats the DNA mutation
         top_occurring_variants.rename(columns={"variant_id": "dna_mutation"}, inplace=True)
 
