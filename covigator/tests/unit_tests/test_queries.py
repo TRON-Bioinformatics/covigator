@@ -232,6 +232,17 @@ class QueriesTests(AbstractTest):
         self.assertGreater(labels.shape[0], 0)
         self.assertEqual(labels[labels.combined_label.isna()].shape[0], 0)
 
+    def test_get_lineage_defining_variants(self):
+        lineage_mutation_aa, lineage_mutation_nuc = self.queries.get_lineage_defining_variants()
+        self.assertIsNotNone(lineage_mutation_aa)
+        self.assertIsNotNone(lineage_mutation_nuc)
+        self.assertGreater(lineage_mutation_aa.shape[0], 0)
+        self.assertGreater(lineage_mutation_nuc.shape[0], 0)
+
+        # Make sure that mutations on different levels have different columns for merging
+        self.assertTrue("dna_mutation" in lineage_mutation_nuc.columns)
+        self.assertTrue("hgvs_p" in lineage_mutation_aa.columns)
+
     def test_count_jobs_in_queue(self):
         mock_samples(faker=self.faker, session=self.session, job_status=JobStatus.QUEUED, num_samples=50)
         mock_samples(faker=self.faker, session=self.session, job_status=JobStatus.FINISHED, num_samples=50)
