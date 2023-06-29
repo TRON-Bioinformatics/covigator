@@ -251,7 +251,7 @@ class QueriesTests(AbstractTest):
         self.assertIsNotNone(merged_table)
         self.assertGreater(merged_table.shape[0], 0)
         # All mutations overlap with lineage mutations
-        self.assertEqual(merged_table[merged_table.no_of_lineages.isna()], 0)
+        self.assertEqual(merged_table[merged_table.no_of_lineages.isna()].shape[0], 0)
         # Correct lineage numbers returned
         self.assertTrue(merged_table.no_of_lineages.values.tolist() == [21, 19, 20, 2])
         # Check that hover label is created correctly
