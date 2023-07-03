@@ -180,6 +180,7 @@ class IntrahostMutationsFigures(Figures):
                 'annotation_highest_impact': 'first',
                 'cons_hmm_sars_cov_2': 'first',
             })
+
             # this fills empty conservation values
             unique_subclonal_variants["cons_hmm_sars_cov_2"].fillna(0.0, inplace=True)
             unique_subclonal_variants["cons_hmm_sars_cov_2"] = unique_subclonal_variants["cons_hmm_sars_cov_2"].transform(lambda x: round(x, 3))
@@ -197,6 +198,9 @@ class IntrahostMutationsFigures(Figures):
                 .apply(lambda x: round(np.log(x[0]) * x[1], 3), axis=1)
 
             unique_subclonal_variants.reset_index(inplace=True)
+
+            # Merge with llineage defining mutations
+            unique_subclonal_variants = self.queries._merge_with_lineage_defining_variants(unique_subclonal_variants)
 
             if order_by == "score":
                 ordered_data = unique_subclonal_variants.sort_values("score", ascending=True)
@@ -217,6 +221,7 @@ class IntrahostMutationsFigures(Figures):
                             {"name": ["Pfam Domain"], "id": "pfam_description"},
                             {"name": ["DNA mutation"], "id": "variant_id"},
                             {"name": ["Protein mutation"], "id": "hgvs_p"},
+                            {"name": ["Pangolin lineage"], "id": "pangolin_hover"},
                             {"name": ["Effect"], "id": "annotation_highest_impact"},
                             {"name": ["First observation"], "id": "first_observation"},
                             {"name": ["Last observation"], "id": "last_observation"},
@@ -235,6 +240,12 @@ class IntrahostMutationsFigures(Figures):
                 style_table={'overflowX': 'auto'},
                 style_data={'whiteSpace': 'normal', 'height': 'auto'},
                 style_cell={'maxWidth': '100px'},
+                tooltip_data=[
+                        {
+                            'pangolin_hover': {'value': row['pangolin_lineage'], 'type': 'markdown'}
+                        } for row in ordered_data.to_dict('records')
+                    ],
+                    tooltip_duration=None,
             )
 
         return [

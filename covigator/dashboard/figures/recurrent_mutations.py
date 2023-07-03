@@ -275,7 +275,7 @@ class RecurrentMutationsFigures(Figures):
                                 {"name": ["Variant", "Gene"], "id": "gene_name"},
                                 {"name": ["", "DNA mutation"], "id": "dna_mutation"},
                                 {"name": ["", "Protein mutation"], "id": "hgvs_p"},
-                                {"name": ["", "Effect"], "id": "annotation"},
+                                {"name": ["", "Pangolin lineage"], "id": "pangolin_hover"},
                                 {"name": ["", "Frequency"], "id": "frequency"},
                                 {"name": ["", "Count"], "id": "total"},
                             ] + month_columns,
@@ -285,7 +285,13 @@ class RecurrentMutationsFigures(Figures):
                     style_header=STYLE_HEADER,
                     style_cell=STYLE_CELL,
                     sort_by=[{"column_id": "frequency", "direction": "desc"}],
-                    row_selectable='multi'
+                    row_selectable='multi',
+                    tooltip_data=[
+                        {
+                            'pangolin_hover': {'value': row['pangolin_lineage'], 'type': 'markdown'}
+                        } for row in data.to_dict('records')
+                    ],
+                    tooltip_duration=None
                 ),
                 html.Br(),
                 html.Div(children=[

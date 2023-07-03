@@ -20,13 +20,13 @@ def get_tab_acknowledgements():
                 html.P("If you want to cite us:"),
                 html.P([
                     "Bukur, T., Riesgo-Ferreiro, P., Sorn, P., Gudimella, R., Hausmann, J., Rösler, T., "
-                    "Löwer, M., Schrörs, B., & Sahin, U. CoVigator – a Knowledge Base for Navigating SARS-CoV-2 Genomic Variants. "
-                    "Preprints.org 2023, 2023060010.",
+                    "Löwer, M., Schrörs, B., & Sahin, U. CoVigator — A Knowledge Base for Navigating SARS-CoV-2 Genomic Variants. "
+                    "Viruses. 2023; 15(6):1391.",
                 ],
                     style={"font-style": "italic", "margin-left": "50px"}),
                 html.P(
-                    html.A("https://doi.org/10.20944/preprints202306.0010.v1",
-                           href="https://doi.org/10.20944/preprints202306.0010.v1", target="_blank"),
+                    html.A("https://doi.org/10.3390/v15061391",
+                           href="https://doi.org/10.3390/v15061391", target="_blank"),
                     style={"text-indent": "50px"}
                 ),
                 html.P([
