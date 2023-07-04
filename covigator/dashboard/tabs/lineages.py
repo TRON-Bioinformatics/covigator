@@ -1,5 +1,4 @@
 from datetime import timedelta, datetime
-import pandas as pd
 from dash import dcc
 import dash_bootstrap_components as dbc
 from dash import html
@@ -53,11 +52,12 @@ def get_lineages_tab_left_bar(queries: Queries, data_source: DataSource):
     # Get all available months from collection_date column in sample table
     lineages = queries.get_combined_labels(data_source.name)
     months = queries.get_sample_months(MONTH_PATTERN, data_source=data_source.name)
-    today = datetime.now()
-    today_formatted = today.strftime(MONTH_PATTERN)
-    oneyearago = today - timedelta(days=356)
-    oneyearago_formatted = oneyearago.strftime(MONTH_PATTERN)
 
+    last_update = queries.get_last_update(data_source.name)
+    last_update_formatted = last_update.strftime(MONTH_PATTERN)
+
+    one_year_before_update = last_update - timedelta(days=365)
+    one_year_before_update_formatted = one_year_before_update.strftime(MONTH_PATTERN)
 
     return html.Div(
         className="two columns",
@@ -126,7 +126,7 @@ def get_lineages_tab_left_bar(queries: Queries, data_source: DataSource):
                 dcc.Dropdown(
                     id=ID_DROPDOWN_LINEAGE_DATE_RANGE_START,
                     options=[{'label': c, 'value': c} for c in months],
-                    value=oneyearago_formatted,
+                    value=one_year_before_update_formatted,
                     multi=False,
                     clearable=False
                 ),
@@ -135,7 +135,7 @@ def get_lineages_tab_left_bar(queries: Queries, data_source: DataSource):
                     children=dcc.Dropdown(
                         id=ID_DROPDOWN_LINEAGE_DATE_RANGE_END,
                         options=[{'label': c, 'value': c} for c in months],
-                        value=today_formatted,
+                        value=last_update_formatted,
                         multi=False,
                         clearable=False
                     ))]),

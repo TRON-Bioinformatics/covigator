@@ -78,3 +78,7 @@ CoVigator — A Knowledge Base for Navigating SARS-CoV-2 Genomic Variants. Virus
 *   Schrörs, B., Riesgo-Ferreiro, P., Sorn, P., Gudimella, R., Bukur, T., Rösler, T., Löwer, M., & Sahin, U. (2021). 
 Large-scale analysis of SARS-CoV-2 spike-glycoprotein mutants demonstrates the need for continuous screening of virus 
 isolates. PLOS ONE, 16(9), e0249254. [10.1371/journal.pone.0249254](https://doi.org/10.1371/journal.pone.0249254)
+
+### Acknowledgements
+
+The lineage annotation in the covigator dashboard package uses "the description of constellations of mutations for the SARS-CoV-2 virus" by [cov-lineages](https://github.com/cov-lineages/constellations) provided and licensed under [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/)

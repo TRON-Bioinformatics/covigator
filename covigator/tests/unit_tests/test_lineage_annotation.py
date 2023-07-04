@@ -1,6 +1,4 @@
-from covigator.database.database import Database
 from covigator.database.queries import Queries
-from covigator.configuration import Configuration
 from covigator.tests.unit_tests.abstract_test import AbstractTest
 from covigator.references.lineage_annotation import LineageAnnotationsLoader, Hgvs, MutationInfo
 

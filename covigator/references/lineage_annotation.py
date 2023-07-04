@@ -11,7 +11,7 @@ from covigator.database.model import Lineages, LineageDefiningVariants, LineageV
 from covigator.database.queries import Queries
 from logzero import logger
 from datetime import datetime
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Tuple
 from dataclasses import dataclass
 
 @dataclass
@@ -162,7 +162,7 @@ class LineageAnnotationsLoader:
         """
         genomic_position = variant.get("genomic_position")
         deletion_length = variant.get("length")
-        gene, gene_start, gene_end = self.find_gene(genomic_position)
+        gene, gene_start, _ = self.find_gene(genomic_position)
         # If deletions falls into intergenic space return nucleotide level reference, alternate and position
         if gene is None:
             return Hgvs(
@@ -316,7 +316,7 @@ class LineageAnnotationsLoader:
         ref_base = variant.get("reference")
         alt_base = variant.get("alternate")
         annotation = SYNONYMOUS_VARIANT
-        gene, gene_start, gene_end = self.find_gene(position)
+        gene, gene_start, _ = self.find_gene(position)
         # If mutation does not overlap any gene --> Intergenic
         if gene is None:
             return Hgvs(
@@ -494,7 +494,6 @@ class LineageAnnotationsLoader:
         on nucleotide level are parsed and translated to protein level.
         """
         snp_pattern = re.compile('([ACTG]+)([0-9]+)([ACTG]+)')
-        insertion_pattern = re.compile(r'(\w+):(\d+)\+([a-zA-Z]+)')
         aa_mutation = re.compile(r'([a-zA-Z-*]+)(\d+)([a-zA-Z-*]*)')
         mutation_list = []
         this_mut = variant_string.split(":")
@@ -678,7 +677,7 @@ class LineageAnnotationsLoader:
                     seen_mutations.add(this_mut.variant_id)
                     all_mutations.append(this_mut)
         logger.info("Loaded into the database {} lineages".format(count_lineages))
-        
+
         # Store all observed lineage defining mutations in database
         lineage_mutations = []
         for this_mut in all_mutations:

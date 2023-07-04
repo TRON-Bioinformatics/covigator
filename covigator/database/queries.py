@@ -168,7 +168,7 @@ class Queries:
         nucleotide_level_mutations = lineage_variants[~pd.isnull(lineage_variants.dna_mutation)].loc[:, ['pangolin_lineage','dna_mutation']]
         nucleotide_level_mutations = nucleotide_level_mutations.sort_values(['dna_mutation', 'pangolin_lineage']).groupby('dna_mutation')['pangolin_lineage'].agg(','.join)
         nucleotide_level_mutations = nucleotide_level_mutations.reset_index()
-        
+
         return aa_level_mutations, nucleotide_level_mutations
     
     def _merge_with_lineage_defining_variants(self, data: pd.DataFrame):

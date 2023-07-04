@@ -222,7 +222,6 @@ class IntrahostMutationsFigures(Figures):
                             {"name": ["DNA mutation"], "id": "variant_id"},
                             {"name": ["Protein mutation"], "id": "hgvs_p"},
                             {"name": ["Pangolin lineage"], "id": "pangolin_hover"},
-                            {"name": ["Effect"], "id": "annotation_highest_impact"},
                             {"name": ["First observation"], "id": "first_observation"},
                             {"name": ["Last observation"], "id": "last_observation"},
                             {"name": ["Count"], "id": "count_observations"},
