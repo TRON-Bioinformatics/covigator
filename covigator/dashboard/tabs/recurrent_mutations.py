@@ -65,10 +65,12 @@ def get_variants_tab_left_bar(queries: Queries, data_source: DataSource):
     # removes repeated gene names (ie: ORF1ab)
     genes = sorted({c.name for c in queries.get_genes()})
     months = queries.get_sample_months(MONTH_PATTERN, data_source=data_source.name)
-    today = datetime.now()
-    today_formatted = today.strftime(MONTH_PATTERN)
-    oneyearago = today - timedelta(days=356)
-    oneyearago_formatted = oneyearago.strftime(MONTH_PATTERN)
+
+    last_update = queries.get_last_update(data_source.name)
+    last_update_formatted = last_update.strftime(MONTH_PATTERN)
+
+    one_year_before_update = last_update - timedelta(days=365)
+    one_year_before_update_formatted = one_year_before_update.strftime(MONTH_PATTERN)
 
     if data_source == DataSource.ENA:
         teaser = html.Div([html.Div(
@@ -141,7 +143,7 @@ Number of top occurring mutations"""),
             dcc.Dropdown(
                 id=ID_DROPDOWN_DATE_RANGE_START,
                 options=[{'label': c, 'value': c} for c in months],
-                value=oneyearago_formatted,
+                value=one_year_before_update_formatted,
                 multi=False,
                 clearable=False
             ),
@@ -150,7 +152,7 @@ Number of top occurring mutations"""),
                 children=dcc.Dropdown(
                     id=ID_DROPDOWN_DATE_RANGE_END,
                     options=[{'label': c, 'value': c} for c in months],
-                    value=today_formatted,
+                    value=last_update_formatted,
                     multi=False,
                     clearable=False
                 ))]),
