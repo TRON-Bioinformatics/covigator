@@ -139,6 +139,8 @@ via the European Nucleotide Archive [1] and the COVID-19 Data Portal [2], on whi
    Nucleic Acids Research, 39(SUPPL. 1), D28. [10.1093/nar/gkq967](https://doi.org/10.1093/nar/gkq967)
 2) “COVID-19 Data Portal - Accelerating Scientific Research through Data.” Accessed October 24, 2022. https://www.covid19dataportal.org/.
 
+The lineage annotation in the covigator dashboard package uses "the description of constellations of mutations for the SARS-CoV-2 virus" by [cov-lineages](https://github.com/cov-lineages/constellations) 
+provided and licensed under [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/)
 
 
 ## A note on terminology
