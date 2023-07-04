@@ -162,11 +162,13 @@ class Queries:
                                                                   else None, axis=1)
         lineage_variants = lineage_variants.rename(columns={"hgvs":"hgvs_p"})
         aa_level_mutations = lineage_variants[~pd.isnull(lineage_variants.hgvs_p)].loc[:, ['pangolin_lineage','hgvs_p']]
-        aa_level_mutations = aa_level_mutations.groupby('hgvs_p')['pangolin_lineage'].agg(','.join).reset_index()
+        aa_level_mutations = aa_level_mutations.sort_values(['hgvs_p', 'pangolin_lineage']).groupby('hgvs_p')['pangolin_lineage'].agg(','.join)
+        aa_level_mutations = aa_level_mutations.reset_index()
 
         nucleotide_level_mutations = lineage_variants[~pd.isnull(lineage_variants.dna_mutation)].loc[:, ['pangolin_lineage','dna_mutation']]
-        nucleotide_level_mutations = nucleotide_level_mutations.groupby('dna_mutation')['pangolin_lineage'].agg(','.join).reset_index()
-
+        nucleotide_level_mutations = nucleotide_level_mutations.sort_values(['dna_mutation', 'pangolin_lineage']).groupby('dna_mutation')['pangolin_lineage'].agg(','.join)
+        nucleotide_level_mutations = nucleotide_level_mutations.reset_index()
+        
         return aa_level_mutations, nucleotide_level_mutations
     
     def _merge_with_lineage_defining_variants(self, data: pd.DataFrame):
@@ -184,7 +186,7 @@ class Queries:
         data = data.merge(lineage_mutation_nuc, how="left", left_on="variant_id", right_on="variant_id")
         
         data["pangolin_lineage_x"].fillna(data["pangolin_lineage_y"], inplace=True)
-        data.drop(columns=["pangolin_lineage_y"])
+        data.drop(columns=["pangolin_lineage_y"], inplace=True)
         # formats the lineage column
         data.rename(columns={"pangolin_lineage_x": "pangolin_lineage"}, inplace=True)
         data["no_of_lineages"] = data.fillna({"pangolin_lineage": ""}).apply(
