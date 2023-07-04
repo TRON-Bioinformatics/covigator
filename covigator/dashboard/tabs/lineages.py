@@ -1,5 +1,4 @@
 from datetime import timedelta, datetime
-import pandas as pd
 from dash import dcc
 import dash_bootstrap_components as dbc
 from dash import html
