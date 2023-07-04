@@ -255,7 +255,7 @@ class QueriesTests(AbstractTest):
         # Correct lineage numbers returned
         self.assertTrue(merged_table.no_of_lineages.values.tolist() == [21, 19, 20, 2])
         # Check that hover label is created correctly
-        self.assertTrue(merged_table.pangolin_hover.values.tolist() == ["21 lineages", "19 lineages", "20 lineages", "AY.4.2,AY.4"])
+        self.assertTrue(merged_table.pangolin_hover.values.tolist() == ["21 lineages", "19 lineages", "20 lineages", "AY.4,AY.4.2"])
 
 
     def test_count_jobs_in_queue(self):
