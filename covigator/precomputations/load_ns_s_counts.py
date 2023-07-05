@@ -58,7 +58,7 @@ class NsSCountsLoader:
     def _dataframe_to_model(self, data, source: DataSource, region: RegionType):
 
         database_rows = []
-        for index, row in data.iterrows():
+        for _, row in data.iterrows():
             database_rows.append(self._row_to_model(row, source, region))
 
         if region == RegionType.GENE:

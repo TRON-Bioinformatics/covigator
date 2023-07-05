@@ -52,11 +52,11 @@ class VariantsPerLineageLoader:
         database_rows = []
         # stores the precomputed data
         if variants_per_lineage_ena is not None:
-            for index, row in variants_per_lineage_ena.iterrows():
+            for _, row in variants_per_lineage_ena.iterrows():
                 # add entries per gene
                 database_rows.append(_row_to_variants_per_lineage(row, source=DataSource.ENA))
         if variants_per_lineage_portal is not None:
-            for index, row in variants_per_lineage_portal.iterrows():
+            for _, row in variants_per_lineage_portal.iterrows():
                 # add entries per gene
                 database_rows.append(_row_to_variants_per_lineage(row, source=DataSource.COVID19_PORTAL))
         return database_rows

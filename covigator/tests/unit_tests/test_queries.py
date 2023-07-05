@@ -93,7 +93,7 @@ class QueriesTests(AbstractTest):
     def test_get_mds(self):
         mock_cooccurrence_matrix(faker=self.faker, session=self.session)
 
-        mds_fit, mds_coords = self.queries.get_mds(gene_name="S")
+        mds_fit, _ = self.queries.get_mds(gene_name="S")
         self.assertIsNotNone(mds_fit)
 
     @parameterized.expand([(DataSource.ENA, )])
