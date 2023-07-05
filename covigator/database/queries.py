@@ -170,7 +170,7 @@ class Queries:
         nucleotide_level_mutations = nucleotide_level_mutations.reset_index()
 
         return aa_level_mutations, nucleotide_level_mutations
-    
+
     def _merge_with_lineage_defining_variants(self, data: pd.DataFrame):
         """
         Merge tables from recurrent and intrahost mutations tab with lineage defining mutations
