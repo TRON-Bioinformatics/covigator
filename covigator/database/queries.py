@@ -175,7 +175,7 @@ class Queries:
         """
         Merge tables from recurrent and intrahost mutations tab with lineage defining mutations
         """
-        
+
         assert "variant_id" in data.columns, "Column variant_id is missing..."
         assert "hgvs_p" in data.columns, "Column hgvs_p is missing..."
         lineage_mutation_aa, lineage_mutation_nuc = self.get_lineage_defining_variants()
