@@ -11,9 +11,9 @@ class PipelineTest(unittest.TestCase):
         fastq2 = "SRR11140748_R2.fastq.gz"
         vcf_file = "expected_snpeff.vcf"
         p = Pipeline(config=Configuration())
-    
+
         # TODO: Implement Unit Test here
-        # Maybe do diff as assertion?    
+        # Maybe do diff as assertion?
         #self.assertEqual(p.run(fastq1=fastq1, fastq2=fastq2), vcf_file)
         #with self.assertRaises(CovigatorPipelineError):
             #vcf_file = p.run(fastq1=fastq1, fastq2=fastq2)

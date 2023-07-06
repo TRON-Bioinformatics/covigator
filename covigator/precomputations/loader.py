@@ -78,7 +78,7 @@ class PrecomputationsLoader:
         data_without_gene = pd.read_sql_query(sql_query, self.session.bind)
 
         database_rows = []
-        for index, row in data.iterrows():
+        for _, row in data.iterrows():
             database_rows.append(PrecomputedVariantsPerSample(
                 count=row["count"],
                 number_mutations=row["number_mutations"],
@@ -86,7 +86,7 @@ class PrecomputationsLoader:
                 variant_type=row["variant_type"],
                 gene_name=row["gene_name"] if row["gene_name"] is not None else "intergenic"
             ))
-        for index, row in data_without_gene.iterrows():
+        for _, row in data_without_gene.iterrows():
             database_rows.append(PrecomputedVariantsPerSample(
                 count=row["count"],
                 number_mutations=row["number_mutations"],
@@ -347,7 +347,7 @@ class PrecomputationsLoader:
                 histograms.append(histogram)
         database_rows = []
         if len(histograms) > 0:
-            for index, row in pd.concat(histograms).iterrows():
+            for _, row in pd.concat(histograms).iterrows():
                 # add entries per gene
                 database_rows.append(PrecomputedVariantAbundanceHistogram(
                     position_bin=row["position_bin"],

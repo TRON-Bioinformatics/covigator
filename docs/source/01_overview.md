@@ -29,17 +29,36 @@ CoVigator is a monitoring system for SARS-CoV-2 which integrates a full variant 
 a database that stores all relevant information about mutations in SARS-CoV-2 and finally a dashboard to enable 
 visual analytics.
 
-![CoVigator sample accumulation](_static/figures/screenshot_01_samples.png)
+![CoVigator system design](_static/figures/system_design_manuscript.png)
 
 <p align = "center">
-<b>Figure 1: Sample accumulation by country</b>
+<b>Figure 1: CoVigator system components. 
+The accessor reads external data and stores it in an SQL database. 
+The processor reads the stored data and distributes the processing of every sample in an HPC cluster via Dask. 
+The pipeline processes FASTA and FASTQ data and finally stores the results back in the database. 
+The dashboard reads the results and displays them in a set of interactive plots. 
+The results are also available in raw format.</b>
 </p>
 
 
-![CoVigator gene S view](_static/figures/screenshot_01_gene_view.png)
+![CoVigator sample accumulation](_static/figures/Figure_2_samples_and_dnds.jpg)
 
 <p align = "center">
-<b>Figure 2: Most frequent mutations in the spike protein</b>
+<b>Figure 2: Samples by country tab plots for raw reads dataset. 
+A) accumulation of samples through time by country; 
+B) dN/dS ratio through time on each SARS-CoV-2 protein; 
+C) dN/dS ratio through time in the domains of the spike protein.</b>
+</p>
+
+
+![CoVigator gene S view](_static/figures/Figure_5_gene_view.jpg)
+
+<p align = "center">
+<b>Figure 3: Gene view for the spike protein on the raw reads dataset. 
+A) Table of the top 20 recurrent mutations with the frequency segregated by month between November 2021 and July 2022; 
+B) gene view showing mutations (synonymous and unique mutations excluded) in the spike protein and their frequencies 
+in the virus population, the ConsHMM conservation tracks in grey and the Pfam protein domains in tones of purple. 
+</b>
 </p>
 
 CoVigator loads publicly available SARS-CoV-2 DNA sequences from two databases:
@@ -66,6 +85,10 @@ The project was kindly supported by
 [Intel´s Pandemic Response Technology Initiative](https://newsroom.intel.com/tag/pandemic-response-technology-initiative).
 
 ## How to cite
+
+* Bukur, T., Riesgo-Ferreiro, P., Sorn, P., Gudimella, R., Hausmann, J., Rösler, T., Löwer, M., Schrörs, B., & Sahin, U. 
+  CoVigator — A Knowledge Base for Navigating SARS-CoV-2 Genomic Variants. Viruses. 2023; 15(6):1391. 
+  [10.3390/v15061391](https://doi.org/10.3390/v15061391)
 
 * Schrörs, B., Riesgo-Ferreiro, P., Sorn, P., Gudimella, R., Bukur, T., Rösler, T., Löwer, M., & Sahin, U. (2021). 
   Large-scale analysis of SARS-CoV-2 spike-glycoprotein mutants demonstrates the need for continuous screening of virus 
@@ -116,6 +139,8 @@ via the European Nucleotide Archive [1] and the COVID-19 Data Portal [2], on whi
    Nucleic Acids Research, 39(SUPPL. 1), D28. [10.1093/nar/gkq967](https://doi.org/10.1093/nar/gkq967)
 2) “COVID-19 Data Portal - Accelerating Scientific Research through Data.” Accessed October 24, 2022. https://www.covid19dataportal.org/.
 
+The lineage annotation in the covigator dashboard package uses "the description of constellations of mutations for the SARS-CoV-2 virus" by [cov-lineages](https://github.com/cov-lineages/constellations) 
+provided and licensed under [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/)
 
 
 ## A note on terminology

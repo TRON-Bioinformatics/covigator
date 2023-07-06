@@ -98,7 +98,7 @@ def processor():
 
 
 def ena_downloader():
-    parser = ArgumentParser(
+    ArgumentParser(
         description="Covigator {} ENA downloader".format(covigator.VERSION))
 
     config = Configuration(verbose=True)

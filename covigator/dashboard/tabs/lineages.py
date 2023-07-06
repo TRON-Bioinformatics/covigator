@@ -49,13 +49,15 @@ def get_lineages_tab_graphs():
 
 def get_lineages_tab_left_bar(queries: Queries, data_source: DataSource):
 
-    lineages = queries.get_lineages(source=data_source.name)
     # Get all available months from collection_date column in sample table
+    lineages = queries.get_combined_labels(data_source.name)
     months = queries.get_sample_months(MONTH_PATTERN, data_source=data_source.name)
-    today = datetime.now()
-    today_formatted = today.strftime(MONTH_PATTERN)
-    oneyearago = today - timedelta(days=356)
-    oneyearago_formatted = oneyearago.strftime(MONTH_PATTERN)
+
+    last_update = queries.get_last_update(data_source.name)
+    last_update_formatted = last_update.strftime(MONTH_PATTERN)
+
+    one_year_before_update = last_update - timedelta(days=365)
+    one_year_before_update_formatted = one_year_before_update.strftime(MONTH_PATTERN)
 
     return html.Div(
         className="two columns",
@@ -106,7 +108,7 @@ def get_lineages_tab_left_bar(queries: Queries, data_source: DataSource):
             dcc.Markdown("""Select one or more lineages"""),
             dcc.Dropdown(
                 id=ID_DROPDOWN_LINEAGE,
-                options=[{'label': c, 'value': c} for c in queries.get_lineages(data_source.name)],
+                options=[{'label': c, 'value': v} for c, v in zip(lineages.combined_label, lineages.pangolin_lineage)],
                 value=None,
                 multi=True
             ),
@@ -124,7 +126,7 @@ def get_lineages_tab_left_bar(queries: Queries, data_source: DataSource):
                 dcc.Dropdown(
                     id=ID_DROPDOWN_LINEAGE_DATE_RANGE_START,
                     options=[{'label': c, 'value': c} for c in months],
-                    value=oneyearago_formatted,
+                    value=one_year_before_update_formatted,
                     multi=False,
                     clearable=False
                 ),
@@ -133,7 +135,7 @@ def get_lineages_tab_left_bar(queries: Queries, data_source: DataSource):
                     children=dcc.Dropdown(
                         id=ID_DROPDOWN_LINEAGE_DATE_RANGE_END,
                         options=[{'label': c, 'value': c} for c in months],
-                        value=today_formatted,
+                        value=last_update_formatted,
                         multi=False,
                         clearable=False
                     ))]),
@@ -161,8 +163,9 @@ def set_callbacks_lineages_tab(app, session: Session):
 
     countries_ena = queries.get_countries(DataSource.ENA.name)
     countries_covid19_portal = queries.get_countries(DataSource.COVID19_PORTAL.name)
-    lineages_ena = queries.get_lineages(DataSource.ENA.name)
-    lineages_covid19_portal = queries.get_lineages(DataSource.COVID19_PORTAL.name)
+
+    lineages_ena = queries.get_combined_labels(DataSource.ENA.name)
+    lineages_covid19_portal = queries.get_combined_labels(DataSource.COVID19_PORTAL.name)
 
     # Get months from ENA/Covid19 table
     months_from_db_ena = queries.get_sample_months(MONTH_PATTERN, data_source=DataSource.ENA.name)
@@ -191,9 +194,9 @@ def set_callbacks_lineages_tab(app, session: Session):
         """
         lineages = []
         if source == DataSource.ENA.name:
-            lineages = [{'label': c, 'value': c} for c in lineages_ena]
+            lineages = [{'label': c, 'value': v} for c, v in zip(lineages_ena.combined_label, lineages_ena.pangolin_lineage)]
         elif source == DataSource.COVID19_PORTAL.name:
-            lineages = [{'label': c, 'value': c} for c in lineages_covid19_portal]
+            lineages = [{'label': c, 'value': v} for c, v in zip(lineages_covid19_portal.combined_label, lineages_covid19_portal.pangolin_lineage)]
         return lineages
 
     @app.callback(
@@ -202,6 +205,9 @@ def set_callbacks_lineages_tab(app, session: Session):
         Input(ID_DROPDOWN_DATA_SOURCE, 'value')
     )
     def update_dropdown_end_date(start_date, data_source):
+        """
+        Updates the date selection slider when data source is changed
+        """
         today = datetime.now()
         today_formatted = today.strftime(MONTH_PATTERN)
         months = []

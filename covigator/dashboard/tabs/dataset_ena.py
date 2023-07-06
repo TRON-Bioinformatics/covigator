@@ -54,7 +54,7 @@ def get_ena_overview_tab_left_bar(queries: Queries):
         children=[
             html.Div([
                 html.Div(dbc.Button(
-                    "Distribution of samples by library strategy",
+                    "Samples by library strategy",
                     color="secondary",
                     className="me-1",
                     style={'font-size': '100%'}

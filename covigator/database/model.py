@@ -2,6 +2,7 @@ import os
 from datetime import datetime
 from typing import List
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship
 from sqlalchemy import Column, String, Float, Enum, DateTime, Integer, Boolean, Date, ForeignKey, \
     ForeignKeyConstraint, BigInteger, JSON, Index
 import enum
@@ -47,6 +48,10 @@ DATA_SOURCE_CONSTRAINT_NAME = get_table_versioned_name('data_source', config=con
 COVIGATOR_MODULE_CONSTRAINT_NAME = get_table_versioned_name('covigator_module', config=config)
 REGION_TYPE_CONSTRAINT_NAME = get_table_versioned_name('region_type', config=config)
 VARIANT_TYPE_CONSTRAINT_NAME = get_table_versioned_name('variant_type', config=config)
+LINEAGE_TABLE_NAME = get_table_versioned_name('lineage', config=config)
+CONSTELLATION_SITES_TABLE_NAME = get_table_versioned_name('lineage_defining_variant', config=config)
+LINEAGE_SITES_JUNCTION_TABLE_NAME = get_table_versioned_name('lineage_variant', config=config)
+VARIANT_LEVEL_CONSTRAINT_NAME = get_table_versioned_name('variant_level', config=config)
 SEPARATOR = ";"
 
 Base = declarative_base()
@@ -358,7 +363,6 @@ class SampleCovid19Portal(Base):
             self.collection_date.strftime("%Y%m%d") if self.collection_date is not None else "nodate",
             self.run_accession)
 
-
 class Variant(Base):
     """
     A variant with its specific annotations. THis does not contain any sample specific annotations.
@@ -531,6 +535,7 @@ class SubclonalVariant(Base):
 
 
 class LowFrequencyVariant(Base):
+
     __tablename__ = LOW_FREQUENCY_VARIANT_TABLE_NAME
 
     variant_id = Column(String, primary_key=True)
@@ -1076,7 +1081,7 @@ class RegionType(enum.Enum):
 
     GENE = 1
     DOMAIN = 2
-    CODING_REGION=3
+    CODING_REGION = 3
 
 
 class PrecomputedSynonymousNonSynonymousCounts(Base):
@@ -1128,3 +1133,78 @@ class PrecomputedVariantsPerLineage(Base):
     country = Column(String)
     count_observations = Column(Integer)
     source = Column(Enum(DataSource, name=DataSource.__constraint_name__))
+
+
+class Lineages(Base):
+    """
+    Annotate pangolin lineage identifiers with WHO designation, VOC/VUI, parent name
+    """
+    __tablename__ = LINEAGE_TABLE_NAME
+
+    pango_lineage_id = Column(String, primary_key=True)
+    # Constellation label used by scorpio for assignment
+    constellation_id = Column(String)
+    who_label = Column(String)
+    # VOC/VUI/V information
+    phe_label = Column(String)
+    voc_date = Column(Date)
+    vui_date = Column(Date)
+    variant_of_concern = Column(Boolean, default=False)
+    variant_under_investigation = Column(Boolean, default=False)
+    parent_lineage_id = Column(String)
+    tags = Column(String)
+
+    variants = relationship(
+        "LineageDefiningVariants",
+        secondary=LINEAGE_SITES_JUNCTION_TABLE_NAME,
+        back_populates='constellations',
+    )
+
+
+class VariantLevel(enum.Enum):
+    __constraint_name__ = VARIANT_LEVEL_CONSTRAINT_NAME
+
+    PROTEOMIC = 1
+    GENOMIC = 2
+
+
+class LineageDefiningVariants(Base):
+    """
+    Store lineage defining mutations as defined in the scorpio constellation files. Mutations can be in nucleotide
+    (intergenic) or proteomic space. The columns variant_id, position, reference and alternate therefore have different
+    meanings and formatting
+
+    Variant_id: position_in_genome:[reference_bases]>[alternate_nuc] (genomic level)
+                canonical_protein_name:[reference_aa]position_in_protein[alternate_aa] (proteomic level)
+    position: position_in_genome (genomic level) or position_in_protein (proteomic level)
+    reference: reference_bases (genomic level) or reference_aa (proteomic level)
+    alternate: alternate_bases (genomic level) or alternate_aa (proteomic level)
+    """
+    __tablename__ = CONSTELLATION_SITES_TABLE_NAME
+
+    variant_id = Column(String, primary_key=True)
+    variant_type = Column(Enum(VariantType, name=VariantType.__constraint_name__))
+    protein = Column(String)
+    position = Column(Integer, index=True)
+    reference = Column(String)
+    alternate = Column(String)
+    ambiguous_alternate = Column(Boolean, default=False)
+    annotation = Column(String)
+    hgvs = Column(String)
+    variant_level = Column(Enum(VariantLevel, name=VariantLevel.__constraint_name__))
+
+    constellations = relationship(
+        "Lineages",
+        secondary=LINEAGE_SITES_JUNCTION_TABLE_NAME,
+        back_populates="variants")
+
+
+class LineageVariant(Base):
+    """
+    Junction table that maps constellation sites to their respective lineage
+    """
+    __tablename__ = LINEAGE_SITES_JUNCTION_TABLE_NAME
+
+    pango_lineage_id = Column(ForeignKey(Lineages.pango_lineage_id), primary_key=True)
+    variant_id = Column(ForeignKey(LineageDefiningVariants.variant_id), primary_key=True)
+

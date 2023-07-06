@@ -20,7 +20,8 @@ STYLE_HEADER = {
 }
 STYLE_CELL = {
     'padding': '5px',
-    'maxWidth': '100px'
+    'maxWidth': '100px',
+    'whiteSpace': 'normal'
 }
 
 

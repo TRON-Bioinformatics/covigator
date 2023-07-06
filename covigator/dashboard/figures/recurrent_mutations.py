@@ -275,7 +275,7 @@ class RecurrentMutationsFigures(Figures):
                                 {"name": ["Variant", "Gene"], "id": "gene_name"},
                                 {"name": ["", "DNA mutation"], "id": "dna_mutation"},
                                 {"name": ["", "Protein mutation"], "id": "hgvs_p"},
-                                {"name": ["", "Effect"], "id": "annotation"},
+                                {"name": ["", "Pangolin lineage"], "id": "pangolin_hover"},
                                 {"name": ["", "Frequency"], "id": "frequency"},
                                 {"name": ["", "Count"], "id": "total"},
                             ] + month_columns,
@@ -285,7 +285,13 @@ class RecurrentMutationsFigures(Figures):
                     style_header=STYLE_HEADER,
                     style_cell=STYLE_CELL,
                     sort_by=[{"column_id": "frequency", "direction": "desc"}],
-                    row_selectable='multi'
+                    row_selectable='multi',
+                    tooltip_data=[
+                        {
+                            'pangolin_hover': {'value': row['pangolin_lineage'], 'type': 'markdown'}
+                        } for row in data.to_dict('records')
+                    ],
+                    tooltip_duration=None
                 ),
                 html.Br(),
                 html.Div(children=[
@@ -559,7 +565,7 @@ class RecurrentMutationsFigures(Figures):
         # reads gene annotations
         logger.debug("Getting genes and domains...")
         assert gene_name is not None or domain_name is not None, "Either gene or domain need to be provided"
-        
+
         if domain_name is None:
             gene = self.queries.get_gene(gene_name)
             domains = self.queries.get_domains_by_gene(gene_name)
@@ -772,7 +778,7 @@ class RecurrentMutationsFigures(Figures):
                 html.Button("Download CSV", id="btn_csv"),
                 dcc.Download(id="download-dataframe-csv"),
                 dcc.Store(id="memory", data=data.to_dict('records'))]))
-            tables.append(html.Br()),
+            tables.append(html.Br())
             tables.append(dcc.Markdown("""
             ***Co-occurrence clustering*** *shows the resulting clusters from the
             co-occurrence matrix with the Jaccard index corrected with the Cohen's kappa coefficient. 

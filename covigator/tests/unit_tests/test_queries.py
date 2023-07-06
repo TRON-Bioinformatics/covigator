@@ -5,13 +5,12 @@ from parameterized import parameterized
 from covigator import SYNONYMOUS_VARIANT
 from covigator.precomputations.loader import PrecomputationsLoader
 from covigator.precomputations.load_ns_s_counts import NsSCountsLoader
-from covigator.database.model import JobStatus, DataSource, Gene, RegionType, Domain
+from covigator.database.model import JobStatus, DataSource, Gene, RegionType, Domain, Lineages
 from covigator.database.queries import Queries
 from covigator.tests.unit_tests.abstract_test import AbstractTest
 from covigator.tests.unit_tests.mocked import get_mocked_variant, \
     get_mocked_variant_observation, mock_samples, mock_cooccurrence_matrix, mock_samples_and_variants, MOCKED_DOMAINS, \
     get_mocked_sample
-
 
 class QueriesTests(AbstractTest):
 
@@ -94,7 +93,7 @@ class QueriesTests(AbstractTest):
     def test_get_mds(self):
         mock_cooccurrence_matrix(faker=self.faker, session=self.session)
 
-        mds_fit, mds_coords = self.queries.get_mds(gene_name="S")
+        mds_fit, _ = self.queries.get_mds(gene_name="S")
         self.assertIsNotNone(mds_fit)
 
     @parameterized.expand([(DataSource.ENA, )])
@@ -198,6 +197,66 @@ class QueriesTests(AbstractTest):
             self.assertIsInstance(d, Domain)
             self.assertIsNotNone(d.name)
             self.assertEqual(d.gene_name, "S")
+
+    def test_get_lineages_who_label(self):
+        who_labels = self.queries.get_lineages_who_label()
+        self.assertIsNotNone(who_labels)
+        self.assertGreater(who_labels.shape[0], 0)
+        self.assertGreater(who_labels[~who_labels.who_label.isna()].shape[0], 0) # no emtpy who labels
+
+    def test_find_parent_who_label(self):
+        import pandas as pd
+        query = self.session.query(Lineages.pango_lineage_id.label("pangolin_lineage"), Lineages.who_label,
+                                   Lineages.parent_lineage_id)
+        data = pd.read_sql(query.statement, self.session.bind)
+        who_label = self.queries.find_parent_who_label("AY.4.2", data)
+        self.assertEqual(who_label, "Delta")
+        who_label = self.queries.find_parent_who_label("AY.4", data)
+        self.assertEqual(who_label, "Delta")
+        who_label = self.queries.find_parent_who_label("XE-parent2", data)
+        self.assertEqual(who_label, "Omicron")
+
+
+    @parameterized.expand([(DataSource.ENA, )])
+    def test_get_combined_labels(self, source):
+        # Mock some ENA samples
+        labels = self.queries.get_combined_labels(source.name)
+        self.assertIsNone(labels)
+
+        test_samples = [get_mocked_sample(faker=self.faker, source=source) for _ in range(10)]
+        self.session.add_all(test_samples)
+        self.session.commit()
+
+        labels = self.queries.get_combined_labels(source.name)
+        self.assertIsNotNone(labels)
+        self.assertGreater(labels.shape[0], 0)
+        self.assertEqual(labels[labels.combined_label.isna()].shape[0], 0)
+
+    def test_get_lineage_defining_variants(self):
+        lineage_mutation_aa, lineage_mutation_nuc = self.queries.get_lineage_defining_variants()
+        self.assertIsNotNone(lineage_mutation_aa)
+        self.assertIsNotNone(lineage_mutation_nuc)
+        self.assertGreater(lineage_mutation_aa.shape[0], 0)
+        self.assertGreater(lineage_mutation_nuc.shape[0], 0)
+
+        # Make sure that mutations on different levels have different columns for merging
+        self.assertTrue("dna_mutation" in lineage_mutation_nuc.columns)
+        self.assertTrue("hgvs_p" in lineage_mutation_aa.columns)
+
+    def test_merge_with_lineage_defining_variants(self):
+        import pandas as pd
+        data = {"variant_id": ["23403:A>G", "10029:C>T", "22995:C>A", "11201:A>G"], "hgvs_p": ["p.D614G", "p.T3255I", "p.T478K", "p.T3646A"]}
+        df = pd.DataFrame(data=data)
+        merged_table = self.queries._merge_with_lineage_defining_variants(df)
+        self.assertIsNotNone(merged_table)
+        self.assertGreater(merged_table.shape[0], 0)
+        # All mutations overlap with lineage mutations
+        self.assertEqual(merged_table[merged_table.no_of_lineages.isna()].shape[0], 0)
+        # Correct lineage numbers returned
+        self.assertTrue(merged_table.no_of_lineages.values.tolist() == [21, 19, 20, 2])
+        # Check that hover label is created correctly
+        self.assertTrue(merged_table.pangolin_hover.values.tolist() == ["21 lineages", "19 lineages", "20 lineages", "AY.4,AY.4.2"])
+
 
     def test_count_jobs_in_queue(self):
         mock_samples(faker=self.faker, session=self.session, job_status=JobStatus.QUEUED, num_samples=50)
