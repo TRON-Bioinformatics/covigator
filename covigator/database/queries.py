@@ -184,7 +184,7 @@ class Queries:
         # Merge data with lineage defining variants on different levels
         data = data.merge(lineage_mutation_aa, how="left", left_on="hgvs_p", right_on="hgvs_p")
         data = data.merge(lineage_mutation_nuc, how="left", left_on="variant_id", right_on="variant_id")
-        
+
         data["pangolin_lineage_x"].fillna(data["pangolin_lineage_y"], inplace=True)
         data.drop(columns=["pangolin_lineage_y"], inplace=True)
         # formats the lineage column
