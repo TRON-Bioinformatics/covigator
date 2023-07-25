@@ -45,6 +45,7 @@ class EnaAccessor(AbstractAccessor):
         "sample_collection",
         "sequencing_method",
         "center_name",
+        "tax_id",
         # FASTQs
         "fastq_ftp",
         "fastq_md5",
@@ -66,7 +67,7 @@ class EnaAccessor(AbstractAccessor):
         "Targeted-Capture"
     ]
 
-    def __init__(self, tax_id: str, host_tax_id: str, database: Database, maximum=None):
+    def __init__(self, tax_id: str, host_tax_id: str, database: Database, maximum=None, minimum_date=None):
 
         super().__init__()
         logger.info("Initialising ENA accessor")
@@ -76,12 +77,18 @@ class EnaAccessor(AbstractAccessor):
         self.tax_id = tax_id
         assert self.tax_id is not None and self.tax_id.strip() != "", "Empty tax id"
         logger.info("Tax id {}".format(self.tax_id))
-        self.host_tax_id = host_tax_id
-        assert self.host_tax_id is not None and self.host_tax_id.strip() != "", "Empty host tax id"
-        logger.info("Host tax id {}".format(self.host_tax_id))
+        if self.host_tax_id is not None and self.host_tax_id.strip() != "":
+            self.host_tax_id = host_tax_id
+            self.host_tax_id_filter = True
+            logger.info("Host tax id {}".format(self.host_tax_id))
+        else:
+            self.host_tax_id = None
+            self.host_tax_id_filter = False
+            logger.info("Empty host tax id. Disabling host id filter")
         self.database = database
         assert self.database is not None, "Empty database"
         self.maximum = maximum
+        self.minimum_date = minimum_date
 
         self.excluded_samples_by_host_tax_id = {}
         self.excluded_samples_by_fastq_ftp = 0
@@ -142,6 +149,9 @@ class EnaAccessor(AbstractAccessor):
                 if not self._complies_with_inclusion_criteria(run):
                     continue    # skips runs not complying with inclusion criteria
                 # NOTE: this parse operation is costly
+                # Remove tax_id field introduced with 2023-05-02 API update
+                if "tax_id" in run:
+                    run.pop("tax_id")
                 try:
                     sample_ena = self._parse_ena_run(run)
                     self.included += 1
@@ -178,11 +188,13 @@ class EnaAccessor(AbstractAccessor):
     def _complies_with_inclusion_criteria(self, ena_run: dict):
         # NOTE: this uses the original dictionary instead of the parsed SampleEna class for performance reasons
         included = True
-        host_tax_id = ena_run.get("host_tax_id")
-        if host_tax_id is None or host_tax_id.strip() == "" or host_tax_id != self.host_tax_id:
-            included = False    # skips runs where the host is empty or does not match
-            self.excluded_samples_by_host_tax_id[str(host_tax_id)] = \
-                self.excluded_samples_by_host_tax_id.get(str(host_tax_id), 0) + 1
+        # Skip host id filter if data is not available for selected Virus
+        if self.host_tax_id_filter:
+            host_tax_id = ena_run.get("host_tax_id")
+            if host_tax_id is None or host_tax_id.strip() == "" or host_tax_id != self.host_tax_id:
+                included = False    # skips runs where the host is empty or does not match
+                self.excluded_samples_by_host_tax_id[str(host_tax_id)] = \
+                    self.excluded_samples_by_host_tax_id.get(str(host_tax_id), 0) + 1
         fastq_ftp = ena_run.get("fastq_ftp")
         if fastq_ftp is None or fastq_ftp == "":
             included = False    # skips runs without FTP URL
