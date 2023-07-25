@@ -77,7 +77,7 @@ class EnaAccessor(AbstractAccessor):
         self.tax_id = tax_id
         assert self.tax_id is not None and self.tax_id.strip() != "", "Empty tax id"
         logger.info("Tax id {}".format(self.tax_id))
-        if self.host_tax_id is not None and self.host_tax_id.strip() != "":
+        if host_tax_id is not None and host_tax_id.strip() != "":
             self.host_tax_id = host_tax_id
             self.host_tax_id_filter = True
             logger.info("Host tax id {}".format(self.host_tax_id))
