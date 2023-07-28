@@ -4,6 +4,7 @@ from requests import Response
 from sqlalchemy.orm import Session
 import covigator
 from covigator.accessor.abstract_accessor import AbstractAccessor, _parse_abstract
+from covigator.accessor import MINIMUM_DATE
 from covigator.exceptions import CovigatorExcludedSampleTooEarlyDateException
 from covigator.database.model import SampleEna, DataSource, Log, CovigatorModule
 from covigator.database.database import Database
@@ -67,7 +68,8 @@ class EnaAccessor(AbstractAccessor):
         "Targeted-Capture"
     ]
 
-    def __init__(self, tax_id: str, host_tax_id: str, database: Database, maximum=None, minimum_date=None):
+    def __init__(self, tax_id: str, host_tax_id: str, database: Database, maximum=None,
+                 disable_minimum_date: bool=False):
 
         super().__init__()
         logger.info("Initialising ENA accessor")
@@ -84,11 +86,13 @@ class EnaAccessor(AbstractAccessor):
         else:
             self.host_tax_id = None
             self.host_tax_id_filter = False
-            logger.info("Empty host tax id. Disabling host id filter")
+            logger.info("Empty host tax id. Disabling host id filter criteria")
         self.database = database
         assert self.database is not None, "Empty database"
         self.maximum = maximum
-        self.minimum_date = minimum_date
+        self.disable_minimum_date = disable_minimum_date
+        if self.disable_minimum_date:
+            logger.info("Disabling minimum date filter criteria")
 
         self.excluded_samples_by_host_tax_id = {}
         self.excluded_samples_by_fastq_ftp = 0
@@ -177,7 +181,7 @@ class EnaAccessor(AbstractAccessor):
     def _parse_ena_run(self, run):
         sample = SampleEna(**run)
         self._parse_country(sample)
-        self._parse_dates(sample)
+        self._parse_dates(sample, self.disable_minimum_date)
         _parse_numeric_fields(sample)
         fastqs = sample.get_fastqs_ftp()
         # annotates with the number of FASTQ files, this is useful as we hold the FASTQs in a single string
