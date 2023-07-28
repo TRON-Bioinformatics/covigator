@@ -172,8 +172,8 @@ class EnaAccessorTests(AbstractTest):
              "collection_date": "2018-12-30"}
         ], database=self.database, disable_minimum_date=True)
         ena_accessor_with_min_date.access()
-        self.assertEqual(ena_accessor.included, 2)
-        self.assertEqual(ena_accessor.excluded_by_date, 1)
+        self.assertEqual(ena_accessor_with_min_date.included, 2)
+        self.assertEqual(ena_accessor_with_min_date.excluded_by_date, 1)
 
         ena_accessor_without_min_date = FakeEnaAccessor(results=[
             {"run_accession": "ERR4080483",
@@ -206,8 +206,8 @@ class EnaAccessorTests(AbstractTest):
              "collection_date": "2018-12-30"}
         ], database=self.database, disable_minimum_date=False)
         ena_accessor_without_min_date.access()
-        self.assertEqual(ena_accessor.included, 3)
-        self.assertEqual(ena_accessor.excluded_by_date, 0)
+        self.assertEqual(ena_accessor_without_min_date.included, 3)
+        self.assertEqual(ena_accessor_without_min_date.excluded_by_date, 0)
 
     def test_filtering_by_missing_fastqs(self):
         ena_accessor = FakeEnaAccessor([
