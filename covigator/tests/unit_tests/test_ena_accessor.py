@@ -170,7 +170,7 @@ class EnaAccessorTests(AbstractTest):
              "host_tax_id": "9606",
              "first_created": "2018-12-31",
              "collection_date": "2018-12-30"}
-        ], database=self.database, disable_minimum_date=True)
+        ], database=self.database, disable_minimum_date=False)
         ena_accessor_with_min_date.access()
         self.assertEqual(ena_accessor_with_min_date.included, 2)
         self.assertEqual(ena_accessor_with_min_date.excluded_by_date, 1)
@@ -204,7 +204,7 @@ class EnaAccessorTests(AbstractTest):
              "host_tax_id": "9606",
              "first_created": "2018-12-31",
              "collection_date": "2018-12-30"}
-        ], database=self.database, disable_minimum_date=False)
+        ], database=self.database, disable_minimum_date=True)
         ena_accessor_without_min_date.access()
         self.assertEqual(ena_accessor_without_min_date.included, 3)
         self.assertEqual(ena_accessor_without_min_date.excluded_by_date, 0)
