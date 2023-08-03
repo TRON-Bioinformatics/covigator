@@ -11,6 +11,7 @@ import pandas as pd
 
 from covigator.dashboard.figures.intrahost_mutations import IntrahostMutationsFigures
 from covigator.database.queries import Queries
+from covigator.dashboard.tabs import APPLY_STYLE
 
 TOP_COOCCURRING_CLONAL_VARIANTS = 'top-cooccurring-clonal-variants-table'
 
@@ -172,7 +173,7 @@ def get_subclonal_variants_tab_left_bar(queries: Queries):
             multi=False
         ),
         html.Br(),
-        html.Button('Apply', id=ID_APPLY_BUTTOM),
+        dbc.Button('Apply', id=ID_APPLY_BUTTOM, outline=True, color="success", style=APPLY_STYLE),
     ], className="two columns")
 
 
