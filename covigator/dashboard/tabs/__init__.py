@@ -4,7 +4,7 @@ import dash_bootstrap_components as dbc
 MONTH_PATTERN = "%Y-%m"
 MISSING_VALUE = "-"
 
-APPLY_STYLE={"height": "38px", "padding": "0 30px"}
+APPLY_STYLE = {"height": "38px", "padding": "0 30px"}
 
 def print_date(date: datetime.date):
     return str(date) if date is not None else MISSING_VALUE

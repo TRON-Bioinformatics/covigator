@@ -109,7 +109,7 @@ def get_samples_tab_left_bar(queries: Queries, data_source: DataSource):
                 multi=True
             ),
             html.Br(),
-            dbc.Button('Apply', id=ID_APPLY_BUTTOM, outline=True, color="success", style=APPLY_STYLE),
+            dbc.Button('Apply', id=ID_APPLY_BUTTOM, outline=False, color="success", style=APPLY_STYLE),
         ])
 
 

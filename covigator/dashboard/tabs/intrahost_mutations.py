@@ -173,7 +173,7 @@ def get_subclonal_variants_tab_left_bar(queries: Queries):
             multi=False
         ),
         html.Br(),
-        dbc.Button('Apply', id=ID_APPLY_BUTTOM, outline=True, color="success", style=APPLY_STYLE),
+        dbc.Button('Apply', id=ID_APPLY_BUTTOM, outline=False, color="success", style=APPLY_STYLE),
     ], className="two columns")
 
 

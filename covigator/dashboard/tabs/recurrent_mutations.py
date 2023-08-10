@@ -210,7 +210,7 @@ considered as a core point. This includes the point itself."""),
             tooltip=dict(always_visible=False, placement="right")
         ),
         html.Br(),
-        dbc.Button('Apply', id=ID_APPLY_BUTTOM, outline=True, color="success", style=APPLY_STYLE),
+        dbc.Button('Apply', id=ID_APPLY_BUTTOM, outline=False, color="success", style=APPLY_STYLE),
     ], className="two columns")
 
 
