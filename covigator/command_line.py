@@ -34,13 +34,21 @@ def ena_accessor():
         help="the taxonomy id of the host organism, eg: 9606 for Homo sapiens",
         default="9606"
     )
+    parser.add_argument(
+        "--disable-minimum-date",
+        dest="disable_minimum_date",
+        help="disable minimum date exclusion criteria",
+        action="store_true"
+    )
 
     args = parser.parse_args()
     tax_id = args.tax_id
     host_tax_id = args.host_tax_id
+    disable_minimum_date = args.disable_minimum_date
     config = Configuration(verbose=True)
     covigator.configuration.initialise_logs(config.logfile_accesor)
-    EnaAccessor(tax_id=tax_id, host_tax_id=host_tax_id, database=Database(config=config, initialize=True)).access()
+    EnaAccessor(tax_id=tax_id, host_tax_id=host_tax_id, database=Database(config=config, initialize=True),
+                disable_minimum_date=disable_minimum_date).access()
 
 
 def covid19_portal_accessor():

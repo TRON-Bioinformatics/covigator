@@ -96,6 +96,119 @@ class EnaAccessorTests(AbstractTest):
         self.assertEqual(ena_accessor.excluded_samples_by_host_tax_id.get("1111"), 1)
         self.assertEqual(ena_accessor.excluded_samples_by_host_tax_id.get("2222"), 1)
 
+    def test_filtering_by_host_taxid_disabled(self):
+        ena_accessor = FakeEnaAccessor([
+            {"run_accession": "ERR4080483",
+             "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
+             "instrument_platform": "ILLUMINA",
+             "library_strategy": "WGS",
+             "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/003/ERR4080483/ERR4080483_1.fastq.gz",
+             "fastq_md5": "a91a9dfa2f7008e13a7ce9767aa9aaf3",
+             "host_tax_id": "9606"},
+            {"run_accession": "ERR4080484",
+             "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
+             "instrument_platform": "ILLUMINA",
+             "library_strategy": "WGS",
+             "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/004/ERR4080484/ERR4080484_1.fastq.gz",
+             "fastq_md5": "c57fef34933cbbec2e9e08867f3c664c",
+             "host_tax_id": "1111"},
+            {"run_accession": "ERR4080485",
+             "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
+             "instrument_platform": "ILLUMINA",
+             "library_strategy": "WGS",
+             "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/005/ERR4080485/ERR4080485_1.fastq.gz",
+             "fastq_md5": "4de269d2b5831e1c5175586af694d21e",
+             "host_tax_id": "2222"},
+            {"run_accession": "ERR4080486",
+             "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
+             "instrument_platform": "ILLUMINA",
+             "library_strategy": "OTHER",
+             "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/004/ERR4080484/ERR4080486_1.fastq.gz",
+             "fastq_md5": "c57fef34933cbbec2e9e08867f3c664c",
+             "host_tax_id": "9606"},
+            {"run_accession": "ERR4080483",
+             "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
+             "instrument_platform": "OXFORD_NANOPORE",
+             "library_strategy": "WGS",
+             "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/003/ERR4080483/ERR4080483_1.fastq.gz",
+             "fastq_md5": "a91a9dfa2f7008e13a7ce9767aa9aaf3",
+             "host_tax_id": "9606"}
+        ], host_tax_id=None)
+        ena_accessor.access()
+        self.assertEqual(ena_accessor.included, 3)
+        self.assertEqual(ena_accessor.excluded, 2)
+        self.assertEqual(ena_accessor.excluded_samples_by_instrument_platform.get("OXFORD_NANOPORE"), 1)
+        self.assertEqual(ena_accessor.excluded_samples_by_library_strategy.get("OTHER"), 1)
+
+    def test_filtering_by_minimum_date(self):
+        ena_accessor_with_min_date = FakeEnaAccessor(results=[
+            {"run_accession": "ERR4080483",
+            "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
+            "instrument_platform": "ILLUMINA",
+             "library_strategy": "WGS",
+             "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/003/ERR4080483/ERR4080483_1.fastq.gz",
+             "fastq_md5": "a91a9dfa2f7008e13a7ce9767aa9aaf3",
+             "host_tax_id": "9606",
+             "first_created": "2020-01-01",
+             "collection_date": "2019-12-31",
+             },
+            {"run_accession": "ERR4080484",
+             "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
+             "instrument_platform": "ILLUMINA",
+             "library_strategy": "WGS",
+             "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/003/ERR4080483/ERR4080483_1.fastq.gz",
+             "fastq_md5": "c57fef34933cbbec2e9e08867f3c664c",
+             "host_tax_id": "9606",
+             "first_created": "2020-01-01 14:50",
+             "collection_date": "2019-12-31 12:12:12"},
+            {"run_accession": "ERR4080485",
+             "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
+             "instrument_platform": "ILLUMINA",
+             "library_strategy": "WGS",
+             "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/005/ERR4080485/ERR4080485_1.fastq.gz",
+             "fastq_md5": "4de269d2b5831e1c5175586af694d21e",
+             "host_tax_id": "9606",
+             "first_created": "2018-12-31",
+             "collection_date": "2018-12-30"}
+        ], disable_minimum_date=False)
+        ena_accessor_with_min_date.access()
+        self.assertEqual(ena_accessor_with_min_date.included, 2)
+        self.assertEqual(ena_accessor_with_min_date.excluded_by_date, 1)
+
+        ena_accessor_without_min_date = FakeEnaAccessor(results=[
+            {"run_accession": "ERR4080486",
+            "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
+            "instrument_platform": "ILLUMINA",
+             "library_strategy": "WGS",
+             "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/003/ERR4080486/ERR4080486_1.fastq.gz",
+             "fastq_md5": "a91a9dfa2f7008e13a7ce9767aa9aaf3",
+             "host_tax_id": "9606",
+             "first_created": "2020-01-01",
+             "collection_date": "2019-12-31",
+             },
+            {"run_accession": "ERR4080487",
+             "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
+             "instrument_platform": "ILLUMINA",
+             "library_strategy": "WGS",
+             "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/003/ERR4080487/ERR4080487_1.fastq.gz",
+             "fastq_md5": "c57fef34933cbbec2e9e08867f3c664c",
+             "host_tax_id": "9606",
+             "first_created": "2020-01-01 14:50",
+             "collection_date": "2019-12-31 12:12:12"},
+            {"run_accession": "ERR4080488",
+             "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
+             "instrument_platform": "ILLUMINA",
+             "library_strategy": "WGS",
+             "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/005/ERR4080489/ERR4080489_1.fastq.gz",
+             "fastq_md5": "4de269d2b5831e1c5175586af694d21e",
+             "host_tax_id": "9606",
+             "first_created": "2018-12-31",
+             "collection_date": "2018-12-30"}
+        ], disable_minimum_date=True)
+        ena_accessor_without_min_date.access()
+        self.assertEqual(ena_accessor_without_min_date.included, 3)
+        self.assertEqual(ena_accessor_without_min_date.excluded_by_date, 0)
+
     def test_filtering_by_missing_fastqs(self):
         ena_accessor = FakeEnaAccessor([
             {"run_accession": "ERR4080483",

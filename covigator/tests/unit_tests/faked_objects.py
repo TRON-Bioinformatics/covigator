@@ -30,10 +30,11 @@ class FakeConfiguration(Configuration):
 
 class FakeEnaAccessor(EnaAccessor):
 
-    def __init__(self, results, database=None):
+    def __init__(self, results, database=None, host_tax_id=HOMO_SAPIENS_TAXID, disable_minimum_date=False):
         # uses an in memory database or the one provided
-        super().__init__(tax_id=SARS_COV_2_TAXID, host_tax_id=HOMO_SAPIENS_TAXID,
-                         database=database if database else Database(test=True, config=Configuration()))
+        super().__init__(tax_id=SARS_COV_2_TAXID, host_tax_id=host_tax_id,
+                         database=database if database else Database(test=True, config=Configuration()),
+                         disable_minimum_date=disable_minimum_date)
         self.results = results
 
     def _get_ena_runs_page(self):
