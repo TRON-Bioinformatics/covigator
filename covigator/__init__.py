@@ -1,4 +1,4 @@
-VERSION = "v2.2.1"
+VERSION = "v2.2.2"
 ANALYSIS_PIPELINE_VERSION = "v0.15.0"
 
 MISSENSE_VARIANT = "missense_variant"

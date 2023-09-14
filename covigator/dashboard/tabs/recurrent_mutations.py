@@ -10,6 +10,7 @@ from covigator.dashboard.figures.recurrent_mutations import RecurrentMutationsFi
 from covigator.dashboard.tabs import MONTH_PATTERN
 from covigator.database.model import DataSource
 from covigator.database.queries import Queries
+from covigator.dashboard.tabs import APPLY_STYLE
 
 ID_DROPDOWN_DATE_RANGE_END_DIV = 'dropdown-date-range-end-div'
 ID_DROPDOWN_GENE = 'dropdown-gene'
@@ -209,7 +210,7 @@ considered as a core point. This includes the point itself."""),
             tooltip=dict(always_visible=False, placement="right")
         ),
         html.Br(),
-        html.Button('Apply', id=ID_APPLY_BUTTOM),
+        dbc.Button('Apply', id=ID_APPLY_BUTTOM, outline=False, color="success", style=APPLY_STYLE),
     ], className="two columns")
 
 

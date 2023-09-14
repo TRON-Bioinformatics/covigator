@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from covigator.dashboard.figures.mutation_stats import MutationStatsFigures
 from covigator.database.model import DataSource, VariantType
 from covigator.database.queries import Queries
+from covigator.dashboard.tabs import APPLY_STYLE
 
 
 ID_VARIANTS_PER_SAMPLE_GRAPH = 'ms-variants-per-sample-graph'
@@ -110,7 +111,7 @@ def get_samples_tab_left_bar(queries: Queries, data_source: DataSource):
                 multi=True
             ),
             html.Br(),
-            html.Button('Apply', id=ID_APPLY_BUTTOM),
+            dbc.Button('Apply', id=ID_APPLY_BUTTOM, outline=False, color="success", style=APPLY_STYLE),
         ])
 
 

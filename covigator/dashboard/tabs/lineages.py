@@ -8,6 +8,7 @@ from covigator.dashboard.figures.lineages import LineageFigures
 from covigator.dashboard.tabs import get_mini_container, print_number, MONTH_PATTERN
 from covigator.database.model import DataSource
 from covigator.database.queries import Queries
+from covigator.dashboard.tabs import APPLY_STYLE
 
 ID_APPLY_BUTTOM = 'lineages-apply-buttom'
 
@@ -152,7 +153,7 @@ def get_lineages_tab_left_bar(queries: Queries, data_source: DataSource):
             ),
             html.Br(),
             html.P("Select a single lineage to explore its corresponding mutations."),
-            html.Button('Apply', id=ID_APPLY_BUTTOM),
+            dbc.Button('Apply', id=ID_APPLY_BUTTOM, outline=True, color="success", style=APPLY_STYLE),
         ])
 
 

@@ -65,90 +65,92 @@ class Dashboard:
         footer = get_footer()
 
         layout = html.Div(children=[
-            dbc.Card([
-                dbc.CardHeader(
-                    children=[
-                        dcc.Location(id='url', refresh=False),
-                        dbc.Navbar(
-                            [
-                                dbc.Row([
-                                        dbc.Col(
-                                            children=html.A(html.Img(src=COVIGATOR_LOGO,
-                                                                     height="80px"), href=HOME_HREF),
-                                            className="ml-2",
-                                            id="logo"
-                                        ),
+            dbc.Navbar([
+                    dbc.Row([
+                        dbc.Col(
+                            children=html.A(html.Img(src=COVIGATOR_LOGO,
+                                                     height="80px"), href=HOME_HREF),
+                            className="ml-2",
+                            id="logo"
+                        ),
+                    ],
+                        align="left",
+                        className="g-0",
+                        style={'align': 'left'}
+                    ),
+                    dbc.Row(
+                        [
+                            dbc.Col(
+                                None,
+                                className="ml-2",
+                                id="top-right-logo",
+                                align="left",
+                                style={'margin-left': '2%', }
+                            ),
+                            dbc.Col(html.Br()),
+                            dbc.Col(
+                                dbc.DropdownMenu(
+                                    label="Menu", children=[
+                                        dbc.DropdownMenuItem(
+                                            "Home", href=HOME_HREF, class_name="m-1",
+                                            style={'font-size': '150%', "color": "#003c78"}),
+                                        dbc.DropdownMenuItem(
+                                            "ENA dashboard", href=ENA_HREF,
+                                            style={'font-size': '150%', "color": "#003c78"}),
+                                        dbc.DropdownMenuItem(
+                                            "COVID-19 Data Portal sequences dashboard", href=COVID_PORTAL_HREF,
+                                            style={'font-size': '150%', "color": "#003c78"}),
+                                        dbc.DropdownMenuItem(
+                                            "Documentation", href="https://covigator.readthedocs.io/en/latest",
+                                            target="_blank",
+                                            style={'font-size': '150%', "color": "#003c78"}),
+                                        dbc.DropdownMenuItem(
+                                            "Data download", href=DOWNLOAD_HREF,
+                                            style={'font-size': '150%', "color": "#003c78"}),
+                                        dbc.DropdownMenuItem(
+                                            "Acknowledgements", href=ACKNOWLEDGEMENTS_HREF,
+                                            style={'font-size': '150%', "color": "#003c78"}),
+                                        dbc.DropdownMenuItem(
+                                            "Feedback", href=FEEDBACK_HREF, target="_blank",
+                                            style={'font-size': '150%', "color": "#003c78"}),
                                     ],
-                                    align="left",
-                                    className="g-0",
-                                    style={'align': 'left'}
+                                    align_end=True,
+                                    size="lg",
+                                    toggle_style={
+                                        "textTransform": "uppercase",
+                                        "background": "#003c78",
+                                        'font-size': '85%'
+                                    },
+                                    style={"margin-left": "15px"}
                                 ),
-                                dbc.Row(
-                                    [
-                                        dbc.Tabs(
-                                            None,
-                                            id="tabs",
-                                            active_tab=SAMPLES_TAB_ID,
-                                            style={'align': 'right', 'font-size': '140%'},
-                                        )],
-                                    align="right",
-                                    style={'margin-left': '2%', }
-                                ),
-                                dbc.Row([
-                                    dbc.Col(
-                                        None,
-                                        className="ml-2",
-                                        id="top-right-logo",
-                                        align="left",
-                                        style={'margin-left': '2%', }
-                                    ),
-                                    dbc.Col(html.Br()),
-                                    dbc.Col(
-                                        dbc.DropdownMenu(
-                                            label="Menu", children=[
-                                                dbc.DropdownMenuItem(
-                                                    "Home", href=HOME_HREF, class_name="m-1",
-                                                    style={'font-size' : '150%', "color": "#003c78"}),
-                                                dbc.DropdownMenuItem(
-                                                    "ENA dashboard", href=ENA_HREF,
-                                                    style={'font-size' : '150%', "color": "#003c78"}),
-                                                dbc.DropdownMenuItem(
-                                                    "COVID-19 Data Portal sequences dashboard", href=COVID_PORTAL_HREF,
-                                                    style={'font-size': '150%', "color": "#003c78"}),
-                                                dbc.DropdownMenuItem(
-                                                    "Documentation", href="https://covigator.readthedocs.io/en/latest",
-                                                    target="_blank",
-                                                    style={'font-size': '150%', "color": "#003c78"}),
-                                                dbc.DropdownMenuItem(
-                                                    "Data download", href=DOWNLOAD_HREF,
-                                                    style={'font-size': '150%', "color": "#003c78"}),
-                                                dbc.DropdownMenuItem(
-                                                    "Acknowledgements", href=ACKNOWLEDGEMENTS_HREF,
-                                                    style={'font-size': '150%', "color": "#003c78"}),
-                                                dbc.DropdownMenuItem(
-                                                    "Feedback", href=FEEDBACK_HREF, target="_blank",
-                                                    style={'font-size': '150%', "color": "#003c78"}),
-                                            ],
-                                            align_end=True,
-                                            size="lg",
-                                            toggle_style={
-                                                "textTransform": "uppercase",
-                                                "background": "#003c78",
-                                                'font-size': '85%'
-                                            },
-                                            style={"margin-left": "15px"}
-                                        ),
-                                        style={}
-                                    )],
-                                    align="right",
-                                    justify="end",
-                                    style={'float': 'right', 'position': 'absolute', 'right': 0, 'text-align': 'right',
-                                           },
-                                    className="g-0 ms-auto flex-nowrap mt-3 mt-md-0",
-                                )
-                                ]
-                        )],
-                ),
+                            )],
+                        align="right",
+                        justify="end",
+                        style={'float': 'right', 'position': 'absolute', 'right': 0, 'text-align': 'right',
+                               "margin-right": "1%"},
+                        className="g-0 ms-auto flex-nowrap mt-3 mt-md-0",
+                    )]
+            ),
+            # Wrap tabs into container. The reason to put them not into the
+            # Card header is because pages without tabs would show the empty
+            # card header adding additional unused vertical space.
+            dbc.Container(children=[
+                dcc.Location(id='url', refresh=False),
+                dbc.Row(
+                    dbc.Col(
+                        dbc.Tabs(
+                            None,
+                            id="tabs",
+                            active_tab=SAMPLES_TAB_ID,
+                            style={'align': 'center', 'font-size': '140%',},
+                        ),
+                        width="auto"),
+                        align="right", justify="left"
+
+                )],
+                style={'background-color':'#f8f9fa'}, fluid=True
+            ),
+            dbc.Card([
                 dbc.CardBody(dcc.Loading(id="loading-1", children=[html.Div(id=ID_TAB_CONTENT)], style={"height": "100%"})),
                 dbc.CardFooter(footer)
             ])
