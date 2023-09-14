@@ -14,37 +14,39 @@ def get_tab_overview():
                             html.Br(),
                             html.P(
                                 """
-                                Human infections with SARS-CoV-2 are spreading globally since the beginning of 2020, necessitating preventive or 
-                                therapeutic strategies and first steps towards an end to this pandemic were done with the approval of the first mRNA 
-                                vaccines against SARS-CoV-2. 
-                                The accumulation of virus samples that have been sequenced in a short time frame is unprecedented.
-                                This is the first pandemic recorded at a molecular level with such level of detail giving us the opportunity to develop
-                                new tools for the monitoring of its evolution.
+                                CoVigator is a knowledge base and dashboard for SARS-CoV-2 mutations, built by integrating 
+                                a full variant calling pipeline. CoVigator dashboard provides readily available interpretation 
+                                of mutations along with respective lineages in an interactive visualization.
                                 """),
                             html.P(
                                 """
-                                We want to provide an up-to-date interactive view on SARS-CoV-2 mutations to support global efforts in preventing or 
-                                treating infections. 
-                                Monitoring the appearance of relevant new mutations is key to enable a fast reaction to new strains and for that 
-                                purpose we enable the exploration of these mutations and their annotations. 
-                                Thus, we envision to help guiding global vaccine design efforts to overcome the threats of this pandemic.
-                                """),
-                            html.P(
-                                """
-                                CoVigator is a monitoring system for SARS-CoV-2 which integrates a full variant calling pipeline, 
-                                a database that stores all relevant information about mutations in SARS-CoV-2 and finally a dashboard to enable 
-                                visual analytics.
+                                The main goal for CoVigator is to provide a comprehensive resource with an up-to-date list 
+                                of mutations supporting the global efforts of finding emerging SARS-CoV-2 variants. CoVigator
+                                dashboard displays pre-calculated ranked recurrent and intrahost mutations through time, 
+                                which facilitates the monitoring of SARS-CoV-2 mutations.
+                                CoVigator process publicly available SARS-CoV-2 raw reads (i.e. FASTQs) from the 
+                                European Nucleotide Archive (ENA) and genome assemblies from the COVID-19 Data Portal. 
+                                CoVigator is open-data-friendly and allowing it to be adopted to other SARS-CoV-2 data sources. 
                                 """),
                             html.Br(),
                             html.P("""
-                               CoVigator loads publicly available SARS-CoV-2 raw reads (ie: FASTQs) from 
-                               the European Nucleotide Archive (ENA) and sequences from the COVID-19 Data Portal.
-                               Some samples are present in both datasets.
-                               ENA enables a high resolution analysis into the SARS-CoV-2 mutations through the raw reads. 
-                               Intrahost mutations are of particular interest.
-                               On the other hand, the COVID-19 Data Portal sequences have a lower resolution, 
-                               but it is a more extensive dataset.
+                               CoVigator provides high-resolution SARS-CoV-2 mutations from genome assemblies and raw 
+                               reads allowing confirmation of evolutionary trends. CoVigator pipeline puts a special 
+                               emphasis on identification of SARS-CoV-2 intrahost mutations, thus reporting potential 
+                               SARS-CoV-2 variants of concern (VoC). CoVigator project is open sourced and made 
+                               available under the MIT license. The knowledge base and dashboard source is 
+                               hosted at https://github.com/TRON-Bioinformatics/covigator
                                """),
+                            html.Br(),
+                            html.P("""
+                               If you are interested in our work, please also have a read of our most recent publication.
+                               """),
+                            html.P([
+                                "Bukur, T., Riesgo-Ferreiro, P., Sorn, P., Gudimella, R., Hausmann, J., Rösler, T., "
+                                "Löwer, M., Schrörs, B., & Sahin, U. CoVigator — A Knowledge Base for Navigating SARS-CoV-2 Genomic Variants. "
+                                "Viruses. 2023; 15(6):1391.",
+                            ], style={"font-style": "italic", "margin-left": "50px"}),
+
 
                             dbc.CardBody(
                                 dbc.Row([
@@ -127,7 +129,7 @@ def get_header():
     return dbc.Row([
                 dbc.Col([None], width=2),
                 dbc.Col([html.Div(
-                    [html.Div([html.H1("Monitoring SARS-CoV-2 mutations")], style={"text-align": "left"})],
-                    id="title")], width=5),
+                    [html.Div([html.H1("Welcome to CoVigator Dashboard")], style={"text-align": "left"})],
+                    id="title")], width=4),
                 dbc.Col([None], width=2)
         ], id="header", className="row flex-display",)
