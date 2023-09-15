@@ -1,6 +1,8 @@
 import dash_bootstrap_components as dbc
 from dash import html
-
+from sqlalchemy.orm import Session
+from covigator.database.queries import Queries
+from dash.dependencies import Output, Input, State
 
 def get_tab_overview():
 
@@ -110,8 +112,38 @@ def get_tab_overview():
                                             ],
                                             outline=False,
                                             style={"width": "40rem", "height": "15rem", "margin-left": "40px"},
-                                        )]
-                                    ),
+                                        ),
+                                        html.Br(),
+                                        dbc.Card(
+                                            [
+                                                dbc.CardBody(
+                                                    dbc.Row([
+                                                        dbc.Col([
+                                                            html.Div(
+                                                                children=[
+                                                                    html.H2("Covigator News Section"),
+                                                                    html.P(
+                                                                        """
+                                                                        Here you can find information about new data 
+                                                                        releases, updates to Coivgator NGS pipeline or 
+                                                                        Covigator python package
+                                                                        """),
+                                                                    html.Br(),
+                                                                    html.Div(
+                                                                        id="news_section",
+                                                                        children=get_news(Session)
+                                                                    )
+                                                                ]
+                                                            )
+                                                        ])
+                                                    ])
+                                                )
+
+                                            ],
+                                            outline=False,
+                                            style={"width": "40rem", "height": "15rem", "margin-left": "40px"},
+                                        )
+                                    ]),
                                 ])),
                             html.Br(),
                             html.Br(),
@@ -133,3 +165,15 @@ def get_header():
                     id="title")], width=4),
                 dbc.Col([None], width=2)
         ], id="header", className="row flex-display",)
+
+
+def get_news(session: Session):
+    queries = Queries(session=session)
+    newest_news = queries.get_top_news(n=3)
+    children = []
+    #for this_news in newest_news.iterrows():
+    #    news_item = []
+    #    news_item.append(html.H3(this_news.message))
+    #    news_item.append(html.P(this_news.publishing_date))
+    #    children.extend(news_item)
+    return children

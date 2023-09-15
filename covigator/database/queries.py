@@ -15,7 +15,7 @@ from covigator.database.model import DataSource, SampleEna, JobStatus, \
     VariantType, PrecomputedAnnotation, PrecomputedOccurrence, PrecomputedTableCounts, \
     PrecomputedVariantAbundanceHistogram, PrecomputedSynonymousNonSynonymousCounts, RegionType, Domain, \
     LastUpdate, SampleCovid19Portal, VariantObservationCovid19Portal, VariantCovid19Portal, Lineages, LineageVariant, \
-    LineageDefiningVariants
+    LineageDefiningVariants, NewsSection
 from covigator.exceptions import CovigatorQueryException, CovigatorDashboardMissingPrecomputedData
 
 
@@ -160,8 +160,8 @@ class Queries:
         # Rename columns to match columns used in recurrent/intrahost mutations tab
         lineage_variants["dna_mutation"] = lineage_variants.apply(lambda x: x.variant_id if pd.isnull(x.hgvs)
                                                                   else None, axis=1)
-        lineage_variants = lineage_variants.rename(columns={"hgvs":"hgvs_p"})
-        aa_level_mutations = lineage_variants[~pd.isnull(lineage_variants.hgvs_p)].loc[:, ['pangolin_lineage','hgvs_p']]
+        lineage_variants = lineage_variants.rename(columns={"hgvs": "hgvs_p"})
+        aa_level_mutations = lineage_variants[~pd.isnull(lineage_variants.hgvs_p)].loc[:, ['pangolin_lineage', 'hgvs_p']]
         aa_level_mutations = aa_level_mutations.sort_values(['hgvs_p', 'pangolin_lineage']).groupby('hgvs_p')['pangolin_lineage'].agg(','.join)
         aa_level_mutations = aa_level_mutations.reset_index()
 
@@ -844,3 +844,8 @@ class Queries:
         for whereclause in self.column_windows(query.session, column, windowsize):
             for row in query.filter(whereclause).order_by(column):
                 yield row
+
+    def get_top_news(self, n=5):
+        query = self.session.query(NewsSection.message_text).order_by(NewsSection.publishing_date, desc)
+        news = pd.read_sql(query.statement, self.session.bind).head(n)
+        return news
