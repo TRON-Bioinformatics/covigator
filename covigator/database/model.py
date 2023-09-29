@@ -1218,6 +1218,7 @@ class NewsType(enum.Enum):
     WARNINGS = 2
     BUGS = 3
 
+
 class NewsSection(Base):
     """
     Table to hold information for news section
@@ -1225,6 +1226,6 @@ class NewsSection(Base):
     __tablename__ = NEWS_SECTION_TABLE_NAME
 
     message_text = Column(String, primary_key=True)
-    publishing_date = Column(DateTime(timezone=True), nullable=False, default=datetime.now())
+    published_date = Column(DateTime(timezone=True), nullable=False, default=datetime.now())
     message_type = Column(Enum(NewsType, name=NewsType.__constraint_name__))
 

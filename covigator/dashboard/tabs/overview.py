@@ -1,10 +1,12 @@
 import dash_bootstrap_components as dbc
+from dash import dcc
 from dash import html
-from sqlalchemy.orm import Session
+from dash import Input, Output, State, html
 from covigator.database.queries import Queries
-from dash.dependencies import Output, Input, State
+from covigator.dashboard.tabs import COLOR_STATUS, NEWS_PATTERN
 
-def get_tab_overview():
+
+def get_tab_overview(queries: Queries):
 
     return dbc.CardBody([
             get_header(),
@@ -30,15 +32,15 @@ def get_tab_overview():
                                 European Nucleotide Archive (ENA) and genome assemblies from the COVID-19 Data Portal. 
                                 CoVigator is open-data-friendly and allowing it to be adopted to other SARS-CoV-2 data sources. 
                                 """),
-                            html.Br(),
-                            html.P("""
-                               CoVigator provides high-resolution SARS-CoV-2 mutations from genome assemblies and raw 
-                               reads allowing confirmation of evolutionary trends. CoVigator pipeline puts a special 
-                               emphasis on identification of SARS-CoV-2 intrahost mutations, thus reporting potential 
-                               SARS-CoV-2 variants of concern (VoC). CoVigator project is open sourced and made 
-                               available under the MIT license. The knowledge base and dashboard source is 
-                               hosted at https://github.com/TRON-Bioinformatics/covigator
-                               """),
+                            html.P([
+                                """
+                                CoVigator provides high-resolution SARS-CoV-2 mutations from genome assemblies and raw 
+                                reads allowing confirmation of evolutionary trends. CoVigator pipeline puts a special 
+                                emphasis on identification of SARS-CoV-2 intrahost mutations, thus reporting potential 
+                                SARS-CoV-2 variants of concern (VoC). CoVigator project is open sourced and made 
+                                available under the MIT license. The knowledge base and dashboard source is 
+                                hosted at """,
+                                html.A("github", href='https://github.com/TRON-Bioinformatics/covigator')]),
                             html.Br(),
                             html.P("""
                                If you are interested in our work, please also have a read of our most recent publication.
@@ -116,39 +118,37 @@ def get_tab_overview():
                                         html.Br(),
                                         dbc.Card(
                                             [
-                                                dbc.CardBody(
-                                                    dbc.Row([
-                                                        dbc.Col([
-                                                            html.Div(
-                                                                children=[
-                                                                    html.H2("Covigator News Section"),
-                                                                    html.P(
-                                                                        """
-                                                                        Here you can find information about new data 
-                                                                        releases, updates to Coivgator NGS pipeline or 
-                                                                        Covigator python package
-                                                                        """),
-                                                                    html.Br(),
-                                                                    html.Div(
-                                                                        id="news_section",
-                                                                        children=get_news(Session)
-                                                                    )
-                                                                ]
-                                                            )
-                                                        ])
-                                                    ])
-                                                )
+                                                dbc.CardHeader([
+                                                        html.Div(
+                                                                dbc.Row([
+                                                                    dbc.Col(html.H5("Covigator News"), width=6),
+                                                                    dbc.Col(
+                                                                        dbc.Button("see all covigator news",
+                                                                                   id="open",
+                                                                                   n_clicks=0,
+                                                                                   style={"justify":"end", "margin-right": "1%"}),
+                                                                        width=6
 
+                                                                    ),
+                                                                ]),
+                                                        ),
+                                                        get_all_news(queries)
+                                                ]),
+                                                dbc.CardBody(
+                                                    html.Div(
+                                                        children=get_news(queries)
+                                                    )
+                                                )
                                             ],
-                                            outline=False,
-                                            style={"width": "40rem", "height": "15rem", "margin-left": "40px"},
+                                            outline=True,
+                                            style={"width": "40rem", "margin-left": "40px"},
                                         )
                                     ]),
                                 ])),
                             html.Br(),
-                            html.Br(),
-                            html.Br(),
-                            html.Br(),
+                            #html.Br(),
+                            #html.Br(),
+                            #html.Br(),
                         ],
                         style={"text-align": "left", "font-size": 16}),
                 ], width=8),
@@ -167,13 +167,56 @@ def get_header():
         ], id="header", className="row flex-display",)
 
 
-def get_news(session: Session):
-    queries = Queries(session=session)
-    newest_news = queries.get_top_news(n=3)
+def get_all_news(queries: Queries):
+    news_items = get_news(queries, None)
+    modal = dbc.Modal(
+        [
+            dbc.ModalHeader(dbc.ModalTitle("All Covigator News"), close_button=False),
+            dbc.ModalBody(children=news_items),
+            dbc.ModalFooter(
+                dbc.Button(
+                    "Close", id="close", className="ms-auto", n_clicks=0
+                )
+            ),
+        ],
+        id="modal",
+        is_open=False,
+        scrollable=True,
+    )
+    return modal
+
+
+def get_news(queries: Queries, n=3):
+    """
+    Get news from database when website is (re)loaded and create children for news section
+    cardboard.
+    """
+    newest_news = queries.get_top_news(n=n)
     children = []
-    #for this_news in newest_news.iterrows():
-    #    news_item = []
-    #    news_item.append(html.H3(this_news.message))
-    #    news_item.append(html.P(this_news.publishing_date))
-    #    children.extend(news_item)
+    for this_news in newest_news.itertuples():
+        children.append(
+            dbc.Alert(children=[
+                    dbc.Badge(children=[
+                        this_news.published_date.strftime(NEWS_PATTERN),
+                        " ",
+                        this_news.message_type.name],
+                        className="me-1"
+                    ),
+                    html.Br(),
+                    dcc.Markdown(this_news.message_text)
+                ],
+                color=COLOR_STATUS[this_news.message_type.name]
+            ))
     return children
+
+
+def set_callbacks_news_section(app):
+    @app.callback(
+        Output("modal", "is_open"),
+        [Input("open", "n_clicks"), Input("close", "n_clicks")],
+        [State("modal", "is_open")],
+    )
+    def toggle_modal(n1, n2, is_open):
+        if n1 or n2:
+            return not is_open
+        return is_open

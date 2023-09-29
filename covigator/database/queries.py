@@ -845,7 +845,12 @@ class Queries:
             for row in query.filter(whereclause).order_by(column):
                 yield row
 
-    def get_top_news(self, n=5):
-        query = self.session.query(NewsSection.message_text).order_by(NewsSection.publishing_date, desc)
-        news = pd.read_sql(query.statement, self.session.bind).head(n)
+    def get_top_news(self, n=3):
+        """
+        Get news from database, sort by publishing date and return n news when specified.
+        """
+        query = self.session.query(NewsSection).order_by(NewsSection.published_date.desc())
+        news = pd.read_sql(query.statement, self.session.bind)
+        if n is not None:
+            news = news.head(n)
         return news

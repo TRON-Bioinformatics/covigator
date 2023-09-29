@@ -18,7 +18,7 @@ from covigator.dashboard.tabs.download import set_callbacks_download_tab, get_ta
 from covigator.dashboard.tabs.footer import get_footer
 from covigator.dashboard.tabs.lineages import set_callbacks_lineages_tab, get_tab_lineages
 from covigator.dashboard.tabs.mutation_stats import get_tab_mutation_stats, set_callbacks_mutation_stats_tab
-from covigator.dashboard.tabs.overview import get_tab_overview
+from covigator.dashboard.tabs.overview import get_tab_overview, set_callbacks_news_section
 from covigator.dashboard.tabs.samples import get_tab_samples, set_callbacks_samples_tab
 from covigator.dashboard.tabs.intrahost_mutations import get_tab_subclonal_variants, set_callbacks_subclonal_variants_tab
 from covigator.dashboard.tabs.recurrent_mutations import get_tab_variants, set_callbacks_variants_tab
@@ -214,6 +214,7 @@ class Dashboard:
         set_callbacks_mutation_stats_tab(app=app, session=session)
         set_callbacks_subclonal_variants_tab(app=app, session=session)
         set_callbacks_download_tab(app=app, content_folder=self.config.content_folder)
+        set_callbacks_news_section(app=app)
         return app
 
 
@@ -311,7 +312,7 @@ def switch_tab_callback(at, url, session, content_folder):
         page = _get_page(url)
         try:
             if page == MAIN_PAGE:
-                return get_tab_overview()
+                return get_tab_overview(queries=queries)
             elif at == ENA_DATASET_TAB_ID:
                 return get_tab_dataset_ena(queries=queries)
             elif at == COVID19_PORTAL_DATASET_TAB_ID:
