@@ -298,5 +298,5 @@ class QueriesTests(AbstractTest):
         self.session.commit()
         news = self.queries.get_top_news()
         self.assertGreater(news.shape[0], 0)
-        self.assertTrue(news.message_text == "bla")
-        self.assertTrue(news.message_type == NewsType.RELEASE.name)
+        self.assertTrue(news.message_text.loc[0] == "bla")
+        self.assertTrue(news.message_type.loc[0] == NewsType.RELEASE.name)
