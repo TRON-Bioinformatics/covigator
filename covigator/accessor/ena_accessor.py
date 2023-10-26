@@ -56,6 +56,7 @@ class EnaAccessor(AbstractAccessor):
         "host_gravidity",
         "host_phenotype",
         "host_genotype",
+        "host_scientific_name",
         # geographical data
         "lat",
         "lon",
@@ -101,6 +102,7 @@ class EnaAccessor(AbstractAccessor):
         self.included = 0
         self.excluded = 0
         self.excluded_by_date = 0
+        self.samples_by_scientific_name = {}
 
     def access(self):
         logger.info("Starting ENA accessor")
@@ -198,6 +200,13 @@ class EnaAccessor(AbstractAccessor):
                 included = False    # skips runs where the host is empty or does not match
                 self.excluded_samples_by_host_tax_id[str(host_tax_id)] = \
                     self.excluded_samples_by_host_tax_id.get(str(host_tax_id), 0) + 1
+        else:
+            host_scientific_name = ena_run.get("host_scientific_name")
+            # Exclude everything that is not Homo Sapiens or NA
+            if host_scientific_name != "Homo sapiens" and \
+                    host_scientific_name.strip() != "":
+                included = False
+                self.samples_by_scientific_name.get(str(host_scientific_name), 0) + 1
         fastq_ftp = ena_run.get("fastq_ftp")
         if fastq_ftp is None or fastq_ftp == "":
             included = False    # skips runs without FTP URL
@@ -219,6 +228,7 @@ class EnaAccessor(AbstractAccessor):
     def _log_results(self):
         logger.info("Included new runs = {}".format(self.included))
         logger.info("Excluded already existing runs = {}".format(self.excluded_existing))
+        logger.info("Included by host_scientific_name = {}".format(self.samples_by_scientific_name))
         logger.info("Total excluded runs by selection criteria = {}".format(self.excluded))
         logger.info("Excluded due to empty FASTQ FTP URL runs = {}".format(self.excluded_samples_by_fastq_ftp))
         logger.info("Excluded by platform runs = {}".format(self.excluded_samples_by_instrument_platform))
