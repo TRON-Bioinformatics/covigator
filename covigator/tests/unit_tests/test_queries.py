@@ -294,7 +294,7 @@ class QueriesTests(AbstractTest):
     def test_get_news(self):
         test_news_section = \
             NewsSection(message_text="bla", message_type=NewsType.RELEASE.name)
-        self.session.add_all(test_news_section)
+        self.session.add(test_news_section)
         self.session.commit()
         news = self.queries.get_top_news()
         self.assertGreater(news.shape[0], 0)
