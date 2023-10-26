@@ -15,42 +15,74 @@ def get_tab_overview(queries: Queries):
                 dbc.Col([
                     html.Div(
                         children=[
-                            html.Br(),
-                            html.P(
-                                """
-                                CoVigator is a knowledge base and dashboard for SARS-CoV-2 mutations, built by integrating 
-                                a full variant calling pipeline. CoVigator dashboard provides readily available interpretation 
-                                of mutations along with respective lineages in an interactive visualization.
-                                """),
-                            html.P(
-                                """
-                                The main goal for CoVigator is to provide a comprehensive resource with an up-to-date list 
-                                of mutations supporting the global efforts of finding emerging SARS-CoV-2 variants. CoVigator
-                                dashboard displays pre-calculated ranked recurrent and intrahost mutations through time, 
-                                which facilitates the monitoring of SARS-CoV-2 mutations.
-                                CoVigator process publicly available SARS-CoV-2 raw reads (i.e. FASTQs) from the 
-                                European Nucleotide Archive (ENA) and genome assemblies from the COVID-19 Data Portal. 
-                                CoVigator is open-data-friendly and allowing it to be adopted to other SARS-CoV-2 data sources. 
-                                """),
-                            html.P([
-                                """
-                                CoVigator provides high-resolution SARS-CoV-2 mutations from genome assemblies and raw 
-                                reads allowing confirmation of evolutionary trends. CoVigator pipeline puts a special 
-                                emphasis on identification of SARS-CoV-2 intrahost mutations, thus reporting potential 
-                                SARS-CoV-2 variants of concern (VoC). CoVigator project is open sourced and made 
-                                available under the MIT license. The knowledge base and dashboard source is 
-                                hosted at """,
-                                html.A("github", href='https://github.com/TRON-Bioinformatics/covigator')]),
-                            html.Br(),
-                            html.P("""
-                               If you are interested in our work, please also have a read of our most recent publication.
-                               """),
-                            html.P([
-                                "Bukur, T., Riesgo-Ferreiro, P., Sorn, P., Gudimella, R., Hausmann, J., Rösler, T., "
-                                "Löwer, M., Schrörs, B., & Sahin, U. CoVigator — A Knowledge Base for Navigating SARS-CoV-2 Genomic Variants. "
-                                "Viruses. 2023; 15(6):1391.",
-                            ], style={"font-style": "italic", "margin-left": "50px"}),
-
+                            dbc.Row([
+                                dbc.Col([
+                                    html.Br(),
+                                    html.P(
+                                    """
+                                    CoVigator is a knowledge base and dashboard for SARS-CoV-2 mutations, built by integrating 
+                                    a full variant calling pipeline. CoVigator dashboard provides readily available interpretation 
+                                    of mutations along with respective lineages in an interactive visualization.
+                                    """, style={"text-align": "justify"}),
+                                    html.P(
+                                        """
+                                        The main goal for CoVigator is to provide a comprehensive resource with an up-to-date list 
+                                        of mutations supporting the global efforts of finding emerging SARS-CoV-2 variants. CoVigator
+                                        dashboard displays pre-calculated ranked recurrent and intrahost mutations through time, 
+                                        which facilitates the monitoring of SARS-CoV-2 mutations.
+                                        CoVigator process publicly available SARS-CoV-2 raw reads (i.e. FASTQs) from the 
+                                        European Nucleotide Archive (ENA) and genome assemblies from the COVID-19 Data Portal. 
+                                        CoVigator is open-data-friendly and allowing it to be adopted to other SARS-CoV-2 data sources. 
+                                        """, style={"text-align": "justify"}),
+                                    html.P([
+                                        """
+                                        CoVigator provides high-resolution SARS-CoV-2 mutations from genome assemblies and raw 
+                                        reads allowing confirmation of evolutionary trends. CoVigator pipeline puts a special 
+                                        emphasis on identification of SARS-CoV-2 intrahost mutations, thus reporting potential 
+                                        SARS-CoV-2 variants of concern (VoC). CoVigator project is open sourced and made 
+                                        available under the MIT license. The knowledge base and dashboard source is 
+                                        hosted at """,
+                                        html.A("github.",
+                                               href="https://github.com/TRON-Bioinformatics/covigator",
+                                               target="_blank"),
+                                        """
+                                        If you are interested in our work, please also have a read of our most recent 
+                                        """,
+                                        html.A("publication.",
+                                               href="https://www.mdpi.com/1999-4915/15/6/1391",
+                                               target="_blank")], style={"text-align": "justify"}),
+                                    html.P(
+                                        "Bukur, T., Riesgo-Ferreiro, P., Sorn, P., Gudimella, R., Hausmann, J., Rösler, T., "
+                                        "Löwer, M., Schrörs, B., & Sahin, U. CoVigator — A Knowledge Base for Navigating SARS-CoV-2 Genomic Variants. "
+                                        "Viruses. 2023; 15(6):1391.",
+                                        style={"font-style": "italic", "margin-left": "50px"})
+                                ], width=7),
+                                dbc.Col(
+                                    dbc.Card(
+                                        [
+                                            dbc.CardHeader([
+                                                html.Div(
+                                                    dbc.Row([
+                                                        dbc.Col(html.H5("Covigator News"), width=6),
+                                                        dbc.Col(
+                                                            dbc.Button("see all covigator news",
+                                                                       id="open",
+                                                                       n_clicks=0,
+                                                                       style={"justify": "end", "margin-right": "1%"}),
+                                                            width=6),
+                                                    ]),
+                                                ),
+                                                get_all_news(queries)
+                                            ]),
+                                            dbc.CardBody(
+                                                html.Div(
+                                                    children=get_news(queries, n=4)
+                                                )
+                                            )
+                                        ], outline=True, style={"width": "40rem", "margin-left": "40px"},
+                                    )
+                                ),
+                            ]),
 
                             dbc.CardBody(
                                 dbc.Row([
@@ -114,41 +146,13 @@ def get_tab_overview(queries: Queries):
                                             ],
                                             outline=False,
                                             style={"width": "40rem", "height": "15rem", "margin-left": "40px"},
-                                        ),
-                                        html.Br(),
-                                        dbc.Card(
-                                            [
-                                                dbc.CardHeader([
-                                                        html.Div(
-                                                                dbc.Row([
-                                                                    dbc.Col(html.H5("Covigator News"), width=6),
-                                                                    dbc.Col(
-                                                                        dbc.Button("see all covigator news",
-                                                                                   id="open",
-                                                                                   n_clicks=0,
-                                                                                   style={"justify":"end", "margin-right": "1%"}),
-                                                                        width=6
-
-                                                                    ),
-                                                                ]),
-                                                        ),
-                                                        get_all_news(queries)
-                                                ]),
-                                                dbc.CardBody(
-                                                    html.Div(
-                                                        children=get_news(queries)
-                                                    )
-                                                )
-                                            ],
-                                            outline=True,
-                                            style={"width": "40rem", "margin-left": "40px"},
-                                        )
-                                    ]),
+                                        )]
+                                    ),
                                 ])),
                             html.Br(),
-                            #html.Br(),
-                            #html.Br(),
-                            #html.Br(),
+                            html.Br(),
+                            html.Br(),
+                            html.Br(),
                         ],
                         style={"text-align": "left", "font-size": 16}),
                 ], width=8),

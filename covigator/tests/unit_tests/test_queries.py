@@ -5,7 +5,7 @@ from parameterized import parameterized
 from covigator import SYNONYMOUS_VARIANT
 from covigator.precomputations.loader import PrecomputationsLoader
 from covigator.precomputations.load_ns_s_counts import NsSCountsLoader
-from covigator.database.model import JobStatus, DataSource, Gene, RegionType, Domain, Lineages
+from covigator.database.model import JobStatus, DataSource, Gene, RegionType, Domain, Lineages, NewsSection, NewsType
 from covigator.database.queries import Queries
 from covigator.tests.unit_tests.abstract_test import AbstractTest
 from covigator.tests.unit_tests.mocked import get_mocked_variant, \
@@ -290,3 +290,13 @@ class QueriesTests(AbstractTest):
         self.assertEqual(data[data.country.isna()].shape[0], 0)  # no empty countries
         self.assertEqual(data[data.month.isna()].shape[0], 0)  # no empty months
         self.assertEqual(data[data.region_name.isna()].shape[0], 0)  # no empty gene
+
+    def test_get_news(self):
+        test_news_section = \
+            NewsSection(message_text="bla", message_type=NewsType.RELEASE.name)
+        self.session.add_all(test_news_section)
+        self.session.commit()
+        news = self.queries.get_top_news()
+        self.assertGreater(news.shape[0], 0)
+        self.assertTrue(news.message_text == "bla")
+        self.assertTrue(news.message_type == NewsType.RELEASE.name)
