@@ -299,4 +299,13 @@ class QueriesTests(AbstractTest):
         news = self.queries.get_top_news()
         self.assertGreater(news.shape[0], 0)
         self.assertTrue(news.message_text.loc[0] == "bla")
-        self.assertTrue(news.message_type.loc[0] == NewsType.RELEASE.name)
+        self.assertTrue(news.message_type.loc[0] == "RELEASE")
+        # Add some more news to check that n News are returned
+        test_news_section = \
+            [NewsSection(message_text="bla2", message_type=NewsType.RELEASE.name),
+             NewsSection(message_text="bla3", message_type=NewsType.RELEASE.name),
+             NewsSection(message_text="bla4", message_type=NewsType.RELEASE.name)]
+        self.session.add_all(test_news_section)
+        news = self.queries.get_top_news()
+        self.assertEqual(news.shape[0], 0)
+
