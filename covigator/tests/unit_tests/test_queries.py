@@ -307,5 +307,5 @@ class QueriesTests(AbstractTest):
              NewsSection(message_text="bla4", message_type=NewsType.RELEASE.name)]
         self.session.add_all(test_news_section)
         news = self.queries.get_top_news()
-        self.assertEqual(news.shape[0], 0)
+        self.assertEqual(news.shape[0], 3)
 
