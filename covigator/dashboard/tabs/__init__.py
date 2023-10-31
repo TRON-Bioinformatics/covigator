@@ -2,6 +2,7 @@ from datetime import datetime
 import dash_bootstrap_components as dbc
 
 MONTH_PATTERN = "%Y-%m"
+NEWS_PATTERN = "%Y-%m-%d"
 MISSING_VALUE = "-"
 
 APPLY_STYLE = {"height": "38px", "padding": "0 30px"}
@@ -21,3 +22,10 @@ def get_mini_container(title, value):
         color="dark",
         className="me-1",
         style={"margin-right": "30px", "margin-left": "30px", 'font-size': '110%'})
+
+
+COLOR_STATUS = {
+    "RELEASE": "success",
+    "WARNINGS": "warning",
+    "BUGS": "danger"
+}
