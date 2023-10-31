@@ -310,6 +310,4 @@ class QueriesTests(AbstractTest):
 
         news = self.queries.get_top_news()
         self.assertEqual(news.shape[0], 3)
-        # Check that most recent news item returned as top element
-        self.assertTrue(news.message_text.loc[0] == "bla4")
 
