@@ -306,6 +306,10 @@ class QueriesTests(AbstractTest):
              NewsSection(message_text="bla3", message_type=NewsType.RELEASE.name),
              NewsSection(message_text="bla4", message_type=NewsType.RELEASE.name)]
         self.session.add_all(test_news_section)
+        self.session.commit()
+
         news = self.queries.get_top_news()
         self.assertEqual(news.shape[0], 3)
+        # Check that most recent news item returned as top element
+        self.assertTrue(news.message_text.loc[0] == "bla4")
 

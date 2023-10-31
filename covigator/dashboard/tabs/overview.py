@@ -1,6 +1,5 @@
 import dash_bootstrap_components as dbc
 from dash import dcc
-from dash import html
 from dash import Input, Output, State, html
 from covigator.database.queries import Queries
 from covigator.dashboard.tabs import COLOR_STATUS, NEWS_PATTERN
