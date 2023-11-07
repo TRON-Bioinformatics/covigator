@@ -238,6 +238,79 @@ class EnaAccessorTests(AbstractTest):
         self.assertEqual(ena_accessor.excluded, 2)
         self.assertEqual(ena_accessor.excluded_samples_by_fastq_ftp, 2)
 
+    def test_filtering_empty_collection_date(self):
+        # Test that samples with empty collection date are filtered out
+        ena_accessor_empty_collection = FakeEnaAccessor(results=[
+            {"run_accession": "ERR4080483",
+            "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
+            "instrument_platform": "ILLUMINA",
+             "library_strategy": "WGS",
+             "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/003/ERR4080483/ERR4080483_1.fastq.gz",
+             "fastq_md5": "a91a9dfa2f7008e13a7ce9767aa9aaf3",
+             "host_tax_id": "9606",
+             "first_created": "2020-01-01",
+             "collection_date": "2019-12-31",
+             },
+            {"run_accession": "ERR4080484",
+             "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
+             "instrument_platform": "ILLUMINA",
+             "library_strategy": "WGS",
+             "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/003/ERR4080483/ERR4080483_1.fastq.gz",
+             "fastq_md5": "c57fef34933cbbec2e9e08867f3c664c",
+             "host_tax_id": "9606",
+             "first_created": "2020-01-01 14:50",
+             "collection_date": "2019-12-31 12:12:12"},
+            {"run_accession": "ERR4080485",
+             "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
+             "instrument_platform": "ILLUMINA",
+             "library_strategy": "WGS",
+             "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/005/ERR4080485/ERR4080485_1.fastq.gz",
+             "fastq_md5": "4de269d2b5831e1c5175586af694d21e",
+             "host_tax_id": "9606",
+             "first_created": "",
+             "collection_date": ""}
+        ])
+        ena_accessor_empty_collection.access()
+        self.assertEqual(ena_accessor_empty_collection.included, 2)
+        self.assertEqual(ena_accessor_empty_collection, 1)
+        self.assertEqual(ena_accessor_empty_collection.excluded_samples_by_empty_collection_date, 1)
+
+        # Test that collection date filter can be disabled
+        ena_accessor_empty_collection_disabled = FakeEnaAccessor(results=[
+            {"run_accession": "ERR4080483",
+             "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
+             "instrument_platform": "ILLUMINA",
+             "library_strategy": "WGS",
+             "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/003/ERR4080483/ERR4080483_1.fastq.gz",
+             "fastq_md5": "a91a9dfa2f7008e13a7ce9767aa9aaf3",
+             "host_tax_id": "9606",
+             "first_created": "2020-01-01",
+             "collection_date": "2019-12-31",
+             },
+            {"run_accession": "ERR4080484",
+             "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
+             "instrument_platform": "ILLUMINA",
+             "library_strategy": "WGS",
+             "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/003/ERR4080483/ERR4080483_1.fastq.gz",
+             "fastq_md5": "c57fef34933cbbec2e9e08867f3c664c",
+             "host_tax_id": "9606",
+             "first_created": "2020-01-01 14:50",
+             "collection_date": "2019-12-31 12:12:12"},
+            {"run_accession": "ERR4080485",
+             "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
+             "instrument_platform": "ILLUMINA",
+             "library_strategy": "WGS",
+             "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/005/ERR4080485/ERR4080485_1.fastq.gz",
+             "fastq_md5": "4de269d2b5831e1c5175586af694d21e",
+             "host_tax_id": "9606",
+             "first_created": "",
+             "collection_date": ""}
+        ], disable_collection_date=True)
+        ena_accessor_empty_collection.access()
+        self.assertEqual(ena_accessor_empty_collection.included, 3)
+        self.assertEqual(ena_accessor_empty_collection.exlcuded, 0)
+        self.assertEqual(ena_accessor_empty_collection.excluded_samples_by_empty_collection_date, 0)
+
     def test_no_filtering(self):
         ena_accessor = FakeEnaAccessor([
             {"run_accession": "ERR4080483",
