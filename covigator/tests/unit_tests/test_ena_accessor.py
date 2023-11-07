@@ -14,6 +14,7 @@ class EnaAccessorTests(AbstractTest):
              "library_strategy": "AMPLICON",
              "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/003/ERR4080483/ERR4080483_1.fastq.gz",
              "fastq_md5": "a91a9dfa2f7008e13a7ce9767aa9aaf3",
+             "collection_date": "2019-12-31 12:12:12",
              "host_tax_id": "9606"},
             {"run_accession": "ERR4080484",
              "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
@@ -21,6 +22,7 @@ class EnaAccessorTests(AbstractTest):
              "library_strategy": "OTHER",
              "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/004/ERR4080484/ERR4080484_1.fastq.gz",
              "fastq_md5": "c57fef34933cbbec2e9e08867f3c664c",
+             "collection_date": "2019-12-31 12:12:12",
              "host_tax_id": "9606"},
             {"run_accession": "ERR4080485",
              "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
@@ -28,6 +30,7 @@ class EnaAccessorTests(AbstractTest):
              "library_strategy": "WGS",
              "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/005/ERR4080485/ERR4080485_1.fastq.gz",
              "fastq_md5": "4de269d2b5831e1c5175586af694d21e",
+             "collection_date": "2019-12-31 12:12:12",
              "host_tax_id": "9606"}
         ])
         ena_accessor.access()
@@ -44,6 +47,7 @@ class EnaAccessorTests(AbstractTest):
              "library_strategy": "WGS",
              "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/003/ERR4080483/ERR4080483_1.fastq.gz",
              "fastq_md5": "a91a9dfa2f7008e13a7ce9767aa9aaf3",
+             "collection_date": "2019-12-31 12:12:12",
              "host_tax_id": "9606"},
             {"run_accession": "ERR4080484",
              "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
@@ -51,6 +55,7 @@ class EnaAccessorTests(AbstractTest):
              "library_strategy": "WGS",
              "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/004/ERR4080484/ERR4080484_1.fastq.gz",
              "fastq_md5": "c57fef34933cbbec2e9e08867f3c664c",
+             "collection_date": "2019-12-31 12:12:12",
              "host_tax_id": "9606"},
             {"run_accession": "ERR4080485",
              "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
@@ -58,6 +63,7 @@ class EnaAccessorTests(AbstractTest):
              "library_strategy": "WGS",
              "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/005/ERR4080485/ERR4080485_1.fastq.gz",
              "fastq_md5": "4de269d2b5831e1c5175586af694d21e",
+             "collection_date": "2019-12-31 12:12:12",
              "host_tax_id": "9606"}
         ])
         ena_accessor.access()
@@ -74,6 +80,7 @@ class EnaAccessorTests(AbstractTest):
              "library_strategy": "WGS",
              "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/003/ERR4080483/ERR4080483_1.fastq.gz",
              "fastq_md5": "a91a9dfa2f7008e13a7ce9767aa9aaf3",
+             "collection_date": "2019-12-31 12:12:12",
              "host_tax_id": "9606"},
             {"run_accession": "ERR4080484",
              "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
@@ -81,6 +88,7 @@ class EnaAccessorTests(AbstractTest):
              "library_strategy": "WGS",
              "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/004/ERR4080484/ERR4080484_1.fastq.gz",
              "fastq_md5": "c57fef34933cbbec2e9e08867f3c664c",
+             "collection_date": "2019-12-31 12:12:12",
              "host_tax_id": "1111"},
             {"run_accession": "ERR4080485",
              "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
@@ -88,6 +96,7 @@ class EnaAccessorTests(AbstractTest):
              "library_strategy": "WGS",
              "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/005/ERR4080485/ERR4080485_1.fastq.gz",
              "fastq_md5": "4de269d2b5831e1c5175586af694d21e",
+             "collection_date": "2019-12-31 12:12:12",
              "host_tax_id": "2222"}
         ])
         ena_accessor.access()
@@ -104,6 +113,7 @@ class EnaAccessorTests(AbstractTest):
              "library_strategy": "WGS",
              "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/003/ERR4080483/ERR4080483_1.fastq.gz",
              "fastq_md5": "a91a9dfa2f7008e13a7ce9767aa9aaf3",
+             "collection_date": "2019-12-31 12:12:12",
              "host_tax_id": "9606"},
             {"run_accession": "ERR4080484",
              "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
@@ -111,6 +121,7 @@ class EnaAccessorTests(AbstractTest):
              "library_strategy": "WGS",
              "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/004/ERR4080484/ERR4080484_1.fastq.gz",
              "fastq_md5": "c57fef34933cbbec2e9e08867f3c664c",
+             "collection_date": "2019-12-31 12:12:12",
              "host_tax_id": "1111"},
             {"run_accession": "ERR4080485",
              "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
@@ -118,6 +129,7 @@ class EnaAccessorTests(AbstractTest):
              "library_strategy": "WGS",
              "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/005/ERR4080485/ERR4080485_1.fastq.gz",
              "fastq_md5": "4de269d2b5831e1c5175586af694d21e",
+             "collection_date": "2019-12-31 12:12:12",
              "host_tax_id": "2222"},
             {"run_accession": "ERR4080486",
              "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
@@ -125,6 +137,7 @@ class EnaAccessorTests(AbstractTest):
              "library_strategy": "OTHER",
              "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/004/ERR4080484/ERR4080486_1.fastq.gz",
              "fastq_md5": "c57fef34933cbbec2e9e08867f3c664c",
+             "collection_date": "2019-12-31 12:12:12",
              "host_tax_id": "9606"},
             {"run_accession": "ERR4080483",
              "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
@@ -132,6 +145,7 @@ class EnaAccessorTests(AbstractTest):
              "library_strategy": "WGS",
              "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/003/ERR4080483/ERR4080483_1.fastq.gz",
              "fastq_md5": "a91a9dfa2f7008e13a7ce9767aa9aaf3",
+             "collection_date": "2019-12-31 12:12:12",
              "host_tax_id": "9606"}
         ], host_tax_id=None)
         ena_accessor.access()
@@ -217,6 +231,7 @@ class EnaAccessorTests(AbstractTest):
              "library_strategy": "WGS",
              "fastq_ftp": "",
              "fastq_md5": "a91a9dfa2f7008e13a7ce9767aa9aaf3",
+             "collection_date": "2019-12-31 12:12:12",
              "host_tax_id": "9606"},
             {"run_accession": "ERR4080484",
              "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
@@ -224,6 +239,7 @@ class EnaAccessorTests(AbstractTest):
              "library_strategy": "WGS",
              "fastq_ftp": None,
              "fastq_md5": "c57fef34933cbbec2e9e08867f3c664c",
+             "collection_date": "2019-12-31 12:12:12",
              "host_tax_id": "9606"},
             {"run_accession": "ERR4080485",
              "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
@@ -231,6 +247,7 @@ class EnaAccessorTests(AbstractTest):
              "library_strategy": "WGS",
              "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/005/ERR4080485/ERR4080485_1.fastq.gz",
              "fastq_md5": "4de269d2b5831e1c5175586af694d21e",
+             "collection_date": "2019-12-31 12:12:12",
              "host_tax_id": "9606"}
         ])
         ena_accessor.access()
@@ -272,7 +289,7 @@ class EnaAccessorTests(AbstractTest):
         ])
         ena_accessor_empty_collection.access()
         self.assertEqual(ena_accessor_empty_collection.included, 2)
-        self.assertEqual(ena_accessor_empty_collection, 1)
+        self.assertEqual(ena_accessor_empty_collection.excluded, 1)
         self.assertEqual(ena_accessor_empty_collection.excluded_samples_by_empty_collection_date, 1)
 
         # Test that collection date filter can be disabled
@@ -319,6 +336,7 @@ class EnaAccessorTests(AbstractTest):
              "library_strategy": "WGS",
              "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/003/ERR4080483/ERR4080483_1.fastq.gz",
              "fastq_md5": "a91a9dfa2f7008e13a7ce9767aa9aaf3",
+             "collection_date": "2019-12-31 12:12:12",
              "host_tax_id": "9606"},
             {"run_accession": "ERR4080484",
              "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
@@ -326,6 +344,7 @@ class EnaAccessorTests(AbstractTest):
              "library_strategy": "WGS",
              "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/003/ERR4080483/ERR4080483_1.fastq.gz",
              "fastq_md5": "c57fef34933cbbec2e9e08867f3c664c",
+             "collection_date": "2019-12-31 12:12:12",
              "host_tax_id": "9606"},
             {"run_accession": "ERR4080485",
              "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
@@ -333,6 +352,7 @@ class EnaAccessorTests(AbstractTest):
              "library_strategy": "WGS",
              "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/005/ERR4080485/ERR4080485_1.fastq.gz",
              "fastq_md5": "4de269d2b5831e1c5175586af694d21e",
+             "collection_date": "2019-12-31 12:12:12",
              "host_tax_id": "9606"}
         ])
         ena_accessor.access()
@@ -347,6 +367,7 @@ class EnaAccessorTests(AbstractTest):
              "library_strategy": "WGS",
              "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/003/ERR4080483/ERR4080483_1.fastq.gz",
              "fastq_md5": "a91a9dfa2f7008e13a7ce9767aa9aaf3",
+             "collection_date": "2019-12-31 12:12:12",
              "host_tax_id": "9606"},
             {"run_accession": "ERR4080484",
              "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
@@ -354,11 +375,13 @@ class EnaAccessorTests(AbstractTest):
              "library_strategy": "WGS",
              "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/003/ERR4080483/ERR4080483_1.fastq.gz",
              "fastq_md5": "c57fef34933cbbec2e9e08867f3c664c",
+             "collection_date": "2019-12-31 12:12:12",
              "host_tax_id": "9606"},
             {"run_accession": "ERR4080485",
              "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
              "instrument_platform": "ILLUMINA",
              "library_strategy": "WGS",
+             "collection_date": "2019-12-31 12:12:12",
              "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/005/ERR4080485/ERR4080485_1.fastq.gz",
              "fastq_md5": "4de269d2b5831e1c5175586af694d21e",
              "host_tax_id": "9606"}
@@ -374,6 +397,7 @@ class EnaAccessorTests(AbstractTest):
              "library_strategy": "WGS",
              "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/003/ERR4080483/ERR4080483_1.fastq.gz",
              "fastq_md5": "a91a9dfa2f7008e13a7ce9767aa9aaf3",
+             "collection_date": "2019-12-31 12:12:12",
              "host_tax_id": "9606"},
             {"run_accession": "ERR4080484",
              "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
@@ -381,6 +405,7 @@ class EnaAccessorTests(AbstractTest):
              "library_strategy": "WGS",
              "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/003/ERR4080483/ERR4080483_1.fastq.gz",
              "fastq_md5": "c57fef34933cbbec2e9e08867f3c664c",
+             "collection_date": "2019-12-31 12:12:12",
              "host_tax_id": "9606"},
             {"run_accession": "THIS_IS_A_NEW_ONE",
              "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
@@ -388,6 +413,7 @@ class EnaAccessorTests(AbstractTest):
              "library_strategy": "WGS",
              "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/005/ERR4080485/ERR4080485_1.fastq.gz",
              "fastq_md5": "4de269d2b5831e1c5175586af694d21e",
+             "collection_date": "2019-12-31 12:12:12",
              "host_tax_id": "9606"}
         ], database=self.database)
         ena_accessor.access()
@@ -403,6 +429,7 @@ class EnaAccessorTests(AbstractTest):
              "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/003/ERR4080483/ERR4080483_1.fastq.gz",
              "fastq_md5": "a91a9dfa2f7008e13a7ce9767aa9aaf3",
              "host_tax_id": "9606",
+             "collection_date": "2019-12-31 12:12:12",
              "country": "england"},
             {"run_accession": "ERR4080484",
              "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
@@ -411,6 +438,7 @@ class EnaAccessorTests(AbstractTest):
              "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/003/ERR4080483/ERR4080483_1.fastq.gz",
              "fastq_md5": "c57fef34933cbbec2e9e08867f3c664c",
              "host_tax_id": "9606",
+             "collection_date": "2019-12-31 12:12:12",
              "country": "GermaN"},
             {"run_accession": "ERR4080485",
              "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
@@ -419,6 +447,7 @@ class EnaAccessorTests(AbstractTest):
              "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/005/ERR4080485/ERR4080485_1.fastq.gz",
              "fastq_md5": "4de269d2b5831e1c5175586af694d21e",
              "host_tax_id": "9606",
+             "collection_date": "2019-12-31 12:12:12",
              "country": "Morocco:Meknez"},
             {"run_accession": "ERR4080486",
              "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
@@ -426,6 +455,7 @@ class EnaAccessorTests(AbstractTest):
              "library_strategy": "WGS",
              "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/005/ERR4080485/ERR4080485_1.fastq.gz",
              "fastq_md5": "4de269d2b5831e1c5175586af694d21e",
+             "collection_date": "2019-12-31 12:12:12",
              "host_tax_id": "9606"},
             {"run_accession": "ERR4080487",
              "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
@@ -434,6 +464,7 @@ class EnaAccessorTests(AbstractTest):
              "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/005/ERR4080485/ERR4080485_1.fastq.gz",
              "fastq_md5": "4de269d2b5831e1c5175586af694d21e",
              "host_tax_id": "9606",
+             "collection_date": "2019-12-31 12:12:12",
              "country": ""},
             {"run_accession": "ERR4080488",
              "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
@@ -442,8 +473,9 @@ class EnaAccessorTests(AbstractTest):
              "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/005/ERR4080485/ERR4080485_1.fastq.gz",
              "fastq_md5": "4de269d2b5831e1c5175586af694d21e",
              "host_tax_id": "9606",
+             "collection_date": "2019-12-31 12:12:12",
              "country": "Jupiter"}
-        ], database=self.database)
+        ], database=self.database, disable_collection_date=True)
         ena_accessor.access()
         self.assertEqual(ena_accessor.included, 6)
         self.assertEqual(ena_accessor.excluded, 0)
@@ -553,6 +585,7 @@ class EnaAccessorTests(AbstractTest):
              "read_count": "",
              "base_count": "",
              "nominal_length": "",
+             "collection_date": "2019-12-31 12:12:12"
              },
             {"run_accession": "ERR4080484",
              "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
@@ -565,7 +598,8 @@ class EnaAccessorTests(AbstractTest):
              "lon": "hey",
              "read_count": "hey",
              "base_count": "hey",
-             "nominal_length": "hey"},
+             "nominal_length": "hey",
+             "collection_date": "2019-12-31 12:12:12"},
             {"run_accession": "ERR4080485",
              "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
              "instrument_platform": "ILLUMINA",
@@ -577,7 +611,8 @@ class EnaAccessorTests(AbstractTest):
              "lon": "1.1",
              "read_count": "1",
              "base_count": "1",
-             "nominal_length": "1"
+             "nominal_length": "1",
+             "collection_date": "2019-12-31 12:12:12"
              }
         ], database=self.database)
         ena_accessor.access()
@@ -614,7 +649,8 @@ class EnaAccessorTests(AbstractTest):
              "library_strategy": "WGS",
              "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/003/ERR4080483/ERR4080483_1.fastq.gz",
              "fastq_md5": "a91a9dfa2f7008e13a7ce9767aa9aaf3",
-             "host_tax_id": "9606"
+             "host_tax_id": "9606",
+             "collection_date": "2019-12-31 12:12:12"
              },
             {"run_accession": "ERR4080484",
              "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
@@ -622,7 +658,8 @@ class EnaAccessorTests(AbstractTest):
              "library_strategy": "WGS",
              "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/003/ERR4080483/ERR4080483_1.fastq.gz",
              "fastq_md5": "c57fef34933cbbec2e9e08867f3c664c",
-             "host_tax_id": "9606"
+             "host_tax_id": "9606",
+             "collection_date": "2019-12-31 12:12:12"
             },
             {"run_accession": "ERR4080485",
              "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
@@ -630,7 +667,8 @@ class EnaAccessorTests(AbstractTest):
              "library_strategy": "WGS",
              "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/005/ERR4080485/ERR4080485_1.fastq.gz",
              "fastq_md5": "4de269d2b5831e1c5175586af694d21e",
-             "host_tax_id": "9606"
+             "host_tax_id": "9606",
+             "collection_date": "2019-12-31 12:12:12"
              }
         ], database=self.database)
         ena_accessor.access()
@@ -653,7 +691,8 @@ class EnaAccessorTests(AbstractTest):
              "library_strategy": "WGS",
              "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/003/ERR4080483/ERR4080483_1.fastq.gz",
              "fastq_md5": "a91a9dfa2f7008e13a7ce9767aa9aaf3",
-             "host_tax_id": "9606"
+             "host_tax_id": "9606",
+             "collection_date": "2019-12-31 12:12:12"
              },
             {"run_accession": "ERR4080484",
              "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
@@ -661,7 +700,8 @@ class EnaAccessorTests(AbstractTest):
              "library_strategy": "WGS",
              "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/003/ERR4080483/ERR4080483_1.fastq.gz",
              "fastq_md5": "c57fef34933cbbec2e9e08867f3c664c",
-             "host_tax_id": "9606"
+             "host_tax_id": "9606",
+             "collection_date": "2019-12-31 12:12:12"
             },
             {"run_accession": "ERR4080485",
              "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
@@ -669,7 +709,8 @@ class EnaAccessorTests(AbstractTest):
              "library_strategy": "WGS",
              "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/005/ERR4080485/ERR4080485_1.fastq.gz",
              "fastq_md5": "4de269d2b5831e1c5175586af694d21e",
-             "host_tax_id": "9606"
+             "host_tax_id": "9606",
+             "collection_date": "2019-12-31 12:12:12"
              }
         ], database=self.database)
         ena_accessor.access()
@@ -699,21 +740,24 @@ class EnaAccessorTests(AbstractTest):
              "library_strategy": "RNA-Seq",
              "fastq_ftp": "",
              "fastq_md5": "a91a9dfa2f7008e13a7ce9767aa9aaf3",
-             "host_tax_id": "9606"},
+             "host_tax_id": "9606",
+             "collection_date": "2019-12-31 12:12:12"},
             {"run_accession": "ERR4080484",
              "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
              "instrument_platform": "RNA-Seq",
              "library_strategy": "WGS",
              "fastq_ftp": None,
              "fastq_md5": "c57fef34933cbbec2e9e08867f3c664c",
-             "host_tax_id": "9606"},
+             "host_tax_id": "9606",
+             "collection_date": "2019-12-31 12:12:12"},
             {"run_accession": "ERR4080485",
              "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
              "instrument_platform": "RNA-Seq",
              "library_strategy": "WGS",
              "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/005/ERR4080485/ERR4080485_1.fastq.gz",
              "fastq_md5": "4de269d2b5831e1c5175586af694d21e",
-             "host_tax_id": "9606"}
+             "host_tax_id": "9606",
+             "collection_date": "2019-12-31 12:12:12"}
         ])
         ena_accessor.access()
         self.assertEqual(ena_accessor.included, 0)
