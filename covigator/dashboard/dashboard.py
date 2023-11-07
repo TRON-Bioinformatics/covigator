@@ -175,7 +175,7 @@ class Dashboard:
         app = dash.Dash(
             name=__name__,
             title="CoVigator",
-            external_stylesheets=[dbc.themes.BOOTSTRAP],
+            external_stylesheets=[dbc.themes.BOOTSTRAP, dbc.icons.FONT_AWESOME],
             suppress_callback_exceptions=True,
             meta_tags=[
                 # A description of the app, used by e.g.
