@@ -301,7 +301,7 @@ class EnaAccessorTests(AbstractTest):
              "fastq_md5": "a91a9dfa2f7008e13a7ce9767aa9aaf3",
              "host_tax_id": "9606",
              "first_created": "2020-01-01",
-             "collection_date": "2019-12-31",
+             "collection_date": "2019-12-31 12:12:12",
              },
             {"run_accession": "ERR4080484",
              "scientific_name": "Severe acute respiratory syndrome coronavirus 2",
