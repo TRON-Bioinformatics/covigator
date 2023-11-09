@@ -1,4 +1,5 @@
 import dash_bootstrap_components as dbc
+import pandas as pd
 from dash import dcc
 from dash import Input, Output, State, html
 from covigator.database.queries import Queries
@@ -6,7 +7,30 @@ from covigator.dashboard.tabs import COLOR_STATUS, NEWS_PATTERN
 
 
 def get_tab_overview(queries: Queries):
-
+    present_icon = html.I(className="fas fa-check", style={"color": "green"})
+    absent_icon = html.I(className="fas fa-times", style={"color": "red"})
+    features = [
+        (present_icon, present_icon),  # "Mutations per sample"
+        (present_icon, present_icon),  # "Most frequent base substitutions"
+        (present_icon, present_icon),  # "Indel length distribution"
+        (present_icon, present_icon),  # "Most frequent mutation effects"
+        (present_icon, present_icon),  # "Samples accumulation"
+        (present_icon, present_icon),  # "Evolutionary pressure (dN/dS)"
+        (present_icon, present_icon),  # "Instantaneous lineage prevalence"
+        (present_icon, present_icon),  # "Top recurrent mutations"
+        (present_icon, present_icon),  # "Genome/gene view"
+        (present_icon, absent_icon),  # "Co-occurrence clustering"
+        (present_icon, absent_icon)  # "Top intrahost mutations"
+    ]
+    features = pd.DataFrame.from_records(features,
+                                         columns=["ENA (FASTQ)", "COVID-19 Data Portal (FASTA)"],
+                                         index=["Mutations per sample", "Most frequent base substitutions",
+                                                "Indel length distribution", "Most frequent mutation effects",
+                                                "Samples accumulation", "Evolutionary pressure (dN/dS)",
+                                                "Instantaneous lineage prevalence", "Top recurrent mutations",
+                                                "Genome/gene view", "Co-occurrence clustering",
+                                                "Top intrahost mutations"])
+    features.index.set_names("Dashboard features", inplace=True)
     return dbc.CardBody([
             get_header(),
             dbc.Row([
@@ -85,28 +109,16 @@ def get_tab_overview(queries: Queries):
 
                             dbc.CardBody(
                                 dbc.Row([
-                                    dbc.Col([html.Img(src="assets/wordcloud.png", style={"width": "100%"})]),
                                     dbc.Col([
                                         html.Br(),
                                         html.Div([
-                                            dbc.ListGroup(
-                                                [
-                                                    dbc.ListGroupItem("Mutations per sample"),
-                                                    dbc.ListGroupItem("Most frequent base substitutions"),
-                                                    dbc.ListGroupItem("Indel length distribution"),
-                                                    dbc.ListGroupItem("Most frequent mutation effects"),
-                                                    dbc.ListGroupItem("Samples accumulation"),
-                                                    dbc.ListGroupItem("Evolutionary pressure (dN/dS)"),
-                                                    dbc.ListGroupItem("Instantaneous lineage prevalence"),
-                                                    dbc.ListGroupItem("Top recurrent mutations"),
-                                                    dbc.ListGroupItem("Genome/gene view"),
-                                                    dbc.ListGroupItem("Co-occurrence clustering"),
-                                                    dbc.ListGroupItem("Top intrahost mutations")
-                                                ],
-                                                flush=True
-                                            )
+                                            dbc.Table.from_dataframe(features,
+                                                                     striped=True,
+                                                                     hover=True,
+                                                                     index=True,
+                                                                     className="center"),
                                         ]),
-                                        ]),
+                                    ], width=7),
                                     dbc.Col([
                                         html.Br(),
                                         dbc.Card(
@@ -145,7 +157,8 @@ def get_tab_overview(queries: Queries):
                                             ],
                                             outline=False,
                                             style={"width": "40rem", "height": "15rem", "margin-left": "40px"},
-                                        )]
+                                        ),
+                                        dbc.Col([html.Img(src="assets/wordcloud.png", style={"width": "100%"})]), ]
                                     ),
                                 ])),
                             html.Br(),
