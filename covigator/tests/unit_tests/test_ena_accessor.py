@@ -285,7 +285,7 @@ class EnaAccessorTests(AbstractTest):
              "fastq_md5": "4de269d2b5831e1c5175586af694d21e",
              "host_tax_id": "9606"
             }
-        ])
+        ], disable_collection_date=False)
         ena_accessor_empty_collection.access()
         self.assertEqual(ena_accessor_empty_collection.included, 2)
         self.assertEqual(ena_accessor_empty_collection.excluded, 1)
