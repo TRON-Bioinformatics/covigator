@@ -324,7 +324,7 @@ class EnaAccessorTests(AbstractTest):
         ], disable_collection_date=True)
         ena_accessor_empty_collection_disabled.access()
         self.assertEqual(ena_accessor_empty_collection_disabled.included, 3)
-        self.assertEqual(ena_accessor_empty_collection_disabled.exlcuded, 0)
+        self.assertEqual(ena_accessor_empty_collection_disabled.excluded, 0)
         self.assertEqual(ena_accessor_empty_collection_disabled.excluded_samples_by_empty_collection_date, 0)
 
     def test_no_filtering(self):
