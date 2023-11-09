@@ -19,11 +19,11 @@ def get_tab_overview(queries: Queries):
         (present_icon, present_icon),  # "Instantaneous lineage prevalence"
         (present_icon, present_icon),  # "Top recurrent mutations"
         (present_icon, present_icon),  # "Genome/gene view"
-        (present_icon, present_icon),  # "Co-occurrence clustering"
+        (present_icon, absent_icon),  # "Co-occurrence clustering"
         (present_icon, absent_icon)  # "Top intrahost mutations"
     ]
     features = pd.DataFrame.from_records(features,
-                                         columns=["ENA", "COVID-19"],
+                                         columns=["ENA (FASTQ)", "COVID-19 Data Portal (FASTA)"],
                                          index=["Mutations per sample", "Most frequent base substitutions",
                                                 "Indel length distribution", "Most frequent mutation effects",
                                                 "Samples accumulation", "Evolutionary pressure (dN/dS)",
@@ -109,29 +109,16 @@ def get_tab_overview(queries: Queries):
 
                             dbc.CardBody(
                                 dbc.Row([
-                                    dbc.Col([html.Img(src="assets/wordcloud.png", style={"width": "100%"})]),
                                     dbc.Col([
                                         html.Br(),
                                         html.Div([
-                                            dbc.Table.from_dataframe(features, striped=True, hover=True, index=True),
-                                            #dbc.ListGroup(
-                                            #    [
-                                            #        dbc.ListGroupItem("Mutations per sample"),
-                                            #        dbc.ListGroupItem("Most frequent base substitutions"),
-                                            #        dbc.ListGroupItem("Indel length distribution"),
-                                            #        dbc.ListGroupItem("Most frequent mutation effects"),
-                                            #        dbc.ListGroupItem("Samples accumulation"),
-                                            #        dbc.ListGroupItem("Evolutionary pressure (dN/dS)"),
-                                            #        dbc.ListGroupItem("Instantaneous lineage prevalence"),
-                                            #        dbc.ListGroupItem("Top recurrent mutations"),
-                                            #        dbc.ListGroupItem("Genome/gene view"),
-                                            #        dbc.ListGroupItem("Co-occurrence clustering"),
-                                            #        dbc.ListGroupItem("Top intrahost mutations")
-                                            #    ],
-                                                #flush=True
-                                            #)
+                                            dbc.Table.from_dataframe(features,
+                                                                     striped=True,
+                                                                     hover=True,
+                                                                     index=True,
+                                                                     className="center"),
                                         ]),
-                                        ]),
+                                    ], width=7),
                                     dbc.Col([
                                         html.Br(),
                                         dbc.Card(
@@ -170,7 +157,8 @@ def get_tab_overview(queries: Queries):
                                             ],
                                             outline=False,
                                             style={"width": "40rem", "height": "15rem", "margin-left": "40px"},
-                                        )]
+                                        ),
+                                        dbc.Col([html.Img(src="assets/wordcloud.png", style={"width": "100%"})]), ]
                                     ),
                                 ])),
                             html.Br(),
