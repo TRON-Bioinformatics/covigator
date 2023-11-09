@@ -100,7 +100,7 @@ class EnaAccessor(AbstractAccessor):
         self.excluded_samples_by_fastq_ftp = 0
         self.excluded_samples_by_instrument_platform = {}
         self.excluded_samples_by_library_strategy = {}
-        self.excluded_samples_by_empty_collection_date = {}
+        self.excluded_samples_by_empty_collection_date = 0
         self.excluded_existing = 0
         self.included = 0
         self.excluded = 0
