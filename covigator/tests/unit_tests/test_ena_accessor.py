@@ -283,9 +283,8 @@ class EnaAccessorTests(AbstractTest):
              "library_strategy": "WGS",
              "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/ERR408/005/ERR4080485/ERR4080485_1.fastq.gz",
              "fastq_md5": "4de269d2b5831e1c5175586af694d21e",
-             "host_tax_id": "9606",
-             "first_created": "",
-             "collection_date": ""}
+             "host_tax_id": "9606"
+            }
         ])
         ena_accessor_empty_collection.access()
         self.assertEqual(ena_accessor_empty_collection.included, 2)
@@ -323,10 +322,10 @@ class EnaAccessorTests(AbstractTest):
              "first_created": "",
              "collection_date": ""}
         ], disable_collection_date=True)
-        ena_accessor_empty_collection.access()
-        self.assertEqual(ena_accessor_empty_collection.included, 3)
-        self.assertEqual(ena_accessor_empty_collection.exlcuded, 0)
-        self.assertEqual(ena_accessor_empty_collection.excluded_samples_by_empty_collection_date, 0)
+        ena_accessor_empty_collection_disabled.access()
+        self.assertEqual(ena_accessor_empty_collection_disabled.included, 3)
+        self.assertEqual(ena_accessor_empty_collection_disabled.exlcuded, 0)
+        self.assertEqual(ena_accessor_empty_collection_disabled.excluded_samples_by_empty_collection_date, 0)
 
     def test_no_filtering(self):
         ena_accessor = FakeEnaAccessor([
