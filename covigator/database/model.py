@@ -54,6 +54,7 @@ LINEAGE_SITES_JUNCTION_TABLE_NAME = get_table_versioned_name('lineage_variant', 
 VARIANT_LEVEL_CONSTRAINT_NAME = get_table_versioned_name('variant_level', config=config)
 NEWS_SECTION_TABLE_NAME = get_table_versioned_name('news_section', config=config)
 NEWS_TYPE_CONSTRAINT_NAME = get_table_versioned_name('news_type', config=config)
+INTRAHOST_MODEL_PREDICTION_NAME = get_table_versioned_name('intrahost_model_prediction', config=config)
 SEPARATOR = ";"
 
 Base = declarative_base()
@@ -1228,4 +1229,16 @@ class NewsSection(Base):
     message_text = Column(String, primary_key=True)
     published_date = Column(DateTime(timezone=True), nullable=False, default=datetime.now())
     message_type = Column(Enum(NewsType, name=NewsType.__constraint_name__))
+
+
+class IntrahostModelPrediction(Base):
+    """
+    Table that holds intrahost mutations
+    """
+    __tablename__ = INTRAHOST_MODEL_PREDICTION_NAME
+
+    variant_id = Column(String, primary_key=True)
+    prediction = Column(Float)
+
+
 

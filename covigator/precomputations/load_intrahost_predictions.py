@@ -5,6 +5,10 @@ import numpy as np
 from covigator.precomputations import GENES_DICT, POLYPROTEIN_OFFSET
 from sklearn.linear_model import LinearRegression
 import joblib
+from sqlalchemy.orm import Session
+from covigator.database.queries import Queries
+from covigator.database.model import SubclonalVariantObservation
+
 
 class FeatureLoader:
     DATA = Path(__file__) / "model_data"
@@ -52,7 +56,8 @@ class FeatureLoader:
             lambda x: POLYPROTEIN_OFFSET.get(x[0], 0) + x[1], axis=1)
 
         # maps the functional annotations in protein coordinates to our variant ids
-        # WARNING: we lose the annotations from all ORF1ab as these are annotated with protein domain coordinates... who would have thought?
+        # WARNING: we lose the annotations from all ORF1ab as these are annotated with protein domain coordinates...
+        # who would have thought?
         columns = ['variant_id', 'gene_name', 'position_amino_acid', 'reference_amino_acid', 'alternate_amino_acid']
         assert all([x in columns for x in intrahost_observations.columns]), "Missing columns in intrahost table"
         #intrahost_observations = pd.read_parquet(
@@ -127,7 +132,7 @@ class FeatureLoader:
         """
         model = LinearRegression()
         intrahost_observations_samples['collection_date_timestamp'] = \
-                intrahost_observations_samples[
+            intrahost_observations_samples[
                     ~intrahost_observations_samples.collection_date.isna()]['collection_date'].apply(
                         lambda x: x.timestamp())
         intrahost_regression_vafs = \
@@ -155,9 +160,13 @@ class FeatureLoader:
 
 class IntrahostPredictionLoader:
     DATA = Path(__file__) / "model_data"
-    def __init__(self):
+
+    def __init__(self, session: Session):
         self.model_file = IntrahostPredictionLoader.DATA / "05_model7_xgboost.joblib"
         self.model = joblib.load(self.model_file)
+        self.session = session
+        self.queries = Queries(session=self.session)
+
     def get_intrahost_mutations(self):
         """
         Implement query to database to obtain intrahost mutations
@@ -165,6 +174,27 @@ class IntrahostPredictionLoader:
         Calculate dn/ds stuff
             - Requires porting Rangas R-code to python function
         """
+        intrahost_mutations = self.session.query(SubclonalVariantObservation.variant_id,
+                                                 SubclonalVariantObservation.gene_name,
+                                                 SubclonalVariantObservation.variant_type,
+                                                 SubclonalVariantObservation.vaf,
+                                                 SubclonalVariantObservation.cons_hmm_sars_cov_2,
+                                                 SubclonalVariantObservation.cons_hmm_sarbecovirus,
+                                                 SubclonalVariantObservation.cons_hmm_vertebrate_cov)
+        intrahost_mutations = pd.read_sql(intrahost_mutations.statement, self.session.bind)
+        intrahost_mutations = intrahost_mutations.drop_duplicates()
+        return intrahost_mutations
+
+    def get_clonal_mutations(self):
+        pass
+
+    def calculate_dn_ds_across_all_time(self):
+        """
+        THis will replace the R code used to calculate dnds ratios
+        """
+        codons = pd.read_csv(self.DATA / "codons.csv")
+        trinucleotide_ns_s = pd.read_csv(self.DATA / "trinucelotide_gene_NS_S.csv")
         pass
     def _build_feature_table(self):
         pass
+
