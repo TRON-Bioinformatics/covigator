@@ -134,8 +134,6 @@ def get_plot_coverage(queries: Queries):
     return [
         dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
         dcc.Markdown("""
-        **Horizontal coverage (%)**
-
         Horizontal coverage is estimated as the sequence length divided by the reference genome length.
         Some samples have thus an horizontal coverage larger than 100 %. 
         """)
@@ -163,8 +161,6 @@ def get_plot_bad_bases_ratio(queries: Queries, count_samples):
     return [
         dcc.Graph(figure=fig, config=PLOTLY_CONFIG),
         dcc.Markdown("""
-        **Ratio of N and ambiguous bases (%)**
-
         The ratio of N and ambiguous bases over the whole sequence length measures the quality of the assembly sequence.
         {} % of samples have a ratio <= 5 %.
         """.format(round(float(data[data["bad_bases_ratio"] <= 5]["count"].sum()) / count_samples, 1)))

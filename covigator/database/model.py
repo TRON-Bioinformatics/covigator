@@ -52,6 +52,8 @@ LINEAGE_TABLE_NAME = get_table_versioned_name('lineage', config=config)
 CONSTELLATION_SITES_TABLE_NAME = get_table_versioned_name('lineage_defining_variant', config=config)
 LINEAGE_SITES_JUNCTION_TABLE_NAME = get_table_versioned_name('lineage_variant', config=config)
 VARIANT_LEVEL_CONSTRAINT_NAME = get_table_versioned_name('variant_level', config=config)
+NEWS_SECTION_TABLE_NAME = get_table_versioned_name('news_section', config=config)
+NEWS_TYPE_CONSTRAINT_NAME = get_table_versioned_name('news_type', config=config)
 SEPARATOR = ";"
 
 Base = declarative_base()
@@ -1207,4 +1209,23 @@ class LineageVariant(Base):
 
     pango_lineage_id = Column(ForeignKey(Lineages.pango_lineage_id), primary_key=True)
     variant_id = Column(ForeignKey(LineageDefiningVariants.variant_id), primary_key=True)
+
+
+class NewsType(enum.Enum):
+    __constraint_name__ = NEWS_TYPE_CONSTRAINT_NAME
+
+    RELEASE = 1
+    WARNINGS = 2
+    BUGS = 3
+
+
+class NewsSection(Base):
+    """
+    Table to hold information for news section
+    """
+    __tablename__ = NEWS_SECTION_TABLE_NAME
+
+    message_text = Column(String, primary_key=True)
+    published_date = Column(DateTime(timezone=True), nullable=False, default=datetime.now())
+    message_type = Column(Enum(NewsType, name=NewsType.__constraint_name__))
 
