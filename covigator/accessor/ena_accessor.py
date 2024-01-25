@@ -68,7 +68,7 @@ class EnaAccessor(AbstractAccessor):
     ]
 
     def __init__(self, tax_id: str, host_tax_id: str, database: Database, maximum=None,
-                 disable_minimum_date: bool=False):
+                 disable_minimum_date: bool = False, disable_collection_date: bool = False):
 
         super().__init__()
         logger.info("Initialising ENA accessor")
@@ -92,11 +92,15 @@ class EnaAccessor(AbstractAccessor):
         self.disable_minimum_date = disable_minimum_date
         if self.disable_minimum_date:
             logger.info("Disabling minimum date filter criteria")
+        self.disable_collection_date_filter = disable_collection_date
+        if self.disable_collection_date_filter:
+            logger.info("Disabling empty collection date filter criteria")
 
         self.excluded_samples_by_host_tax_id = {}
         self.excluded_samples_by_fastq_ftp = 0
         self.excluded_samples_by_instrument_platform = {}
         self.excluded_samples_by_library_strategy = {}
+        self.excluded_samples_by_empty_collection_date = 0
         self.excluded_existing = 0
         self.included = 0
         self.excluded = 0
@@ -191,6 +195,12 @@ class EnaAccessor(AbstractAccessor):
     def _complies_with_inclusion_criteria(self, ena_run: dict):
         # NOTE: this uses the original dictionary instead of the parsed SampleEna class for performance reasons
         included = True
+        # Skip samples with empty collection date - Note this checks not if collection date is too early
+        if not self.disable_collection_date_filter:
+            collection_date = ena_run.get("collection_date")
+            if collection_date is None or collection_date.strip() == "":
+                included = False
+                self.excluded_samples_by_empty_collection_date += 1
         # Skip host id filter if data is not available for selected Virus
         if self.host_tax_id_filter:
             host_tax_id = ena_run.get("host_tax_id")
@@ -212,6 +222,7 @@ class EnaAccessor(AbstractAccessor):
             included = False  # skips not included library strategies
             self.excluded_samples_by_library_strategy[str(library_strategy)] = \
                 self.excluded_samples_by_library_strategy.get(str(library_strategy), 0) + 1
+        # Skip samples
         if not included:
             self.excluded += 1
         return included
@@ -224,6 +235,7 @@ class EnaAccessor(AbstractAccessor):
         logger.info("Excluded by platform runs = {}".format(self.excluded_samples_by_instrument_platform))
         logger.info("Excluded by host if runs = {}".format(self.excluded_samples_by_host_tax_id))
         logger.info("Excluded by library strategy = {}".format(self.excluded_samples_by_library_strategy))
+        logger.info("Excluded by empty collection date = {}".format(self.excluded_samples_by_empty_collection_date))
 
     def _write_execution_log(self, session: Session):
         end_time = datetime.now()

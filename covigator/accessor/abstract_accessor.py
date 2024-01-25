@@ -41,7 +41,7 @@ class AbstractAccessor:
         sample.continent_alpha_2 = parsed_country.continent_alpha_2
         sample.continent = parsed_country.continent
 
-    def _parse_dates(self, sample: Union[SampleEna, SampleCovid19], disable_minimum_date: bool=False):
+    def _parse_dates(self, sample: Union[SampleEna, SampleCovid19], disable_minimum_date: bool = False):
         sample.collection_date = _parse_abstract(sample.collection_date, date.fromisoformat)
         sample.first_created = _parse_abstract(sample.first_created, date.fromisoformat)
         if not disable_minimum_date:
