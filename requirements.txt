@@ -10,7 +10,7 @@ cytoolz==0.11.0
 logzero==1.6.3
 psycopg2-binary==2.8.6
 plotly==5.18.0
-dash==2.14.1
+dash==2.15.0
 dash_bootstrap_components==1.5.0
 cyvcf2==0.30.4
 pycountry==20.7.3
