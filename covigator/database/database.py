@@ -11,6 +11,7 @@ from covigator.exceptions import CovigatorDatabaseConnectionException
 from covigator.references.conservation import ConservationLoader
 from covigator.references.gene_annotations import GeneAnnotationsLoader
 from covigator.references.lineage_annotation import LineageAnnotationsLoader
+from covigator.references.intrahost_prediction import IntrahostPredictionLoader
 
 
 class Database:
@@ -48,6 +49,8 @@ class Database:
             ConservationLoader(session).load_data()
         if session.query(Lineages).count() == 0:
             LineageAnnotationsLoader(session).load_data()
+        if session.query(Lineages).count() == 0:
+            IntrahostPredictionLoader.load_data()
 
     def get_database_session(self) -> Session:
         return self.Session()
