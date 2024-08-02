@@ -1,3 +1,15 @@
+> **:construction: Maintenance Update: :construction:**
+>
+> The CoVigator python package is presently not under active maintenance. Users are
+> advised that there won't be regular updates, bug fixes and data updates.
+>
+> We welcome any contibutions of interested individuals. Feel free to fork
+> the project to continue its development or submit patches to the orginal repository.
+>
+> Thank you for your understanding.
+
+---
+
 ![CoVigator logo](covigator/dashboard/assets/CoVigator_logo_txt_reg_no_bg.png "CoVigator logo")
 
 -----------------
